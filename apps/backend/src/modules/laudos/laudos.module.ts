@@ -1,0 +1,25 @@
+// ==========================================
+// @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
+// @date:   26-01-2026
+// L AU DO S.M OD UL E
+// ==========================================
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Laudo } from './entities/laudo.entity';
+import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+import { LaudosService } from './laudos.service';
+import { LaudosController } from './laudos.controller';
+import { PacientesModule } from '../pacientes/pacientes.module';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Evolucao } from '../evolucoes/entities/evolucao.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Laudo, LaudoAiGeneration, Anamnese, Evolucao]),
+    PacientesModule,
+  ],
+  controllers: [LaudosController],
+  providers: [LaudosService],
+  exports: [LaudosService],
+})
+export class LaudosModule {}

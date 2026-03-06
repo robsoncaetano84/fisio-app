@@ -1,0 +1,28 @@
+env: load .env
+env: export EXPO_PUBLIC_API_URL
+Starting project at C:\Projetos\fisio-app\apps\mobile
+Starting Metro Bundler
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 1808ms index.ts (1209 modules)
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 225ms index.ts (1 module)
+ LOG  [analytics] session_started {"evolucaoId": null, "pacienteId": "8842da4e-13d9-4263-a267-3c980a0c19af", "source": "EvolucaoFormScreen"}
+ ERROR  [TypeError: Cannot set property 'onSpeechStart' of null]
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 122ms index.ts (1 module)
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 113ms index.ts (1 module)
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 71ms index.ts (1 module)
+ LOG  [analytics] session_started {"evolucaoId": null, "pacienteId": "8842da4e-13d9-4263-a267-3c980a0c19af", "source": "EvolucaoFormScreen"}
+ WARN  [evolucaoStore] fetchEvolucoesByPaciente falhou [AxiosError: Network Error]
+ WARN  [evolucaoStore] fetchEvolucoesByPaciente falhou [AxiosError: Network Error]
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 73ms index.ts (1 module)
+ WARN  [evolucaoStore] fetchEvolucoesByPaciente falhou [AxiosError: Network Error]
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 96ms index.ts (1 module)
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 96ms index.ts (1 module)

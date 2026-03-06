@@ -1,0 +1,695 @@
+
+> backend@0.0.1 start:dev
+> nest start --watch
+
+[2J[3J[H[[90m14:55:59[0m] Starting compilation in watch mode...
+
+[[90m14:56:04[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +16ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +31ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+query: SELECT version()
+query: SELECT * FROM current_schema()
+query: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+query: START TRANSACTION
+query: SELECT * FROM current_schema()
+query: SELECT * FROM current_database()
+query: SELECT "table_schema", "table_name", obj_description(('"' || "table_schema" || '"."' || "table_name" || '"')::regclass, 'pg_class') AS table_comment FROM "information_schema"."tables" WHERE ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens')
+query: SELECT TRUE FROM information_schema.columns WHERE table_name = 'pg_class' and column_name = 'relispartition'
+query: SELECT columns.*, pg_catalog.col_description(('"' || table_catalog || '"."' || table_schema || '"."' || table_name || '"')::regclass::oid, ordinal_position) AS description, ('"' || "udt_schema" || '"."' || "udt_name" || '"')::"regtype"::text AS "regtype", pg_catalog.format_type("col_attr"."atttypid", "col_attr"."atttypmod") AS "format_type" FROM "information_schema"."columns" LEFT JOIN "pg_catalog"."pg_attribute" AS "col_attr" ON "col_attr"."attname" = "columns"."column_name" AND "col_attr"."attrelid" = ( SELECT "cls"."oid" FROM "pg_catalog"."pg_class" AS "cls" LEFT JOIN "pg_catalog"."pg_namespace" AS "ns" ON "ns"."oid" = "cls"."relnamespace" WHERE "cls"."relname" = "columns"."table_name" AND "ns"."nspname" = "columns"."table_schema" ) WHERE ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades')
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "cnst"."conname" AS "constraint_name", pg_get_constraintdef("cnst"."oid") AS "expression", CASE "cnst"."contype" WHEN 'p' THEN 'PRIMARY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'x' THEN 'EXCLUDE' END AS "constraint_type", "a"."attname" AS "column_name" FROM "pg_constraint" "cnst" INNER JOIN "pg_class" "t" ON "t"."oid" = "cnst"."conrelid" INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "cnst"."connamespace" LEFT JOIN "pg_attribute" "a" ON "a"."attrelid" = "cnst"."conrelid" AND "a"."attnum" = ANY ("cnst"."conkey") WHERE "t"."relkind" IN ('r', 'p') AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "i"."relname" AS "constraint_name", "a"."attname" AS "column_name", CASE "ix"."indisunique" WHEN 't' THEN 'TRUE' ELSE'FALSE' END AS "is_unique", pg_get_expr("ix"."indpred", "ix"."indrelid") AS "condition", "types"."typname" AS "type_name", "am"."amname" AS "index_type" FROM "pg_class" "t" INNER JOIN "pg_index" "ix" ON "ix"."indrelid" = "t"."oid" INNER JOIN "pg_attribute" "a" ON "a"."attrelid" = "t"."oid"  AND "a"."attnum" = ANY ("ix"."indkey") INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "t"."relnamespace" INNER JOIN "pg_class" "i" ON "i"."oid" = "ix"."indexrelid" INNER JOIN "pg_type" "types" ON "types"."oid" = "a"."atttypid" INNER JOIN "pg_am" "am" ON "i"."relam" = "am"."oid" LEFT JOIN "pg_constraint" "cnst" ON "cnst"."conname" = "i"."relname" WHERE "t"."relkind" IN ('r', 'p') AND "cnst"."contype" IS NULL AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "con"."conname" AS "constraint_name", "con"."nspname" AS "table_schema", "con"."relname" AS "table_name", "att2"."attname" AS "column_name", "ns"."nspname" AS "referenced_table_schema", "cl"."relname" AS "referenced_table_name", "att"."attname" AS "referenced_column_name", "con"."confdeltype" AS "on_delete", "con"."confupdtype" AS "on_update", "con"."condeferrable" AS "deferrable", "con"."condeferred" AS "deferred" FROM ( SELECT UNNEST ("con1"."conkey") AS "parent", UNNEST ("con1"."confkey") AS "child", "con1"."confrelid", "con1"."conrelid", "con1"."conname", "con1"."contype", "ns"."nspname", "cl"."relname", "con1"."condeferrable", CASE WHEN "con1"."condeferred" THEN 'INITIALLY DEFERRED' ELSE 'INITIALLY IMMEDIATE' END as condeferred, CASE "con1"."confdeltype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confdeltype", CASE "con1"."confupdtype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confupdtype" FROM "pg_class" "cl" INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_constraint" "con1" ON "con1"."conrelid" = "cl"."oid" WHERE "con1"."contype" = 'f' AND (("ns"."nspname" = 'public' AND "cl"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividades')) ) "con" INNER JOIN "pg_attribute" "att" ON "att"."attrelid" = "con"."confrelid" AND "att"."attnum" = "con"."child" INNER JOIN "pg_class" "cl" ON "cl"."oid" = "con"."confrelid"  AND "cl"."relispartition" = 'f'INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_attribute" "att2" ON "att2"."attrelid" = "con"."conrelid" AND "att2"."attnum" = "con"."parent"
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='sexo'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='estado_civil'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='motivo_busca'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='inicio_problema'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'evolucoes' AND "column_name"='checkin_dificuldade'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'laudos' AND "column_name"='status'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'usuarios' AND "column_name"='role'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'auth_logs' AND "column_name"='eventType'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'atividade_checkins' AND "column_name"='dificuldade'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_sexo_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_estado_civil_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_motivo_busca_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_inicio_problema_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'evolucoes_checkin_dificuldade_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'laudos_status_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'usuarios_role_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'auth_logs_eventtype_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'atividade_checkins_dificuldade_enum'
+query: SELECT * FROM "information_schema"."tables" WHERE "table_schema" = 'public' AND "table_name" = 'typeorm_metadata'
+query: COMMIT
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +161ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsuariosModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPacientesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificacoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnamnesesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEvolucoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAtividadesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLaudosModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +6ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-convite, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro-paciente-convite, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuario, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuarios, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPacientesController {/api/pacientes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/paged, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/attention, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnamnesesController {/api/anamneses}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEvolucoesController {/api/evolucoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLaudosController {/api/laudos}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/gerar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/validar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAtividadesController {/api/atividades}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/inativar, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/duplicar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/duplicar-lote, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/minhas, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/updates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificacoesController {/api/notificacoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:56:05 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +2ms[39m
+query: SELECT "Usuario"."id" AS "Usuario_id", "Usuario"."created_at" AS "Usuario_created_at", "Usuario"."updated_at" AS "Usuario_updated_at", "Usuario"."nome" AS "Usuario_nome", "Usuario"."email" AS "Usuario_email", "Usuario"."senha" AS "Usuario_senha", "Usuario"."registro_prof" AS "Usuario_registro_prof", "Usuario"."especialidade" AS "Usuario_especialidade", "Usuario"."ativo" AS "Usuario_ativo", "Usuario"."role" AS "Usuario_role" FROM "usuarios" "Usuario" WHERE (("Usuario"."email" = $1)) LIMIT 1 -- PARAMETERS: ["robson@teste.com"]
+[32m[Nest] 20620  - [39m16/02/2026, 14:57:23 [32m    LOG[39m [38;5;3m[AuthService] [39m[32mLogin ok para robson@teste.com (ip=::ffff:192.168.2.100)[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:57:23 [32m    LOG[39m [38;5;3m[AuthService] [39m[32m{"event":"login","email":"robson@teste.com","ip":"::ffff:192.168.2.100","success":true}[39m
+query: START TRANSACTION
+query: INSERT INTO "auth_logs"("id", "created_at", "updated_at", "usuario_id", "email", "ip", "eventType", "success", "reason") VALUES (DEFAULT, DEFAULT, DEFAULT, $1, $2, $3, $4, $5, DEFAULT) RETURNING "id", "created_at", "updated_at", "success" -- PARAMETERS: ["1686108c-dcf6-4e8b-9350-953146a7a241","robson@teste.com","::ffff:192.168.2.100","LOGIN",1]
+query: COMMIT
+query: SELECT "Usuario"."id" AS "Usuario_id", "Usuario"."created_at" AS "Usuario_created_at", "Usuario"."updated_at" AS "Usuario_updated_at", "Usuario"."nome" AS "Usuario_nome", "Usuario"."email" AS "Usuario_email", "Usuario"."senha" AS "Usuario_senha", "Usuario"."registro_prof" AS "Usuario_registro_prof", "Usuario"."especialidade" AS "Usuario_especialidade", "Usuario"."ativo" AS "Usuario_ativo", "Usuario"."role" AS "Usuario_role" FROM "usuarios" "Usuario" WHERE (("Usuario"."email" = $1)) LIMIT 1 -- PARAMETERS: ["teste@teste.com"]
+[32m[Nest] 20620  - [39m16/02/2026, 14:57:54 [32m    LOG[39m [38;5;3m[AuthService] [39m[32mLogin ok para teste@teste.com (ip=::ffff:192.168.2.100)[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:57:54 [32m    LOG[39m [38;5;3m[AuthService] [39m[32m{"event":"login","email":"teste@teste.com","ip":"::ffff:192.168.2.100","success":true}[39m
+query: START TRANSACTION
+query: INSERT INTO "auth_logs"("id", "created_at", "updated_at", "usuario_id", "email", "ip", "eventType", "success", "reason") VALUES (DEFAULT, DEFAULT, DEFAULT, $1, $2, $3, $4, $5, DEFAULT) RETURNING "id", "created_at", "updated_at", "success" -- PARAMETERS: ["000fdfee-41cd-44bf-836a-ec6cca9bcd9a","teste@teste.com","::ffff:192.168.2.100","LOGIN",1]
+query: COMMIT
+query: SELECT "Usuario"."id" AS "Usuario_id", "Usuario"."created_at" AS "Usuario_created_at", "Usuario"."updated_at" AS "Usuario_updated_at", "Usuario"."nome" AS "Usuario_nome", "Usuario"."email" AS "Usuario_email", "Usuario"."senha" AS "Usuario_senha", "Usuario"."registro_prof" AS "Usuario_registro_prof", "Usuario"."especialidade" AS "Usuario_especialidade", "Usuario"."ativo" AS "Usuario_ativo", "Usuario"."role" AS "Usuario_role" FROM "usuarios" "Usuario" WHERE (("Usuario"."email" = $1)) LIMIT 1 -- PARAMETERS: ["robson@teste.com"]
+[33m[Nest] 20620  - [39m16/02/2026, 14:59:06 [33m   WARN[39m [38;5;3m[AuthService] [39m[33mLogin falhou para robson@teste.com (ip=::ffff:127.0.0.1)[39m
+[32m[Nest] 20620  - [39m16/02/2026, 14:59:06 [32m    LOG[39m [38;5;3m[AuthService] [39m[32m{"event":"login","email":"robson@teste.com","ip":"::ffff:127.0.0.1","success":false,"reason":"INVALID_CREDENTIALS"}[39m
+query: START TRANSACTION
+query: INSERT INTO "auth_logs"("id", "created_at", "updated_at", "usuario_id", "email", "ip", "eventType", "success", "reason") VALUES (DEFAULT, DEFAULT, DEFAULT, DEFAULT, $1, $2, $3, $4, $5) RETURNING "id", "created_at", "updated_at", "success" -- PARAMETERS: ["robson@teste.com","::ffff:127.0.0.1","LOGIN",0,"INVALID_CREDENTIALS"]
+query: COMMIT
+query: SELECT "Usuario"."id" AS "Usuario_id", "Usuario"."created_at" AS "Usuario_created_at", "Usuario"."updated_at" AS "Usuario_updated_at", "Usuario"."nome" AS "Usuario_nome", "Usuario"."email" AS "Usuario_email", "Usuario"."senha" AS "Usuario_senha", "Usuario"."registro_prof" AS "Usuario_registro_prof", "Usuario"."especialidade" AS "Usuario_especialidade", "Usuario"."ativo" AS "Usuario_ativo", "Usuario"."role" AS "Usuario_role" FROM "usuarios" "Usuario" WHERE (("Usuario"."email" = $1)) LIMIT 1 -- PARAMETERS: ["teste@teste.com"]
+[33m[Nest] 20620  - [39m16/02/2026, 15:04:10 [33m   WARN[39m [38;5;3m[AuthService] [39m[33mLogin falhou para teste@teste.com (ip=::ffff:127.0.0.1)[39m
+[32m[Nest] 20620  - [39m16/02/2026, 15:04:10 [32m    LOG[39m [38;5;3m[AuthService] [39m[32m{"event":"login","email":"teste@teste.com","ip":"::ffff:127.0.0.1","success":false,"reason":"INVALID_CREDENTIALS"}[39m
+query: START TRANSACTION
+query: INSERT INTO "auth_logs"("id", "created_at", "updated_at", "usuario_id", "email", "ip", "eventType", "success", "reason") VALUES (DEFAULT, DEFAULT, DEFAULT, DEFAULT, $1, $2, $3, $4, $5) RETURNING "id", "created_at", "updated_at", "success" -- PARAMETERS: ["teste@teste.com","::ffff:127.0.0.1","LOGIN",0,"INVALID_CREDENTIALS"]
+query: COMMIT
+[2J[3J[H[[90m15:08:57[0m] File change detected. Starting incremental compilation...
+
+[[90m15:08:58[0m] Found 0 errors. Watching for file changes.
+
+[2J[3J[H[[90m15:08:58[0m] File change detected. Starting incremental compilation...
+
+[[90m15:09:00[0m] Found 0 errors. Watching for file changes.
+
+[2J[3J[H[[90m15:09:00[0m] File change detected. Starting incremental compilation...
+
+[[90m15:09:01[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +22ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +32ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:02 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m
+query: SELECT version()
+query: SELECT * FROM current_schema()
+query: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+query: START TRANSACTION
+query: SELECT * FROM current_schema()
+query: SELECT * FROM current_database()
+query: SELECT "table_schema", "table_name", obj_description(('"' || "table_schema" || '"."' || "table_name" || '"')::regclass, 'pg_class') AS table_comment FROM "information_schema"."tables" WHERE ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens')
+query: SELECT TRUE FROM information_schema.columns WHERE table_name = 'pg_class' and column_name = 'relispartition'
+query: SELECT columns.*, pg_catalog.col_description(('"' || table_catalog || '"."' || table_schema || '"."' || table_name || '"')::regclass::oid, ordinal_position) AS description, ('"' || "udt_schema" || '"."' || "udt_name" || '"')::"regtype"::text AS "regtype", pg_catalog.format_type("col_attr"."atttypid", "col_attr"."atttypmod") AS "format_type" FROM "information_schema"."columns" LEFT JOIN "pg_catalog"."pg_attribute" AS "col_attr" ON "col_attr"."attname" = "columns"."column_name" AND "col_attr"."attrelid" = ( SELECT "cls"."oid" FROM "pg_catalog"."pg_class" AS "cls" LEFT JOIN "pg_catalog"."pg_namespace" AS "ns" ON "ns"."oid" = "cls"."relnamespace" WHERE "cls"."relname" = "columns"."table_name" AND "ns"."nspname" = "columns"."table_schema" ) WHERE ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades')
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "cnst"."conname" AS "constraint_name", pg_get_constraintdef("cnst"."oid") AS "expression", CASE "cnst"."contype" WHEN 'p' THEN 'PRIMARY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'x' THEN 'EXCLUDE' END AS "constraint_type", "a"."attname" AS "column_name" FROM "pg_constraint" "cnst" INNER JOIN "pg_class" "t" ON "t"."oid" = "cnst"."conrelid" INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "cnst"."connamespace" LEFT JOIN "pg_attribute" "a" ON "a"."attrelid" = "cnst"."conrelid" AND "a"."attnum" = ANY ("cnst"."conkey") WHERE "t"."relkind" IN ('r', 'p') AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "i"."relname" AS "constraint_name", "a"."attname" AS "column_name", CASE "ix"."indisunique" WHEN 't' THEN 'TRUE' ELSE'FALSE' END AS "is_unique", pg_get_expr("ix"."indpred", "ix"."indrelid") AS "condition", "types"."typname" AS "type_name", "am"."amname" AS "index_type" FROM "pg_class" "t" INNER JOIN "pg_index" "ix" ON "ix"."indrelid" = "t"."oid" INNER JOIN "pg_attribute" "a" ON "a"."attrelid" = "t"."oid"  AND "a"."attnum" = ANY ("ix"."indkey") INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "t"."relnamespace" INNER JOIN "pg_class" "i" ON "i"."oid" = "ix"."indexrelid" INNER JOIN "pg_type" "types" ON "types"."oid" = "a"."atttypid" INNER JOIN "pg_am" "am" ON "i"."relam" = "am"."oid" LEFT JOIN "pg_constraint" "cnst" ON "cnst"."conname" = "i"."relname" WHERE "t"."relkind" IN ('r', 'p') AND "cnst"."contype" IS NULL AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "con"."conname" AS "constraint_name", "con"."nspname" AS "table_schema", "con"."relname" AS "table_name", "att2"."attname" AS "column_name", "ns"."nspname" AS "referenced_table_schema", "cl"."relname" AS "referenced_table_name", "att"."attname" AS "referenced_column_name", "con"."confdeltype" AS "on_delete", "con"."confupdtype" AS "on_update", "con"."condeferrable" AS "deferrable", "con"."condeferred" AS "deferred" FROM ( SELECT UNNEST ("con1"."conkey") AS "parent", UNNEST ("con1"."confkey") AS "child", "con1"."confrelid", "con1"."conrelid", "con1"."conname", "con1"."contype", "ns"."nspname", "cl"."relname", "con1"."condeferrable", CASE WHEN "con1"."condeferred" THEN 'INITIALLY DEFERRED' ELSE 'INITIALLY IMMEDIATE' END as condeferred, CASE "con1"."confdeltype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confdeltype", CASE "con1"."confupdtype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confupdtype" FROM "pg_class" "cl" INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_constraint" "con1" ON "con1"."conrelid" = "cl"."oid" WHERE "con1"."contype" = 'f' AND (("ns"."nspname" = 'public' AND "cl"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividades')) ) "con" INNER JOIN "pg_attribute" "att" ON "att"."attrelid" = "con"."confrelid" AND "att"."attnum" = "con"."child" INNER JOIN "pg_class" "cl" ON "cl"."oid" = "con"."confrelid"  AND "cl"."relispartition" = 'f'INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_attribute" "att2" ON "att2"."attrelid" = "con"."conrelid" AND "att2"."attnum" = "con"."parent"
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='sexo'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='estado_civil'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='motivo_busca'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='inicio_problema'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'evolucoes' AND "column_name"='checkin_dificuldade'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'laudos' AND "column_name"='status'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'usuarios' AND "column_name"='role'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'auth_logs' AND "column_name"='eventType'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'atividade_checkins' AND "column_name"='dificuldade'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_sexo_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_estado_civil_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_motivo_busca_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_inicio_problema_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'evolucoes_checkin_dificuldade_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'laudos_status_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'usuarios_role_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'auth_logs_eventtype_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'atividade_checkins_dificuldade_enum'
+query: SELECT * FROM "information_schema"."tables" WHERE "table_schema" = 'public' AND "table_name" = 'typeorm_metadata'
+query: COMMIT
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +148ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsuariosModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPacientesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificacoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnamnesesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEvolucoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAtividadesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLaudosModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +5ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-convite, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro-paciente-convite, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuario, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuarios, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPacientesController {/api/pacientes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/paged, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/attention, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnamnesesController {/api/anamneses}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEvolucoesController {/api/evolucoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLaudosController {/api/laudos}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/gerar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/validar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAtividadesController {/api/atividades}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/inativar, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/duplicar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/duplicar-lote, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/minhas, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/updates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificacoesController {/api/notificacoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 17020  - [39m16/02/2026, 15:09:03 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +5ms[39m
+[2J[3J[H[[90m15:09:03[0m] File change detected. Starting incremental compilation...
+
+[[90m15:09:03[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +21ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +28ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+query: SELECT version()
+query: SELECT * FROM current_schema()
+query: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+query: START TRANSACTION
+query: SELECT * FROM current_schema()
+query: SELECT * FROM current_database()
+query: SELECT "table_schema", "table_name", obj_description(('"' || "table_schema" || '"."' || "table_name" || '"')::regclass, 'pg_class') AS table_comment FROM "information_schema"."tables" WHERE ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens')
+query: SELECT TRUE FROM information_schema.columns WHERE table_name = 'pg_class' and column_name = 'relispartition'
+query: SELECT columns.*, pg_catalog.col_description(('"' || table_catalog || '"."' || table_schema || '"."' || table_name || '"')::regclass::oid, ordinal_position) AS description, ('"' || "udt_schema" || '"."' || "udt_name" || '"')::"regtype"::text AS "regtype", pg_catalog.format_type("col_attr"."atttypid", "col_attr"."atttypmod") AS "format_type" FROM "information_schema"."columns" LEFT JOIN "pg_catalog"."pg_attribute" AS "col_attr" ON "col_attr"."attname" = "columns"."column_name" AND "col_attr"."attrelid" = ( SELECT "cls"."oid" FROM "pg_catalog"."pg_class" AS "cls" LEFT JOIN "pg_catalog"."pg_namespace" AS "ns" ON "ns"."oid" = "cls"."relnamespace" WHERE "cls"."relname" = "columns"."table_name" AND "ns"."nspname" = "columns"."table_schema" ) WHERE ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades')
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "cnst"."conname" AS "constraint_name", pg_get_constraintdef("cnst"."oid") AS "expression", CASE "cnst"."contype" WHEN 'p' THEN 'PRIMARY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'x' THEN 'EXCLUDE' END AS "constraint_type", "a"."attname" AS "column_name" FROM "pg_constraint" "cnst" INNER JOIN "pg_class" "t" ON "t"."oid" = "cnst"."conrelid" INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "cnst"."connamespace" LEFT JOIN "pg_attribute" "a" ON "a"."attrelid" = "cnst"."conrelid" AND "a"."attnum" = ANY ("cnst"."conkey") WHERE "t"."relkind" IN ('r', 'p') AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "i"."relname" AS "constraint_name", "a"."attname" AS "column_name", CASE "ix"."indisunique" WHEN 't' THEN 'TRUE' ELSE'FALSE' END AS "is_unique", pg_get_expr("ix"."indpred", "ix"."indrelid") AS "condition", "types"."typname" AS "type_name", "am"."amname" AS "index_type" FROM "pg_class" "t" INNER JOIN "pg_index" "ix" ON "ix"."indrelid" = "t"."oid" INNER JOIN "pg_attribute" "a" ON "a"."attrelid" = "t"."oid"  AND "a"."attnum" = ANY ("ix"."indkey") INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "t"."relnamespace" INNER JOIN "pg_class" "i" ON "i"."oid" = "ix"."indexrelid" INNER JOIN "pg_type" "types" ON "types"."oid" = "a"."atttypid" INNER JOIN "pg_am" "am" ON "i"."relam" = "am"."oid" LEFT JOIN "pg_constraint" "cnst" ON "cnst"."conname" = "i"."relname" WHERE "t"."relkind" IN ('r', 'p') AND "cnst"."contype" IS NULL AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "con"."conname" AS "constraint_name", "con"."nspname" AS "table_schema", "con"."relname" AS "table_name", "att2"."attname" AS "column_name", "ns"."nspname" AS "referenced_table_schema", "cl"."relname" AS "referenced_table_name", "att"."attname" AS "referenced_column_name", "con"."confdeltype" AS "on_delete", "con"."confupdtype" AS "on_update", "con"."condeferrable" AS "deferrable", "con"."condeferred" AS "deferred" FROM ( SELECT UNNEST ("con1"."conkey") AS "parent", UNNEST ("con1"."confkey") AS "child", "con1"."confrelid", "con1"."conrelid", "con1"."conname", "con1"."contype", "ns"."nspname", "cl"."relname", "con1"."condeferrable", CASE WHEN "con1"."condeferred" THEN 'INITIALLY DEFERRED' ELSE 'INITIALLY IMMEDIATE' END as condeferred, CASE "con1"."confdeltype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confdeltype", CASE "con1"."confupdtype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confupdtype" FROM "pg_class" "cl" INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_constraint" "con1" ON "con1"."conrelid" = "cl"."oid" WHERE "con1"."contype" = 'f' AND (("ns"."nspname" = 'public' AND "cl"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividades')) ) "con" INNER JOIN "pg_attribute" "att" ON "att"."attrelid" = "con"."confrelid" AND "att"."attnum" = "con"."child" INNER JOIN "pg_class" "cl" ON "cl"."oid" = "con"."confrelid"  AND "cl"."relispartition" = 'f'INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_attribute" "att2" ON "att2"."attrelid" = "con"."conrelid" AND "att2"."attnum" = "con"."parent"
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='sexo'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='estado_civil'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='motivo_busca'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='inicio_problema'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'evolucoes' AND "column_name"='checkin_dificuldade'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'laudos' AND "column_name"='status'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'usuarios' AND "column_name"='role'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'auth_logs' AND "column_name"='eventType'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'atividade_checkins' AND "column_name"='dificuldade'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_sexo_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_estado_civil_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_motivo_busca_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_inicio_problema_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'evolucoes_checkin_dificuldade_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'laudos_status_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'usuarios_role_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'auth_logs_eventtype_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'atividade_checkins_dificuldade_enum'
+query: SELECT * FROM "information_schema"."tables" WHERE "table_schema" = 'public' AND "table_name" = 'typeorm_metadata'
+query: COMMIT
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +140ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsuariosModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPacientesModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificacoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnamnesesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEvolucoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAtividadesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLaudosModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +5ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-convite, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro-paciente-convite, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuario, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuarios, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPacientesController {/api/pacientes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/paged, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/attention, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnamnesesController {/api/anamneses}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEvolucoesController {/api/evolucoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLaudosController {/api/laudos}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/gerar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/validar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAtividadesController {/api/atividades}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/inativar, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/duplicar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/duplicar-lote, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/minhas, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/updates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificacoesController {/api/notificacoes}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 43872  - [39m16/02/2026, 15:09:05 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +5ms[39m
+[31m[Nest] 43872  - [39m16/02/2026, 15:09:05 [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3000[39m[38;5;3m +2ms[39m
+node:net:1940
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at ExpressAdapter.listen (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\platform-express\adapters\express-adapter.js:127:32)
+    at C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\core\nest-application.js:188:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\core\nest-application.js:178:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async bootstrap (C:\Projetos\fisio-app\apps\backend\src\main.ts:64:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v22.21.0
+[2J[3J[H[[90m15:15:51[0m] File change detected. Starting incremental compilation...
+
+[[90m15:15:51[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +22ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +47ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+query: SELECT version()
+query: SELECT * FROM current_schema()
+query: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+query: START TRANSACTION
+query: SELECT * FROM current_schema()
+query: SELECT * FROM current_database()
+query: SELECT "table_schema", "table_name", obj_description(('"' || "table_schema" || '"."' || "table_name" || '"')::regclass, 'pg_class') AS table_comment FROM "information_schema"."tables" WHERE ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens')
+query: SELECT TRUE FROM information_schema.columns WHERE table_name = 'pg_class' and column_name = 'relispartition'
+query: SELECT columns.*, pg_catalog.col_description(('"' || table_catalog || '"."' || table_schema || '"."' || table_name || '"')::regclass::oid, ordinal_position) AS description, ('"' || "udt_schema" || '"."' || "udt_name" || '"')::"regtype"::text AS "regtype", pg_catalog.format_type("col_attr"."atttypid", "col_attr"."atttypmod") AS "format_type" FROM "information_schema"."columns" LEFT JOIN "pg_catalog"."pg_attribute" AS "col_attr" ON "col_attr"."attname" = "columns"."column_name" AND "col_attr"."attrelid" = ( SELECT "cls"."oid" FROM "pg_catalog"."pg_class" AS "cls" LEFT JOIN "pg_catalog"."pg_namespace" AS "ns" ON "ns"."oid" = "cls"."relnamespace" WHERE "cls"."relname" = "columns"."table_name" AND "ns"."nspname" = "columns"."table_schema" ) WHERE ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades')
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "cnst"."conname" AS "constraint_name", pg_get_constraintdef("cnst"."oid") AS "expression", CASE "cnst"."contype" WHEN 'p' THEN 'PRIMARY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'x' THEN 'EXCLUDE' END AS "constraint_type", "a"."attname" AS "column_name" FROM "pg_constraint" "cnst" INNER JOIN "pg_class" "t" ON "t"."oid" = "cnst"."conrelid" INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "cnst"."connamespace" LEFT JOIN "pg_attribute" "a" ON "a"."attrelid" = "cnst"."conrelid" AND "a"."attnum" = ANY ("cnst"."conkey") WHERE "t"."relkind" IN ('r', 'p') AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "i"."relname" AS "constraint_name", "a"."attname" AS "column_name", CASE "ix"."indisunique" WHEN 't' THEN 'TRUE' ELSE'FALSE' END AS "is_unique", pg_get_expr("ix"."indpred", "ix"."indrelid") AS "condition", "types"."typname" AS "type_name", "am"."amname" AS "index_type" FROM "pg_class" "t" INNER JOIN "pg_index" "ix" ON "ix"."indrelid" = "t"."oid" INNER JOIN "pg_attribute" "a" ON "a"."attrelid" = "t"."oid"  AND "a"."attnum" = ANY ("ix"."indkey") INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "t"."relnamespace" INNER JOIN "pg_class" "i" ON "i"."oid" = "ix"."indexrelid" INNER JOIN "pg_type" "types" ON "types"."oid" = "a"."atttypid" INNER JOIN "pg_am" "am" ON "i"."relam" = "am"."oid" LEFT JOIN "pg_constraint" "cnst" ON "cnst"."conname" = "i"."relname" WHERE "t"."relkind" IN ('r', 'p') AND "cnst"."contype" IS NULL AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "con"."conname" AS "constraint_name", "con"."nspname" AS "table_schema", "con"."relname" AS "table_name", "att2"."attname" AS "column_name", "ns"."nspname" AS "referenced_table_schema", "cl"."relname" AS "referenced_table_name", "att"."attname" AS "referenced_column_name", "con"."confdeltype" AS "on_delete", "con"."confupdtype" AS "on_update", "con"."condeferrable" AS "deferrable", "con"."condeferred" AS "deferred" FROM ( SELECT UNNEST ("con1"."conkey") AS "parent", UNNEST ("con1"."confkey") AS "child", "con1"."confrelid", "con1"."conrelid", "con1"."conname", "con1"."contype", "ns"."nspname", "cl"."relname", "con1"."condeferrable", CASE WHEN "con1"."condeferred" THEN 'INITIALLY DEFERRED' ELSE 'INITIALLY IMMEDIATE' END as condeferred, CASE "con1"."confdeltype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confdeltype", CASE "con1"."confupdtype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confupdtype" FROM "pg_class" "cl" INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_constraint" "con1" ON "con1"."conrelid" = "cl"."oid" WHERE "con1"."contype" = 'f' AND (("ns"."nspname" = 'public' AND "cl"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividades')) ) "con" INNER JOIN "pg_attribute" "att" ON "att"."attrelid" = "con"."confrelid" AND "att"."attnum" = "con"."child" INNER JOIN "pg_class" "cl" ON "cl"."oid" = "con"."confrelid"  AND "cl"."relispartition" = 'f'INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_attribute" "att2" ON "att2"."attrelid" = "con"."conrelid" AND "att2"."attnum" = "con"."parent"
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='sexo'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='estado_civil'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='motivo_busca'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='inicio_problema'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'evolucoes' AND "column_name"='checkin_dificuldade'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'laudos' AND "column_name"='status'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'usuarios' AND "column_name"='role'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'auth_logs' AND "column_name"='eventType'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'atividade_checkins' AND "column_name"='dificuldade'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_sexo_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_estado_civil_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_motivo_busca_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_inicio_problema_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'evolucoes_checkin_dificuldade_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'laudos_status_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'usuarios_role_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'auth_logs_eventtype_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'atividade_checkins_dificuldade_enum'
+query: SELECT * FROM "information_schema"."tables" WHERE "table_schema" = 'public' AND "table_name" = 'typeorm_metadata'
+query: COMMIT
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +223ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsuariosModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPacientesModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificacoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnamnesesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEvolucoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAtividadesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLaudosModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +8ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-convite, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro-paciente-convite, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuario, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuarios, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPacientesController {/api/pacientes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/paged, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/attention, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnamnesesController {/api/anamneses}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEvolucoesController {/api/evolucoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLaudosController {/api/laudos}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/gerar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/validar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAtividadesController {/api/atividades}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/inativar, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/duplicar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/duplicar-lote, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/minhas, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/updates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificacoesController {/api/notificacoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 24512  - [39m16/02/2026, 15:15:54 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +6ms[39m
+[2J[3J[H[[90m15:16:14[0m] File change detected. Starting incremental compilation...
+
+[[90m15:16:18[0m] Found 0 errors. Watching for file changes.
+
+[2J[3J[H[[90m15:16:18[0m] File change detected. Starting incremental compilation...
+
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +38ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +43ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+query: SELECT version()
+query: SELECT * FROM current_schema()
+query: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+query: START TRANSACTION
+query: SELECT * FROM current_schema()
+query: SELECT * FROM current_database()
+query: SELECT "table_schema", "table_name", obj_description(('"' || "table_schema" || '"."' || "table_name" || '"')::regclass, 'pg_class') AS table_comment FROM "information_schema"."tables" WHERE ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens')
+query: SELECT TRUE FROM information_schema.columns WHERE table_name = 'pg_class' and column_name = 'relispartition'
+query: SELECT columns.*, pg_catalog.col_description(('"' || table_catalog || '"."' || table_schema || '"."' || table_name || '"')::regclass::oid, ordinal_position) AS description, ('"' || "udt_schema" || '"."' || "udt_name" || '"')::"regtype"::text AS "regtype", pg_catalog.format_type("col_attr"."atttypid", "col_attr"."atttypmod") AS "format_type" FROM "information_schema"."columns" LEFT JOIN "pg_catalog"."pg_attribute" AS "col_attr" ON "col_attr"."attname" = "columns"."column_name" AND "col_attr"."attrelid" = ( SELECT "cls"."oid" FROM "pg_catalog"."pg_class" AS "cls" LEFT JOIN "pg_catalog"."pg_namespace" AS "ns" ON "ns"."oid" = "cls"."relnamespace" WHERE "cls"."relname" = "columns"."table_name" AND "ns"."nspname" = "columns"."table_schema" ) WHERE ("table_schema" = 'public' AND "table_name" = 'pacientes') OR ("table_schema" = 'public' AND "table_name" = 'anamneses') OR ("table_schema" = 'public' AND "table_name" = 'laudo_ai_generations') OR ("table_schema" = 'public' AND "table_name" = 'evolucoes') OR ("table_schema" = 'public' AND "table_name" = 'laudos') OR ("table_schema" = 'public' AND "table_name" = 'usuarios') OR ("table_schema" = 'public' AND "table_name" = 'push_tokens') OR ("table_schema" = 'public' AND "table_name" = 'auth_logs') OR ("table_schema" = 'public' AND "table_name" = 'atividade_checkins') OR ("table_schema" = 'public' AND "table_name" = 'atividades')
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "cnst"."conname" AS "constraint_name", pg_get_constraintdef("cnst"."oid") AS "expression", CASE "cnst"."contype" WHEN 'p' THEN 'PRIMARY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'x' THEN 'EXCLUDE' END AS "constraint_type", "a"."attname" AS "column_name" FROM "pg_constraint" "cnst" INNER JOIN "pg_class" "t" ON "t"."oid" = "cnst"."conrelid" INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "cnst"."connamespace" LEFT JOIN "pg_attribute" "a" ON "a"."attrelid" = "cnst"."conrelid" AND "a"."attnum" = ANY ("cnst"."conkey") WHERE "t"."relkind" IN ('r', 'p') AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "ns"."nspname" AS "table_schema", "t"."relname" AS "table_name", "i"."relname" AS "constraint_name", "a"."attname" AS "column_name", CASE "ix"."indisunique" WHEN 't' THEN 'TRUE' ELSE'FALSE' END AS "is_unique", pg_get_expr("ix"."indpred", "ix"."indrelid") AS "condition", "types"."typname" AS "type_name", "am"."amname" AS "index_type" FROM "pg_class" "t" INNER JOIN "pg_index" "ix" ON "ix"."indrelid" = "t"."oid" INNER JOIN "pg_attribute" "a" ON "a"."attrelid" = "t"."oid"  AND "a"."attnum" = ANY ("ix"."indkey") INNER JOIN "pg_namespace" "ns" ON "ns"."oid" = "t"."relnamespace" INNER JOIN "pg_class" "i" ON "i"."oid" = "ix"."indexrelid" INNER JOIN "pg_type" "types" ON "types"."oid" = "a"."atttypid" INNER JOIN "pg_am" "am" ON "i"."relam" = "am"."oid" LEFT JOIN "pg_constraint" "cnst" ON "cnst"."conname" = "i"."relname" WHERE "t"."relkind" IN ('r', 'p') AND "cnst"."contype" IS NULL AND (("ns"."nspname" = 'public' AND "t"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "t"."relname" = 'atividades'))
+query: SELECT "con"."conname" AS "constraint_name", "con"."nspname" AS "table_schema", "con"."relname" AS "table_name", "att2"."attname" AS "column_name", "ns"."nspname" AS "referenced_table_schema", "cl"."relname" AS "referenced_table_name", "att"."attname" AS "referenced_column_name", "con"."confdeltype" AS "on_delete", "con"."confupdtype" AS "on_update", "con"."condeferrable" AS "deferrable", "con"."condeferred" AS "deferred" FROM ( SELECT UNNEST ("con1"."conkey") AS "parent", UNNEST ("con1"."confkey") AS "child", "con1"."confrelid", "con1"."conrelid", "con1"."conname", "con1"."contype", "ns"."nspname", "cl"."relname", "con1"."condeferrable", CASE WHEN "con1"."condeferred" THEN 'INITIALLY DEFERRED' ELSE 'INITIALLY IMMEDIATE' END as condeferred, CASE "con1"."confdeltype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confdeltype", CASE "con1"."confupdtype" WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END as "confupdtype" FROM "pg_class" "cl" INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_constraint" "con1" ON "con1"."conrelid" = "cl"."oid" WHERE "con1"."contype" = 'f' AND (("ns"."nspname" = 'public' AND "cl"."relname" = 'pacientes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'anamneses') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudo_ai_generations') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'evolucoes') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'laudos') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'usuarios') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'push_tokens') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'auth_logs') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividade_checkins') OR ("ns"."nspname" = 'public' AND "cl"."relname" = 'atividades')) ) "con" INNER JOIN "pg_attribute" "att" ON "att"."attrelid" = "con"."confrelid" AND "att"."attnum" = "con"."child" INNER JOIN "pg_class" "cl" ON "cl"."oid" = "con"."confrelid"  AND "cl"."relispartition" = 'f'INNER JOIN "pg_namespace" "ns" ON "cl"."relnamespace" = "ns"."oid" INNER JOIN "pg_attribute" "att2" ON "att2"."attrelid" = "con"."conrelid" AND "att2"."attnum" = "con"."parent"
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='sexo'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'pacientes' AND "column_name"='estado_civil'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='motivo_busca'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'anamneses' AND "column_name"='inicio_problema'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'evolucoes' AND "column_name"='checkin_dificuldade'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'laudos' AND "column_name"='status'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'usuarios' AND "column_name"='role'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'auth_logs' AND "column_name"='eventType'
+query: SELECT "udt_schema", "udt_name" FROM "information_schema"."columns" WHERE "table_schema" = 'public' AND "table_name" = 'atividade_checkins' AND "column_name"='dificuldade'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_sexo_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'pacientes_estado_civil_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_motivo_busca_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'anamneses_inicio_problema_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'evolucoes_checkin_dificuldade_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'laudos_status_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'usuarios_role_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'auth_logs_eventtype_enum'
+query: SELECT "e"."enumlabel" AS "value" FROM "pg_enum" "e" INNER JOIN "pg_type" "t" ON "t"."oid" = "e"."enumtypid" INNER JOIN "pg_namespace" "n" ON "n"."oid" = "t"."typnamespace" WHERE "n"."nspname" = 'public' AND "t"."typname" = 'atividade_checkins_dificuldade_enum'
+query: SELECT * FROM "information_schema"."tables" WHERE "table_schema" = 'public' AND "table_name" = 'typeorm_metadata'
+query: COMMIT
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +209ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsuariosModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPacientesModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificacoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnamnesesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEvolucoesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAtividadesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLaudosModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +6ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-convite, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/registro-paciente-convite, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuario, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/paciente-usuarios, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPacientesController {/api/pacientes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/paged, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/attention, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/pacientes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnamnesesController {/api/anamneses}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/anamneses/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mEvolucoesController {/api/evolucoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/evolucoes/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLaudosController {/api/laudos}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/gerar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-laudo, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/self/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/pdf-plano, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id/validar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/laudos/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAtividadesController {/api/atividades}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/inativar, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/duplicar, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/duplicar-lote, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/minhas, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/checkins, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/updates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/atividades/:id/checkins, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificacoesController {/api/notificacoes}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notificacoes/token, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 42504  - [39m16/02/2026, 15:16:20 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +7ms[39m
+[31m[Nest] 42504  - [39m16/02/2026, 15:16:20 [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3000[39m[38;5;3m +3ms[39m
+node:net:1940
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at ExpressAdapter.listen (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\platform-express\adapters\express-adapter.js:127:32)
+    at C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\core\nest-application.js:188:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\core\nest-application.js:178:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async bootstrap (C:\Projetos\fisio-app\apps\backend\src\main.ts:64:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v22.21.0
+^C

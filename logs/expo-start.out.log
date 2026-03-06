@@ -1,0 +1,22 @@
+
+> mobile@1.0.0 start
+> expo start
+
+env: load .env
+env: export EXPO_PUBLIC_API_URL
+Starting project at C:\Projetos\fisio-app\apps\mobile
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android .\index.ts ▓▓▓▓▓▓░░░░░░░░░░ 38.6% (348/560)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 95.9% (1126/1150)
+Android Bundled 8592ms index.ts (1209 modules)
+ WARN  `new NativeEventEmitter()` was called with a non-null argument without the required `addListener` method.
+ WARN  `new NativeEventEmitter()` was called with a non-null argument without the required `removeListeners` method.
+ WARN  The app is running using the Legacy Architecture. The Legacy Architecture is deprecated and will be removed in a future version of React Native. Please consider migrating to the New Architecture. For more information, please see https://reactnative.dev/blog/2024/10/23/the-new-architecture-is-here
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 133ms index.ts (1 module)
+ WARN  `new NativeEventEmitter()` was called with a non-null argument without the required `addListener` method.
+ WARN  `new NativeEventEmitter()` was called with a non-null argument without the required `removeListeners` method.
+ WARN  The app is running using the Legacy Architecture. The Legacy Architecture is deprecated and will be removed in a future version of React Native. Please consider migrating to the New Architecture. For more information, please see https://reactnative.dev/blog/2024/10/23/the-new-architecture-is-here

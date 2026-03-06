@@ -1,0 +1,69 @@
+[31m[Nest] 24908  - [39m22/02/2026, 18:02:46 [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3000[39m[38;5;3m +6ms[39m
+node:net:1940
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at ExpressAdapter.listen (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\platform-express\adapters\express-adapter.js:127:32)
+    at C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\core\nest-application.js:188:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\core\nest-application.js:178:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async bootstrap (C:\Projetos\fisio-app\apps\backend\src\main.ts:64:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v22.21.0
+ERRO: o processo "11612" nÆo foi encontrado.
+ERRO: o processo "11612" nÆo foi encontrado.
+node:child_process:991
+    throw err;
+    ^
+
+Error: Command failed: taskkill /pid 11612 /T /F
+ERRO: o processo "11612" nï¿½o foi encontrado.
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:916:11)
+    at execSync (node:child_process:988:15)
+    at treeKillSync (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\cli\lib\utils\tree-kill.js:7:38)
+    at C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\cli\actions\start.action.js:68:46
+    at Object.onWatchStatusChange (C:\Projetos\fisio-app\apps\backend\node_modules\@nestjs\cli\lib\compiler\watch-compiler.js:83:17)
+    at C:\Projetos\fisio-app\apps\backend\node_modules\typescript\lib\typescript.js:133916:30
+    at emitFilesAndReportErrors (C:\Projetos\fisio-app\apps\backend\node_modules\typescript\lib\typescript.js:133737:5)
+    at result.afterProgramCreate (C:\Projetos\fisio-app\apps\backend\node_modules\typescript\lib\typescript.js:133912:5) {
+  status: 128,
+  signal: null,
+  output: [
+    null,
+    Buffer(0) [Uint8Array] [],
+    Buffer(46) [Uint8Array] [
+       69,  82,  82,  79,  58,  32, 111,  32, 112,
+      114, 111,  99, 101, 115, 115, 111,  32,  34,
+       49,  49,  54,  49,  50,  34,  32, 110, 198,
+      111,  32, 102, 111, 105,  32, 101, 110,  99,
+      111, 110, 116, 114,  97, 100, 111,  46,  13,
+       10
+    ]
+  ],
+  pid: 20436,
+  stdout: Buffer(0) [Uint8Array] [],
+  stderr: Buffer(46) [Uint8Array] [
+     69,  82,  82,  79,  58,  32, 111,  32, 112,
+    114, 111,  99, 101, 115, 115, 111,  32,  34,
+     49,  49,  54,  49,  50,  34,  32, 110, 198,
+    111,  32, 102, 111, 105,  32, 101, 110,  99,
+    111, 110, 116, 114,  97, 100, 111,  46,  13,
+     10
+  ]
+}
+
+Node.js v22.21.0

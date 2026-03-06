@@ -1,0 +1,934 @@
+// ==========================================
+// @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
+// @date:   26-01-2026
+// L AU DO S.S ER VI CE
+// ==========================================
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import PDFDocument from 'pdfkit';
+import { Laudo } from './entities/laudo.entity';
+import { LaudoStatus } from './entities/laudo.entity';
+import { CreateLaudoDto } from './dto/create-laudo.dto';
+import { UpdateLaudoDto } from './dto/update-laudo.dto';
+import { PacientesService } from '../pacientes/pacientes.service';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Evolucao } from '../evolucoes/entities/evolucao.entity';
+import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+
+type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
+
+type LaudoReferenceItem = {
+  id: string;
+  title: string;
+  category: LaudoReferenceCategory;
+  source: string;
+  year?: number;
+  authors?: string;
+  url: string;
+  rationale: string;
+};
+
+type LaudoReferenceProfile = 'GERAL' | 'LOMBAR' | 'CERVICAL' | 'JOELHO';
+
+type LaudoReferenceSuggestionResponse = {
+  profile: LaudoReferenceProfile;
+  disclaimer: string;
+  laudoReferences: LaudoReferenceItem[];
+  planoReferences: LaudoReferenceItem[];
+};
+
+@Injectable()
+export class LaudosService {
+  constructor(
+    @InjectRepository(Laudo)
+    private readonly laudoRepository: Repository<Laudo>,
+    @InjectRepository(Anamnese)
+    private readonly anamneseRepository: Repository<Anamnese>,
+    @InjectRepository(Evolucao)
+    private readonly evolucaoRepository: Repository<Evolucao>,
+    @InjectRepository(LaudoAiGeneration)
+    private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
+    private readonly pacientesService: PacientesService,
+  ) {}
+
+  async getSuggestedReferences(
+    pacienteId: string,
+    usuarioId: string,
+  ): Promise<LaudoReferenceSuggestionResponse> {
+    await this.pacientesService.findOne(pacienteId, usuarioId);
+    const latestAnamnese = await this.anamneseRepository.findOne({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+    });
+
+    const profile = this.inferReferenceProfile(latestAnamnese);
+    const catalog = this.getReferenceCatalog();
+    const byProfile = catalog[profile];
+
+    return {
+      profile,
+      disclaimer:
+        'Referências sugeridas para apoio à decisão clínica. Não substituem avaliação, raciocínio clínico e validação profissional.',
+      laudoReferences: byProfile.laudoReferences,
+      planoReferences: byProfile.planoReferences,
+    };
+  }
+
+  async create(createLaudoDto: CreateLaudoDto, usuarioId: string): Promise<Laudo> {
+    await this.pacientesService.findOne(createLaudoDto.pacienteId, usuarioId);
+
+    const existing = await this.laudoRepository.findOne({
+      where: { pacienteId: createLaudoDto.pacienteId },
+    });
+    if (existing) {
+      throw new BadRequestException('Ja existe laudo para este paciente');
+    }
+
+    const laudo = this.laudoRepository.create({
+      ...createLaudoDto,
+      status: LaudoStatus.RASCUNHO_IA,
+      validadoPorUsuarioId: null,
+      validadoEm: null,
+    });
+    return this.laudoRepository.save(laudo);
+  }
+
+  async findByPaciente(
+    pacienteId: string,
+    usuarioId: string,
+    autoGenerate = false,
+  ): Promise<Laudo | null> {
+    await this.pacientesService.findOne(pacienteId, usuarioId);
+    const existing = await this.laudoRepository.findOne({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing || !autoGenerate) {
+      return existing;
+    }
+    return this.generateAndSaveByPaciente(pacienteId, usuarioId);
+  }
+
+  async findOne(id: string, usuarioId: string): Promise<Laudo> {
+    const laudo = await this.laudoRepository.findOne({
+      where: { id },
+      relations: ['paciente'],
+    });
+
+    if (!laudo) {
+      throw new NotFoundException('Laudo nao encontrado');
+    }
+    if (laudo.paciente.usuarioId !== usuarioId) {
+      throw new NotFoundException('Laudo nao encontrado');
+    }
+    return laudo;
+  }
+
+  async findLatestByPacienteUsuario(usuarioId: string): Promise<Laudo> {
+    const laudo = await this.laudoRepository
+      .createQueryBuilder('laudo')
+      .leftJoinAndSelect('laudo.paciente', 'paciente')
+      .where('paciente.paciente_usuario_id = :usuarioId', { usuarioId })
+      .andWhere('paciente.ativo = :ativo', { ativo: true })
+      .orderBy('laudo.updatedAt', 'DESC')
+      .getOne();
+
+    if (!laudo) {
+      throw new NotFoundException('Laudo nao encontrado para este paciente');
+    }
+
+    return laudo;
+  }
+
+  async update(
+    id: string,
+    updateLaudoDto: UpdateLaudoDto,
+    usuarioId: string,
+  ): Promise<Laudo> {
+    const laudo = await this.findOne(id, usuarioId);
+    Object.assign(laudo, updateLaudoDto);
+    // Qualquer alteracao apos aprovacao volta para rascunho e exige nova validacao.
+    laudo.status = LaudoStatus.RASCUNHO_IA;
+    laudo.validadoPorUsuarioId = null;
+    laudo.validadoEm = null;
+    return this.laudoRepository.save(laudo);
+  }
+
+  async remove(id: string, usuarioId: string): Promise<void> {
+    const laudo = await this.findOne(id, usuarioId);
+    await this.laudoRepository.remove(laudo);
+  }
+
+  async validarLaudo(id: string, usuarioId: string): Promise<Laudo> {
+    const laudo = await this.findOne(id, usuarioId);
+    laudo.status = LaudoStatus.VALIDADO_PROFISSIONAL;
+    laudo.validadoPorUsuarioId = usuarioId;
+    laudo.validadoEm = new Date();
+    return this.laudoRepository.save(laudo);
+  }
+
+  async buildPdfBuffer(
+    id: string,
+    usuarioId: string,
+    tipo: 'laudo' | 'plano',
+    options?: {
+      consultedReferenceIds?: string[];
+    },
+  ): Promise<Buffer> {
+    const laudo = await this.findOne(id, usuarioId);
+    const paciente = await this.pacientesService.findOne(laudo.pacienteId, usuarioId);
+
+    const chunks: Buffer[] = [];
+    const doc = new PDFDocument({ size: 'A4', margin: 50, compress: false });
+    doc.font('Helvetica');
+
+    doc.on('data', (chunk: Buffer | Uint8Array) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    const done = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+
+    const emittedAt = new Date();
+    const statusText =
+      laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL
+        ? 'Validado pelo profissional'
+        : 'Rascunho IA';
+
+    doc.save();
+    doc.lineWidth(1).strokeColor('#D1D5DB').rect(35, 35, 525, 770).stroke();
+    doc.restore();
+
+    doc.rect(35, 35, 525, 75).fill('#14532D');
+    doc.fillColor('#FFFFFF').fontSize(18).text('Fisio App', 50, 58);
+    doc
+      .fontSize(10)
+      .fillColor('#DCFCE7')
+      .text('Documento clinico', 50, 82);
+
+    doc.fillColor('#111827').fontSize(17).text(
+      tipo === 'laudo' ? 'Laudo do Paciente' : 'Plano de Tratamento',
+      50,
+      130,
+    );
+
+    doc
+      .lineWidth(0.5)
+      .strokeColor('#E5E7EB')
+      .moveTo(50, 155)
+      .lineTo(540, 155)
+      .stroke();
+
+    doc
+      .fontSize(10.5)
+      .fillColor('#374151')
+      .text(`Paciente: ${paciente.nomeCompleto}`, 50, 170)
+      .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
+      .text(`Status: ${statusText}`, 300, 170)
+      .text(`Profissional: ${usuarioId}`, 300, 186);
+
+    doc.moveDown(3.2);
+    doc.fillColor('#000');
+
+    if (tipo === 'laudo') {
+      this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
+      this.addSection(doc, 'Objetivos de Curto Prazo', laudo.objetivosCurtoPrazo);
+      this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
+      this.addSection(
+        doc,
+        'Frequencia e Duracao',
+        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${
+          laudo.duracaoSemanas ?? '-'
+        } semana(s)`,
+      );
+      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+      this.addSection(
+        doc,
+        'Observacao',
+        'Documento para uso clinico profissional. Reavaliar periodicamente.',
+      );
+    } else {
+      this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
+      this.addSection(doc, 'Plano de Tratamento (IA)', laudo.planoTratamentoIA);
+      this.addSection(
+        doc,
+        'Frequencia Sugerida',
+        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`,
+      );
+      this.addSection(
+        doc,
+        'Duracao Sugerida',
+        `${laudo.duracaoSemanas ?? '-'} semana(s)`,
+      );
+      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+      this.addSection(
+        doc,
+        'Observacao',
+        'Plano sujeito a ajuste pelo profissional responsavel.',
+      );
+    }
+
+    const consultedReferenceIds = (options?.consultedReferenceIds || []).filter(Boolean);
+    try {
+      const suggestions = await this.getSuggestedReferences(laudo.pacienteId, usuarioId);
+      const candidates =
+        tipo === 'laudo' ? suggestions.laudoReferences : suggestions.planoReferences;
+      const consultedReferences = candidates.filter((ref) =>
+        consultedReferenceIds.includes(ref.id),
+      );
+
+      this.addScientificValidationSummary(doc, consultedReferences.length, candidates.length);
+
+      if (consultedReferences.length) {
+        this.addReferenceSection(
+          doc,
+          'Referencias consultadas (uso profissional)',
+          consultedReferences,
+        );
+      }
+    } catch {
+      // Nao bloqueia a emissao do PDF caso falhe a obtencao das referencias sugeridas.
+    }
+
+    doc.y = Math.max(doc.y + 15, 690);
+    doc
+      .lineWidth(0.6)
+      .strokeColor('#9CA3AF')
+      .moveTo(80, doc.y)
+      .lineTo(280, doc.y)
+      .stroke();
+    doc
+      .moveTo(320, doc.y)
+      .lineTo(520, doc.y)
+      .stroke();
+    doc
+      .fontSize(9)
+      .fillColor('#4B5563')
+      .text('Assinatura do profissional', 110, doc.y + 4)
+      .text(`Data: ${emittedAt.toLocaleDateString('pt-BR')}`, 385, doc.y + 4);
+
+    doc.end();
+    return done;
+  }
+
+  private addReferenceSection(
+    doc: PDFKit.PDFDocument,
+    title: string,
+    items: LaudoReferenceItem[],
+  ) {
+    if (!items.length) return;
+
+    doc.moveDown(0.8);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#111827').text(title);
+    doc
+      .font('Helvetica')
+      .fontSize(8.5)
+      .fillColor('#6B7280')
+      .text(
+        'Referencias consultadas para apoio a decisao clinica; nao substituem julgamento profissional.',
+      );
+    doc.moveDown(0.3);
+
+    items.forEach((item, index) => {
+      const meta = [
+        item.category,
+        item.source,
+        item.year ? String(item.year) : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor('#111827')
+        .text(`${index + 1}. ${item.title}`);
+
+      if (meta) {
+        doc
+          .font('Helvetica')
+          .fontSize(9)
+          .fillColor('#4B5563')
+          .text(meta);
+      }
+
+      if (item.authors) {
+        doc
+          .font('Helvetica')
+          .fontSize(9)
+          .fillColor('#4B5563')
+          .text(`Autores: ${item.authors}`);
+      }
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#2563EB')
+        .text(item.url, { underline: false });
+
+      doc
+        .font('Helvetica')
+        .fontSize(8.5)
+        .fillColor('#6B7280')
+        .text(`Uso sugerido: ${item.rationale}`);
+
+      doc.moveDown(0.35);
+    });
+  }
+
+  private addScientificValidationSummary(
+    doc: PDFKit.PDFDocument,
+    consultedCount: number,
+    suggestedCount: number,
+  ) {
+    if (suggestedCount <= 0) return;
+
+    doc.moveDown(0.5);
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(11)
+      .fillColor('#111827')
+      .text('Validacao cientifica');
+    doc
+      .font('Helvetica')
+      .fontSize(9)
+      .fillColor('#4B5563')
+      .text(`Fontes consultadas: ${consultedCount}/${suggestedCount}`);
+    doc.moveDown(0.2);
+  }
+
+  async buildPdfBufferByPacienteUsuario(
+    usuarioId: string,
+    tipo: 'laudo' | 'plano',
+  ): Promise<Buffer> {
+    const laudo = await this.findLatestByPacienteUsuario(usuarioId);
+    const chunks: Buffer[] = [];
+    const doc = new PDFDocument({ size: 'A4', margin: 50, compress: false });
+    doc.font('Helvetica');
+
+    doc.on('data', (chunk: Buffer | Uint8Array) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    const done = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+
+    const emittedAt = new Date();
+    const statusText =
+      laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL
+        ? 'Validado pelo profissional'
+        : 'Rascunho IA';
+
+    doc.save();
+    doc.lineWidth(1).strokeColor('#D1D5DB').rect(35, 35, 525, 770).stroke();
+    doc.restore();
+
+    doc.rect(35, 35, 525, 75).fill('#14532D');
+    doc.fillColor('#FFFFFF').fontSize(18).text('Fisio App', 50, 58);
+    doc.fontSize(10).fillColor('#DCFCE7').text('Documento do paciente', 50, 82);
+
+    doc
+      .fillColor('#111827')
+      .fontSize(17)
+      .text(tipo === 'laudo' ? 'Meu Laudo' : 'Meu Plano de Tratamento', 50, 130);
+
+    doc
+      .lineWidth(0.5)
+      .strokeColor('#E5E7EB')
+      .moveTo(50, 155)
+      .lineTo(540, 155)
+      .stroke();
+
+    doc
+      .fontSize(10.5)
+      .fillColor('#374151')
+      .text(`Paciente: ${laudo.paciente.nomeCompleto}`, 50, 170)
+      .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
+      .text(`Status: ${statusText}`, 300, 170);
+
+    doc.moveDown(3.2);
+    doc.fillColor('#000');
+
+    if (tipo === 'laudo') {
+      this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
+      this.addSection(doc, 'Objetivos de Curto Prazo', laudo.objetivosCurtoPrazo);
+      this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
+      this.addSection(
+        doc,
+        'Frequencia e Duracao',
+        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${
+          laudo.duracaoSemanas ?? '-'
+        } semana(s)`,
+      );
+      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+    } else {
+      this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
+      this.addSection(doc, 'Plano de Tratamento', laudo.planoTratamentoIA);
+      this.addSection(
+        doc,
+        'Frequencia Sugerida',
+        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`,
+      );
+      this.addSection(
+        doc,
+        'Duracao Sugerida',
+        `${laudo.duracaoSemanas ?? '-'} semana(s)`,
+      );
+      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+    }
+
+    doc.end();
+    return done;
+  }
+
+  async generateAndSaveByPaciente(
+    pacienteId: string,
+    usuarioId: string,
+  ): Promise<Laudo> {
+    const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
+    const existing = await this.laudoRepository.findOne({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    const anamneses = await this.anamneseRepository.find({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+      take: 3,
+    });
+    const evolucoes = await this.evolucaoRepository.find({
+      where: { pacienteId },
+      order: { data: 'DESC' },
+      take: 5,
+    });
+
+    const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
+    const aiSuggestion = canUseAiToday
+      ? await this.generateSuggestionWithAI({
+          paciente: {
+            nomeCompleto: paciente.nomeCompleto,
+            idade: this.calculateAge(paciente.dataNascimento),
+            sexo: paciente.sexo,
+            profissao: paciente.profissao ?? '',
+          },
+          anamnese: anamneses[0]
+            ? {
+                motivoBusca: anamneses[0].motivoBusca,
+                areasAfetadas: anamneses[0].areasAfetadas,
+                intensidadeDor: anamneses[0].intensidadeDor,
+                descricaoSintomas: anamneses[0].descricaoSintomas ?? '',
+                tempoProblema: anamneses[0].tempoProblema ?? '',
+                inicioProblema: anamneses[0].inicioProblema ?? '',
+                fatorAlivio: anamneses[0].fatorAlivio ?? '',
+              }
+            : null,
+          evolucoes: evolucoes.map((e) => ({
+            data: e.data,
+            ajustes: e.ajustes ?? '',
+            orientacoes: e.orientacoes ?? '',
+            observacoes: e.observacoes ?? '',
+          })),
+        })
+      : {};
+
+    const payload: CreateLaudoDto = {
+      pacienteId,
+      diagnosticoFuncional:
+        aiSuggestion.diagnosticoFuncional ??
+        'Diagnostico funcional inicial a confirmar em consulta.',
+      objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo,
+      objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo,
+      frequenciaSemanal: aiSuggestion.frequenciaSemanal,
+      duracaoSemanas: aiSuggestion.duracaoSemanas,
+      condutas:
+        aiSuggestion.condutas ??
+        'Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.',
+      planoTratamentoIA:
+        aiSuggestion.planoTratamentoIA ??
+        'Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.',
+      criteriosAlta: aiSuggestion.criteriosAlta,
+    };
+
+    const created = this.laudoRepository.create({
+      ...payload,
+      status: LaudoStatus.RASCUNHO_IA,
+      validadoPorUsuarioId: null,
+      validadoEm: null,
+    });
+    return this.laudoRepository.save(created);
+  }
+
+  private calculateAge(dataNascimento: Date): number | null {
+    const nascimento = new Date(dataNascimento);
+    if (Number.isNaN(nascimento.getTime())) return null;
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const mes = hoje.getMonth() - nascimento.getMonth();
+    if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+      idade--;
+    }
+    return idade;
+  }
+
+  private extractJsonObject(raw: string): Record<string, unknown> | null {
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+    const candidate = raw.slice(start, end + 1);
+    try {
+      return JSON.parse(candidate) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  private async generateSuggestionWithAI(input: {
+    paciente: {
+      nomeCompleto: string;
+      idade: number | null;
+      sexo: string;
+      profissao: string;
+    };
+    anamnese: {
+      motivoBusca: string;
+      areasAfetadas: unknown;
+      intensidadeDor: number;
+      descricaoSintomas: string;
+      tempoProblema: string;
+      inicioProblema: string;
+      fatorAlivio: string;
+    } | null;
+    evolucoes: Array<{
+      data: Date;
+      ajustes: string;
+      orientacoes: string;
+      observacoes: string;
+    }>;
+  }): Promise<Partial<CreateLaudoDto>> {
+    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
+    if (!apiKey) {
+      return {};
+    }
+
+    const model = (process.env.OPENAI_MODEL || 'gpt-4.1-mini').trim();
+    const systemPrompt =
+      'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes.';
+    const userPrompt = `
+Retorne SOMENTE JSON valido com as chaves:
+diagnosticoFuncional (string),
+objetivosCurtoPrazo (string),
+objetivosMedioPrazo (string),
+frequenciaSemanal (number 1-7),
+duracaoSemanas (number 1-52),
+condutas (string),
+planoTratamentoIA (string com plano por fases/semanas),
+criteriosAlta (string).
+
+Contexto do paciente:
+${JSON.stringify(input, null, 2)}
+`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutMs = 4000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.2,
+        }),
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+
+      if (!response.ok) {
+        return {};
+      }
+
+      const data = (await response.json()) as {
+        output_text?: string;
+        output?: Array<{
+          content?: Array<{ text?: string }>;
+        }>;
+      };
+
+      const outputText =
+        data.output_text ||
+        data.output
+          ?.flatMap((item) => item.content || [])
+          .map((c) => c.text || '')
+          .join('\n') ||
+        '';
+
+      const parsed = this.extractJsonObject(outputText);
+      if (!parsed) {
+        return {};
+      }
+
+      const freq =
+        typeof parsed.frequenciaSemanal === 'number'
+          ? Math.min(7, Math.max(1, Math.round(parsed.frequenciaSemanal)))
+          : undefined;
+      const dur =
+        typeof parsed.duracaoSemanas === 'number'
+          ? Math.min(52, Math.max(1, Math.round(parsed.duracaoSemanas)))
+          : undefined;
+
+      return {
+        diagnosticoFuncional:
+          typeof parsed.diagnosticoFuncional === 'string'
+            ? parsed.diagnosticoFuncional
+            : undefined,
+        objetivosCurtoPrazo:
+          typeof parsed.objetivosCurtoPrazo === 'string'
+            ? parsed.objetivosCurtoPrazo
+            : undefined,
+        objetivosMedioPrazo:
+          typeof parsed.objetivosMedioPrazo === 'string'
+            ? parsed.objetivosMedioPrazo
+            : undefined,
+        frequenciaSemanal: freq,
+        duracaoSemanas: dur,
+        condutas: typeof parsed.condutas === 'string' ? parsed.condutas : undefined,
+        planoTratamentoIA:
+          typeof parsed.planoTratamentoIA === 'string'
+            ? parsed.planoTratamentoIA
+            : undefined,
+        criteriosAlta:
+          typeof parsed.criteriosAlta === 'string'
+            ? parsed.criteriosAlta
+            : undefined,
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  private getUtcDayString(date: Date): string {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private async acquireDailyAiGenerationSlot(pacienteId: string): Promise<boolean> {
+    const generatedOn = this.getUtcDayString(new Date());
+    try {
+      const insertResult = await this.laudoAiGenerationRepository
+        .createQueryBuilder()
+        .insert()
+        .into(LaudoAiGeneration)
+        .values({ pacienteId, generatedOn })
+        .orIgnore()
+        .execute();
+      return (insertResult.identifiers?.length ?? 0) > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  private addSection(doc: PDFKit.PDFDocument, title: string, value?: string | null) {
+    doc.fontSize(12).fillColor('#1b5e40').text(title);
+    doc.moveDown(0.2);
+    doc.fontSize(11).fillColor('#111').text(value?.trim() ? value : 'Nao informado', {
+      align: 'left',
+    });
+    doc.moveDown(0.8);
+  }
+
+  private inferReferenceProfile(anamnese: Anamnese | null): LaudoReferenceProfile {
+    if (!anamnese) return 'GERAL';
+
+    const text = [
+      anamnese.descricaoSintomas,
+      anamnese.tempoProblema,
+      anamnese.fatorAlivio,
+      anamnese.eventoEspecifico,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    const areaText = (anamnese.areasAfetadas || [])
+      .map((a) => String(a.regiao || '').toLowerCase())
+      .join(' ');
+
+    const combined = `${areaText} ${text}`;
+
+    if (
+      combined.includes('lomb') ||
+      combined.includes('coluna lombar') ||
+      combined.includes('lombar')
+    ) {
+      return 'LOMBAR';
+    }
+    if (
+      combined.includes('cervic') ||
+      combined.includes('pesco') ||
+      combined.includes('trap') ||
+      combined.includes('cervical')
+    ) {
+      return 'CERVICAL';
+    }
+    if (
+      combined.includes('joelho') ||
+      combined.includes('patel') ||
+      combined.includes('menisc')
+    ) {
+      return 'JOELHO';
+    }
+
+    return 'GERAL';
+  }
+
+  private getReferenceCatalog(): Record<
+    LaudoReferenceProfile,
+    { laudoReferences: LaudoReferenceItem[]; planoReferences: LaudoReferenceItem[] }
+  > {
+    const commonLaudo: LaudoReferenceItem[] = [
+      {
+        id: 'guideline-pain-2021-iasp',
+        title: 'IASP Terminology & Pain Definition Update',
+        category: 'GUIDELINE',
+        source: 'PAIN (IASP)',
+        year: 2021,
+        authors: 'Raja SN et al.',
+        url: 'https://journals.lww.com/pain/fulltext/2020/09000/the_revised_international_association_for_the.8.aspx',
+        rationale: 'Base conceitual para avaliação de dor e comunicação clínica.',
+      },
+      {
+        id: 'book-magee-orthopedic-physical-assessment',
+        title: 'Orthopedic Physical Assessment',
+        category: 'LIVRO',
+        source: 'Elsevier',
+        year: 2020,
+        authors: 'David J. Magee',
+        url: 'https://www.elsevier.com/books/orthopedic-physical-assessment/magee/978-0-323-52998-6',
+        rationale: 'Referência de avaliação física musculoesquelética e testes clínicos.',
+      },
+    ];
+
+    const commonPlano: LaudoReferenceItem[] = [
+      {
+        id: 'guideline-who-rehab',
+        title: 'WHO Rehabilitation in Health Systems',
+        category: 'GUIDELINE',
+        source: 'World Health Organization',
+        year: 2017,
+        url: 'https://www.who.int/publications/i/item/9789241549974',
+        rationale: 'Princípios de planejamento terapêutico e funcionalidade.',
+      },
+      {
+        id: 'book-therapeutic-exercise-kisner',
+        title: 'Therapeutic Exercise: Foundations and Techniques',
+        category: 'LIVRO',
+        source: 'F.A. Davis',
+        year: 2017,
+        authors: 'Kisner, Colby, Borstad',
+        url: 'https://www.fadavis.com/product/physical-therapy-therapeutic-exercise-kisner-colby-borstad-7',
+        rationale: 'Base para prescrição, progressão e dosagem de exercícios terapêuticos.',
+      },
+    ];
+
+    return {
+      GERAL: {
+        laudoReferences: commonLaudo,
+        planoReferences: commonPlano,
+      },
+      LOMBAR: {
+        laudoReferences: [
+          ...commonLaudo,
+          {
+            id: 'guideline-jospt-lbp-2021',
+            title: 'Interventions for the Management of Acute and Chronic Low Back Pain',
+            category: 'GUIDELINE',
+            source: 'JOSPT Clinical Practice Guideline',
+            year: 2021,
+            url: 'https://www.jospt.org/doi/10.2519/jospt.2021.0304',
+            rationale: 'Diretriz para condutas e classificação em dor lombar.',
+          },
+        ],
+        planoReferences: [
+          ...commonPlano,
+          {
+            id: 'article-lbp-exercise-cochrane',
+            title: 'Exercise therapy for chronic low back pain',
+            category: 'ARTIGO',
+            source: 'Cochrane Review',
+            year: 2021,
+            url: 'https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD009790.pub2/full',
+            rationale: 'Evidência para prescrição de exercício em dor lombar crônica.',
+          },
+        ],
+      },
+      CERVICAL: {
+        laudoReferences: [
+          ...commonLaudo,
+          {
+            id: 'guideline-neckpain-jospt',
+            title: 'Neck Pain Clinical Practice Guidelines',
+            category: 'GUIDELINE',
+            source: 'JOSPT / Orthopaedic Section CPG',
+            year: 2017,
+            url: 'https://www.jospt.org/doi/10.2519/jospt.2017.0302',
+            rationale: 'Classificação e manejo fisioterapêutico da cervicalgia.',
+          },
+        ],
+        planoReferences: [
+          ...commonPlano,
+          {
+            id: 'article-neck-pain-exercise-manual-therapy',
+            title: 'Exercise and manual therapy for neck pain',
+            category: 'ARTIGO',
+            source: 'Systematic Review / Clinical Evidence',
+            year: 2015,
+            url: 'https://pubmed.ncbi.nlm.nih.gov/25830800/',
+            rationale: 'Suporte para combinação de exercício e terapia manual.',
+          },
+        ],
+      },
+      JOELHO: {
+        laudoReferences: [
+          ...commonLaudo,
+          {
+            id: 'guideline-knee-pain-patellofemoral-2019',
+            title: 'Patellofemoral Pain Clinical Practice Guideline',
+            category: 'GUIDELINE',
+            source: 'JOSPT Clinical Practice Guideline',
+            year: 2019,
+            url: 'https://www.jospt.org/doi/10.2519/jospt.2019.0302',
+            rationale: 'Avaliação e raciocínio clínico para dor patelofemoral/joelho.',
+          },
+        ],
+        planoReferences: [
+          ...commonPlano,
+          {
+            id: 'article-aclr-rehab-consensus',
+            title: 'Anterior Cruciate Ligament Rehabilitation: Clinical Practice',
+            category: 'GUIDELINE',
+            source: 'BJSM / Consensus Recommendations',
+            year: 2020,
+            url: 'https://bjsm.bmj.com/content/54/24/1506',
+            rationale: 'Referência para progressão funcional e critérios de retorno.',
+          },
+        ],
+      },
+    };
+  }
+}

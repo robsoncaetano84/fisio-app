@@ -1,0 +1,374 @@
+import { ConfigService } from '@nestjs/config';
+import { Repository } from 'typeorm';
+import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
+import { Paciente } from '../pacientes/entities/paciente.entity';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { CreateCrmLeadDto } from './dto/create-crm-lead.dto';
+import { UpdateCrmLeadDto } from './dto/update-crm-lead.dto';
+import { CreateCrmTaskDto } from './dto/create-crm-task.dto';
+import { UpdateCrmTaskDto } from './dto/update-crm-task.dto';
+import { CreateCrmInteractionDto } from './dto/create-crm-interaction.dto';
+import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
+import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
+import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
+import { CrmInteraction } from './entities/crm-interaction.entity';
+export declare class CrmService {
+    private readonly configService;
+    private readonly crmLeadRepository;
+    private readonly crmTaskRepository;
+    private readonly crmInteractionRepository;
+    private readonly pacienteRepository;
+    private readonly usuarioRepository;
+    private readonly anamneseRepository;
+    constructor(configService: ConfigService, crmLeadRepository: Repository<CrmLead>, crmTaskRepository: Repository<CrmTask>, crmInteractionRepository: Repository<CrmInteraction>, pacienteRepository: Repository<Paciente>, usuarioRepository: Repository<Usuario>, anamneseRepository: Repository<Anamnese>);
+    assertMasterAdmin(usuario: Usuario): void;
+    getPipelineSummary(): Promise<{
+        totalLeads: number;
+        totalPipelineValue: number;
+        byStage: Record<CrmLeadStage, {
+            count: number;
+            value: number;
+        }>;
+    }>;
+    listAdminProfissionais(params?: {
+        q?: string;
+        ativo?: boolean;
+        especialidade?: string;
+    }): Promise<{
+        id: string;
+        nome: string;
+        email: string;
+        registroProf: string | null;
+        especialidade: string | null;
+        ativo: boolean;
+        role: UserRole;
+        createdAt: Date;
+        updatedAt: Date;
+        pacientesTotal: number;
+        pacientesAtivos: number;
+        lastPacienteUpdate: Date | null;
+    }[]>;
+    listAdminProfissionaisPaged(params?: {
+        q?: string;
+        ativo?: boolean;
+        especialidade?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        items: {
+            id: string;
+            nome: string;
+            email: string;
+            registroProf: string | null;
+            especialidade: string | null;
+            ativo: boolean;
+            role: UserRole;
+            createdAt: Date;
+            updatedAt: Date;
+            pacientesTotal: number;
+            pacientesAtivos: number;
+            lastPacienteUpdate: Date | null;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
+    listAdminPacientes(params?: {
+        q?: string;
+        ativo?: boolean;
+        vinculadoUsuarioPaciente?: boolean;
+        cidade?: string;
+        uf?: string;
+    }): Promise<{
+        id: string;
+        nomeCompleto: string;
+        contatoEmail: string | null;
+        contatoWhatsapp: string | null;
+        enderecoCidade: string | null;
+        enderecoUf: string | null;
+        profissao: string | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        usuarioId: string;
+        profissionalNome: string | null;
+        profissionalEmail: string | null;
+        pacienteUsuarioId: string | null;
+        pacienteUsuarioEmail: string | null;
+        emocional: {
+            nivelEstresse: number;
+            energiaDiaria: number;
+            apoioEmocional: number;
+            qualidadeSono: number;
+            humorPredominante: string | null;
+            vulnerabilidade: boolean;
+            updatedAt: Date;
+        } | null;
+    }[]>;
+    listAdminPacientesPaged(params?: {
+        q?: string;
+        ativo?: boolean;
+        vinculadoUsuarioPaciente?: boolean;
+        cidade?: string;
+        uf?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        items: {
+            id: string;
+            nomeCompleto: string;
+            contatoEmail: string | null;
+            contatoWhatsapp: string | null;
+            enderecoCidade: string | null;
+            enderecoUf: string | null;
+            profissao: string | null;
+            ativo: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            usuarioId: string;
+            profissionalNome: string | null;
+            profissionalEmail: string | null;
+            pacienteUsuarioId: string | null;
+            pacienteUsuarioEmail: string | null;
+            emocional: {
+                nivelEstresse: number;
+                energiaDiaria: number;
+                apoioEmocional: number;
+                qualidadeSono: number;
+                humorPredominante: string | null;
+                vulnerabilidade: boolean;
+                updatedAt: Date;
+            } | null;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
+    listLeads(params?: {
+        q?: string;
+        stage?: CrmLeadStage | 'TODOS';
+    }): Promise<{
+        id: string;
+        nome: string;
+        empresa: string | null;
+        canal: import("./entities/crm-lead.entity").CrmLeadChannel;
+        stage: CrmLeadStage;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        valorPotencial: number;
+        observacoes: string | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    listLeadsPaged(params?: {
+        q?: string;
+        stage?: CrmLeadStage | 'TODOS';
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        items: {
+            id: string;
+            nome: string;
+            empresa: string | null;
+            canal: import("./entities/crm-lead.entity").CrmLeadChannel;
+            stage: CrmLeadStage;
+            responsavelNome: string | null;
+            responsavelUsuarioId: string | null;
+            valorPotencial: number;
+            observacoes: string | null;
+            ativo: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
+    getLeadById(id: string): Promise<{
+        id: string;
+        nome: string;
+        empresa: string | null;
+        canal: import("./entities/crm-lead.entity").CrmLeadChannel;
+        stage: CrmLeadStage;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        valorPotencial: number;
+        observacoes: string | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    createLead(dto: CreateCrmLeadDto, usuario: Usuario): Promise<{
+        id: string;
+        nome: string;
+        empresa: string | null;
+        canal: import("./entities/crm-lead.entity").CrmLeadChannel;
+        stage: CrmLeadStage;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        valorPotencial: number;
+        observacoes: string | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateLead(id: string, dto: UpdateCrmLeadDto): Promise<{
+        id: string;
+        nome: string;
+        empresa: string | null;
+        canal: import("./entities/crm-lead.entity").CrmLeadChannel;
+        stage: CrmLeadStage;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        valorPotencial: number;
+        observacoes: string | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteLead(id: string): Promise<void>;
+    listTasks(params?: {
+        status?: CrmTaskStatus | 'TODOS';
+        limit?: number;
+    }): Promise<{
+        id: string;
+        titulo: string;
+        descricao: string | null;
+        leadId: string | null;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        dueAt: Date | null;
+        status: CrmTaskStatus;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    listTasksPaged(params?: {
+        status?: CrmTaskStatus | 'TODOS';
+        q?: string;
+        leadId?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        items: {
+            id: string;
+            titulo: string;
+            descricao: string | null;
+            leadId: string | null;
+            responsavelNome: string | null;
+            responsavelUsuarioId: string | null;
+            dueAt: Date | null;
+            status: CrmTaskStatus;
+            ativo: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
+    createTask(dto: CreateCrmTaskDto, usuario: Usuario): Promise<{
+        id: string;
+        titulo: string;
+        descricao: string | null;
+        leadId: string | null;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        dueAt: Date | null;
+        status: CrmTaskStatus;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateTask(id: string, dto: UpdateCrmTaskDto): Promise<{
+        id: string;
+        titulo: string;
+        descricao: string | null;
+        leadId: string | null;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        dueAt: Date | null;
+        status: CrmTaskStatus;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteTask(id: string): Promise<void>;
+    listInteractions(leadId: string): Promise<{
+        id: string;
+        leadId: string;
+        tipo: import("./entities/crm-interaction.entity").CrmInteractionType;
+        resumo: string;
+        detalhes: string | null;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        occurredAt: Date;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    listInteractionsPaged(params: {
+        leadId: string;
+        tipo?: string;
+        q?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        items: {
+            id: string;
+            leadId: string;
+            tipo: import("./entities/crm-interaction.entity").CrmInteractionType;
+            resumo: string;
+            detalhes: string | null;
+            responsavelNome: string | null;
+            responsavelUsuarioId: string | null;
+            occurredAt: Date;
+            ativo: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
+    createInteraction(dto: CreateCrmInteractionDto, usuario: Usuario): Promise<{
+        id: string;
+        leadId: string;
+        tipo: import("./entities/crm-interaction.entity").CrmInteractionType;
+        resumo: string;
+        detalhes: string | null;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        occurredAt: Date;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateInteraction(id: string, dto: UpdateCrmInteractionDto): Promise<{
+        id: string;
+        leadId: string;
+        tipo: import("./entities/crm-interaction.entity").CrmInteractionType;
+        resumo: string;
+        detalhes: string | null;
+        responsavelNome: string | null;
+        responsavelUsuarioId: string | null;
+        occurredAt: Date;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteInteraction(id: string): Promise<void>;
+    private buildLeadQuery;
+    private buildTaskQuery;
+    private buildInteractionQuery;
+    private mapLead;
+    private mapTask;
+    private mapInteraction;
+    private ensureLeadExists;
+}

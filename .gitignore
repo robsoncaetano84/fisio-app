@@ -1,0 +1,3 @@
+apps/backend/.env
+apps/mobile/.env
+node_modules
