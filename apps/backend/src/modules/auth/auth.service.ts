@@ -33,6 +33,7 @@ export interface JwtPayload {
 
 type InvitePayload = {
   sub: string;
+  pacienteId: string;
   type: 'PACIENTE_INVITE';
 };
 
@@ -247,6 +248,7 @@ export class AuthService {
 
   async gerarConvitePaciente(
     profissional: Usuario,
+    pacienteId: string,
     diasExpiracao?: number,
   ): Promise<{ token: string; link: string; expiraEmDias: number }> {
     if (
@@ -254,6 +256,18 @@ export class AuthService {
       profissional.role !== UserRole.USER
     ) {
       throw new ForbiddenException('Apenas profissionais podem gerar convite');
+    }
+
+    const paciente = await this.pacienteRepository.findOne({
+      where: { id: pacienteId, usuarioId: profissional.id, ativo: true },
+    });
+
+    if (!paciente) {
+      throw new BadRequestException('Paciente do convite nao encontrado');
+    }
+
+    if (paciente.pacienteUsuarioId) {
+      throw new BadRequestException('Paciente ja possui usuario vinculado');
     }
 
     const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
@@ -268,6 +282,7 @@ export class AuthService {
     const token = this.jwtService.sign(
       {
         sub: profissional.id,
+        pacienteId: paciente.id,
         type: 'PACIENTE_INVITE',
       } satisfies InvitePayload,
       {
@@ -305,7 +320,7 @@ export class AuthService {
       throw new BadRequestException('Convite invalido ou expirado');
     }
 
-    if (!payload?.sub || payload.type !== 'PACIENTE_INVITE') {
+    if (!payload?.sub || !payload?.pacienteId || payload.type !== 'PACIENTE_INVITE') {
       throw new BadRequestException('Convite invalido');
     }
 
@@ -318,6 +333,22 @@ export class AuthService {
       throw new BadRequestException('Profissional do convite nao encontrado');
     }
 
+    const pacienteParaVinculo = await this.pacienteRepository.findOne({
+      where: {
+        id: payload.pacienteId,
+        usuarioId: profissional.id,
+        ativo: true,
+      },
+    });
+
+    if (!pacienteParaVinculo) {
+      throw new BadRequestException('Paciente do convite nao encontrado');
+    }
+
+    if (pacienteParaVinculo.pacienteUsuarioId) {
+      throw new BadRequestException('Paciente ja possui usuario vinculado');
+    }
+
     const createUsuarioDto: CreateUsuarioDto = {
       nome: dto.nome.trim(),
       email: dto.email.trim().toLowerCase(),
@@ -327,32 +358,15 @@ export class AuthService {
 
     const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
 
-    // Tenta vincular automaticamente pelo e-mail de contato do cadastro
-    // do paciente pertencente ao profissional dono do convite.
-    const pacienteParaVinculo = await this.pacienteRepository
-      .createQueryBuilder('paciente')
-      .where('paciente.usuario_id = :profissionalId', { profissionalId: profissional.id })
-      .andWhere('paciente.ativo = :ativo', { ativo: true })
-      .andWhere('LOWER(COALESCE(paciente.contato_email, \'\')) = :email', {
-        email: createUsuarioDto.email,
-      })
-      .andWhere('paciente.paciente_usuario_id IS NULL')
-      .orderBy('paciente.updated_at', 'DESC')
-      .addOrderBy('paciente.created_at', 'DESC')
-      .getOne();
-
-    let pacienteId: string | null = null;
-    if (pacienteParaVinculo) {
-      pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
-      await this.pacienteRepository.save(pacienteParaVinculo);
-      pacienteId = pacienteParaVinculo.id;
-    }
+    pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
+    await this.pacienteRepository.save(pacienteParaVinculo);
+    const pacienteId: string | null = pacienteParaVinculo.id;
 
     const loginResponse = this.buildLoginResponse(pacienteUsuario);
 
     return {
       ...loginResponse,
-      vinculadoAutomaticamente: !!pacienteId,
+      vinculadoAutomaticamente: true,
       pacienteId,
       profissionalId: profissional.id,
     };

@@ -79,7 +79,11 @@ export class AuthController {
     @CurrentUser() usuario: Usuario,
     @Body() body: CreatePacienteInviteDto,
   ) {
-    return this.authService.gerarConvitePaciente(usuario, body?.diasExpiracao);
+    return this.authService.gerarConvitePaciente(
+      usuario,
+      body.pacienteId,
+      body?.diasExpiracao,
+    );
   }
 
   @Post('registro-paciente-convite')
