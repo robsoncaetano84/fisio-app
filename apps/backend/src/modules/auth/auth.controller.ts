@@ -1,9 +1,4 @@
-// ==========================================
-// @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
-// A UT H.C ON TR OL LE R
-// ==========================================
-import {
+﻿import {
   Controller,
   Post,
   Body,
@@ -26,6 +21,7 @@ import { SearchPacienteUsuariosQueryDto } from './dto/search-paciente-usuarios-q
 import { PacienteUsuarioResponseDto } from './dto/paciente-usuario-response.dto';
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
+import { AceitarPacienteInviteDto } from './dto/aceitar-paciente-convite.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
@@ -62,7 +58,7 @@ export class AuthController {
   async registro(@Body() createUsuarioDto: CreateUsuarioDto) {
     const usuario = await this.usuariosService.create(createUsuarioDto);
     return {
-      message: 'Usuário criado com sucesso',
+      message: 'Usuario criado com sucesso',
       usuario: {
         id: usuario.id,
         nome: usuario.nome,
@@ -95,6 +91,17 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('aceitar-paciente-convite')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @Roles(UserRole.PACIENTE)
+  async aceitarConvitePaciente(
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: AceitarPacienteInviteDto,
+  ) {
+    return this.authService.aceitarConvitePaciente(usuario, dto.conviteToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@CurrentUser() usuario: Usuario) {
     return {
@@ -111,20 +118,24 @@ export class AuthController {
   @Get('paciente-usuario')
   @Roles(UserRole.ADMIN, UserRole.USER)
   async getPacienteUsuarioByEmail(
+    @CurrentUser() usuario: Usuario,
     @Query() query: PacienteUsuarioQueryDto,
   ): Promise<PacienteUsuarioResponseDto | null> {
     const normalizedEmail = query.email.trim().toLowerCase();
 
-    const usuario = await this.usuariosService.findPacienteByEmail(normalizedEmail);
-    if (!usuario) {
+    const pacienteUsuario = await this.usuariosService.findPacienteByEmailForProfissional(
+      usuario.id,
+      normalizedEmail,
+    );
+    if (!pacienteUsuario) {
       return null;
     }
 
     return {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      role: usuario.role,
+      id: pacienteUsuario.id,
+      nome: pacienteUsuario.nome,
+      email: pacienteUsuario.email,
+      role: pacienteUsuario.role,
     };
   }
 
@@ -132,17 +143,19 @@ export class AuthController {
   @Get('paciente-usuarios')
   @Roles(UserRole.ADMIN, UserRole.USER)
   async searchPacienteUsuarios(
+    @CurrentUser() usuario: Usuario,
     @Query() query: SearchPacienteUsuariosQueryDto,
   ): Promise<PacienteUsuarioResponseDto[]> {
-    const usuarios = await this.usuariosService.searchPacientesByTerm(
+    const usuarios = await this.usuariosService.searchPacientesByTermForProfissional(
+      usuario.id,
       query.query,
       query.limit ?? 10,
     );
-    return usuarios.map((usuario) => ({
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      role: usuario.role,
+    return usuarios.map((pacienteUsuario) => ({
+      id: pacienteUsuario.id,
+      nome: pacienteUsuario.nome,
+      email: pacienteUsuario.email,
+      role: pacienteUsuario.role,
     }));
   }
 }

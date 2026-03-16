@@ -152,7 +152,7 @@ let AuthService = AuthService_1 = class AuthService {
             });
             const usuario = await this.usuariosService.findById(payload.sub);
             if (!usuario || !usuario.ativo) {
-                throw new common_1.UnauthorizedException('Usuário inválido');
+                throw new common_1.UnauthorizedException('UsuÃ¡rio invÃ¡lido');
             }
             this.logger.log(`Refresh token ok para ${usuario.email}`);
             this.logger.log(JSON.stringify({
@@ -182,45 +182,25 @@ let AuthService = AuthService_1 = class AuthService {
                 success: false,
                 reason: 'INVALID_REFRESH',
             });
-            throw new common_1.UnauthorizedException('Refresh token inválido');
+            throw new common_1.UnauthorizedException('Refresh token invÃ¡lido');
         }
     }
-    async gerarConvitePaciente(profissional, diasExpiracao) {
-        if (profissional.role !== usuario_entity_1.UserRole.ADMIN &&
-            profissional.role !== usuario_entity_1.UserRole.USER) {
-            throw new common_1.ForbiddenException('Apenas profissionais podem gerar convite');
-        }
-        const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
-        const inviteSecret = this.configService.get('INVITE_SECRET') ||
+    getInviteSecret() {
+        return (this.configService.get('INVITE_SECRET') ||
             this.configService.get('JWT_SECRET') ||
-            'invite-default-secret';
-        const inviteBaseUrl = this.configService.get('PATIENT_INVITE_BASE_URL') ||
-            'fisioapp://cadastro-paciente';
-        const token = this.jwtService.sign({
-            sub: profissional.id,
-            type: 'PACIENTE_INVITE',
-        }, {
-            secret: inviteSecret,
-            expiresIn: `${expiraEmDias}d`,
-        });
-        const sep = inviteBaseUrl.includes('?') ? '&' : '?';
-        const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
-        return { token, link, expiraEmDias };
+            'invite-default-secret');
     }
-    async registrarPacientePorConvite(dto) {
-        const inviteSecret = this.configService.get('INVITE_SECRET') ||
-            this.configService.get('JWT_SECRET') ||
-            'invite-default-secret';
+    async resolveInviteContext(conviteToken) {
         let payload;
         try {
-            payload = this.jwtService.verify(dto.conviteToken, {
-                secret: inviteSecret,
+            payload = this.jwtService.verify(conviteToken, {
+                secret: this.getInviteSecret(),
             });
         }
         catch {
             throw new common_1.BadRequestException('Convite invalido ou expirado');
         }
-        if (!payload?.sub || payload.type !== 'PACIENTE_INVITE') {
+        if (!payload?.sub || !payload?.pacienteId || payload.type !== 'PACIENTE_INVITE') {
             throw new common_1.BadRequestException('Convite invalido');
         }
         const profissional = await this.usuariosService.findById(payload.sub);
@@ -229,6 +209,77 @@ let AuthService = AuthService_1 = class AuthService {
                 profissional.role !== usuario_entity_1.UserRole.USER)) {
             throw new common_1.BadRequestException('Profissional do convite nao encontrado');
         }
+        const pacienteParaVinculo = await this.pacienteRepository.findOne({
+            where: {
+                id: payload.pacienteId,
+                usuarioId: profissional.id,
+                ativo: true,
+            },
+        });
+        if (!pacienteParaVinculo) {
+            throw new common_1.BadRequestException('Paciente do convite nao encontrado');
+        }
+        return { profissional, pacienteParaVinculo };
+    }
+    async vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario) {
+        if (pacienteParaVinculo.pacienteUsuarioId) {
+            if (pacienteParaVinculo.pacienteUsuarioId === pacienteUsuario.id) {
+                return;
+            }
+            throw new common_1.BadRequestException('Paciente ja possui usuario vinculado');
+        }
+        const vinculoExistente = await this.pacienteRepository.findOne({
+            where: { pacienteUsuarioId: pacienteUsuario.id },
+        });
+        if (vinculoExistente && vinculoExistente.id !== pacienteParaVinculo.id) {
+            throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
+        }
+        pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
+        await this.pacienteRepository.save(pacienteParaVinculo);
+    }
+    async gerarConvitePaciente(profissional, pacienteId, diasExpiracao) {
+        if (profissional.role !== usuario_entity_1.UserRole.ADMIN &&
+            profissional.role !== usuario_entity_1.UserRole.USER) {
+            throw new common_1.ForbiddenException('Apenas profissionais podem gerar convite');
+        }
+        const paciente = await this.pacienteRepository.findOne({
+            where: { id: pacienteId, usuarioId: profissional.id, ativo: true },
+        });
+        if (!paciente) {
+            throw new common_1.BadRequestException('Paciente do convite nao encontrado');
+        }
+        if (paciente.pacienteUsuarioId) {
+            throw new common_1.BadRequestException('Paciente ja possui usuario vinculado');
+        }
+        const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
+        const inviteBaseUrl = this.configService.get('PATIENT_INVITE_BASE_URL') ||
+            'fisioapp://cadastro-paciente';
+        const token = this.jwtService.sign({
+            sub: profissional.id,
+            pacienteId: paciente.id,
+            type: 'PACIENTE_INVITE',
+        }, {
+            secret: this.getInviteSecret(),
+            expiresIn: `${expiraEmDias}d`,
+        });
+        const sep = inviteBaseUrl.includes('?') ? '&' : '?';
+        const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
+        return { token, link, expiraEmDias };
+    }
+    async aceitarConvitePaciente(pacienteUsuario, conviteToken) {
+        if (pacienteUsuario.role !== usuario_entity_1.UserRole.PACIENTE || !pacienteUsuario.ativo) {
+            throw new common_1.ForbiddenException('Apenas pacientes autenticados podem aceitar o convite');
+        }
+        const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(conviteToken);
+        await this.vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario);
+        return {
+            vinculadoAutomaticamente: true,
+            pacienteId: pacienteParaVinculo.id,
+            profissionalId: profissional.id,
+        };
+    }
+    async registrarPacientePorConvite(dto) {
+        const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(dto.conviteToken);
         const createUsuarioDto = {
             nome: dto.nome.trim(),
             email: dto.email.trim().toLowerCase(),
@@ -236,27 +287,12 @@ let AuthService = AuthService_1 = class AuthService {
             role: usuario_entity_1.UserRole.PACIENTE,
         };
         const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
-        const pacienteParaVinculo = await this.pacienteRepository
-            .createQueryBuilder('paciente')
-            .where('paciente.usuario_id = :profissionalId', { profissionalId: profissional.id })
-            .andWhere('paciente.ativo = :ativo', { ativo: true })
-            .andWhere('LOWER(COALESCE(paciente.contato_email, \'\')) = :email', {
-            email: createUsuarioDto.email,
-        })
-            .andWhere('paciente.paciente_usuario_id IS NULL')
-            .orderBy('paciente.updated_at', 'DESC')
-            .addOrderBy('paciente.created_at', 'DESC')
-            .getOne();
-        let pacienteId = null;
-        if (pacienteParaVinculo) {
-            pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
-            await this.pacienteRepository.save(pacienteParaVinculo);
-            pacienteId = pacienteParaVinculo.id;
-        }
+        await this.vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario);
+        const pacienteId = pacienteParaVinculo.id;
         const loginResponse = this.buildLoginResponse(pacienteUsuario);
         return {
             ...loginResponse,
-            vinculadoAutomaticamente: !!pacienteId,
+            vinculadoAutomaticamente: true,
             pacienteId,
             profissionalId: profissional.id,
         };

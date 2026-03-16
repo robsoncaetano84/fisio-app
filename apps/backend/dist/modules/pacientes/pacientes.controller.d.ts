@@ -22,7 +22,11 @@ export declare class PacientesController {
         atendidosMes: number;
     }>;
     getMyPacienteProfile(usuario: Usuario): Promise<PacienteProfileResponseDto>;
+    unlinkMyProfessional(usuario: Usuario): Promise<{
+        pacienteId: string;
+    }>;
     findOne(id: string, usuario: Usuario): Promise<import("./entities/paciente.entity").Paciente>;
     update(id: string, updatePacienteDto: UpdatePacienteDto, usuario: Usuario): Promise<import("./entities/paciente.entity").Paciente>;
+    unlinkPacienteUsuario(id: string, usuario: Usuario): Promise<import("./entities/paciente.entity").Paciente>;
     remove(id: string, usuario: Usuario): Promise<void>;
 }

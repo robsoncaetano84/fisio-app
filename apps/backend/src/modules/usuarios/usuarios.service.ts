@@ -1,9 +1,4 @@
-// ==========================================
-// @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
-// U SU AR IO S.S ER VI CE
-// ==========================================
-import {
+﻿import {
   Injectable,
   ConflictException,
   NotFoundException,
@@ -14,12 +9,15 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Usuario, UserRole } from './entities/usuario.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { Paciente } from '../pacientes/entities/paciente.entity';
 
 @Injectable()
 export class UsuariosService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Paciente)
+    private readonly pacienteRepository: Repository<Paciente>,
     private readonly configService: ConfigService,
   ) {}
 
@@ -29,7 +27,7 @@ export class UsuariosService {
     });
 
     if (existingUser) {
-      throw new ConflictException('E-mail já cadastrado');
+      throw new ConflictException('E-mail ja cadastrado');
     }
 
     const hashedPassword = await bcrypt.hash(createUsuarioDto.senha, 10);
@@ -56,13 +54,34 @@ export class UsuariosService {
     return this.usuarioRepository.findOne({ where: { email } });
   }
 
-  async findPacienteByEmail(email: string): Promise<Usuario | null> {
-    return this.usuarioRepository.findOne({
-      where: { email, role: UserRole.PACIENTE, ativo: true },
-    });
+  async findPacienteByEmailForProfissional(
+    profissionalId: string,
+    email: string,
+  ): Promise<Usuario | null> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return null;
+    }
+
+    return this.usuarioRepository
+      .createQueryBuilder('usuario')
+      .innerJoin(
+        Paciente,
+        'paciente',
+        'paciente.pacienteUsuarioId = usuario.id AND paciente.usuarioId = :profissionalId AND paciente.ativo = :pacienteAtivo',
+        { profissionalId, pacienteAtivo: true },
+      )
+      .where('usuario.ativo = :ativo', { ativo: true })
+      .andWhere('usuario.role = :role', { role: UserRole.PACIENTE })
+      .andWhere('LOWER(usuario.email) = :email', { email: normalizedEmail })
+      .getOne();
   }
 
-  async searchPacientesByTerm(term: string, limit = 10): Promise<Usuario[]> {
+  async searchPacientesByTermForProfissional(
+    profissionalId: string,
+    term: string,
+    limit = 10,
+  ): Promise<Usuario[]> {
     const safeTerm = term.trim().toLowerCase();
     if (!safeTerm) {
       return [];
@@ -70,6 +89,12 @@ export class UsuariosService {
 
     return this.usuarioRepository
       .createQueryBuilder('usuario')
+      .innerJoin(
+        Paciente,
+        'paciente',
+        'paciente.pacienteUsuarioId = usuario.id AND paciente.usuarioId = :profissionalId AND paciente.ativo = :pacienteAtivo',
+        { profissionalId, pacienteAtivo: true },
+      )
       .where('usuario.ativo = :ativo', { ativo: true })
       .andWhere('usuario.role = :role', { role: UserRole.PACIENTE })
       .andWhere(
@@ -77,6 +102,7 @@ export class UsuariosService {
         { term: `%${safeTerm}%` },
       )
       .orderBy('usuario.nome', 'ASC')
+      .distinct(true)
       .limit(Math.max(1, Math.min(20, limit)))
       .getMany();
   }
@@ -85,7 +111,7 @@ export class UsuariosService {
     const usuario = await this.usuarioRepository.findOne({ where: { id } });
 
     if (!usuario) {
-      throw new NotFoundException('Usuário não encontrado');
+      throw new NotFoundException('Usuario nao encontrado');
     }
 
     return usuario;

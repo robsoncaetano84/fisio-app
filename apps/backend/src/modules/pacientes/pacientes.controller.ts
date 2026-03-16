@@ -1,9 +1,4 @@
-// ==========================================
-// @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
-// P AC IE NT ES.C ON TR OL LE R
-// ==========================================
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -84,6 +79,13 @@ export class PacientesController {
     return this.pacientesService.getMyPacienteProfile(usuario);
   }
 
+  @Post('me/desvincular-profissional')
+  @Throttle({ default: { ttl: 60, limit: 10 } })
+  @Roles(UserRole.PACIENTE)
+  unlinkMyProfessional(@CurrentUser() usuario: Usuario) {
+    return this.pacientesService.unlinkMyProfessional(usuario);
+  }
+
   @Get(':id')
   @Throttle({ default: { ttl: 60, limit: 120 } })
   @Roles(UserRole.ADMIN, UserRole.USER)
@@ -103,6 +105,16 @@ export class PacientesController {
     @CurrentUser() usuario: Usuario,
   ) {
     return this.pacientesService.update(id, updatePacienteDto, usuario.id);
+  }
+
+  @Post(':id/desvincular-acesso')
+  @Throttle({ default: { ttl: 60, limit: 10 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  unlinkPacienteUsuario(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.pacientesService.unlinkPacienteUsuarioByProfessional(id, usuario.id);
   }
 
   @Delete(':id')

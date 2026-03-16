@@ -119,6 +119,28 @@ let PacientesService = class PacientesService {
         Object.assign(paciente, updatePacienteDto);
         return this.pacienteRepository.save(paciente);
     }
+    async unlinkPacienteUsuarioByProfessional(id, usuarioId) {
+        const paciente = await this.findOne(id, usuarioId);
+        if (!paciente.pacienteUsuarioId) {
+            throw new common_1.BadRequestException('Paciente nao possui usuario vinculado');
+        }
+        paciente.pacienteUsuarioId = null;
+        return this.pacienteRepository.save(paciente);
+    }
+    async unlinkMyProfessional(usuario) {
+        if (usuario.role !== usuario_entity_1.UserRole.PACIENTE) {
+            throw new common_1.ForbiddenException('Acesso permitido somente para pacientes');
+        }
+        const paciente = await this.pacienteRepository.findOne({
+            where: { pacienteUsuarioId: usuario.id, ativo: true },
+        });
+        if (!paciente) {
+            throw new common_1.NotFoundException('Nenhum cadastro de paciente vinculado');
+        }
+        paciente.pacienteUsuarioId = null;
+        await this.pacienteRepository.save(paciente);
+        return { pacienteId: paciente.id };
+    }
     async remove(id, usuarioId) {
         const paciente = await this.findOne(id, usuarioId);
         paciente.ativo = false;

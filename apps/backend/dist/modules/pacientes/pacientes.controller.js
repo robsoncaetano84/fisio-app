@@ -46,11 +46,17 @@ let PacientesController = class PacientesController {
     getMyPacienteProfile(usuario) {
         return this.pacientesService.getMyPacienteProfile(usuario);
     }
+    unlinkMyProfessional(usuario) {
+        return this.pacientesService.unlinkMyProfessional(usuario);
+    }
     findOne(id, usuario) {
         return this.pacientesService.findOne(id, usuario.id);
     }
     update(id, updatePacienteDto, usuario) {
         return this.pacientesService.update(id, updatePacienteDto, usuario.id);
+    }
+    unlinkPacienteUsuario(id, usuario) {
+        return this.pacientesService.unlinkPacienteUsuarioByProfessional(id, usuario.id);
     }
     remove(id, usuario) {
         return this.pacientesService.remove(id, usuario.id);
@@ -116,6 +122,15 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PacientesController.prototype, "getMyPacienteProfile", null);
 __decorate([
+    (0, common_1.Post)('me/desvincular-profissional'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 10 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
+    __metadata("design:returntype", void 0)
+], PacientesController.prototype, "unlinkMyProfessional", null);
+__decorate([
     (0, common_1.Get)(':id'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
@@ -137,6 +152,16 @@ __decorate([
         usuario_entity_2.Usuario]),
     __metadata("design:returntype", void 0)
 ], PacientesController.prototype, "update", null);
+__decorate([
+    (0, common_1.Post)(':id/desvincular-acesso'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 10 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", void 0)
+], PacientesController.prototype, "unlinkPacienteUsuario", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),

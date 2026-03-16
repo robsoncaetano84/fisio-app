@@ -208,7 +208,7 @@ export class AuthService {
 
       const usuario = await this.usuariosService.findById(payload.sub);
       if (!usuario || !usuario.ativo) {
-        throw new UnauthorizedException('Usuário inválido');
+        throw new UnauthorizedException('UsuÃ¡rio invÃ¡lido');
       }
 
       this.logger.log(`Refresh token ok para ${usuario.email}`);
@@ -242,79 +242,25 @@ export class AuthService {
         success: false,
         reason: 'INVALID_REFRESH',
       });
-      throw new UnauthorizedException('Refresh token inválido');
+      throw new UnauthorizedException('Refresh token invÃ¡lido');
     }
   }
 
-  async gerarConvitePaciente(
-    profissional: Usuario,
-    pacienteId: string,
-    diasExpiracao?: number,
-  ): Promise<{ token: string; link: string; expiraEmDias: number }> {
-    if (
-      profissional.role !== UserRole.ADMIN &&
-      profissional.role !== UserRole.USER
-    ) {
-      throw new ForbiddenException('Apenas profissionais podem gerar convite');
-    }
-
-    const paciente = await this.pacienteRepository.findOne({
-      where: { id: pacienteId, usuarioId: profissional.id, ativo: true },
-    });
-
-    if (!paciente) {
-      throw new BadRequestException('Paciente do convite nao encontrado');
-    }
-
-    if (paciente.pacienteUsuarioId) {
-      throw new BadRequestException('Paciente ja possui usuario vinculado');
-    }
-
-    const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
-    const inviteSecret =
+  private getInviteSecret(): string {
+    return (
       this.configService.get<string>('INVITE_SECRET') ||
       this.configService.get<string>('JWT_SECRET') ||
-      'invite-default-secret';
-    const inviteBaseUrl =
-      this.configService.get<string>('PATIENT_INVITE_BASE_URL') ||
-      'fisioapp://cadastro-paciente';
-
-    const token = this.jwtService.sign(
-      {
-        sub: profissional.id,
-        pacienteId: paciente.id,
-        type: 'PACIENTE_INVITE',
-      } satisfies InvitePayload,
-      {
-        secret: inviteSecret,
-        expiresIn: `${expiraEmDias}d` as SignOptions['expiresIn'],
-      },
+      'invite-default-secret'
     );
-
-    const sep = inviteBaseUrl.includes('?') ? '&' : '?';
-    const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
-
-    return { token, link, expiraEmDias };
   }
 
-  async registrarPacientePorConvite(
-    dto: RegistroPacientePorConviteDto,
-  ): Promise<
-    LoginResponse & {
-      vinculadoAutomaticamente: boolean;
-      pacienteId: string | null;
-      profissionalId: string;
-    }
-  > {
-    const inviteSecret =
-      this.configService.get<string>('INVITE_SECRET') ||
-      this.configService.get<string>('JWT_SECRET') ||
-      'invite-default-secret';
-
+  private async resolveInviteContext(
+    conviteToken: string,
+  ): Promise<{ profissional: Usuario; pacienteParaVinculo: Paciente }> {
     let payload: InvitePayload;
     try {
-      payload = this.jwtService.verify<InvitePayload>(dto.conviteToken, {
-        secret: inviteSecret,
+      payload = this.jwtService.verify<InvitePayload>(conviteToken, {
+        secret: this.getInviteSecret(),
       });
     } catch {
       throw new BadRequestException('Convite invalido ou expirado');
@@ -345,9 +291,119 @@ export class AuthService {
       throw new BadRequestException('Paciente do convite nao encontrado');
     }
 
+    return { profissional, pacienteParaVinculo };
+  }
+
+  private async vincularPacienteUsuarioAoCadastro(
+    pacienteParaVinculo: Paciente,
+    pacienteUsuario: Usuario,
+  ): Promise<void> {
     if (pacienteParaVinculo.pacienteUsuarioId) {
+      if (pacienteParaVinculo.pacienteUsuarioId === pacienteUsuario.id) {
+        return;
+      }
       throw new BadRequestException('Paciente ja possui usuario vinculado');
     }
+
+    const vinculoExistente = await this.pacienteRepository.findOne({
+      where: { pacienteUsuarioId: pacienteUsuario.id },
+    });
+
+    if (vinculoExistente && vinculoExistente.id !== pacienteParaVinculo.id) {
+      throw new BadRequestException('Usuario paciente ja vinculado a outro cadastro');
+    }
+
+    pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
+    await this.pacienteRepository.save(pacienteParaVinculo);
+  }
+
+  async gerarConvitePaciente(
+    profissional: Usuario,
+    pacienteId: string,
+    diasExpiracao?: number,
+  ): Promise<{ token: string; link: string; expiraEmDias: number }> {
+    if (
+      profissional.role !== UserRole.ADMIN &&
+      profissional.role !== UserRole.USER
+    ) {
+      throw new ForbiddenException('Apenas profissionais podem gerar convite');
+    }
+
+    const paciente = await this.pacienteRepository.findOne({
+      where: { id: pacienteId, usuarioId: profissional.id, ativo: true },
+    });
+
+    if (!paciente) {
+      throw new BadRequestException('Paciente do convite nao encontrado');
+    }
+
+    if (paciente.pacienteUsuarioId) {
+      throw new BadRequestException('Paciente ja possui usuario vinculado');
+    }
+
+    const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
+    const inviteBaseUrl =
+      this.configService.get<string>('PATIENT_INVITE_BASE_URL') ||
+      'fisioapp://cadastro-paciente';
+
+    const token = this.jwtService.sign(
+      {
+        sub: profissional.id,
+        pacienteId: paciente.id,
+        type: 'PACIENTE_INVITE',
+      } satisfies InvitePayload,
+      {
+        secret: this.getInviteSecret(),
+        expiresIn: `${expiraEmDias}d` as SignOptions['expiresIn'],
+      },
+    );
+
+    const sep = inviteBaseUrl.includes('?') ? '&' : '?';
+    const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
+
+    return { token, link, expiraEmDias };
+  }
+
+  async aceitarConvitePaciente(
+    pacienteUsuario: Usuario,
+    conviteToken: string,
+  ): Promise<{
+    vinculadoAutomaticamente: boolean;
+    pacienteId: string;
+    profissionalId: string;
+  }> {
+    if (pacienteUsuario.role !== UserRole.PACIENTE || !pacienteUsuario.ativo) {
+      throw new ForbiddenException('Apenas pacientes autenticados podem aceitar o convite');
+    }
+
+    const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(
+      conviteToken,
+    );
+
+    await this.vincularPacienteUsuarioAoCadastro(
+      pacienteParaVinculo,
+      pacienteUsuario,
+    );
+
+    return {
+      vinculadoAutomaticamente: true,
+      pacienteId: pacienteParaVinculo.id,
+      profissionalId: profissional.id,
+    };
+  }
+
+  async registrarPacientePorConvite(
+    dto: RegistroPacientePorConviteDto,
+  ): Promise<
+    LoginResponse & {
+      vinculadoAutomaticamente: boolean;
+      pacienteId: string | null;
+      profissionalId: string;
+    }
+  > {
+    const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(
+      dto.conviteToken,
+    );
 
     const createUsuarioDto: CreateUsuarioDto = {
       nome: dto.nome.trim(),
@@ -358,8 +414,10 @@ export class AuthService {
 
     const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
 
-    pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
-    await this.pacienteRepository.save(pacienteParaVinculo);
+    await this.vincularPacienteUsuarioAoCadastro(
+      pacienteParaVinculo,
+      pacienteUsuario,
+    );
     const pacienteId: string | null = pacienteParaVinculo.id;
 
     const loginResponse = this.buildLoginResponse(pacienteUsuario);

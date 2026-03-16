@@ -1,13 +1,9 @@
-// ==========================================
-// @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
-// P AC IE NT ES.S ER VI CE
-// ==========================================
-import {
+﻿import {
   Injectable,
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -157,6 +153,39 @@ export class PacientesService {
 
     Object.assign(paciente, updatePacienteDto);
     return this.pacienteRepository.save(paciente);
+  }
+
+  async unlinkPacienteUsuarioByProfessional(
+    id: string,
+    usuarioId: string,
+  ): Promise<Paciente> {
+    const paciente = await this.findOne(id, usuarioId);
+
+    if (!paciente.pacienteUsuarioId) {
+      throw new BadRequestException('Paciente nao possui usuario vinculado');
+    }
+
+    paciente.pacienteUsuarioId = null;
+    return this.pacienteRepository.save(paciente);
+  }
+
+  async unlinkMyProfessional(usuario: Usuario): Promise<{ pacienteId: string }> {
+    if (usuario.role !== UserRole.PACIENTE) {
+      throw new ForbiddenException('Acesso permitido somente para pacientes');
+    }
+
+    const paciente = await this.pacienteRepository.findOne({
+      where: { pacienteUsuarioId: usuario.id, ativo: true },
+    });
+
+    if (!paciente) {
+      throw new NotFoundException('Nenhum cadastro de paciente vinculado');
+    }
+
+    paciente.pacienteUsuarioId = null;
+    await this.pacienteRepository.save(paciente);
+
+    return { pacienteId: paciente.id };
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {

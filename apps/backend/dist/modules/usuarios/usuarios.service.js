@@ -52,11 +52,14 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcrypt = __importStar(require("bcrypt"));
 const usuario_entity_1 = require("./entities/usuario.entity");
+const paciente_entity_1 = require("../pacientes/entities/paciente.entity");
 let UsuariosService = class UsuariosService {
     usuarioRepository;
+    pacienteRepository;
     configService;
-    constructor(usuarioRepository, configService) {
+    constructor(usuarioRepository, pacienteRepository, configService) {
         this.usuarioRepository = usuarioRepository;
+        this.pacienteRepository = pacienteRepository;
         this.configService = configService;
     }
     async create(createUsuarioDto) {
@@ -64,7 +67,7 @@ let UsuariosService = class UsuariosService {
             where: { email: createUsuarioDto.email },
         });
         if (existingUser) {
-            throw new common_1.ConflictException('E-mail já cadastrado');
+            throw new common_1.ConflictException('E-mail ja cadastrado');
         }
         const hashedPassword = await bcrypt.hash(createUsuarioDto.senha, 10);
         const allowAdmin = this.configService.get('ALLOW_ADMIN_REGISTRATION') === 'true';
@@ -83,29 +86,39 @@ let UsuariosService = class UsuariosService {
     async findByEmail(email) {
         return this.usuarioRepository.findOne({ where: { email } });
     }
-    async findPacienteByEmail(email) {
-        return this.usuarioRepository.findOne({
-            where: { email, role: usuario_entity_1.UserRole.PACIENTE, ativo: true },
-        });
+    async findPacienteByEmailForProfissional(profissionalId, email) {
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail) {
+            return null;
+        }
+        return this.usuarioRepository
+            .createQueryBuilder('usuario')
+            .innerJoin(paciente_entity_1.Paciente, 'paciente', 'paciente.pacienteUsuarioId = usuario.id AND paciente.usuarioId = :profissionalId AND paciente.ativo = :pacienteAtivo', { profissionalId, pacienteAtivo: true })
+            .where('usuario.ativo = :ativo', { ativo: true })
+            .andWhere('usuario.role = :role', { role: usuario_entity_1.UserRole.PACIENTE })
+            .andWhere('LOWER(usuario.email) = :email', { email: normalizedEmail })
+            .getOne();
     }
-    async searchPacientesByTerm(term, limit = 10) {
+    async searchPacientesByTermForProfissional(profissionalId, term, limit = 10) {
         const safeTerm = term.trim().toLowerCase();
         if (!safeTerm) {
             return [];
         }
         return this.usuarioRepository
             .createQueryBuilder('usuario')
+            .innerJoin(paciente_entity_1.Paciente, 'paciente', 'paciente.pacienteUsuarioId = usuario.id AND paciente.usuarioId = :profissionalId AND paciente.ativo = :pacienteAtivo', { profissionalId, pacienteAtivo: true })
             .where('usuario.ativo = :ativo', { ativo: true })
             .andWhere('usuario.role = :role', { role: usuario_entity_1.UserRole.PACIENTE })
             .andWhere('(LOWER(usuario.nome) LIKE :term OR LOWER(usuario.email) LIKE :term)', { term: `%${safeTerm}%` })
             .orderBy('usuario.nome', 'ASC')
+            .distinct(true)
             .limit(Math.max(1, Math.min(20, limit)))
             .getMany();
     }
     async findById(id) {
         const usuario = await this.usuarioRepository.findOne({ where: { id } });
         if (!usuario) {
-            throw new common_1.NotFoundException('Usuário não encontrado');
+            throw new common_1.NotFoundException('Usuario nao encontrado');
         }
         return usuario;
     }
@@ -117,7 +130,9 @@ exports.UsuariosService = UsuariosService;
 exports.UsuariosService = UsuariosService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(usuario_entity_1.Usuario)),
+    __param(1, (0, typeorm_1.InjectRepository)(paciente_entity_1.Paciente)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         config_1.ConfigService])
 ], UsuariosService);
 //# sourceMappingURL=usuarios.service.js.map

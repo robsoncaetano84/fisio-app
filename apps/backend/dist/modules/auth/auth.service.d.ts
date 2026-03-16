@@ -42,10 +42,18 @@ export declare class AuthService {
         ip?: string;
     }): Promise<LoginResponse>;
     refresh(refreshToken: string): Promise<LoginResponse>;
-    gerarConvitePaciente(profissional: Usuario, diasExpiracao?: number): Promise<{
+    private getInviteSecret;
+    private resolveInviteContext;
+    private vincularPacienteUsuarioAoCadastro;
+    gerarConvitePaciente(profissional: Usuario, pacienteId: string, diasExpiracao?: number): Promise<{
         token: string;
         link: string;
         expiraEmDias: number;
+    }>;
+    aceitarConvitePaciente(pacienteUsuario: Usuario, conviteToken: string): Promise<{
+        vinculadoAutomaticamente: boolean;
+        pacienteId: string;
+        profissionalId: string;
     }>;
     registrarPacientePorConvite(dto: RegistroPacientePorConviteDto): Promise<LoginResponse & {
         vinculadoAutomaticamente: boolean;

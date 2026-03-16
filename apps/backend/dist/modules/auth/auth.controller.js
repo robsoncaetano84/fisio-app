@@ -24,6 +24,7 @@ const paciente_usuario_query_dto_1 = require("./dto/paciente-usuario-query.dto")
 const search_paciente_usuarios_query_dto_1 = require("./dto/search-paciente-usuarios-query.dto");
 const create_paciente_invite_dto_1 = require("./dto/create-paciente-invite.dto");
 const registro_paciente_por_convite_dto_1 = require("./dto/registro-paciente-por-convite.dto");
+const aceitar_paciente_convite_dto_1 = require("./dto/aceitar-paciente-convite.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const current_user_decorator_1 = require("./decorators/current-user.decorator");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
@@ -46,7 +47,7 @@ let AuthController = class AuthController {
     async registro(createUsuarioDto) {
         const usuario = await this.usuariosService.create(createUsuarioDto);
         return {
-            message: 'Usuário criado com sucesso',
+            message: 'Usuario criado com sucesso',
             usuario: {
                 id: usuario.id,
                 nome: usuario.nome,
@@ -55,10 +56,13 @@ let AuthController = class AuthController {
         };
     }
     async gerarConvitePaciente(usuario, body) {
-        return this.authService.gerarConvitePaciente(usuario, body?.diasExpiracao);
+        return this.authService.gerarConvitePaciente(usuario, body.pacienteId, body?.diasExpiracao);
     }
     async registroPacientePorConvite(dto) {
         return this.authService.registrarPacientePorConvite(dto);
+    }
+    async aceitarConvitePaciente(usuario, dto) {
+        return this.authService.aceitarConvitePaciente(usuario, dto.conviteToken);
     }
     async me(usuario) {
         return {
@@ -70,26 +74,26 @@ let AuthController = class AuthController {
             role: usuario.role,
         };
     }
-    async getPacienteUsuarioByEmail(query) {
+    async getPacienteUsuarioByEmail(usuario, query) {
         const normalizedEmail = query.email.trim().toLowerCase();
-        const usuario = await this.usuariosService.findPacienteByEmail(normalizedEmail);
-        if (!usuario) {
+        const pacienteUsuario = await this.usuariosService.findPacienteByEmailForProfissional(usuario.id, normalizedEmail);
+        if (!pacienteUsuario) {
             return null;
         }
         return {
-            id: usuario.id,
-            nome: usuario.nome,
-            email: usuario.email,
-            role: usuario.role,
+            id: pacienteUsuario.id,
+            nome: pacienteUsuario.nome,
+            email: pacienteUsuario.email,
+            role: pacienteUsuario.role,
         };
     }
-    async searchPacienteUsuarios(query) {
-        const usuarios = await this.usuariosService.searchPacientesByTerm(query.query, query.limit ?? 10);
-        return usuarios.map((usuario) => ({
-            id: usuario.id,
-            nome: usuario.nome,
-            email: usuario.email,
-            role: usuario.role,
+    async searchPacienteUsuarios(usuario, query) {
+        const usuarios = await this.usuariosService.searchPacientesByTermForProfissional(usuario.id, query.query, query.limit ?? 10);
+        return usuarios.map((pacienteUsuario) => ({
+            id: pacienteUsuario.id,
+            nome: pacienteUsuario.nome,
+            email: pacienteUsuario.email,
+            role: pacienteUsuario.role,
         }));
     }
 };
@@ -143,6 +147,18 @@ __decorate([
 ], AuthController.prototype, "registroPacientePorConvite", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('aceitar-paciente-convite'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario,
+        aceitar_paciente_convite_dto_1.AceitarPacienteInviteDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "aceitarConvitePaciente", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('me'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -153,18 +169,22 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('paciente-usuario'),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [paciente_usuario_query_dto_1.PacienteUsuarioQueryDto]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario,
+        paciente_usuario_query_dto_1.PacienteUsuarioQueryDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "getPacienteUsuarioByEmail", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('paciente-usuarios'),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [search_paciente_usuarios_query_dto_1.SearchPacienteUsuariosQueryDto]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario,
+        search_paciente_usuarios_query_dto_1.SearchPacienteUsuariosQueryDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "searchPacienteUsuarios", null);
 exports.AuthController = AuthController = __decorate([

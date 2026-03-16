@@ -9,21 +9,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreatePacienteInviteDto = void 0;
+exports.AceitarPacienteInviteDto = void 0;
 const class_validator_1 = require("class-validator");
-class CreatePacienteInviteDto {
-    pacienteId;
-    diasExpiracao;
+class AceitarPacienteInviteDto {
+    conviteToken;
 }
-exports.CreatePacienteInviteDto = CreatePacienteInviteDto;
+exports.AceitarPacienteInviteDto = AceitarPacienteInviteDto;
 __decorate([
-    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
-], CreatePacienteInviteDto.prototype, "pacienteId", void 0);
-__decorate([
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.Min)(1),
-    (0, class_validator_1.Max)(30),
-    __metadata("design:type", Number)
-], CreatePacienteInviteDto.prototype, "diasExpiracao", void 0);
-//# sourceMappingURL=create-paciente-invite.dto.js.map
+], AceitarPacienteInviteDto.prototype, "conviteToken", void 0);
+//# sourceMappingURL=aceitar-paciente-convite.dto.js.map

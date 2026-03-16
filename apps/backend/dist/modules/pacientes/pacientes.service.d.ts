@@ -24,6 +24,10 @@ export declare class PacientesService {
     }>;
     findOne(id: string, usuarioId: string): Promise<Paciente>;
     update(id: string, updatePacienteDto: UpdatePacienteDto, usuarioId: string): Promise<Paciente>;
+    unlinkPacienteUsuarioByProfessional(id: string, usuarioId: string): Promise<Paciente>;
+    unlinkMyProfessional(usuario: Usuario): Promise<{
+        pacienteId: string;
+    }>;
     remove(id: string, usuarioId: string): Promise<void>;
     getAttentionMap(usuarioId: string): Promise<Record<string, number | null>>;
     getStats(usuarioId: string): Promise<{
