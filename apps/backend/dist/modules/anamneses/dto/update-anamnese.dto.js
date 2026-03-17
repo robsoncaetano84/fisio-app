@@ -26,6 +26,9 @@ class UpdateAnamneseDto {
     quandoProblemaAnterior;
     tratamentosAnteriores;
     historicoFamiliar;
+    limitacoesFuncionais;
+    atividadesQuePioram;
+    metaPrincipalPaciente;
     horasSonoMedia;
     qualidadeSono;
     nivelEstresse;
@@ -104,6 +107,21 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateAnamneseDto.prototype, "historicoFamiliar", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "limitacoesFuncionais", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "atividadesQuePioram", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "metaPrincipalPaciente", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

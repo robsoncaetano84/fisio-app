@@ -30,10 +30,25 @@ let AnamnesesService = class AnamnesesService {
         const anamnese = this.anamneseRepository.create(createAnamneseDto);
         return this.anamneseRepository.save(anamnese);
     }
+    async createForPacienteUsuario(createAnamneseDto, usuarioId) {
+        const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
+        const anamnese = this.anamneseRepository.create({
+            ...createAnamneseDto,
+            pacienteId: paciente.id,
+        });
+        return this.anamneseRepository.save(anamnese);
+    }
     async findAllByPaciente(pacienteId, usuarioId) {
         await this.pacientesService.findOne(pacienteId, usuarioId);
         return this.anamneseRepository.find({
             where: { pacienteId },
+            order: { createdAt: 'DESC' },
+        });
+    }
+    async findLatestByPacienteUsuario(usuarioId) {
+        const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
+        return this.anamneseRepository.findOne({
+            where: { pacienteId: paciente.id },
             order: { createdAt: 'DESC' },
         });
     }
@@ -43,15 +58,30 @@ let AnamnesesService = class AnamnesesService {
             relations: ['paciente'],
         });
         if (!anamnese) {
-            throw new common_1.NotFoundException('Anamnese não encontrada');
+            throw new common_1.NotFoundException('Anamnese n�o encontrada');
         }
         if (anamnese.paciente.usuarioId !== usuarioId) {
-            throw new common_1.NotFoundException('Anamnese não encontrada');
+            throw new common_1.NotFoundException('Anamnese n�o encontrada');
+        }
+        return anamnese;
+    }
+    async findOneByPacienteUsuario(id, usuarioId) {
+        const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
+        const anamnese = await this.anamneseRepository.findOne({
+            where: { id, pacienteId: paciente.id },
+        });
+        if (!anamnese) {
+            throw new common_1.NotFoundException('Anamnese n�o encontrada');
         }
         return anamnese;
     }
     async update(id, updateAnamneseDto, usuarioId) {
         const anamnese = await this.findOne(id, usuarioId);
+        Object.assign(anamnese, updateAnamneseDto);
+        return this.anamneseRepository.save(anamnese);
+    }
+    async updateByPacienteUsuario(id, updateAnamneseDto, usuarioId) {
+        const anamnese = await this.findOneByPacienteUsuario(id, usuarioId);
         Object.assign(anamnese, updateAnamneseDto);
         return this.anamneseRepository.save(anamnese);
     }

@@ -19,9 +19,11 @@ import { Throttle } from '@nestjs/throttler';
 import { AnamnesesService } from './anamneses.service';
 import { CreateAnamneseDto } from './dto/create-anamnese.dto';
 import { UpdateAnamneseDto } from './dto/update-anamnese.dto';
+import { CreateMyAnamneseDto } from './dto/create-my-anamnese.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Usuario } from '../usuarios/entities/usuario.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 
 @Controller('anamneses')
 @UseGuards(JwtAuthGuard)
@@ -29,6 +31,7 @@ export class AnamnesesController {
   constructor(private readonly anamnesesService: AnamnesesService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @Throttle({ default: { ttl: 60, limit: 30 } })
   create(
     @Body() createAnamneseDto: CreateAnamneseDto,
@@ -38,6 +41,7 @@ export class AnamnesesController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @Throttle({ default: { ttl: 60, limit: 120 } })
   findAllByPaciente(
     @Query('pacienteId', ParseUUIDPipe) pacienteId: string,
@@ -46,7 +50,28 @@ export class AnamnesesController {
     return this.anamnesesService.findAllByPaciente(pacienteId, usuario.id);
   }
 
+  @Get('me/latest')
+  @Roles(UserRole.PACIENTE)
+  @Throttle({ default: { ttl: 60, limit: 60 } })
+  findMyLatest(@CurrentUser() usuario: Usuario) {
+    return this.anamnesesService.findLatestByPacienteUsuario(usuario.id);
+  }
+
+  @Post('me')
+  @Roles(UserRole.PACIENTE)
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  createMy(
+    @Body() createMyAnamneseDto: CreateMyAnamneseDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.anamnesesService.createForPacienteUsuario(
+      createMyAnamneseDto,
+      usuario.id,
+    );
+  }
+
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @Throttle({ default: { ttl: 60, limit: 120 } })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -55,7 +80,23 @@ export class AnamnesesController {
     return this.anamnesesService.findOne(id, usuario.id);
   }
 
+  @Patch('me/:id')
+  @Roles(UserRole.PACIENTE)
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  updateMy(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateAnamneseDto: UpdateAnamneseDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.anamnesesService.updateByPacienteUsuario(
+      id,
+      updateAnamneseDto,
+      usuario.id,
+    );
+  }
+
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @Throttle({ default: { ttl: 60, limit: 30 } })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -66,6 +107,7 @@ export class AnamnesesController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @Throttle({ default: { ttl: 60, limit: 20 } })
   remove(
     @Param('id', ParseUUIDPipe) id: string,

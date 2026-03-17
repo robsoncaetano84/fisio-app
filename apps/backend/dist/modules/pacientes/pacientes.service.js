@@ -131,15 +131,19 @@ let PacientesService = class PacientesService {
         if (usuario.role !== usuario_entity_1.UserRole.PACIENTE) {
             throw new common_1.ForbiddenException('Acesso permitido somente para pacientes');
         }
+        const paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
+        paciente.pacienteUsuarioId = null;
+        await this.pacienteRepository.save(paciente);
+        return { pacienteId: paciente.id };
+    }
+    async findLinkedPacienteByUsuarioId(usuarioId) {
         const paciente = await this.pacienteRepository.findOne({
-            where: { pacienteUsuarioId: usuario.id, ativo: true },
+            where: { pacienteUsuarioId: usuarioId, ativo: true },
         });
         if (!paciente) {
             throw new common_1.NotFoundException('Nenhum cadastro de paciente vinculado');
         }
-        paciente.pacienteUsuarioId = null;
-        await this.pacienteRepository.save(paciente);
-        return { pacienteId: paciente.id };
+        return paciente;
     }
     async remove(id, usuarioId) {
         const paciente = await this.findOne(id, usuarioId);

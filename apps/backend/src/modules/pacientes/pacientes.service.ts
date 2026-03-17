@@ -174,18 +174,24 @@ export class PacientesService {
       throw new ForbiddenException('Acesso permitido somente para pacientes');
     }
 
+    const paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
+
+    paciente.pacienteUsuarioId = null;
+    await this.pacienteRepository.save(paciente);
+
+    return { pacienteId: paciente.id };
+  }
+
+  async findLinkedPacienteByUsuarioId(usuarioId: string): Promise<Paciente> {
     const paciente = await this.pacienteRepository.findOne({
-      where: { pacienteUsuarioId: usuario.id, ativo: true },
+      where: { pacienteUsuarioId: usuarioId, ativo: true },
     });
 
     if (!paciente) {
       throw new NotFoundException('Nenhum cadastro de paciente vinculado');
     }
 
-    paciente.pacienteUsuarioId = null;
-    await this.pacienteRepository.save(paciente);
-
-    return { pacienteId: paciente.id };
+    return paciente;
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {

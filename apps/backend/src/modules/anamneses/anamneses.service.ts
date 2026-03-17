@@ -28,6 +28,22 @@ export class AnamnesesService {
     return this.anamneseRepository.save(anamnese);
   }
 
+  async createForPacienteUsuario(
+    createAnamneseDto: Omit<CreateAnamneseDto, 'pacienteId'>,
+    usuarioId: string,
+  ): Promise<Anamnese> {
+    const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
+      usuarioId,
+    );
+
+    const anamnese = this.anamneseRepository.create({
+      ...createAnamneseDto,
+      pacienteId: paciente.id,
+    });
+
+    return this.anamneseRepository.save(anamnese);
+  }
+
   async findAllByPaciente(
     pacienteId: string,
     usuarioId: string,
@@ -39,6 +55,17 @@ export class AnamnesesService {
     });
   }
 
+  async findLatestByPacienteUsuario(usuarioId: string): Promise<Anamnese | null> {
+    const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
+      usuarioId,
+    );
+
+    return this.anamneseRepository.findOne({
+      where: { pacienteId: paciente.id },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findOne(id: string, usuarioId: string): Promise<Anamnese> {
     const anamnese = await this.anamneseRepository.findOne({
       where: { id },
@@ -46,11 +73,30 @@ export class AnamnesesService {
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese n√£o encontrada');
+      throw new NotFoundException('Anamnese n„o encontrada');
     }
 
     if (anamnese.paciente.usuarioId !== usuarioId) {
-      throw new NotFoundException('Anamnese n√£o encontrada');
+      throw new NotFoundException('Anamnese n„o encontrada');
+    }
+
+    return anamnese;
+  }
+
+  async findOneByPacienteUsuario(
+    id: string,
+    usuarioId: string,
+  ): Promise<Anamnese> {
+    const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
+      usuarioId,
+    );
+
+    const anamnese = await this.anamneseRepository.findOne({
+      where: { id, pacienteId: paciente.id },
+    });
+
+    if (!anamnese) {
+      throw new NotFoundException('Anamnese n„o encontrada');
     }
 
     return anamnese;
@@ -62,6 +108,16 @@ export class AnamnesesService {
     usuarioId: string,
   ): Promise<Anamnese> {
     const anamnese = await this.findOne(id, usuarioId);
+    Object.assign(anamnese, updateAnamneseDto);
+    return this.anamneseRepository.save(anamnese);
+  }
+
+  async updateByPacienteUsuario(
+    id: string,
+    updateAnamneseDto: UpdateAnamneseDto,
+    usuarioId: string,
+  ): Promise<Anamnese> {
+    const anamnese = await this.findOneByPacienteUsuario(id, usuarioId);
     Object.assign(anamnese, updateAnamneseDto);
     return this.anamneseRepository.save(anamnese);
   }

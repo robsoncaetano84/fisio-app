@@ -76,6 +76,18 @@ export class UpdateAnamneseDto {
 
   @IsOptional()
   @IsString()
+  limitacoesFuncionais?: string;
+
+  @IsOptional()
+  @IsString()
+  atividadesQuePioram?: string;
+
+  @IsOptional()
+  @IsString()
+  metaPrincipalPaciente?: string;
+
+  @IsOptional()
+  @IsString()
   horasSonoMedia?: string;
 
   @IsOptional()

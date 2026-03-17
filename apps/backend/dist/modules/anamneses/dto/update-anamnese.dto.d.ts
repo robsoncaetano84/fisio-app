@@ -13,6 +13,9 @@ export declare class UpdateAnamneseDto {
     quandoProblemaAnterior?: string;
     tratamentosAnteriores?: string[];
     historicoFamiliar?: string;
+    limitacoesFuncionais?: string;
+    atividadesQuePioram?: string;
+    metaPrincipalPaciente?: string;
     horasSonoMedia?: string;
     qualidadeSono?: number;
     nivelEstresse?: number;
