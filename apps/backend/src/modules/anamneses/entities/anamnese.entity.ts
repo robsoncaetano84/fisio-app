@@ -19,6 +19,13 @@ export enum InicioProblema {
   NAO_SABE = 'NAO_SABE',
 }
 
+export enum TipoDor {
+  MECANICA = 'MECANICA',
+  INFLAMATORIA = 'INFLAMATORIA',
+  NEUROPATICA = 'NEUROPATICA',
+  MISTA = 'MISTA',
+}
+
 export interface AreaAfetada {
   regiao: string;
   lado?: 'esquerdo' | 'direito' | 'ambos';
@@ -64,6 +71,34 @@ export class Anamnese extends BaseEntity {
 
   @Column({ name: 'fator_alivio', type: 'text', nullable: true })
   fatorAlivio: string;
+
+  @Column({ name: 'dor_repouso', type: 'boolean', nullable: true })
+  dorRepouso: boolean;
+
+  @Column({ name: 'dor_noturna', type: 'boolean', nullable: true })
+  dorNoturna: boolean;
+
+  @Column({ name: 'irradiacao', type: 'boolean', nullable: true })
+  irradiacao: boolean;
+
+  @Column({ name: 'local_irradiacao', length: 255, nullable: true })
+  localIrradiacao: string;
+
+  @Column({ name: 'tipo_dor', type: 'enum', enum: TipoDor, nullable: true })
+  tipoDor: TipoDor;
+
+  @Column({
+    name: 'sinais_sensibilizacao_central',
+    type: 'text',
+    nullable: true,
+  })
+  sinaisSensibilizacaoCentral: string;
+
+  @Column({ name: 'red_flags', type: 'jsonb', default: [] })
+  redFlags: string[];
+
+  @Column({ name: 'yellow_flags', type: 'jsonb', default: [] })
+  yellowFlags: string[];
 
   @Column({ name: 'problema_anterior', default: false })
   problemaAnterior: boolean;

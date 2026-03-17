@@ -1,4 +1,4 @@
-import { CheckinDificuldade } from '../entities/evolucao.entity';
+import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, CondutaStatus } from '../entities/evolucao.entity';
 export declare class CreateEvolucaoDto {
     pacienteId: string;
     data?: string;
@@ -9,5 +9,10 @@ export declare class CreateEvolucaoDto {
     checkinDor?: number;
     checkinDificuldade?: CheckinDificuldade;
     checkinObservacao?: string;
+    dorStatus?: VariacaoStatus;
+    funcaoStatus?: VariacaoStatus;
+    adesaoStatus?: AdesaoStatus;
+    statusEvolucao?: EvolucaoStatus;
+    condutaStatus?: CondutaStatus;
     observacoes?: string;
 }

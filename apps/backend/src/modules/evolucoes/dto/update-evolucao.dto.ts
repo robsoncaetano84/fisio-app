@@ -4,7 +4,7 @@
 // U PD AT E E VO LU CA O.D TO
 // ==========================================
 import { IsOptional, IsString, IsDateString, IsInt, Min, Max, IsEnum } from 'class-validator';
-import { CheckinDificuldade } from '../entities/evolucao.entity';
+import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, CondutaStatus } from '../entities/evolucao.entity';
 
 export class UpdateEvolucaoDto {
   @IsOptional()
@@ -40,6 +40,26 @@ export class UpdateEvolucaoDto {
   @IsOptional()
   @IsString()
   checkinObservacao?: string;
+
+  @IsOptional()
+  @IsEnum(VariacaoStatus)
+  dorStatus?: VariacaoStatus;
+
+  @IsOptional()
+  @IsEnum(VariacaoStatus)
+  funcaoStatus?: VariacaoStatus;
+
+  @IsOptional()
+  @IsEnum(AdesaoStatus)
+  adesaoStatus?: AdesaoStatus;
+
+  @IsOptional()
+  @IsEnum(EvolucaoStatus)
+  statusEvolucao?: EvolucaoStatus;
+
+  @IsOptional()
+  @IsEnum(CondutaStatus)
+  condutaStatus?: CondutaStatus;
 
   @IsOptional()
   @IsString()

@@ -10,6 +10,12 @@ export declare enum InicioProblema {
     APOS_EVENTO = "APOS_EVENTO",
     NAO_SABE = "NAO_SABE"
 }
+export declare enum TipoDor {
+    MECANICA = "MECANICA",
+    INFLAMATORIA = "INFLAMATORIA",
+    NEUROPATICA = "NEUROPATICA",
+    MISTA = "MISTA"
+}
 export interface AreaAfetada {
     regiao: string;
     lado?: 'esquerdo' | 'direito' | 'ambos';
@@ -26,6 +32,14 @@ export declare class Anamnese extends BaseEntity {
     inicioProblema: InicioProblema;
     eventoEspecifico: string;
     fatorAlivio: string;
+    dorRepouso: boolean;
+    dorNoturna: boolean;
+    irradiacao: boolean;
+    localIrradiacao: string;
+    tipoDor: TipoDor;
+    sinaisSensibilizacaoCentral: string;
+    redFlags: string[];
+    yellowFlags: string[];
     problemaAnterior: boolean;
     quandoProblemaAnterior: string;
     tratamentosAnteriores: string[];

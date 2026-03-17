@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Evolucao = exports.CheckinDificuldade = void 0;
+exports.Evolucao = exports.CondutaStatus = exports.EvolucaoStatus = exports.AdesaoStatus = exports.VariacaoStatus = exports.CheckinDificuldade = void 0;
 const typeorm_1 = require("typeorm");
 const base_entity_1 = require("../../../common/entities/base.entity");
 const paciente_entity_1 = require("../../pacientes/entities/paciente.entity");
@@ -19,6 +19,31 @@ var CheckinDificuldade;
     CheckinDificuldade["MEDIO"] = "MEDIO";
     CheckinDificuldade["DIFICIL"] = "DIFICIL";
 })(CheckinDificuldade || (exports.CheckinDificuldade = CheckinDificuldade = {}));
+var VariacaoStatus;
+(function (VariacaoStatus) {
+    VariacaoStatus["MELHOROU"] = "MELHOROU";
+    VariacaoStatus["MANTEVE"] = "MANTEVE";
+    VariacaoStatus["PIOROU"] = "PIOROU";
+})(VariacaoStatus || (exports.VariacaoStatus = VariacaoStatus = {}));
+var AdesaoStatus;
+(function (AdesaoStatus) {
+    AdesaoStatus["ALTA"] = "ALTA";
+    AdesaoStatus["MEDIA"] = "MEDIA";
+    AdesaoStatus["BAIXA"] = "BAIXA";
+})(AdesaoStatus || (exports.AdesaoStatus = AdesaoStatus = {}));
+var EvolucaoStatus;
+(function (EvolucaoStatus) {
+    EvolucaoStatus["EVOLUINDO_BEM"] = "EVOLUINDO_BEM";
+    EvolucaoStatus["ESTAGNADO"] = "ESTAGNADO";
+    EvolucaoStatus["PIORA"] = "PIORA";
+})(EvolucaoStatus || (exports.EvolucaoStatus = EvolucaoStatus = {}));
+var CondutaStatus;
+(function (CondutaStatus) {
+    CondutaStatus["MANTER"] = "MANTER";
+    CondutaStatus["PROGREDIR"] = "PROGREDIR";
+    CondutaStatus["REGREDIR"] = "REGREDIR";
+    CondutaStatus["REAVALIAR"] = "REAVALIAR";
+})(CondutaStatus || (exports.CondutaStatus = CondutaStatus = {}));
 let Evolucao = class Evolucao extends base_entity_1.BaseEntity {
     paciente;
     pacienteId;
@@ -30,6 +55,11 @@ let Evolucao = class Evolucao extends base_entity_1.BaseEntity {
     checkinDor;
     checkinDificuldade;
     checkinObservacao;
+    dorStatus;
+    funcaoStatus;
+    adesaoStatus;
+    statusEvolucao;
+    condutaStatus;
     observacoes;
 };
 exports.Evolucao = Evolucao;
@@ -79,6 +109,51 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'checkin_observacao', type: 'text', nullable: true }),
     __metadata("design:type", Object)
 ], Evolucao.prototype, "checkinObservacao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'dor_status',
+        type: 'enum',
+        enum: VariacaoStatus,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Evolucao.prototype, "dorStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'funcao_status',
+        type: 'enum',
+        enum: VariacaoStatus,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Evolucao.prototype, "funcaoStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'adesao_status',
+        type: 'enum',
+        enum: AdesaoStatus,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Evolucao.prototype, "adesaoStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'status_evolucao',
+        type: 'enum',
+        enum: EvolucaoStatus,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Evolucao.prototype, "statusEvolucao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'conduta_status',
+        type: 'enum',
+        enum: CondutaStatus,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Evolucao.prototype, "condutaStatus", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)

@@ -13,6 +13,31 @@ export enum CheckinDificuldade {
   DIFICIL = 'DIFICIL',
 }
 
+export enum VariacaoStatus {
+  MELHOROU = 'MELHOROU',
+  MANTEVE = 'MANTEVE',
+  PIOROU = 'PIOROU',
+}
+
+export enum AdesaoStatus {
+  ALTA = 'ALTA',
+  MEDIA = 'MEDIA',
+  BAIXA = 'BAIXA',
+}
+
+export enum EvolucaoStatus {
+  EVOLUINDO_BEM = 'EVOLUINDO_BEM',
+  ESTAGNADO = 'ESTAGNADO',
+  PIORA = 'PIORA',
+}
+
+export enum CondutaStatus {
+  MANTER = 'MANTER',
+  PROGREDIR = 'PROGREDIR',
+  REGREDIR = 'REGREDIR',
+  REAVALIAR = 'REAVALIAR',
+}
+
 @Entity('evolucoes')
 @Index('IDX_EVOLUCAO_PACIENTE_DATA', ['pacienteId', 'data'])
 export class Evolucao extends BaseEntity {
@@ -51,6 +76,46 @@ export class Evolucao extends BaseEntity {
 
   @Column({ name: 'checkin_observacao', type: 'text', nullable: true })
   checkinObservacao: string | null;
+
+  @Column({
+    name: 'dor_status',
+    type: 'enum',
+    enum: VariacaoStatus,
+    nullable: true,
+  })
+  dorStatus: VariacaoStatus | null;
+
+  @Column({
+    name: 'funcao_status',
+    type: 'enum',
+    enum: VariacaoStatus,
+    nullable: true,
+  })
+  funcaoStatus: VariacaoStatus | null;
+
+  @Column({
+    name: 'adesao_status',
+    type: 'enum',
+    enum: AdesaoStatus,
+    nullable: true,
+  })
+  adesaoStatus: AdesaoStatus | null;
+
+  @Column({
+    name: 'status_evolucao',
+    type: 'enum',
+    enum: EvolucaoStatus,
+    nullable: true,
+  })
+  statusEvolucao: EvolucaoStatus | null;
+
+  @Column({
+    name: 'conduta_status',
+    type: 'enum',
+    enum: CondutaStatus,
+    nullable: true,
+  })
+  condutaStatus: CondutaStatus | null;
 
   @Column({ type: 'text', nullable: true })
   observacoes: string;

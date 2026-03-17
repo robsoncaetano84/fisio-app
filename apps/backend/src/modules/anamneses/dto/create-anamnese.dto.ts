@@ -15,7 +15,7 @@ import {
   Max,
   IsUUID,
 } from 'class-validator';
-import { MotivoBusca, InicioProblema, AreaAfetada } from '../entities/anamnese.entity';
+import { MotivoBusca, InicioProblema, AreaAfetada, TipoDor } from '../entities/anamnese.entity';
 
 export class CreateAnamneseDto {
   @IsNotEmpty({ message: 'ID do paciente é obrigatório' })

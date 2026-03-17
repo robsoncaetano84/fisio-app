@@ -14,7 +14,7 @@ import {
   Max,
   IsEnum,
 } from 'class-validator';
-import { CheckinDificuldade } from '../entities/evolucao.entity';
+import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, CondutaStatus } from '../entities/evolucao.entity';
 
 export class CreateEvolucaoDto {
   @IsNotEmpty({ message: 'ID do paciente e obrigatorio' })
@@ -54,6 +54,26 @@ export class CreateEvolucaoDto {
   @IsOptional()
   @IsString()
   checkinObservacao?: string;
+
+  @IsOptional()
+  @IsEnum(VariacaoStatus)
+  dorStatus?: VariacaoStatus;
+
+  @IsOptional()
+  @IsEnum(VariacaoStatus)
+  funcaoStatus?: VariacaoStatus;
+
+  @IsOptional()
+  @IsEnum(AdesaoStatus)
+  adesaoStatus?: AdesaoStatus;
+
+  @IsOptional()
+  @IsEnum(EvolucaoStatus)
+  statusEvolucao?: EvolucaoStatus;
+
+  @IsOptional()
+  @IsEnum(CondutaStatus)
+  condutaStatus?: CondutaStatus;
 
   @IsOptional()
   @IsString()

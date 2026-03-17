@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Anamnese = exports.InicioProblema = exports.MotivoBusca = void 0;
+exports.Anamnese = exports.TipoDor = exports.InicioProblema = exports.MotivoBusca = void 0;
 const typeorm_1 = require("typeorm");
 const base_entity_1 = require("../../../common/entities/base.entity");
 const paciente_entity_1 = require("../../pacientes/entities/paciente.entity");
@@ -25,6 +25,13 @@ var InicioProblema;
     InicioProblema["APOS_EVENTO"] = "APOS_EVENTO";
     InicioProblema["NAO_SABE"] = "NAO_SABE";
 })(InicioProblema || (exports.InicioProblema = InicioProblema = {}));
+var TipoDor;
+(function (TipoDor) {
+    TipoDor["MECANICA"] = "MECANICA";
+    TipoDor["INFLAMATORIA"] = "INFLAMATORIA";
+    TipoDor["NEUROPATICA"] = "NEUROPATICA";
+    TipoDor["MISTA"] = "MISTA";
+})(TipoDor || (exports.TipoDor = TipoDor = {}));
 let Anamnese = class Anamnese extends base_entity_1.BaseEntity {
     paciente;
     pacienteId;
@@ -37,6 +44,14 @@ let Anamnese = class Anamnese extends base_entity_1.BaseEntity {
     inicioProblema;
     eventoEspecifico;
     fatorAlivio;
+    dorRepouso;
+    dorNoturna;
+    irradiacao;
+    localIrradiacao;
+    tipoDor;
+    sinaisSensibilizacaoCentral;
+    redFlags;
+    yellowFlags;
     problemaAnterior;
     quandoProblemaAnterior;
     tratamentosAnteriores;
@@ -105,6 +120,42 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'fator_alivio', type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], Anamnese.prototype, "fatorAlivio", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'dor_repouso', type: 'boolean', nullable: true }),
+    __metadata("design:type", Boolean)
+], Anamnese.prototype, "dorRepouso", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'dor_noturna', type: 'boolean', nullable: true }),
+    __metadata("design:type", Boolean)
+], Anamnese.prototype, "dorNoturna", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'irradiacao', type: 'boolean', nullable: true }),
+    __metadata("design:type", Boolean)
+], Anamnese.prototype, "irradiacao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'local_irradiacao', length: 255, nullable: true }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "localIrradiacao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'tipo_dor', type: 'enum', enum: TipoDor, nullable: true }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "tipoDor", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'sinais_sensibilizacao_central',
+        type: 'text',
+        nullable: true,
+    }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "sinaisSensibilizacaoCentral", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'red_flags', type: 'jsonb', default: [] }),
+    __metadata("design:type", Array)
+], Anamnese.prototype, "redFlags", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'yellow_flags', type: 'jsonb', default: [] }),
+    __metadata("design:type", Array)
+], Anamnese.prototype, "yellowFlags", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'problema_anterior', default: false }),
     __metadata("design:type", Boolean)

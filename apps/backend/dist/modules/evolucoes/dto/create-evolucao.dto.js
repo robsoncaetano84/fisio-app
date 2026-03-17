@@ -22,6 +22,11 @@ class CreateEvolucaoDto {
     checkinDor;
     checkinDificuldade;
     checkinObservacao;
+    dorStatus;
+    funcaoStatus;
+    adesaoStatus;
+    statusEvolucao;
+    condutaStatus;
     observacoes;
 }
 exports.CreateEvolucaoDto = CreateEvolucaoDto;
@@ -72,6 +77,31 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateEvolucaoDto.prototype, "checkinObservacao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(evolucao_entity_1.VariacaoStatus),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "dorStatus", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(evolucao_entity_1.VariacaoStatus),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "funcaoStatus", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(evolucao_entity_1.AdesaoStatus),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "adesaoStatus", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(evolucao_entity_1.EvolucaoStatus),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "statusEvolucao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(evolucao_entity_1.CondutaStatus),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "condutaStatus", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
