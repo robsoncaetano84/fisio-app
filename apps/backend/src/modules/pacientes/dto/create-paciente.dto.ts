@@ -12,6 +12,7 @@ import {
   Length,
   IsDateString,
   IsUUID,
+  IsBoolean,
 } from 'class-validator';
 import { Sexo, EstadoCivil } from '../entities/paciente.entity';
 
@@ -87,4 +88,8 @@ export class CreatePacienteDto {
   @IsOptional()
   @IsUUID('4', { message: 'Usuario do paciente invalido' })
   pacienteUsuarioId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  anamneseLiberadaPaciente?: boolean;
 }

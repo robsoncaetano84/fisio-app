@@ -31,6 +31,7 @@ class UpdatePacienteDto {
     contatoTelefone;
     contatoEmail;
     pacienteUsuarioId;
+    anamneseLiberadaPaciente;
 }
 exports.UpdatePacienteDto = UpdatePacienteDto;
 __decorate([
@@ -123,4 +124,9 @@ __decorate([
     (0, class_validator_1.IsUUID)('4', { message: 'Usuario do paciente invalido' }),
     __metadata("design:type", String)
 ], UpdatePacienteDto.prototype, "pacienteUsuarioId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdatePacienteDto.prototype, "anamneseLiberadaPaciente", void 0);
 //# sourceMappingURL=update-paciente.dto.js.map

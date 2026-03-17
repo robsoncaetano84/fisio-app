@@ -6,6 +6,7 @@ import { PacientesService } from '../pacientes/pacientes.service';
 export declare class AnamnesesService {
     private readonly anamneseRepository;
     private readonly pacientesService;
+    private ensurePacienteCanFillOwnAnamnese;
     constructor(anamneseRepository: Repository<Anamnese>, pacientesService: PacientesService);
     create(createAnamneseDto: CreateAnamneseDto, usuarioId: string): Promise<Anamnese>;
     createForPacienteUsuario(createAnamneseDto: Omit<CreateAnamneseDto, 'pacienteId'>, usuarioId: string): Promise<Anamnese>;

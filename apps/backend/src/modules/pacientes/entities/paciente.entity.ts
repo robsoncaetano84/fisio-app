@@ -98,4 +98,11 @@ export class Paciente extends BaseEntity {
 
   @Column({ name: 'paciente_usuario_id', type: 'uuid', nullable: true, unique: true })
   pacienteUsuarioId: string | null;
+
+  @Column({
+    name: 'anamnese_liberada_paciente',
+    type: 'boolean',
+    default: false,
+  })
+  anamneseLiberadaPaciente: boolean;
 }

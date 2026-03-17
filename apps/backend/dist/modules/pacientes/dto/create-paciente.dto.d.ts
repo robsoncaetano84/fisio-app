@@ -18,4 +18,5 @@ export declare class CreatePacienteDto {
     contatoTelefone?: string;
     contatoEmail?: string;
     pacienteUsuarioId?: string;
+    anamneseLiberadaPaciente?: boolean;
 }

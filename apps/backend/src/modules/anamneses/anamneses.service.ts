@@ -3,7 +3,7 @@
 // @date:   26-01-2026
 // A NA MN ES ES.S ER VI CE
 // ==========================================
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Anamnese } from './entities/anamnese.entity';
@@ -13,6 +13,11 @@ import { PacientesService } from '../pacientes/pacientes.service';
 
 @Injectable()
 export class AnamnesesService {
+  private ensurePacienteCanFillOwnAnamnese(anamneseLiberadaPaciente: boolean): void {
+    if (!anamneseLiberadaPaciente) {
+      throw new ForbiddenException('Preenchimento de anamnese nao liberado pelo profissional');
+    }
+  }
   constructor(
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
@@ -35,6 +40,8 @@ export class AnamnesesService {
     const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
       usuarioId,
     );
+
+    this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
 
     const anamnese = this.anamneseRepository.create({
       ...createAnamneseDto,
@@ -60,6 +67,8 @@ export class AnamnesesService {
       usuarioId,
     );
 
+    this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
+
     return this.anamneseRepository.findOne({
       where: { pacienteId: paciente.id },
       order: { createdAt: 'DESC' },
@@ -73,11 +82,11 @@ export class AnamnesesService {
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese não encontrada');
+      throw new NotFoundException('Anamnese nï¿½o encontrada');
     }
 
     if (anamnese.paciente.usuarioId !== usuarioId) {
-      throw new NotFoundException('Anamnese não encontrada');
+      throw new NotFoundException('Anamnese nï¿½o encontrada');
     }
 
     return anamnese;
@@ -91,12 +100,14 @@ export class AnamnesesService {
       usuarioId,
     );
 
+    this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
+
     const anamnese = await this.anamneseRepository.findOne({
       where: { id, pacienteId: paciente.id },
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese não encontrada');
+      throw new NotFoundException('Anamnese nï¿½o encontrada');
     }
 
     return anamnese;

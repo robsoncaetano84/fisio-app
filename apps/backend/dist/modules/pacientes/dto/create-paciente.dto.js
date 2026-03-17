@@ -31,6 +31,7 @@ class CreatePacienteDto {
     contatoTelefone;
     contatoEmail;
     pacienteUsuarioId;
+    anamneseLiberadaPaciente;
 }
 exports.CreatePacienteDto = CreatePacienteDto;
 __decorate([
@@ -123,4 +124,9 @@ __decorate([
     (0, class_validator_1.IsUUID)('4', { message: 'Usuario do paciente invalido' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "pacienteUsuarioId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreatePacienteDto.prototype, "anamneseLiberadaPaciente", void 0);
 //# sourceMappingURL=create-paciente.dto.js.map

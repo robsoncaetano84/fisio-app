@@ -50,6 +50,7 @@ let Paciente = class Paciente extends base_entity_1.BaseEntity {
     usuarioId;
     pacienteUsuario;
     pacienteUsuarioId;
+    anamneseLiberadaPaciente;
 };
 exports.Paciente = Paciente;
 __decorate([
@@ -147,6 +148,14 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'paciente_usuario_id', type: 'uuid', nullable: true, unique: true }),
     __metadata("design:type", Object)
 ], Paciente.prototype, "pacienteUsuarioId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'anamnese_liberada_paciente',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Paciente.prototype, "anamneseLiberadaPaciente", void 0);
 exports.Paciente = Paciente = __decorate([
     (0, typeorm_1.Entity)('pacientes'),
     (0, typeorm_1.Index)('IDX_PACIENTE_USUARIO_ATIVO', ['usuarioId', 'ativo']),
