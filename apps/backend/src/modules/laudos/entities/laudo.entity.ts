@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // L AU DO.E NT IT Y
 // ==========================================
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';

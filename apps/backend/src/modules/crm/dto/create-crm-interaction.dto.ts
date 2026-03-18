@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // C RE AT E C RM I NT ER AC TI ON.D TO
 // ==========================================
 import { Type } from 'class-transformer';

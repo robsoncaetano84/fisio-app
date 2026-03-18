@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // C RE AT E A NA MN ES E.D TO
 // ==========================================
 import {

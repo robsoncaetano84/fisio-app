@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // N OT IF IC AC OE S.C ON TR OL LE R
 // ==========================================
 import { Body, Controller, Delete, Post, UseGuards } from '@nestjs/common';

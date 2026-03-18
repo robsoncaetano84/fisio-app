@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // H EA LT H.C ON TR OL LE R
 // ==========================================
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';

@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // L AU DO S.M OD UL E
 // ==========================================
 import { Module } from '@nestjs/common';

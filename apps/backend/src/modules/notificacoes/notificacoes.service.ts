@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // N OT IF IC AC OE S.S ER VI CE
 // ==========================================
 import { Injectable, Logger } from '@nestjs/common';

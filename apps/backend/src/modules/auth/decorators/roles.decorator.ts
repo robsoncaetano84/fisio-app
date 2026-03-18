@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // R OL ES.D EC OR AT OR
 // ==========================================
 import { SetMetadata } from '@nestjs/common';

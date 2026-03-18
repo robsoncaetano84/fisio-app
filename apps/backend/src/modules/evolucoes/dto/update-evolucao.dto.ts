@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // U PD AT E E VO LU CA O.D TO
 // ==========================================
 import { IsOptional, IsString, IsDateString, IsInt, Min, Max, IsEnum } from 'class-validator';

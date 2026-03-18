@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // APP MODULE - CONFIGURAÇÃO PRINCIPAL
 // ==========================================
 

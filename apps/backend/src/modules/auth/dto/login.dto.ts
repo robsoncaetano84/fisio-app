@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // L OG IN.D TO
 // ==========================================
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';

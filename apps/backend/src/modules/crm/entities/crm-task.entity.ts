@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // C RM T AS K.E NT IT Y
 // ==========================================
 import { Column, Entity, Index } from 'typeorm';

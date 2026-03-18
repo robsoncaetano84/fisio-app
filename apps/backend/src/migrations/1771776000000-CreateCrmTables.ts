@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // 1771776000000 C RE AT EC RM TA BL ES
 // ==========================================
 import { MigrationInterface, QueryRunner } from 'typeorm';

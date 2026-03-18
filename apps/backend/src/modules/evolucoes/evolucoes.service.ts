@@ -1,6 +1,5 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
 // E VO LU CO ES.S ER VI CE
 // ==========================================
 import { Injectable, NotFoundException } from '@nestjs/common';
