@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A NA MN ES ES.S ER VI CE
 // ==========================================
@@ -81,11 +81,11 @@ export class AnamnesesService {
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese n�o encontrada');
+      throw new NotFoundException('Anamnese não encontrada');
     }
 
     if (anamnese.paciente.usuarioId !== usuarioId) {
-      throw new NotFoundException('Anamnese n�o encontrada');
+      throw new NotFoundException('Anamnese não encontrada');
     }
 
     return anamnese;
@@ -106,7 +106,7 @@ export class AnamnesesService {
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese n�o encontrada');
+      throw new NotFoundException('Anamnese não encontrada');
     }
 
     return anamnese;
@@ -137,3 +137,5 @@ export class AnamnesesService {
     await this.anamneseRepository.remove(anamnese);
   }
 }
+
+
