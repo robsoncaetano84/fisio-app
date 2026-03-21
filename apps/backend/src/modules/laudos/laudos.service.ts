@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // L AU DO S.S ER VI CE
 // ==========================================
@@ -531,8 +531,8 @@ export class LaudosService {
             : null,
           evolucoes: evolucoes.map((e) => ({
             data: e.data,
-            ajustes: e.ajustes ?? '',
-            orientacoes: e.orientacoes ?? '',
+            avaliacaoClinica: e.avaliacao ?? '',
+            planoSessao: e.plano ?? '',
             observacoes: e.observacoes ?? '',
           })),
         })
@@ -607,8 +607,8 @@ export class LaudosService {
     } | null;
     evolucoes: Array<{
       data: Date;
-      ajustes: string;
-      orientacoes: string;
+      avaliacaoClinica: string;
+      planoSessao: string;
       observacoes: string;
     }>;
   }): Promise<Partial<CreateLaudoDto>> {
@@ -931,3 +931,4 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
+

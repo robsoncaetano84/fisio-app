@@ -1,15 +1,38 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // U PD AT E E VO LU CA O.D TO
 // ==========================================
 import { IsOptional, IsString, IsDateString, IsInt, Min, Max, IsEnum } from 'class-validator';
-import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, CondutaStatus } from '../entities/evolucao.entity';
+import {
+  CheckinDificuldade,
+  VariacaoStatus,
+  AdesaoStatus,
+  EvolucaoStatus,
+  CondutaStatus,
+} from '../entities/evolucao.entity';
 
 export class UpdateEvolucaoDto {
   @IsOptional()
   @IsDateString()
   data?: string;
 
+  @IsOptional()
+  @IsString()
+  subjetivo?: string;
+
+  @IsOptional()
+  @IsString()
+  objetivo?: string;
+
+  @IsOptional()
+  @IsString()
+  avaliacao?: string;
+
+  @IsOptional()
+  @IsString()
+  plano?: string;
+
+  // Compatibilidade legada (remover apos migracao completa dos clientes)
   @IsOptional()
   @IsString()
   listagens?: string;

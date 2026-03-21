@@ -50,17 +50,17 @@ export class Evolucao extends BaseEntity {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   data: Date;
 
-  @Column({ type: 'text', nullable: true })
-  listagens: string;
+  @Column({ name: 'listagens', type: 'text', nullable: true })
+  subjetivo: string;
 
   @Column({ name: 'leg_check', type: 'text', nullable: true })
-  legCheck: string;
+  objetivo: string;
 
-  @Column({ type: 'text', nullable: true })
-  ajustes: string;
+  @Column({ name: 'ajustes', type: 'text', nullable: true })
+  avaliacao: string;
 
-  @Column({ type: 'text', nullable: true })
-  orientacoes: string;
+  @Column({ name: 'orientacoes', type: 'text', nullable: true })
+  plano: string;
 
   @Column({ name: 'checkin_dor', type: 'int', nullable: true })
   checkinDor: number | null;
@@ -119,3 +119,4 @@ export class Evolucao extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   observacoes: string;
 }
+

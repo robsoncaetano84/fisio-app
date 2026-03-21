@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // C RE AT E E VO LU CA O.D TO
 // ==========================================
@@ -12,8 +12,15 @@ import {
   Min,
   Max,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
-import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, CondutaStatus } from '../entities/evolucao.entity';
+import {
+  CheckinDificuldade,
+  VariacaoStatus,
+  AdesaoStatus,
+  EvolucaoStatus,
+  CondutaStatus,
+} from '../entities/evolucao.entity';
 
 export class CreateEvolucaoDto {
   @IsNotEmpty({ message: 'ID do paciente e obrigatorio' })
@@ -26,15 +33,33 @@ export class CreateEvolucaoDto {
 
   @IsOptional()
   @IsString()
+  subjetivo?: string;
+
+  @IsOptional()
+  @IsString()
+  objetivo?: string;
+
+  @ValidateIf((o) => !o.ajustes)
+  @IsNotEmpty({ message: 'Avaliacao clinica e obrigatoria' })
+  @IsString()
+  avaliacao?: string;
+
+  @IsOptional()
+  @IsString()
+  plano?: string;
+
+  // Compatibilidade legada (remover apos migracao completa dos clientes)
+  @IsOptional()
+  @IsString()
   listagens?: string;
 
   @IsOptional()
   @IsString()
   legCheck?: string;
 
-  @IsNotEmpty({ message: 'Ajustes realizados sao obrigatorios' })
+  @IsOptional()
   @IsString()
-  ajustes: string;
+  ajustes?: string;
 
   @IsOptional()
   @IsString()

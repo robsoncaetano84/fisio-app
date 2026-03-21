@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // E VO LU CO ES.S ER VI CE
 // ==========================================
@@ -18,6 +18,17 @@ export class EvolucoesService {
     private readonly pacientesService: PacientesService,
   ) {}
 
+  private normalizeFields(
+    payload: Partial<CreateEvolucaoDto | UpdateEvolucaoDto>,
+  ): Pick<Evolucao, 'subjetivo' | 'objetivo' | 'avaliacao' | 'plano'> {
+    return {
+      subjetivo: payload.subjetivo ?? payload.listagens ?? null,
+      objetivo: payload.objetivo ?? payload.legCheck ?? null,
+      avaliacao: payload.avaliacao ?? payload.ajustes ?? null,
+      plano: payload.plano ?? payload.orientacoes ?? null,
+    } as Pick<Evolucao, 'subjetivo' | 'objetivo' | 'avaliacao' | 'plano'>;
+  }
+
   async create(
     createEvolucaoDto: CreateEvolucaoDto,
     usuarioId: string,
@@ -28,10 +39,20 @@ export class EvolucoesService {
     );
 
     const evolucao = this.evolucaoRepository.create({
-      ...createEvolucaoDto,
+      pacienteId: createEvolucaoDto.pacienteId,
       data: createEvolucaoDto.data
         ? new Date(createEvolucaoDto.data)
         : new Date(),
+      ...this.normalizeFields(createEvolucaoDto),
+      checkinDor: createEvolucaoDto.checkinDor,
+      checkinDificuldade: createEvolucaoDto.checkinDificuldade,
+      checkinObservacao: createEvolucaoDto.checkinObservacao,
+      dorStatus: createEvolucaoDto.dorStatus,
+      funcaoStatus: createEvolucaoDto.funcaoStatus,
+      adesaoStatus: createEvolucaoDto.adesaoStatus,
+      statusEvolucao: createEvolucaoDto.statusEvolucao,
+      condutaStatus: createEvolucaoDto.condutaStatus,
+      observacoes: createEvolucaoDto.observacoes,
     });
 
     return this.evolucaoRepository.save(evolucao);
@@ -72,7 +93,31 @@ export class EvolucoesService {
     usuarioId: string,
   ): Promise<Evolucao> {
     const evolucao = await this.findOne(id, usuarioId);
-    Object.assign(evolucao, updateEvolucaoDto);
+
+    if (updateEvolucaoDto.data) {
+      evolucao.data = new Date(updateEvolucaoDto.data);
+    }
+
+    const normalized = this.normalizeFields(updateEvolucaoDto);
+    if (normalized.subjetivo !== null) evolucao.subjetivo = normalized.subjetivo;
+    if (normalized.objetivo !== null) evolucao.objetivo = normalized.objetivo;
+    if (normalized.avaliacao !== null) evolucao.avaliacao = normalized.avaliacao;
+    if (normalized.plano !== null) evolucao.plano = normalized.plano;
+
+    Object.assign(evolucao, {
+      checkinDor: updateEvolucaoDto.checkinDor ?? evolucao.checkinDor,
+      checkinDificuldade:
+        updateEvolucaoDto.checkinDificuldade ?? evolucao.checkinDificuldade,
+      checkinObservacao:
+        updateEvolucaoDto.checkinObservacao ?? evolucao.checkinObservacao,
+      dorStatus: updateEvolucaoDto.dorStatus ?? evolucao.dorStatus,
+      funcaoStatus: updateEvolucaoDto.funcaoStatus ?? evolucao.funcaoStatus,
+      adesaoStatus: updateEvolucaoDto.adesaoStatus ?? evolucao.adesaoStatus,
+      statusEvolucao: updateEvolucaoDto.statusEvolucao ?? evolucao.statusEvolucao,
+      condutaStatus: updateEvolucaoDto.condutaStatus ?? evolucao.condutaStatus,
+      observacoes: updateEvolucaoDto.observacoes ?? evolucao.observacoes,
+    });
+
     return this.evolucaoRepository.save(evolucao);
   }
 
