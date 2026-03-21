@@ -14,6 +14,10 @@ const class_validator_1 = require("class-validator");
 const evolucao_entity_1 = require("../entities/evolucao.entity");
 class UpdateEvolucaoDto {
     data;
+    subjetivo;
+    objetivo;
+    avaliacao;
+    plano;
     listagens;
     legCheck;
     ajustes;
@@ -34,6 +38,26 @@ __decorate([
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
 ], UpdateEvolucaoDto.prototype, "data", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEvolucaoDto.prototype, "subjetivo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEvolucaoDto.prototype, "objetivo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEvolucaoDto.prototype, "avaliacao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateEvolucaoDto.prototype, "plano", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

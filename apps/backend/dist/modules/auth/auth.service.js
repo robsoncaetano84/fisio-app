@@ -152,7 +152,7 @@ let AuthService = AuthService_1 = class AuthService {
             });
             const usuario = await this.usuariosService.findById(payload.sub);
             if (!usuario || !usuario.ativo) {
-                throw new common_1.UnauthorizedException('UsuÃ¡rio invÃ¡lido');
+                throw new common_1.UnauthorizedException('Usuário inválido');
             }
             this.logger.log(`Refresh token ok para ${usuario.email}`);
             this.logger.log(JSON.stringify({
@@ -182,7 +182,7 @@ let AuthService = AuthService_1 = class AuthService {
                 success: false,
                 reason: 'INVALID_REFRESH',
             });
-            throw new common_1.UnauthorizedException('Refresh token invÃ¡lido');
+            throw new common_1.UnauthorizedException('Refresh token inválido');
         }
     }
     getInviteSecret() {

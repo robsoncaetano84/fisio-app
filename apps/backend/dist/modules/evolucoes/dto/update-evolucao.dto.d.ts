@@ -1,6 +1,10 @@
 import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, CondutaStatus } from '../entities/evolucao.entity';
 export declare class UpdateEvolucaoDto {
     data?: string;
+    subjetivo?: string;
+    objetivo?: string;
+    avaliacao?: string;
+    plano?: string;
     listagens?: string;
     legCheck?: string;
     ajustes?: string;

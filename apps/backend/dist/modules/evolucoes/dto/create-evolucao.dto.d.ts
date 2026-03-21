@@ -2,9 +2,13 @@ import { CheckinDificuldade, VariacaoStatus, AdesaoStatus, EvolucaoStatus, Condu
 export declare class CreateEvolucaoDto {
     pacienteId: string;
     data?: string;
+    subjetivo?: string;
+    objetivo?: string;
+    avaliacao?: string;
+    plano?: string;
     listagens?: string;
     legCheck?: string;
-    ajustes: string;
+    ajustes?: string;
     orientacoes?: string;
     checkinDor?: number;
     checkinDificuldade?: CheckinDificuldade;

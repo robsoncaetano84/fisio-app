@@ -15,6 +15,10 @@ const evolucao_entity_1 = require("../entities/evolucao.entity");
 class CreateEvolucaoDto {
     pacienteId;
     data;
+    subjetivo;
+    objetivo;
+    avaliacao;
+    plano;
     listagens;
     legCheck;
     ajustes;
@@ -44,6 +48,27 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "subjetivo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "objetivo", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => !o.ajustes),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Avaliacao clinica e obrigatoria' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "avaliacao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEvolucaoDto.prototype, "plano", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
 ], CreateEvolucaoDto.prototype, "listagens", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
@@ -51,7 +76,7 @@ __decorate([
     __metadata("design:type", String)
 ], CreateEvolucaoDto.prototype, "legCheck", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Ajustes realizados sao obrigatorios' }),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateEvolucaoDto.prototype, "ajustes", void 0);

@@ -65,10 +65,10 @@ let AnamnesesService = class AnamnesesService {
             relations: ['paciente'],
         });
         if (!anamnese) {
-            throw new common_1.NotFoundException('Anamnese n�o encontrada');
+            throw new common_1.NotFoundException('Anamnese não encontrada');
         }
         if (anamnese.paciente.usuarioId !== usuarioId) {
-            throw new common_1.NotFoundException('Anamnese n�o encontrada');
+            throw new common_1.NotFoundException('Anamnese não encontrada');
         }
         return anamnese;
     }
@@ -79,7 +79,7 @@ let AnamnesesService = class AnamnesesService {
             where: { id, pacienteId: paciente.id },
         });
         if (!anamnese) {
-            throw new common_1.NotFoundException('Anamnese n�o encontrada');
+            throw new common_1.NotFoundException('Anamnese não encontrada');
         }
         return anamnese;
     }

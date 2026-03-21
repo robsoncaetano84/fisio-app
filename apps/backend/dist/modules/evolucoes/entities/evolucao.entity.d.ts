@@ -30,10 +30,10 @@ export declare class Evolucao extends BaseEntity {
     paciente: Paciente;
     pacienteId: string;
     data: Date;
-    listagens: string;
-    legCheck: string;
-    ajustes: string;
-    orientacoes: string;
+    subjetivo: string;
+    objetivo: string;
+    avaliacao: string;
+    plano: string;
     checkinDor: number | null;
     checkinDificuldade: CheckinDificuldade | null;
     checkinObservacao: string | null;

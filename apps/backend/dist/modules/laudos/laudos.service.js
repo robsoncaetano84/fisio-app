@@ -379,8 +379,8 @@ let LaudosService = class LaudosService {
                     : null,
                 evolucoes: evolucoes.map((e) => ({
                     data: e.data,
-                    ajustes: e.ajustes ?? '',
-                    orientacoes: e.orientacoes ?? '',
+                    avaliacaoClinica: e.avaliacao ?? '',
+                    planoSessao: e.plano ?? '',
                     observacoes: e.observacoes ?? '',
                 })),
             })

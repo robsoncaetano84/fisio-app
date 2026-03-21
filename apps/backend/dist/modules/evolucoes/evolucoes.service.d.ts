@@ -7,6 +7,7 @@ export declare class EvolucoesService {
     private readonly evolucaoRepository;
     private readonly pacientesService;
     constructor(evolucaoRepository: Repository<Evolucao>, pacientesService: PacientesService);
+    private normalizeFields;
     create(createEvolucaoDto: CreateEvolucaoDto, usuarioId: string): Promise<Evolucao>;
     findAllByPaciente(pacienteId: string, usuarioId: string): Promise<Evolucao[]>;
     findOne(id: string, usuarioId: string): Promise<Evolucao>;

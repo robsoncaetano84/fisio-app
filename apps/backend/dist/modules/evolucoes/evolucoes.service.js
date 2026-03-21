@@ -25,13 +25,31 @@ let EvolucoesService = class EvolucoesService {
         this.evolucaoRepository = evolucaoRepository;
         this.pacientesService = pacientesService;
     }
+    normalizeFields(payload) {
+        return {
+            subjetivo: payload.subjetivo ?? payload.listagens ?? null,
+            objetivo: payload.objetivo ?? payload.legCheck ?? null,
+            avaliacao: payload.avaliacao ?? payload.ajustes ?? null,
+            plano: payload.plano ?? payload.orientacoes ?? null,
+        };
+    }
     async create(createEvolucaoDto, usuarioId) {
         await this.pacientesService.findOne(createEvolucaoDto.pacienteId, usuarioId);
         const evolucao = this.evolucaoRepository.create({
-            ...createEvolucaoDto,
+            pacienteId: createEvolucaoDto.pacienteId,
             data: createEvolucaoDto.data
                 ? new Date(createEvolucaoDto.data)
                 : new Date(),
+            ...this.normalizeFields(createEvolucaoDto),
+            checkinDor: createEvolucaoDto.checkinDor,
+            checkinDificuldade: createEvolucaoDto.checkinDificuldade,
+            checkinObservacao: createEvolucaoDto.checkinObservacao,
+            dorStatus: createEvolucaoDto.dorStatus,
+            funcaoStatus: createEvolucaoDto.funcaoStatus,
+            adesaoStatus: createEvolucaoDto.adesaoStatus,
+            statusEvolucao: createEvolucaoDto.statusEvolucao,
+            condutaStatus: createEvolucaoDto.condutaStatus,
+            observacoes: createEvolucaoDto.observacoes,
         });
         return this.evolucaoRepository.save(evolucao);
     }
@@ -57,7 +75,29 @@ let EvolucoesService = class EvolucoesService {
     }
     async update(id, updateEvolucaoDto, usuarioId) {
         const evolucao = await this.findOne(id, usuarioId);
-        Object.assign(evolucao, updateEvolucaoDto);
+        if (updateEvolucaoDto.data) {
+            evolucao.data = new Date(updateEvolucaoDto.data);
+        }
+        const normalized = this.normalizeFields(updateEvolucaoDto);
+        if (normalized.subjetivo !== null)
+            evolucao.subjetivo = normalized.subjetivo;
+        if (normalized.objetivo !== null)
+            evolucao.objetivo = normalized.objetivo;
+        if (normalized.avaliacao !== null)
+            evolucao.avaliacao = normalized.avaliacao;
+        if (normalized.plano !== null)
+            evolucao.plano = normalized.plano;
+        Object.assign(evolucao, {
+            checkinDor: updateEvolucaoDto.checkinDor ?? evolucao.checkinDor,
+            checkinDificuldade: updateEvolucaoDto.checkinDificuldade ?? evolucao.checkinDificuldade,
+            checkinObservacao: updateEvolucaoDto.checkinObservacao ?? evolucao.checkinObservacao,
+            dorStatus: updateEvolucaoDto.dorStatus ?? evolucao.dorStatus,
+            funcaoStatus: updateEvolucaoDto.funcaoStatus ?? evolucao.funcaoStatus,
+            adesaoStatus: updateEvolucaoDto.adesaoStatus ?? evolucao.adesaoStatus,
+            statusEvolucao: updateEvolucaoDto.statusEvolucao ?? evolucao.statusEvolucao,
+            condutaStatus: updateEvolucaoDto.condutaStatus ?? evolucao.condutaStatus,
+            observacoes: updateEvolucaoDto.observacoes ?? evolucao.observacoes,
+        });
         return this.evolucaoRepository.save(evolucao);
     }
     async remove(id, usuarioId) {

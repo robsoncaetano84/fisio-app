@@ -48,10 +48,10 @@ let Evolucao = class Evolucao extends base_entity_1.BaseEntity {
     paciente;
     pacienteId;
     data;
-    listagens;
-    legCheck;
-    ajustes;
-    orientacoes;
+    subjetivo;
+    objetivo;
+    avaliacao;
+    plano;
     checkinDor;
     checkinDificuldade;
     checkinObservacao;
@@ -77,21 +77,21 @@ __decorate([
     __metadata("design:type", Date)
 ], Evolucao.prototype, "data", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    (0, typeorm_1.Column)({ name: 'listagens', type: 'text', nullable: true }),
     __metadata("design:type", String)
-], Evolucao.prototype, "listagens", void 0);
+], Evolucao.prototype, "subjetivo", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'leg_check', type: 'text', nullable: true }),
     __metadata("design:type", String)
-], Evolucao.prototype, "legCheck", void 0);
+], Evolucao.prototype, "objetivo", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    (0, typeorm_1.Column)({ name: 'ajustes', type: 'text', nullable: true }),
     __metadata("design:type", String)
-], Evolucao.prototype, "ajustes", void 0);
+], Evolucao.prototype, "avaliacao", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    (0, typeorm_1.Column)({ name: 'orientacoes', type: 'text', nullable: true }),
     __metadata("design:type", String)
-], Evolucao.prototype, "orientacoes", void 0);
+], Evolucao.prototype, "plano", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'checkin_dor', type: 'int', nullable: true }),
     __metadata("design:type", Object)
