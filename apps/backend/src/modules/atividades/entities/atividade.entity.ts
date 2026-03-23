@@ -36,6 +36,15 @@ export class Atividade extends BaseEntity {
   @Column({ name: 'repetir_semanal', type: 'boolean', default: true })
   repetirSemanal: boolean;
 
+  @Column({ name: 'aceite_profissional', type: 'boolean', default: false })
+  aceiteProfissional: boolean;
+
+  @Column({ name: 'aceite_profissional_por_usuario_id', type: 'uuid', nullable: true })
+  aceiteProfissionalPorUsuarioId: string | null;
+
+  @Column({ name: 'aceite_profissional_em', type: 'timestamp', nullable: true })
+  aceiteProfissionalEm: Date | null;
+
   @Column({ default: true })
   ativo: boolean;
 

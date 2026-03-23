@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A TI VI DA DE S.C ON TR OL LE R
 // ==========================================
@@ -23,6 +23,7 @@ import { CreateAtividadeCheckinDto } from './dto/create-atividade-checkin.dto';
 import { DuplicateAtividadeDto } from './dto/duplicate-atividade.dto';
 import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dto';
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
+import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 import { AtividadesService } from './atividades.service';
 
 @Controller('atividades')
@@ -30,6 +31,16 @@ import { AtividadesService } from './atividades.service';
 export class AtividadesController {
   constructor(private readonly atividadesService: AtividadesService) {}
 
+  
+  @Post('sugestao-ia')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  generateAiSuggestion(
+    @Body() dto: GenerateAtividadeAiDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.atividadesService.generateAiSuggestion(dto, usuario.id);
+  }
   @Post()
   @Throttle({ default: { ttl: 60, limit: 30 } })
   @Roles(UserRole.ADMIN, UserRole.USER)
@@ -142,3 +153,4 @@ export class AtividadesController {
     return this.atividadesService.findCheckinsByAtividade(atividadeId, usuario.id);
   }
 }
+

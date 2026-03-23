@@ -9,6 +9,9 @@ export declare class Atividade extends BaseEntity {
     diaPrescricao: number | null;
     ordemNoDia: number | null;
     repetirSemanal: boolean;
+    aceiteProfissional: boolean;
+    aceiteProfissionalPorUsuarioId: string | null;
+    aceiteProfissionalEm: Date | null;
     ativo: boolean;
     paciente: Paciente;
     pacienteId: string;

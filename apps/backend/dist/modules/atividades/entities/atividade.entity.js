@@ -22,6 +22,9 @@ let Atividade = class Atividade extends base_entity_1.BaseEntity {
     diaPrescricao;
     ordemNoDia;
     repetirSemanal;
+    aceiteProfissional;
+    aceiteProfissionalPorUsuarioId;
+    aceiteProfissionalEm;
     ativo;
     paciente;
     pacienteId;
@@ -54,6 +57,18 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'repetir_semanal', type: 'boolean', default: true }),
     __metadata("design:type", Boolean)
 ], Atividade.prototype, "repetirSemanal", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'aceite_profissional', type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], Atividade.prototype, "aceiteProfissional", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'aceite_profissional_por_usuario_id', type: 'uuid', nullable: true }),
+    __metadata("design:type", Object)
+], Atividade.prototype, "aceiteProfissionalPorUsuarioId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'aceite_profissional_em', type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], Atividade.prototype, "aceiteProfissionalEm", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: true }),
     __metadata("design:type", Boolean)

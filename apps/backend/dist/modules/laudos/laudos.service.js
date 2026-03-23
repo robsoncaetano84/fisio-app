@@ -437,7 +437,7 @@ let LaudosService = class LaudosService {
         if (!apiKey) {
             return {};
         }
-        const model = (process.env.OPENAI_MODEL || 'gpt-4.1-mini').trim();
+        const model = (process.env.OPENAI_LAUDO_MODEL || process.env.OPENAI_MODEL || 'gpt-5-mini').trim();
         const systemPrompt = 'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes.';
         const userPrompt = `
 Retorne SOMENTE JSON valido com as chaves:

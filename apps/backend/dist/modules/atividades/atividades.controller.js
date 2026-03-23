@@ -24,11 +24,15 @@ const create_atividade_checkin_dto_1 = require("./dto/create-atividade-checkin.d
 const duplicate_atividade_dto_1 = require("./dto/duplicate-atividade.dto");
 const duplicate_atividades_batch_dto_1 = require("./dto/duplicate-atividades-batch.dto");
 const update_atividade_dto_1 = require("./dto/update-atividade.dto");
+const generate_atividade_ai_dto_1 = require("./dto/generate-atividade-ai.dto");
 const atividades_service_1 = require("./atividades.service");
 let AtividadesController = class AtividadesController {
     atividadesService;
     constructor(atividadesService) {
         this.atividadesService = atividadesService;
+    }
+    generateAiSuggestion(dto, usuario) {
+        return this.atividadesService.generateAiSuggestion(dto, usuario.id);
     }
     create(dto, usuario) {
         return this.atividadesService.create(dto, usuario.id);
@@ -69,6 +73,17 @@ let AtividadesController = class AtividadesController {
     }
 };
 exports.AtividadesController = AtividadesController;
+__decorate([
+    (0, common_1.Post)('sugestao-ia'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [generate_atividade_ai_dto_1.GenerateAtividadeAiDto,
+        usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], AtividadesController.prototype, "generateAiSuggestion", null);
 __decorate([
     (0, common_1.Post)(),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 30 } }),

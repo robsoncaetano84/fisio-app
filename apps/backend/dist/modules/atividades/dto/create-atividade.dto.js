@@ -20,6 +20,7 @@ class CreateAtividadeDto {
     diaPrescricao;
     ordemNoDia;
     repetirSemanal;
+    aceiteProfissional;
 }
 exports.CreateAtividadeDto = CreateAtividadeDto;
 __decorate([
@@ -64,4 +65,10 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateAtividadeDto.prototype, "repetirSemanal", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Boolean),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateAtividadeDto.prototype, "aceiteProfissional", void 0);
 //# sourceMappingURL=create-atividade.dto.js.map

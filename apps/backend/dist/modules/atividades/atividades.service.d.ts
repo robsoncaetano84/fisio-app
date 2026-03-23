@@ -2,19 +2,22 @@ import { Repository } from 'typeorm';
 import { Atividade } from './entities/atividade.entity';
 import { AtividadeCheckin, DificuldadeExecucao } from './entities/atividade-checkin.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { CreateAtividadeDto } from './dto/create-atividade.dto';
 import { CreateAtividadeCheckinDto } from './dto/create-atividade-checkin.dto';
 import { DuplicateAtividadeDto } from './dto/duplicate-atividade.dto';
 import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dto';
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
+import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 export declare class AtividadesService {
     private readonly atividadeRepository;
     private readonly checkinRepository;
     private readonly pacienteRepository;
+    private readonly anamneseRepository;
     private readonly notificacoesService;
-    constructor(atividadeRepository: Repository<Atividade>, checkinRepository: Repository<AtividadeCheckin>, pacienteRepository: Repository<Paciente>, notificacoesService: NotificacoesService);
+    constructor(atividadeRepository: Repository<Atividade>, checkinRepository: Repository<AtividadeCheckin>, pacienteRepository: Repository<Paciente>, anamneseRepository: Repository<Anamnese>, notificacoesService: NotificacoesService);
     create(dto: CreateAtividadeDto, usuarioId: string): Promise<Atividade>;
     findByPaciente(pacienteId: string, usuarioId: string): Promise<Atividade[]>;
     inativar(atividadeId: string, usuarioId: string): Promise<{
@@ -61,4 +64,19 @@ export declare class AtividadesService {
         motivoNaoExecucao: string | null;
         createdAt: Date;
     }>>;
+    generateAiSuggestion(dto: GenerateAtividadeAiDto, usuarioId: string): Promise<{
+        titulo: string;
+        descricao: string;
+        referencias?: string[];
+        source: 'ai' | 'rules';
+        model?: string;
+    }>;
+    private getAgeInYears;
+    private extractJsonObject;
+    private sanitizeText;
+    private buildRuleSuggestion;
+    private generateWithOpenAI;
+    private getDefaultBibliographicReferences;
+    private normalizeReferences;
+    private appendReferencesToDescricao;
 }

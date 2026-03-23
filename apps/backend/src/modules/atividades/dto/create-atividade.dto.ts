@@ -51,4 +51,9 @@ export class CreateAtividadeDto {
   @Type(() => Boolean)
   @IsBoolean()
   repetirSemanal?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  aceiteProfissional?: boolean;
 }

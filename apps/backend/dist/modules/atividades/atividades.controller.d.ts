@@ -4,10 +4,18 @@ import { CreateAtividadeCheckinDto } from './dto/create-atividade-checkin.dto';
 import { DuplicateAtividadeDto } from './dto/duplicate-atividade.dto';
 import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dto';
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
+import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 import { AtividadesService } from './atividades.service';
 export declare class AtividadesController {
     private readonly atividadesService;
     constructor(atividadesService: AtividadesService);
+    generateAiSuggestion(dto: GenerateAtividadeAiDto, usuario: Usuario): Promise<{
+        titulo: string;
+        descricao: string;
+        referencias?: string[];
+        source: "ai" | "rules";
+        model?: string;
+    }>;
     create(dto: CreateAtividadeDto, usuario: Usuario): Promise<import("./entities/atividade.entity").Atividade>;
     findByPaciente(pacienteId: string, usuario: Usuario): Promise<import("./entities/atividade.entity").Atividade[]>;
     inativar(atividadeId: string, usuario: Usuario): Promise<{

@@ -6,4 +6,5 @@ export declare class CreateAtividadeDto {
     diaPrescricao?: number;
     ordemNoDia?: number;
     repetirSemanal?: boolean;
+    aceiteProfissional?: boolean;
 }
