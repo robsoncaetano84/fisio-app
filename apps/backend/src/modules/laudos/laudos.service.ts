@@ -204,7 +204,7 @@ export class LaudosService {
     doc.restore();
 
     doc.rect(35, 35, 525, 75).fill('#14532D');
-    doc.fillColor('#FFFFFF').fontSize(18).text('Fisio App', 50, 58);
+    doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
     doc
       .fontSize(10)
       .fillColor('#DCFCE7')
@@ -428,7 +428,7 @@ export class LaudosService {
     doc.restore();
 
     doc.rect(35, 35, 525, 75).fill('#14532D');
-    doc.fillColor('#FFFFFF').fontSize(18).text('Fisio App', 50, 58);
+    doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
     doc.fontSize(10).fillColor('#DCFCE7').text('Documento do paciente', 50, 82);
 
     doc
@@ -931,5 +931,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
+
 
 

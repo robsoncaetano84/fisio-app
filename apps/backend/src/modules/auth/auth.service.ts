@@ -343,7 +343,7 @@ export class AuthService {
     const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
     const inviteBaseUrl =
       this.configService.get<string>('PATIENT_INVITE_BASE_URL') ||
-      'fisioapp://cadastro-paciente';
+      'synap://cadastro-paciente';
 
     const token = this.jwtService.sign(
       {
@@ -429,3 +429,4 @@ export class AuthService {
     };
   }
 }
+
