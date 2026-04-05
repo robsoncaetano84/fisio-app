@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A TI VI DA DE S.S ER VI CE
 // ==========================================
@@ -9,8 +9,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';\nimport { createHash } from 'crypto';
-import { Atividade } from './entities/atividade.entity';\nimport { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity';
+import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
+import { Atividade } from './entities/atividade.entity';
+import { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity';
 import {
   AtividadeCheckin,
   DificuldadeExecucao,
@@ -625,18 +627,18 @@ export class AtividadesService {
 
     const titulo =
       dto.titulo?.trim() ||
-      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapÃªutico funcional');
+      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapêutico funcional');
 
     const referencias = this.getDefaultBibliographicReferences().slice(0, 3);
     const descricaoBase =
       dto.descricao?.trim() ||
       [
-        'PrescriÃ§Ã£o sugerida com base na anamnese mais recente.',
+        'Prescrição sugerida com base na anamnese mais recente.',
         objetivo ? `Meta principal: ${objetivo}.` : undefined,
-        limitacoes ? `LimitaÃ§Ãµes funcionais: ${limitacoes}.` : undefined,
-        piora ? `AtenÃ§Ã£o para piora com: ${piora}.` : undefined,
-        alivio ? `EstratÃ©gias que aliviam: ${alivio}.` : undefined,
-        'Executar com progressÃ£o gradual e monitorar resposta clÃ­nica.',
+        limitacoes ? `Limitações funcionais: ${limitacoes}.` : undefined,
+        piora ? `Atenção para piora com: ${piora}.` : undefined,
+        alivio ? `Estratégias que aliviam: ${alivio}.` : undefined,
+        'Executar com progressão gradual e monitorar resposta clínica.',
       ]
         .filter(Boolean)
         .join(' ')
@@ -675,17 +677,17 @@ export class AtividadesService {
     const model = (process.env.OPENAI_ATIVIDADE_MODEL || 'gpt-5-mini').trim();
     const referenciasCanonicas = this.getDefaultBibliographicReferences();
     const systemPrompt =
-      'VocÃª Ã© um assistente clÃ­nico de fisioterapia tradicional. Gere prescriÃ§Ã£o de atividade segura, objetiva e executÃ¡vel. Baseie-se em literatura tÃ©cnica e nÃ£o invente dados ausentes.';
+      'Você é um assistente clínico de fisioterapia tradicional. Gere prescrição de atividade segura, objetiva e executável. Baseie-se em literatura técnica e não invente dados ausentes.';
     const userPrompt = `
-Retorne SOMENTE JSON vÃ¡lido com as chaves:
-titulo (string atÃ© 140 chars),
-descricao (string atÃ© 1000 chars),
-referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referÃªncias abaixo, sem inventar novas).
+Retorne SOMENTE JSON válido com as chaves:
+titulo (string até 140 chars),
+descricao (string até 1000 chars),
+referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referências abaixo, sem inventar novas).
 
-Lista de referÃªncias permitidas:
+Lista de referências permitidas:
 ${referenciasCanonicas.map((r, index) => `${index + 1}. ${r}`).join('\n')}
 
-Contexto clÃ­nico:
+Contexto clínico:
 ${JSON.stringify(input, null, 2)}
 `;
 
@@ -776,5 +778,6 @@ ${JSON.stringify(input, null, 2)}
     return `${base}${blocoReferencias}`.slice(0, 1000);
   }
 }
+
 
 
