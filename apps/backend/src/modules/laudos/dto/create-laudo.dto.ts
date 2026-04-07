@@ -47,9 +47,18 @@ export class CreateLaudoDto {
 
   @IsOptional()
   @IsString()
+  exameFisico?: string;
+
+  @IsOptional()
+  @IsString()
   planoTratamentoIA?: string;
+
+  @IsOptional()
+  @IsString()
+  rascunhoProfissional?: string;
 
   @IsOptional()
   @IsString()
   criteriosAlta?: string;
 }
+

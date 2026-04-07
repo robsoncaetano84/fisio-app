@@ -35,9 +35,18 @@ export class UpdateLaudoDto {
 
   @IsOptional()
   @IsString()
+  exameFisico?: string;
+
+  @IsOptional()
+  @IsString()
   planoTratamentoIA?: string;
+
+  @IsOptional()
+  @IsString()
+  rascunhoProfissional?: string;
 
   @IsOptional()
   @IsString()
   criteriosAlta?: string;
 }
+

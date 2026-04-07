@@ -1,4 +1,4 @@
-ï»¿// ==========================================
+// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // L AU DO S.S ER VI CE
 // ==========================================
@@ -72,7 +72,7 @@ export class LaudosService {
     return {
       profile,
       disclaimer:
-        'ReferÃªncias sugeridas para apoio Ã  decisÃ£o clÃ­nica. NÃ£o substituem avaliaÃ§Ã£o, raciocÃ­nio clÃ­nico e validaÃ§Ã£o profissional.',
+        'Referências sugeridas para apoio à decisão clínica. Não substituem avaliação, raciocínio clínico e validação profissional.',
       laudoReferences: byProfile.laudoReferences,
       planoReferences: byProfile.planoReferences,
     };
@@ -236,6 +236,12 @@ export class LaudosService {
 
     if (tipo === 'laudo') {
       this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
+      if (laudo.exameFisico) {
+        this.addSection(doc, 'Exame Fisico', laudo.exameFisico);
+      }
+      if (laudo.rascunhoProfissional) {
+        this.addSection(doc, 'Notas do Profissional', laudo.rascunhoProfissional);
+      }
       this.addSection(doc, 'Objetivos de Curto Prazo', laudo.objetivosCurtoPrazo);
       this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
       this.addSection(
@@ -455,6 +461,12 @@ export class LaudosService {
 
     if (tipo === 'laudo') {
       this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
+      if (laudo.exameFisico) {
+        this.addSection(doc, 'Exame Fisico', laudo.exameFisico);
+      }
+      if (laudo.rascunhoProfissional) {
+        this.addSection(doc, 'Notas do Profissional', laudo.rascunhoProfissional);
+      }
       this.addSection(doc, 'Objetivos de Curto Prazo', laudo.objetivosCurtoPrazo);
       this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
       this.addSection(
@@ -809,7 +821,7 @@ ${JSON.stringify(input, null, 2)}
         year: 2021,
         authors: 'Raja SN et al.',
         url: 'https://journals.lww.com/pain/fulltext/2020/09000/the_revised_international_association_for_the.8.aspx',
-        rationale: 'Base conceitual para avaliaÃ§Ã£o de dor e comunicaÃ§Ã£o clÃ­nica.',
+        rationale: 'Base conceitual para avaliação de dor e comunicação clínica.',
       },
       {
         id: 'book-magee-orthopedic-physical-assessment',
@@ -819,7 +831,7 @@ ${JSON.stringify(input, null, 2)}
         year: 2020,
         authors: 'David J. Magee',
         url: 'https://www.elsevier.com/books/orthopedic-physical-assessment/magee/978-0-323-52998-6',
-        rationale: 'ReferÃªncia de avaliaÃ§Ã£o fÃ­sica musculoesquelÃ©tica e testes clÃ­nicos.',
+        rationale: 'Referência de avaliação física musculoesquelética e testes clínicos.',
       },
     ];
 
@@ -831,7 +843,7 @@ ${JSON.stringify(input, null, 2)}
         source: 'World Health Organization',
         year: 2017,
         url: 'https://www.who.int/publications/i/item/9789241549974',
-        rationale: 'PrincÃ­pios de planejamento terapÃªutico e funcionalidade.',
+        rationale: 'Princípios de planejamento terapêutico e funcionalidade.',
       },
       {
         id: 'book-therapeutic-exercise-kisner',
@@ -841,7 +853,7 @@ ${JSON.stringify(input, null, 2)}
         year: 2017,
         authors: 'Kisner, Colby, Borstad',
         url: 'https://www.fadavis.com/product/physical-therapy-therapeutic-exercise-kisner-colby-borstad-7',
-        rationale: 'Base para prescriÃ§Ã£o, progressÃ£o e dosagem de exercÃ­cios terapÃªuticos.',
+        rationale: 'Base para prescrição, progressão e dosagem de exercícios terapêuticos.',
       },
     ];
 
@@ -860,7 +872,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'JOSPT Clinical Practice Guideline',
             year: 2021,
             url: 'https://www.jospt.org/doi/10.2519/jospt.2021.0304',
-            rationale: 'Diretriz para condutas e classificaÃ§Ã£o em dor lombar.',
+            rationale: 'Diretriz para condutas e classificação em dor lombar.',
           },
         ],
         planoReferences: [
@@ -872,7 +884,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'Cochrane Review',
             year: 2021,
             url: 'https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD009790.pub2/full',
-            rationale: 'EvidÃªncia para prescriÃ§Ã£o de exercÃ­cio em dor lombar crÃ´nica.',
+            rationale: 'Evidência para prescrição de exercício em dor lombar crônica.',
           },
         ],
       },
@@ -886,7 +898,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'JOSPT / Orthopaedic Section CPG',
             year: 2017,
             url: 'https://www.jospt.org/doi/10.2519/jospt.2017.0302',
-            rationale: 'ClassificaÃ§Ã£o e manejo fisioterapÃªutico da cervicalgia.',
+            rationale: 'Classificação e manejo fisioterapêutico da cervicalgia.',
           },
         ],
         planoReferences: [
@@ -898,7 +910,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'Systematic Review / Clinical Evidence',
             year: 2015,
             url: 'https://pubmed.ncbi.nlm.nih.gov/25830800/',
-            rationale: 'Suporte para combinaÃ§Ã£o de exercÃ­cio e terapia manual.',
+            rationale: 'Suporte para combinação de exercício e terapia manual.',
           },
         ],
       },
@@ -912,7 +924,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'JOSPT Clinical Practice Guideline',
             year: 2019,
             url: 'https://www.jospt.org/doi/10.2519/jospt.2019.0302',
-            rationale: 'AvaliaÃ§Ã£o e raciocÃ­nio clÃ­nico para dor patelofemoral/joelho.',
+            rationale: 'Avaliação e raciocínio clínico para dor patelofemoral/joelho.',
           },
         ],
         planoReferences: [
@@ -924,13 +936,16 @@ ${JSON.stringify(input, null, 2)}
             source: 'BJSM / Consensus Recommendations',
             year: 2020,
             url: 'https://bjsm.bmj.com/content/54/24/1506',
-            rationale: 'ReferÃªncia para progressÃ£o funcional e critÃ©rios de retorno.',
+            rationale: 'Referência para progressão funcional e critérios de retorno.',
           },
         ],
       },
     };
   }
 }
+
+
+
 
 
 

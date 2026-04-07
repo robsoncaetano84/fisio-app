@@ -38,8 +38,14 @@ export class Laudo extends BaseEntity {
   @Column({ type: 'text' })
   condutas: string;
 
+  @Column({ name: 'exame_fisico', type: 'text', nullable: true })
+  exameFisico: string | null;
+
   @Column({ name: 'plano_tratamento_ia', type: 'text', nullable: true })
   planoTratamentoIA: string | null;
+
+  @Column({ name: 'rascunho_profissional', type: 'text', nullable: true })
+  rascunhoProfissional: string | null;
 
   @Column({
     type: 'enum',
@@ -57,3 +63,4 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'criterios_alta', type: 'text', nullable: true })
   criteriosAlta: string | null;
 }
+
