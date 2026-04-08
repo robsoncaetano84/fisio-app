@@ -47,6 +47,11 @@ export class UpdateLaudoDto {
 
   @IsOptional()
   @IsString()
+  observacoes?: string;
+
+  @IsOptional()
+  @IsString()
   criteriosAlta?: string;
 }
+
 

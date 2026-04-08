@@ -59,6 +59,11 @@ export class CreateLaudoDto {
 
   @IsOptional()
   @IsString()
+  observacoes?: string;
+
+  @IsOptional()
+  @IsString()
   criteriosAlta?: string;
 }
+
 

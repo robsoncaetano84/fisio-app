@@ -1,4 +1,4 @@
-// ==========================================
+ï»¿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // L AU DO S.S ER VI CE
 // ==========================================
@@ -72,7 +72,7 @@ export class LaudosService {
     return {
       profile,
       disclaimer:
-        'Referências sugeridas para apoio à decisão clínica. Não substituem avaliação, raciocínio clínico e validação profissional.',
+        'ReferÃªncias sugeridas para apoio Ã  decisÃ£o clÃ­nica. NÃ£o substituem avaliaÃ§Ã£o, raciocÃ­nio clÃ­nico e validaÃ§Ã£o profissional.',
       laudoReferences: byProfile.laudoReferences,
       planoReferences: byProfile.planoReferences,
     };
@@ -247,19 +247,17 @@ export class LaudosService {
       this.addSection(
         doc,
         'Frequencia e Duracao',
-        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${
-          laudo.duracaoSemanas ?? '-'
-        } semana(s)`,
+        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${laudo.duracaoSemanas ?? '-'} semana(s)`,
       );
       this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
       this.addSection(
         doc,
         'Observacao',
-        'Documento para uso clinico profissional. Reavaliar periodicamente.',
+        laudo.observacoes || 'Documento para uso clinico profissional. Reavaliar periodicamente.',
       );
     } else {
       this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
-      this.addSection(doc, 'Plano de Tratamento (IA)', laudo.planoTratamentoIA);
+      this.addSection(doc, 'Plano de Tratamento', laudo.planoTratamentoIA);
       this.addSection(
         doc,
         'Frequencia Sugerida',
@@ -274,137 +272,12 @@ export class LaudosService {
       this.addSection(
         doc,
         'Observacao',
-        'Plano sujeito a ajuste pelo profissional responsavel.',
+        laudo.observacoes || 'Plano sujeito a ajuste pelo profissional responsavel.',
       );
     }
-
-    const consultedReferenceIds = (options?.consultedReferenceIds || []).filter(Boolean);
-    try {
-      const suggestions = await this.getSuggestedReferences(laudo.pacienteId, usuarioId);
-      const candidates =
-        tipo === 'laudo' ? suggestions.laudoReferences : suggestions.planoReferences;
-      const consultedReferences = candidates.filter((ref) =>
-        consultedReferenceIds.includes(ref.id),
-      );
-
-      this.addScientificValidationSummary(doc, consultedReferences.length, candidates.length);
-
-      if (consultedReferences.length) {
-        this.addReferenceSection(
-          doc,
-          'Referencias consultadas (uso profissional)',
-          consultedReferences,
-        );
-      }
-    } catch {
-      // Nao bloqueia a emissao do PDF caso falhe a obtencao das referencias sugeridas.
-    }
-
-    doc.y = Math.max(doc.y + 15, 690);
-    doc
-      .lineWidth(0.6)
-      .strokeColor('#9CA3AF')
-      .moveTo(80, doc.y)
-      .lineTo(280, doc.y)
-      .stroke();
-    doc
-      .moveTo(320, doc.y)
-      .lineTo(520, doc.y)
-      .stroke();
-    doc
-      .fontSize(9)
-      .fillColor('#4B5563')
-      .text('Assinatura do profissional', 110, doc.y + 4)
-      .text(`Data: ${emittedAt.toLocaleDateString('pt-BR')}`, 385, doc.y + 4);
 
     doc.end();
     return done;
-  }
-
-  private addReferenceSection(
-    doc: PDFKit.PDFDocument,
-    title: string,
-    items: LaudoReferenceItem[],
-  ) {
-    if (!items.length) return;
-
-    doc.moveDown(0.8);
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('#111827').text(title);
-    doc
-      .font('Helvetica')
-      .fontSize(8.5)
-      .fillColor('#6B7280')
-      .text(
-        'Referencias consultadas para apoio a decisao clinica; nao substituem julgamento profissional.',
-      );
-    doc.moveDown(0.3);
-
-    items.forEach((item, index) => {
-      const meta = [
-        item.category,
-        item.source,
-        item.year ? String(item.year) : null,
-      ]
-        .filter(Boolean)
-        .join(' | ');
-
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(10)
-        .fillColor('#111827')
-        .text(`${index + 1}. ${item.title}`);
-
-      if (meta) {
-        doc
-          .font('Helvetica')
-          .fontSize(9)
-          .fillColor('#4B5563')
-          .text(meta);
-      }
-
-      if (item.authors) {
-        doc
-          .font('Helvetica')
-          .fontSize(9)
-          .fillColor('#4B5563')
-          .text(`Autores: ${item.authors}`);
-      }
-
-      doc
-        .font('Helvetica')
-        .fontSize(9)
-        .fillColor('#2563EB')
-        .text(item.url, { underline: false });
-
-      doc
-        .font('Helvetica')
-        .fontSize(8.5)
-        .fillColor('#6B7280')
-        .text(`Uso sugerido: ${item.rationale}`);
-
-      doc.moveDown(0.35);
-    });
-  }
-
-  private addScientificValidationSummary(
-    doc: PDFKit.PDFDocument,
-    consultedCount: number,
-    suggestedCount: number,
-  ) {
-    if (suggestedCount <= 0) return;
-
-    doc.moveDown(0.5);
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(11)
-      .fillColor('#111827')
-      .text('Validacao cientifica');
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor('#4B5563')
-      .text(`Fontes consultadas: ${consultedCount}/${suggestedCount}`);
-    doc.moveDown(0.2);
   }
 
   async buildPdfBufferByPacienteUsuario(
@@ -477,6 +350,11 @@ export class LaudosService {
         } semana(s)`,
       );
       this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+      this.addSection(
+        doc,
+        'Observacao',
+        laudo.observacoes || 'Documento para uso clinico profissional. Reavaliar periodicamente.',
+      );
     } else {
       this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
       this.addSection(doc, 'Plano de Tratamento', laudo.planoTratamentoIA);
@@ -491,12 +369,16 @@ export class LaudosService {
         `${laudo.duracaoSemanas ?? '-'} semana(s)`,
       );
       this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+      this.addSection(
+        doc,
+        'Observacao',
+        laudo.observacoes || 'Plano sujeito a ajuste pelo profissional responsavel.',
+      );
     }
 
     doc.end();
     return done;
   }
-
   async generateAndSaveByPaciente(
     pacienteId: string,
     usuarioId: string,
@@ -821,7 +703,7 @@ ${JSON.stringify(input, null, 2)}
         year: 2021,
         authors: 'Raja SN et al.',
         url: 'https://journals.lww.com/pain/fulltext/2020/09000/the_revised_international_association_for_the.8.aspx',
-        rationale: 'Base conceitual para avaliação de dor e comunicação clínica.',
+        rationale: 'Base conceitual para avaliaÃ§Ã£o de dor e comunicaÃ§Ã£o clÃ­nica.',
       },
       {
         id: 'book-magee-orthopedic-physical-assessment',
@@ -831,7 +713,7 @@ ${JSON.stringify(input, null, 2)}
         year: 2020,
         authors: 'David J. Magee',
         url: 'https://www.elsevier.com/books/orthopedic-physical-assessment/magee/978-0-323-52998-6',
-        rationale: 'Referência de avaliação física musculoesquelética e testes clínicos.',
+        rationale: 'ReferÃªncia de avaliaÃ§Ã£o fÃ­sica musculoesquelÃ©tica e testes clÃ­nicos.',
       },
     ];
 
@@ -843,7 +725,7 @@ ${JSON.stringify(input, null, 2)}
         source: 'World Health Organization',
         year: 2017,
         url: 'https://www.who.int/publications/i/item/9789241549974',
-        rationale: 'Princípios de planejamento terapêutico e funcionalidade.',
+        rationale: 'PrincÃ­pios de planejamento terapÃªutico e funcionalidade.',
       },
       {
         id: 'book-therapeutic-exercise-kisner',
@@ -853,7 +735,7 @@ ${JSON.stringify(input, null, 2)}
         year: 2017,
         authors: 'Kisner, Colby, Borstad',
         url: 'https://www.fadavis.com/product/physical-therapy-therapeutic-exercise-kisner-colby-borstad-7',
-        rationale: 'Base para prescrição, progressão e dosagem de exercícios terapêuticos.',
+        rationale: 'Base para prescriÃ§Ã£o, progressÃ£o e dosagem de exercÃ­cios terapÃªuticos.',
       },
     ];
 
@@ -872,7 +754,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'JOSPT Clinical Practice Guideline',
             year: 2021,
             url: 'https://www.jospt.org/doi/10.2519/jospt.2021.0304',
-            rationale: 'Diretriz para condutas e classificação em dor lombar.',
+            rationale: 'Diretriz para condutas e classificaÃ§Ã£o em dor lombar.',
           },
         ],
         planoReferences: [
@@ -884,7 +766,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'Cochrane Review',
             year: 2021,
             url: 'https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD009790.pub2/full',
-            rationale: 'Evidência para prescrição de exercício em dor lombar crônica.',
+            rationale: 'EvidÃªncia para prescriÃ§Ã£o de exercÃ­cio em dor lombar crÃ´nica.',
           },
         ],
       },
@@ -898,7 +780,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'JOSPT / Orthopaedic Section CPG',
             year: 2017,
             url: 'https://www.jospt.org/doi/10.2519/jospt.2017.0302',
-            rationale: 'Classificação e manejo fisioterapêutico da cervicalgia.',
+            rationale: 'ClassificaÃ§Ã£o e manejo fisioterapÃªutico da cervicalgia.',
           },
         ],
         planoReferences: [
@@ -910,7 +792,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'Systematic Review / Clinical Evidence',
             year: 2015,
             url: 'https://pubmed.ncbi.nlm.nih.gov/25830800/',
-            rationale: 'Suporte para combinação de exercício e terapia manual.',
+            rationale: 'Suporte para combinaÃ§Ã£o de exercÃ­cio e terapia manual.',
           },
         ],
       },
@@ -924,7 +806,7 @@ ${JSON.stringify(input, null, 2)}
             source: 'JOSPT Clinical Practice Guideline',
             year: 2019,
             url: 'https://www.jospt.org/doi/10.2519/jospt.2019.0302',
-            rationale: 'Avaliação e raciocínio clínico para dor patelofemoral/joelho.',
+            rationale: 'AvaliaÃ§Ã£o e raciocÃ­nio clÃ­nico para dor patelofemoral/joelho.',
           },
         ],
         planoReferences: [
@@ -936,13 +818,22 @@ ${JSON.stringify(input, null, 2)}
             source: 'BJSM / Consensus Recommendations',
             year: 2020,
             url: 'https://bjsm.bmj.com/content/54/24/1506',
-            rationale: 'Referência para progressão funcional e critérios de retorno.',
+            rationale: 'ReferÃªncia para progressÃ£o funcional e critÃ©rios de retorno.',
           },
         ],
       },
     };
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

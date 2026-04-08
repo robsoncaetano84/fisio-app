@@ -47,6 +47,9 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'rascunho_profissional', type: 'text', nullable: true })
   rascunhoProfissional: string | null;
 
+  @Column({ name: 'observacoes', type: 'text', nullable: true })
+  observacoes: string | null;
+
   @Column({
     type: 'enum',
     enum: LaudoStatus,
@@ -63,4 +66,5 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'criterios_alta', type: 'text', nullable: true })
   criteriosAlta: string | null;
 }
+
 
