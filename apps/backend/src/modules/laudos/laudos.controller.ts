@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // L AU DO S.C ON TR OL LE R
 // ==========================================
@@ -90,6 +90,19 @@ export class LaudosController {
     @CurrentUser() usuario: Usuario,
   ) {
     return this.laudosService.generateAndSaveByPaciente(
+      generateLaudoDto.pacienteId,
+      usuario.id,
+    );
+  }
+
+      @Post('sugestao-ia')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60, limit: 30 } })
+  suggestByPaciente(
+    @Body() generateLaudoDto: GenerateLaudoDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.laudosService.generateSuggestionPreview(
       generateLaudoDto.pacienteId,
       usuario.id,
     );
@@ -239,3 +252,5 @@ export class LaudosController {
     return this.laudosService.remove(id, usuario.id);
   }
 }
+
+

@@ -383,26 +383,14 @@ export class LaudosService {
     pacienteId: string,
     usuarioId: string,
   ): Promise<Laudo> {
-    const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
+    const { paciente, anamneses, evolucoes } = await this.buildAiInput(pacienteId, usuarioId);
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId },
       order: { createdAt: 'DESC' },
     });
     if (existing) {
       return existing;
-    }
-
-    const anamneses = await this.anamneseRepository.find({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-      take: 3,
-    });
-    const evolucoes = await this.evolucaoRepository.find({
-      where: { pacienteId },
-      order: { data: 'DESC' },
-      take: 5,
-    });
-
+    }\r\n
     const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
     const aiSuggestion = canUseAiToday
       ? await this.generateSuggestionWithAI({
@@ -459,6 +447,66 @@ export class LaudosService {
     return this.laudoRepository.save(created);
   }
 
+  async generateSuggestionPreview(
+    pacienteId: string,
+    usuarioId: string,
+  ): Promise<{ source: "ai" | "rules" } & Partial<CreateLaudoDto>> {
+    const { paciente, anamneses, evolucoes } = await this.buildAiInput(
+      pacienteId,
+      usuarioId,
+    );
+    const aiSuggestion = await this.generateSuggestionWithAI({
+      paciente: {
+        nomeCompleto: paciente.nomeCompleto,
+        idade: this.calculateAge(paciente.dataNascimento),
+        sexo: paciente.sexo,
+        profissao: paciente.profissao ?? "",
+      },
+      anamnese: anamneses[0]
+        ? {
+            motivoBusca: anamneses[0].motivoBusca,
+            areasAfetadas: anamneses[0].areasAfetadas,
+            intensidadeDor: anamneses[0].intensidadeDor,
+            descricaoSintomas: anamneses[0].descricaoSintomas ?? "",
+            tempoProblema: anamneses[0].tempoProblema ?? "",
+            inicioProblema: anamneses[0].inicioProblema ?? "",
+            fatorAlivio: anamneses[0].fatorAlivio ?? "",
+          }
+        : null,
+      evolucoes: evolucoes.map((e) => ({
+        data: e.data,
+        avaliacaoClinica: e.avaliacao ?? "",
+        planoSessao: e.plano ?? "",
+        observacoes: e.observacoes ?? "",
+      })),
+    });
+
+    const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
+
+    return {
+      source,
+      diagnosticoFuncional:
+        aiSuggestion.diagnosticoFuncional ??
+        "Diagnostico funcional inicial a confirmar em consulta.",
+      objetivosCurtoPrazo:
+        aiSuggestion.objetivosCurtoPrazo ??
+        "Reduzir dor percebida e melhorar controle motor inicial.",
+      objetivosMedioPrazo:
+        aiSuggestion.objetivosMedioPrazo ??
+        "Restabelecer funcao global e autonomia nas atividades diarias.",
+      frequenciaSemanal: aiSuggestion.frequenciaSemanal ?? 2,
+      duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
+      condutas:
+        aiSuggestion.condutas ??
+        "Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.",
+      planoTratamentoIA:
+        aiSuggestion.planoTratamentoIA ??
+        "Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.",
+      criteriosAlta:
+        aiSuggestion.criteriosAlta ??
+        "Dor controlada, funcao satisfatoria e independencia para autocuidado.",
+    };
+  }
   private calculateAge(dataNascimento: Date): number | null {
     const nascimento = new Date(dataNascimento);
     if (Number.isNaN(nascimento.getTime())) return null;
@@ -636,6 +684,9 @@ ${JSON.stringify(input, null, 2)}
     }
   }
 
+  private async buildAiInput(pacienteId: string, usuarioId: string) {
+    const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);\r\n    return { paciente, anamneses, evolucoes };
+  }
   private addSection(doc: PDFKit.PDFDocument, title: string, value?: string | null) {
     doc.fontSize(12).fillColor('#1b5e40').text(title);
     doc.moveDown(0.2);
@@ -825,6 +876,10 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
+
+
+
+
 
 
 
