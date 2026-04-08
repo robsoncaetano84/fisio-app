@@ -1,9 +1,10 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // M AI N
 // ==========================================
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import * as fs from 'fs';
 import { randomUUID } from 'crypto';
@@ -72,7 +73,7 @@ async function bootstrap() {
       },
     }),
   );
-  app.use((req: any, res: any, next: any) => {
+  app.use((req: Request & { requestId?: string }, res: Response, next: NextFunction) => {
     const startedAt = Date.now();
     const requestId =
       (req.headers['x-request-id'] as string | undefined)?.trim() ||
@@ -118,3 +119,4 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
+

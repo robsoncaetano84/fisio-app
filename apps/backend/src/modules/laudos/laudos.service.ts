@@ -18,6 +18,7 @@ import { PacientesService } from '../pacientes/pacientes.service';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+import { sanitizePartialUpdate } from './laudo-patch.util';
 
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 
@@ -150,7 +151,7 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<Laudo> {
     const laudo = await this.findOne(id, usuarioId);
-    Object.assign(laudo, updateLaudoDto);
+    Object.assign(laudo, sanitizePartialUpdate(updateLaudoDto));
     // Qualquer alteracao apos aprovacao volta para rascunho e exige nova validacao.
     laudo.status = LaudoStatus.RASCUNHO_IA;
     laudo.validadoPorUsuarioId = null;
@@ -885,6 +886,7 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
+
 
 
 
