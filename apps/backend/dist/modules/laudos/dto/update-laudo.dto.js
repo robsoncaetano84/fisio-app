@@ -18,7 +18,10 @@ class UpdateLaudoDto {
     frequenciaSemanal;
     duracaoSemanas;
     condutas;
+    exameFisico;
     planoTratamentoIA;
+    rascunhoProfissional;
+    observacoes;
     criteriosAlta;
 }
 exports.UpdateLaudoDto = UpdateLaudoDto;
@@ -60,7 +63,22 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
+], UpdateLaudoDto.prototype, "exameFisico", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
 ], UpdateLaudoDto.prototype, "planoTratamentoIA", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateLaudoDto.prototype, "rascunhoProfissional", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateLaudoDto.prototype, "observacoes", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

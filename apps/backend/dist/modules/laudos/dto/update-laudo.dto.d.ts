@@ -5,6 +5,9 @@ export declare class UpdateLaudoDto {
     frequenciaSemanal?: number;
     duracaoSemanas?: number;
     condutas?: string;
+    exameFisico?: string;
     planoTratamentoIA?: string;
+    rascunhoProfissional?: string;
+    observacoes?: string;
     criteriosAlta?: string;
 }

@@ -19,7 +19,10 @@ class CreateLaudoDto {
     frequenciaSemanal;
     duracaoSemanas;
     condutas;
+    exameFisico;
     planoTratamentoIA;
+    rascunhoProfissional;
+    observacoes;
     criteriosAlta;
 }
 exports.CreateLaudoDto = CreateLaudoDto;
@@ -66,7 +69,22 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
+], CreateLaudoDto.prototype, "exameFisico", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
 ], CreateLaudoDto.prototype, "planoTratamentoIA", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateLaudoDto.prototype, "rascunhoProfissional", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateLaudoDto.prototype, "observacoes", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

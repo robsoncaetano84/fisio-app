@@ -6,6 +6,9 @@ export declare class CreateLaudoDto {
     frequenciaSemanal?: number;
     duracaoSemanas?: number;
     condutas: string;
+    exameFisico?: string;
     planoTratamentoIA?: string;
+    rascunhoProfissional?: string;
+    observacoes?: string;
     criteriosAlta?: string;
 }

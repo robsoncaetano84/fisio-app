@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const atividade_entity_1 = require("./entities/atividade.entity");
 const atividade_checkin_entity_1 = require("./entities/atividade-checkin.entity");
+const atividade_ai_generation_entity_1 = require("./entities/atividade-ai-generation.entity");
 const paciente_entity_1 = require("../pacientes/entities/paciente.entity");
 const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
 const atividades_controller_1 = require("./atividades.controller");
@@ -22,7 +23,7 @@ exports.AtividadesModule = AtividadesModule;
 exports.AtividadesModule = AtividadesModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([atividade_entity_1.Atividade, atividade_checkin_entity_1.AtividadeCheckin, paciente_entity_1.Paciente, anamnese_entity_1.Anamnese]),
+            typeorm_1.TypeOrmModule.forFeature([atividade_entity_1.Atividade, atividade_checkin_entity_1.AtividadeCheckin, atividade_ai_generation_entity_1.AtividadeAiGeneration, paciente_entity_1.Paciente, anamnese_entity_1.Anamnese]),
             notificacoes_module_1.NotificacoesModule,
         ],
         controllers: [atividades_controller_1.AtividadesController],

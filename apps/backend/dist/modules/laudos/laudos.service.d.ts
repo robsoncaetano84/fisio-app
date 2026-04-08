@@ -42,15 +42,17 @@ export declare class LaudosService {
     buildPdfBuffer(id: string, usuarioId: string, tipo: 'laudo' | 'plano', options?: {
         consultedReferenceIds?: string[];
     }): Promise<Buffer>;
-    private addReferenceSection;
-    private addScientificValidationSummary;
     buildPdfBufferByPacienteUsuario(usuarioId: string, tipo: 'laudo' | 'plano'): Promise<Buffer>;
     generateAndSaveByPaciente(pacienteId: string, usuarioId: string): Promise<Laudo>;
+    generateSuggestionPreview(pacienteId: string, usuarioId: string): Promise<{
+        source: "ai" | "rules";
+    } & Partial<CreateLaudoDto>>;
     private calculateAge;
     private extractJsonObject;
     private generateSuggestionWithAI;
     private getUtcDayString;
     private acquireDailyAiGenerationSlot;
+    private buildAiInput;
     private addSection;
     private inferReferenceProfile;
     private getReferenceCatalog;

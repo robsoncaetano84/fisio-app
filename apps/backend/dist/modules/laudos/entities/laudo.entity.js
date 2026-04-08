@@ -27,7 +27,10 @@ let Laudo = class Laudo extends base_entity_1.BaseEntity {
     frequenciaSemanal;
     duracaoSemanas;
     condutas;
+    exameFisico;
     planoTratamentoIA;
+    rascunhoProfissional;
+    observacoes;
     status;
     validadoPorUsuarioId;
     validadoEm;
@@ -68,9 +71,21 @@ __decorate([
     __metadata("design:type", String)
 ], Laudo.prototype, "condutas", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'exame_fisico', type: 'text', nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "exameFisico", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'plano_tratamento_ia', type: 'text', nullable: true }),
     __metadata("design:type", Object)
 ], Laudo.prototype, "planoTratamentoIA", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'rascunho_profissional', type: 'text', nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "rascunhoProfissional", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'observacoes', type: 'text', nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "observacoes", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'enum',

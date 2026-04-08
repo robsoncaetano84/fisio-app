@@ -13,7 +13,10 @@ export declare class Laudo extends BaseEntity {
     frequenciaSemanal: number | null;
     duracaoSemanas: number | null;
     condutas: string;
+    exameFisico: string | null;
     planoTratamentoIA: string | null;
+    rascunhoProfissional: string | null;
+    observacoes: string | null;
     status: LaudoStatus;
     validadoPorUsuarioId: string | null;
     validadoEm: Date | null;

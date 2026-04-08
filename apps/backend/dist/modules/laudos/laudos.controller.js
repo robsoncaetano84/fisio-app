@@ -63,6 +63,9 @@ let LaudosController = class LaudosController {
     generateByPaciente(generateLaudoDto, usuario) {
         return this.laudosService.generateAndSaveByPaciente(generateLaudoDto.pacienteId, usuario.id);
     }
+    suggestByPaciente(generateLaudoDto, usuario) {
+        return this.laudosService.generateSuggestionPreview(generateLaudoDto.pacienteId, usuario.id);
+    }
     getSuggestedReferences(pacienteId, usuario) {
         return this.laudosService.getSuggestedReferences(pacienteId, usuario.id);
     }
@@ -153,6 +156,17 @@ __decorate([
         usuario_entity_1.Usuario]),
     __metadata("design:returntype", void 0)
 ], LaudosController.prototype, "generateByPaciente", null);
+__decorate([
+    (0, common_1.Post)('sugestao-ia'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 30 } }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [generate_laudo_dto_1.GenerateLaudoDto,
+        usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], LaudosController.prototype, "suggestByPaciente", null);
 __decorate([
     (0, common_1.Get)('referencias-sugeridas'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

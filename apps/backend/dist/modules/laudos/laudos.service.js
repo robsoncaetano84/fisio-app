@@ -147,7 +147,7 @@ let LaudosService = class LaudosService {
         doc.lineWidth(1).strokeColor('#D1D5DB').rect(35, 35, 525, 770).stroke();
         doc.restore();
         doc.rect(35, 35, 525, 75).fill('#14532D');
-        doc.fillColor('#FFFFFF').fontSize(18).text('Fisio App', 50, 58);
+        doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
         doc
             .fontSize(10)
             .fillColor('#DCFCE7')
@@ -170,117 +170,28 @@ let LaudosService = class LaudosService {
         doc.fillColor('#000');
         if (tipo === 'laudo') {
             this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
+            if (laudo.exameFisico) {
+                this.addSection(doc, 'Exame Fisico', laudo.exameFisico);
+            }
+            if (laudo.rascunhoProfissional) {
+                this.addSection(doc, 'Notas do Profissional', laudo.rascunhoProfissional);
+            }
             this.addSection(doc, 'Objetivos de Curto Prazo', laudo.objetivosCurtoPrazo);
             this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
             this.addSection(doc, 'Frequencia e Duracao', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-            this.addSection(doc, 'Observacao', 'Documento para uso clinico profissional. Reavaliar periodicamente.');
+            this.addSection(doc, 'Observacao', laudo.observacoes || 'Documento para uso clinico profissional. Reavaliar periodicamente.');
         }
         else {
             this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
-            this.addSection(doc, 'Plano de Tratamento (IA)', laudo.planoTratamentoIA);
+            this.addSection(doc, 'Plano de Tratamento', laudo.planoTratamentoIA);
             this.addSection(doc, 'Frequencia Sugerida', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`);
             this.addSection(doc, 'Duracao Sugerida', `${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-            this.addSection(doc, 'Observacao', 'Plano sujeito a ajuste pelo profissional responsavel.');
+            this.addSection(doc, 'Observacao', laudo.observacoes || 'Plano sujeito a ajuste pelo profissional responsavel.');
         }
-        const consultedReferenceIds = (options?.consultedReferenceIds || []).filter(Boolean);
-        try {
-            const suggestions = await this.getSuggestedReferences(laudo.pacienteId, usuarioId);
-            const candidates = tipo === 'laudo' ? suggestions.laudoReferences : suggestions.planoReferences;
-            const consultedReferences = candidates.filter((ref) => consultedReferenceIds.includes(ref.id));
-            this.addScientificValidationSummary(doc, consultedReferences.length, candidates.length);
-            if (consultedReferences.length) {
-                this.addReferenceSection(doc, 'Referencias consultadas (uso profissional)', consultedReferences);
-            }
-        }
-        catch {
-        }
-        doc.y = Math.max(doc.y + 15, 690);
-        doc
-            .lineWidth(0.6)
-            .strokeColor('#9CA3AF')
-            .moveTo(80, doc.y)
-            .lineTo(280, doc.y)
-            .stroke();
-        doc
-            .moveTo(320, doc.y)
-            .lineTo(520, doc.y)
-            .stroke();
-        doc
-            .fontSize(9)
-            .fillColor('#4B5563')
-            .text('Assinatura do profissional', 110, doc.y + 4)
-            .text(`Data: ${emittedAt.toLocaleDateString('pt-BR')}`, 385, doc.y + 4);
         doc.end();
         return done;
-    }
-    addReferenceSection(doc, title, items) {
-        if (!items.length)
-            return;
-        doc.moveDown(0.8);
-        doc.font('Helvetica-Bold').fontSize(12).fillColor('#111827').text(title);
-        doc
-            .font('Helvetica')
-            .fontSize(8.5)
-            .fillColor('#6B7280')
-            .text('Referencias consultadas para apoio a decisao clinica; nao substituem julgamento profissional.');
-        doc.moveDown(0.3);
-        items.forEach((item, index) => {
-            const meta = [
-                item.category,
-                item.source,
-                item.year ? String(item.year) : null,
-            ]
-                .filter(Boolean)
-                .join(' | ');
-            doc
-                .font('Helvetica-Bold')
-                .fontSize(10)
-                .fillColor('#111827')
-                .text(`${index + 1}. ${item.title}`);
-            if (meta) {
-                doc
-                    .font('Helvetica')
-                    .fontSize(9)
-                    .fillColor('#4B5563')
-                    .text(meta);
-            }
-            if (item.authors) {
-                doc
-                    .font('Helvetica')
-                    .fontSize(9)
-                    .fillColor('#4B5563')
-                    .text(`Autores: ${item.authors}`);
-            }
-            doc
-                .font('Helvetica')
-                .fontSize(9)
-                .fillColor('#2563EB')
-                .text(item.url, { underline: false });
-            doc
-                .font('Helvetica')
-                .fontSize(8.5)
-                .fillColor('#6B7280')
-                .text(`Uso sugerido: ${item.rationale}`);
-            doc.moveDown(0.35);
-        });
-    }
-    addScientificValidationSummary(doc, consultedCount, suggestedCount) {
-        if (suggestedCount <= 0)
-            return;
-        doc.moveDown(0.5);
-        doc
-            .font('Helvetica-Bold')
-            .fontSize(11)
-            .fillColor('#111827')
-            .text('Validacao cientifica');
-        doc
-            .font('Helvetica')
-            .fontSize(9)
-            .fillColor('#4B5563')
-            .text(`Fontes consultadas: ${consultedCount}/${suggestedCount}`);
-        doc.moveDown(0.2);
     }
     async buildPdfBufferByPacienteUsuario(usuarioId, tipo) {
         const laudo = await this.findLatestByPacienteUsuario(usuarioId);
@@ -301,7 +212,7 @@ let LaudosService = class LaudosService {
         doc.lineWidth(1).strokeColor('#D1D5DB').rect(35, 35, 525, 770).stroke();
         doc.restore();
         doc.rect(35, 35, 525, 75).fill('#14532D');
-        doc.fillColor('#FFFFFF').fontSize(18).text('Fisio App', 50, 58);
+        doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
         doc.fontSize(10).fillColor('#DCFCE7').text('Documento do paciente', 50, 82);
         doc
             .fillColor('#111827')
@@ -323,10 +234,17 @@ let LaudosService = class LaudosService {
         doc.fillColor('#000');
         if (tipo === 'laudo') {
             this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
+            if (laudo.exameFisico) {
+                this.addSection(doc, 'Exame Fisico', laudo.exameFisico);
+            }
+            if (laudo.rascunhoProfissional) {
+                this.addSection(doc, 'Notas do Profissional', laudo.rascunhoProfissional);
+            }
             this.addSection(doc, 'Objetivos de Curto Prazo', laudo.objetivosCurtoPrazo);
             this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
             this.addSection(doc, 'Frequencia e Duracao', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+            this.addSection(doc, 'Observacao', laudo.observacoes || 'Documento para uso clinico profissional. Reavaliar periodicamente.');
         }
         else {
             this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
@@ -334,12 +252,13 @@ let LaudosService = class LaudosService {
             this.addSection(doc, 'Frequencia Sugerida', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`);
             this.addSection(doc, 'Duracao Sugerida', `${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
+            this.addSection(doc, 'Observacao', laudo.observacoes || 'Plano sujeito a ajuste pelo profissional responsavel.');
         }
         doc.end();
         return done;
     }
     async generateAndSaveByPaciente(pacienteId, usuarioId) {
-        const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
+        const { paciente, anamneses, evolucoes } = await this.buildAiInput(pacienteId, usuarioId);
         const existing = await this.laudoRepository.findOne({
             where: { pacienteId },
             order: { createdAt: 'DESC' },
@@ -347,16 +266,6 @@ let LaudosService = class LaudosService {
         if (existing) {
             return existing;
         }
-        const anamneses = await this.anamneseRepository.find({
-            where: { pacienteId },
-            order: { createdAt: 'DESC' },
-            take: 3,
-        });
-        const evolucoes = await this.evolucaoRepository.find({
-            where: { pacienteId },
-            order: { data: 'DESC' },
-            take: 5,
-        });
         const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
         const aiSuggestion = canUseAiToday
             ? await this.generateSuggestionWithAI({
@@ -406,6 +315,52 @@ let LaudosService = class LaudosService {
             validadoEm: null,
         });
         return this.laudoRepository.save(created);
+    }
+    async generateSuggestionPreview(pacienteId, usuarioId) {
+        const { paciente, anamneses, evolucoes } = await this.buildAiInput(pacienteId, usuarioId);
+        const aiSuggestion = await this.generateSuggestionWithAI({
+            paciente: {
+                nomeCompleto: paciente.nomeCompleto,
+                idade: this.calculateAge(paciente.dataNascimento),
+                sexo: paciente.sexo,
+                profissao: paciente.profissao ?? "",
+            },
+            anamnese: anamneses[0]
+                ? {
+                    motivoBusca: anamneses[0].motivoBusca,
+                    areasAfetadas: anamneses[0].areasAfetadas,
+                    intensidadeDor: anamneses[0].intensidadeDor,
+                    descricaoSintomas: anamneses[0].descricaoSintomas ?? "",
+                    tempoProblema: anamneses[0].tempoProblema ?? "",
+                    inicioProblema: anamneses[0].inicioProblema ?? "",
+                    fatorAlivio: anamneses[0].fatorAlivio ?? "",
+                }
+                : null,
+            evolucoes: evolucoes.map((e) => ({
+                data: e.data,
+                avaliacaoClinica: e.avaliacao ?? "",
+                planoSessao: e.plano ?? "",
+                observacoes: e.observacoes ?? "",
+            })),
+        });
+        const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
+        return {
+            source,
+            diagnosticoFuncional: aiSuggestion.diagnosticoFuncional ??
+                "Diagnostico funcional inicial a confirmar em consulta.",
+            objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo ??
+                "Reduzir dor percebida e melhorar controle motor inicial.",
+            objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo ??
+                "Restabelecer funcao global e autonomia nas atividades diarias.",
+            frequenciaSemanal: aiSuggestion.frequenciaSemanal ?? 2,
+            duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
+            condutas: aiSuggestion.condutas ??
+                "Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.",
+            planoTratamentoIA: aiSuggestion.planoTratamentoIA ??
+                "Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.",
+            criteriosAlta: aiSuggestion.criteriosAlta ??
+                "Dor controlada, funcao satisfatoria e independencia para autocuidado.",
+        };
     }
     calculateAge(dataNascimento) {
         const nascimento = new Date(dataNascimento);
@@ -539,6 +494,18 @@ ${JSON.stringify(input, null, 2)}
         catch {
             return false;
         }
+    }
+    async buildAiInput(pacienteId, usuarioId) {
+        const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
+        const anamneses = await this.anamneseRepository.find({
+            where: { pacienteId },
+            order: { createdAt: 'DESC' },
+        });
+        const evolucoes = await this.evolucaoRepository.find({
+            where: { pacienteId },
+            order: { createdAt: 'DESC' },
+        });
+        return { paciente, anamneses, evolucoes };
     }
     addSection(doc, title, value) {
         doc.fontSize(12).fillColor('#1b5e40').text(title);
