@@ -390,7 +390,7 @@ export class LaudosService {
     });
     if (existing) {
       return existing;
-    }\r\n
+    }
     const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
     const aiSuggestion = canUseAiToday
       ? await this.generateSuggestionWithAI({
@@ -685,7 +685,16 @@ ${JSON.stringify(input, null, 2)}
   }
 
   private async buildAiInput(pacienteId: string, usuarioId: string) {
-    const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);\r\n    return { paciente, anamneses, evolucoes };
+    const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
+    const anamneses = await this.anamneseRepository.find({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+    });
+    const evolucoes = await this.evolucaoRepository.find({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+    });
+    return { paciente, anamneses, evolucoes };
   }
   private addSection(doc: PDFKit.PDFDocument, title: string, value?: string | null) {
     doc.fontSize(12).fillColor('#1b5e40').text(title);
@@ -876,6 +885,9 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
+
+
+
 
 
 
