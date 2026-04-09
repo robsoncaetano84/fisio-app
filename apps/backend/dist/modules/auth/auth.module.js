@@ -34,11 +34,14 @@ exports.AuthModule = AuthModule = __decorate([
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => {
                     const secret = configService.get('JWT_SECRET') || 'default-secret';
-                    const expiresIn = configService.get('JWT_EXPIRES_IN') || '7d';
+                    const expiresInRaw = configService.get('JWT_EXPIRES_IN') || '7d';
+                    const expiresIn = /^\\d+$/.test(expiresInRaw)
+                        ? Number(expiresInRaw)
+                        : expiresInRaw;
                     return {
                         secret,
                         signOptions: {
-                            expiresIn: expiresIn,
+                            expiresIn,
                         },
                     };
                 },

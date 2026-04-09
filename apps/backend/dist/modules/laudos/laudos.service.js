@@ -26,6 +26,7 @@ const pacientes_service_1 = require("../pacientes/pacientes.service");
 const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_ai_generation_entity_1 = require("./entities/laudo-ai-generation.entity");
+const laudo_patch_util_1 = require("./laudo-patch.util");
 let LaudosService = class LaudosService {
     laudoRepository;
     anamneseRepository;
@@ -110,7 +111,7 @@ let LaudosService = class LaudosService {
     }
     async update(id, updateLaudoDto, usuarioId) {
         const laudo = await this.findOne(id, usuarioId);
-        Object.assign(laudo, updateLaudoDto);
+        Object.assign(laudo, (0, laudo_patch_util_1.sanitizePartialUpdate)(updateLaudoDto));
         laudo.status = laudo_entity_2.LaudoStatus.RASCUNHO_IA;
         laudo.validadoPorUsuarioId = null;
         laudo.validadoEm = null;
