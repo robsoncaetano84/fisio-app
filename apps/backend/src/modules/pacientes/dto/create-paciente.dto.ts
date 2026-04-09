@@ -13,26 +13,30 @@ import {
   IsUUID,
   IsBoolean,
 } from 'class-validator';
-import { Sexo, EstadoCivil } from '../entities/paciente.entity';
+import {
+  Sexo,
+  EstadoCivil,
+  PacienteCadastroOrigem,
+} from '../entities/paciente.entity';
 
 export class CreatePacienteDto {
-  @IsNotEmpty({ message: 'Nome completo é obrigatório' })
+  @IsNotEmpty({ message: 'Nome completo e obrigatorio' })
   @IsString()
   nomeCompleto: string;
 
-  @IsNotEmpty({ message: 'CPF é obrigatório' })
-  @Length(11, 11, { message: 'CPF deve ter 11 dígitos' })
+  @IsNotEmpty({ message: 'CPF e obrigatorio' })
+  @Length(11, 11, { message: 'CPF deve ter 11 digitos' })
   cpf: string;
 
   @IsOptional()
   @IsString()
   rg?: string;
 
-  @IsNotEmpty({ message: 'Data de nascimento é obrigatória' })
+  @IsNotEmpty({ message: 'Data de nascimento e obrigatoria' })
   @IsDateString()
   dataNascimento: string;
 
-  @IsNotEmpty({ message: 'Sexo é obrigatório' })
+  @IsNotEmpty({ message: 'Sexo e obrigatorio' })
   @IsEnum(Sexo)
   sexo: Sexo;
 
@@ -44,11 +48,11 @@ export class CreatePacienteDto {
   @IsString()
   profissao?: string;
 
-  @IsNotEmpty({ message: 'Rua é obrigatória' })
+  @IsNotEmpty({ message: 'Rua e obrigatoria' })
   @IsString()
   enderecoRua: string;
 
-  @IsNotEmpty({ message: 'Número é obrigatório' })
+  @IsNotEmpty({ message: 'Numero e obrigatorio' })
   @IsString()
   enderecoNumero: string;
 
@@ -56,32 +60,32 @@ export class CreatePacienteDto {
   @IsString()
   enderecoComplemento?: string;
 
-  @IsNotEmpty({ message: 'Bairro é obrigatório' })
+  @IsNotEmpty({ message: 'Bairro e obrigatorio' })
   @IsString()
   enderecoBairro: string;
 
-  @IsNotEmpty({ message: 'CEP é obrigatório' })
-  @Length(8, 8, { message: 'CEP deve ter 8 dígitos' })
+  @IsNotEmpty({ message: 'CEP e obrigatorio' })
+  @Length(8, 8, { message: 'CEP deve ter 8 digitos' })
   enderecoCep: string;
 
-  @IsNotEmpty({ message: 'Cidade é obrigatória' })
+  @IsNotEmpty({ message: 'Cidade e obrigatoria' })
   @IsString()
   enderecoCidade: string;
 
-  @IsNotEmpty({ message: 'UF é obrigatória' })
+  @IsNotEmpty({ message: 'UF e obrigatoria' })
   @Length(2, 2, { message: 'UF deve ter 2 caracteres' })
   enderecoUf: string;
 
-  @IsNotEmpty({ message: 'WhatsApp é obrigatório' })
-  @Length(10, 11, { message: 'WhatsApp deve ter 10 ou 11 dígitos' })
+  @IsNotEmpty({ message: 'WhatsApp e obrigatorio' })
+  @Length(10, 11, { message: 'WhatsApp deve ter 10 ou 11 digitos' })
   contatoWhatsapp: string;
 
   @IsOptional()
-  @Length(10, 11, { message: 'Telefone deve ter 10 ou 11 dígitos' })
+  @Length(10, 11, { message: 'Telefone deve ter 10 ou 11 digitos' })
   contatoTelefone?: string;
 
   @IsOptional()
-  @IsEmail({}, { message: 'E-mail inválido' })
+  @IsEmail({}, { message: 'E-mail invalido' })
   contatoEmail?: string;
 
   @IsOptional()
@@ -91,4 +95,8 @@ export class CreatePacienteDto {
   @IsOptional()
   @IsBoolean()
   anamneseLiberadaPaciente?: boolean;
+
+  @IsOptional()
+  @IsEnum(PacienteCadastroOrigem)
+  cadastroOrigem?: PacienteCadastroOrigem;
 }

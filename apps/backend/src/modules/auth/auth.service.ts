@@ -21,7 +21,11 @@ import { UserRole } from '../usuarios/entities/usuario.entity';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Paciente } from '../pacientes/entities/paciente.entity';
+import {
+  Paciente,
+  PacienteCadastroOrigem,
+  PacienteVinculoStatus,
+} from '../pacientes/entities/paciente.entity';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 
 export interface JwtPayload {
@@ -305,6 +309,14 @@ export class AuthService {
   ): Promise<void> {
     if (pacienteParaVinculo.pacienteUsuarioId) {
       if (pacienteParaVinculo.pacienteUsuarioId === pacienteUsuario.id) {
+        pacienteParaVinculo.vinculoStatus =
+          pacienteParaVinculo.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
+            ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+            : PacienteVinculoStatus.VINCULADO;
+        if (!pacienteParaVinculo.conviteAceitoEm) {
+          pacienteParaVinculo.conviteAceitoEm = new Date();
+        }
+        await this.pacienteRepository.save(pacienteParaVinculo);
         return;
       }
       throw new BadRequestException('Paciente ja possui usuario vinculado');
@@ -319,6 +331,11 @@ export class AuthService {
     }
 
     pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
+    pacienteParaVinculo.vinculoStatus =
+      pacienteParaVinculo.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
+        ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+        : PacienteVinculoStatus.VINCULADO;
+    pacienteParaVinculo.conviteAceitoEm = new Date();
     await this.pacienteRepository.save(pacienteParaVinculo);
   }
 
@@ -365,6 +382,10 @@ export class AuthService {
 
     const sep = inviteBaseUrl.includes('?') ? '&' : '?';
     const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
+
+    paciente.vinculoStatus = PacienteVinculoStatus.CONVITE_ENVIADO;
+    paciente.conviteEnviadoEm = new Date();
+    await this.pacienteRepository.save(paciente);
 
     return { token, link, expiraEmDias };
   }
@@ -435,4 +456,8 @@ export class AuthService {
     };
   }
 }
+
+
+
+
 

@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // P AC IE NT E.E NT IT Y
 // ==========================================
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 
@@ -18,6 +18,19 @@ export enum EstadoCivil {
   VIUVO = 'VIUVO',
   DIVORCIADO = 'DIVORCIADO',
   UNIAO_ESTAVEL = 'UNIAO_ESTAVEL',
+}
+
+export enum PacienteCadastroOrigem {
+  CADASTRO_ASSISTIDO = 'CADASTRO_ASSISTIDO',
+  CONVITE_RAPIDO = 'CONVITE_RAPIDO',
+}
+
+export enum PacienteVinculoStatus {
+  SEM_VINCULO = 'SEM_VINCULO',
+  CONVITE_ENVIADO = 'CONVITE_ENVIADO',
+  VINCULADO = 'VINCULADO',
+  VINCULADO_PENDENTE_COMPLEMENTO = 'VINCULADO_PENDENTE_COMPLEMENTO',
+  BLOQUEADO_CONFLITO = 'BLOQUEADO_CONFLITO',
 }
 
 @Entity('pacientes')
@@ -104,4 +117,26 @@ export class Paciente extends BaseEntity {
     default: false,
   })
   anamneseLiberadaPaciente: boolean;
+
+  @Column({
+    name: 'cadastro_origem',
+    type: 'enum',
+    enum: PacienteCadastroOrigem,
+    default: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+  })
+  cadastroOrigem: PacienteCadastroOrigem;
+
+  @Column({
+    name: 'vinculo_status',
+    type: 'enum',
+    enum: PacienteVinculoStatus,
+    default: PacienteVinculoStatus.SEM_VINCULO,
+  })
+  vinculoStatus: PacienteVinculoStatus;
+
+  @Column({ name: 'convite_enviado_em', type: 'timestamp', nullable: true })
+  conviteEnviadoEm: Date | null;
+
+  @Column({ name: 'convite_aceito_em', type: 'timestamp', nullable: true })
+  conviteAceitoEm: Date | null;
 }

@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -8,7 +8,11 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { promises as fs } from 'fs';
-import { Paciente } from './entities/paciente.entity';
+import {
+  Paciente,
+  PacienteCadastroOrigem,
+  PacienteVinculoStatus,
+} from './entities/paciente.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
@@ -31,6 +35,19 @@ export class PacientesService {
     @InjectRepository(PacienteExame)
     private readonly pacienteExameRepository: Repository<PacienteExame>,
   ) {}
+
+  private resolveInitialVinculoStatus(
+    pacienteUsuarioId: string | null,
+    cadastroOrigem?: PacienteCadastroOrigem,
+  ): PacienteVinculoStatus {
+    if (pacienteUsuarioId) {
+      if (cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO) {
+        return PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO;
+      }
+      return PacienteVinculoStatus.VINCULADO;
+    }
+    return PacienteVinculoStatus.SEM_VINCULO;
+  }
 
   private async validatePacienteUsuarioId(
     pacienteUsuarioId: string | undefined,
@@ -79,8 +96,15 @@ export class PacientesService {
       createPacienteDto.pacienteUsuarioId,
     );
 
+    const cadastroOrigem =
+      createPacienteDto.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO;
+
     const paciente = this.pacienteRepository.create({
       ...createPacienteDto,
+      cadastroOrigem,
+      vinculoStatus: this.resolveInitialVinculoStatus(pacienteUsuarioId, cadastroOrigem),
+      conviteEnviadoEm: null,
+      conviteAceitoEm: pacienteUsuarioId ? new Date() : null,
       usuarioId,
       pacienteUsuarioId,
     });
@@ -152,7 +176,28 @@ export class PacientesService {
         updatePacienteDto.pacienteUsuarioId,
         paciente.id,
       );
+
       paciente.pacienteUsuarioId = pacienteUsuarioId;
+      paciente.vinculoStatus = pacienteUsuarioId
+        ? this.resolveInitialVinculoStatus(
+            pacienteUsuarioId,
+            paciente.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+          )
+        : PacienteVinculoStatus.SEM_VINCULO;
+
+      if (!pacienteUsuarioId) {
+        paciente.conviteAceitoEm = null;
+      } else if (!paciente.conviteAceitoEm) {
+        paciente.conviteAceitoEm = new Date();
+      }
+    }
+
+    if (updatePacienteDto.cadastroOrigem) {
+      paciente.cadastroOrigem = updatePacienteDto.cadastroOrigem;
+    }
+
+    if (updatePacienteDto.vinculoStatus) {
+      paciente.vinculoStatus = updatePacienteDto.vinculoStatus;
     }
 
     Object.assign(paciente, updatePacienteDto);
@@ -170,6 +215,8 @@ export class PacientesService {
     }
 
     paciente.pacienteUsuarioId = null;
+    paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+    paciente.conviteAceitoEm = null;
     return this.pacienteRepository.save(paciente);
   }
 
@@ -181,6 +228,8 @@ export class PacientesService {
     const paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
 
     paciente.pacienteUsuarioId = null;
+    paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+    paciente.conviteAceitoEm = null;
     await this.pacienteRepository.save(paciente);
 
     return { pacienteId: paciente.id };

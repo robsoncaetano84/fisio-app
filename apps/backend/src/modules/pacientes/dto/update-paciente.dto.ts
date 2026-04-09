@@ -12,7 +12,12 @@ import {
   IsUUID,
   IsBoolean,
 } from 'class-validator';
-import { Sexo, EstadoCivil } from '../entities/paciente.entity';
+import {
+  Sexo,
+  EstadoCivil,
+  PacienteCadastroOrigem,
+  PacienteVinculoStatus,
+} from '../entities/paciente.entity';
 
 export class UpdatePacienteDto {
   @IsOptional()
@@ -90,4 +95,12 @@ export class UpdatePacienteDto {
   @IsOptional()
   @IsBoolean()
   anamneseLiberadaPaciente?: boolean;
+
+  @IsOptional()
+  @IsEnum(PacienteCadastroOrigem)
+  cadastroOrigem?: PacienteCadastroOrigem;
+
+  @IsOptional()
+  @IsEnum(PacienteVinculoStatus)
+  vinculoStatus?: PacienteVinculoStatus;
 }

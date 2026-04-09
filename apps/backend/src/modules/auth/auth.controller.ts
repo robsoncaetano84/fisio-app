@@ -18,9 +18,6 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
-import { PacienteUsuarioQueryDto } from './dto/paciente-usuario-query.dto';
-import { SearchPacienteUsuariosQueryDto } from './dto/search-paciente-usuarios-query.dto';
-import { PacienteUsuarioResponseDto } from './dto/paciente-usuario-response.dto';
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { AceitarPacienteInviteDto } from './dto/aceitar-paciente-convite.dto';
@@ -135,49 +132,5 @@ export class AuthController {
       role: updated.role,
     };
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('paciente-usuario')
-  @Roles(UserRole.ADMIN, UserRole.USER)
-  async getPacienteUsuarioByEmail(
-    @CurrentUser() usuario: Usuario,
-    @Query() query: PacienteUsuarioQueryDto,
-  ): Promise<PacienteUsuarioResponseDto | null> {
-    const normalizedEmail = query.email.trim().toLowerCase();
-
-    const pacienteUsuario = await this.usuariosService.findPacienteByEmailForProfissional(
-      usuario.id,
-      normalizedEmail,
-    );
-    if (!pacienteUsuario) {
-      return null;
-    }
-
-    return {
-      id: pacienteUsuario.id,
-      nome: pacienteUsuario.nome,
-      email: pacienteUsuario.email,
-      role: pacienteUsuario.role,
-    };
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('paciente-usuarios')
-  @Roles(UserRole.ADMIN, UserRole.USER)
-  async searchPacienteUsuarios(
-    @CurrentUser() usuario: Usuario,
-    @Query() query: SearchPacienteUsuariosQueryDto,
-  ): Promise<PacienteUsuarioResponseDto[]> {
-    const usuarios = await this.usuariosService.searchPacientesByTermForProfissional(
-      usuario.id,
-      query.query,
-      query.limit ?? 10,
-    );
-    return usuarios.map((pacienteUsuario) => ({
-      id: pacienteUsuario.id,
-      nome: pacienteUsuario.nome,
-      email: pacienteUsuario.email,
-      role: pacienteUsuario.role,
-    }));
-  }
 }
+
