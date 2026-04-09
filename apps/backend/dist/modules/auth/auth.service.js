@@ -227,6 +227,14 @@ let AuthService = AuthService_1 = class AuthService {
     async vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario) {
         if (pacienteParaVinculo.pacienteUsuarioId) {
             if (pacienteParaVinculo.pacienteUsuarioId === pacienteUsuario.id) {
+                pacienteParaVinculo.vinculoStatus =
+                    pacienteParaVinculo.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
+                        ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+                        : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
+                if (!pacienteParaVinculo.conviteAceitoEm) {
+                    pacienteParaVinculo.conviteAceitoEm = new Date();
+                }
+                await this.pacienteRepository.save(pacienteParaVinculo);
                 return;
             }
             throw new common_1.BadRequestException('Paciente ja possui usuario vinculado');
@@ -238,7 +246,69 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
         }
         pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
+        pacienteParaVinculo.vinculoStatus =
+            pacienteParaVinculo.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
+                ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+                : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
+        pacienteParaVinculo.conviteAceitoEm = new Date();
         await this.pacienteRepository.save(pacienteParaVinculo);
+    }
+    sanitizeDigits(value) {
+        return (value || '').replace(/\D/g, '').trim();
+    }
+    async generateUniquePacienteCpf() {
+        for (let i = 0; i < 25; i++) {
+            const base = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+            const cpf = base.slice(-11).padStart(11, '0');
+            const exists = await this.pacienteRepository.findOne({ where: { cpf } });
+            if (!exists)
+                return cpf;
+        }
+        throw new common_1.BadRequestException('Nao foi possivel gerar CPF temporario para convite rapido');
+    }
+    async gerarConviteRapidoPaciente(profissional, dto) {
+        if (profissional.role !== usuario_entity_1.UserRole.ADMIN &&
+            profissional.role !== usuario_entity_1.UserRole.USER) {
+            throw new common_1.ForbiddenException('Apenas profissionais podem gerar convite');
+        }
+        const whatsappDigits = this.sanitizeDigits(dto.whatsapp);
+        const email = dto.email?.trim().toLowerCase() || '';
+        if (!whatsappDigits && !email) {
+            throw new common_1.BadRequestException('Informe WhatsApp ou e-mail para envio do convite');
+        }
+        const cpfTemporario = await this.generateUniquePacienteCpf();
+        const nomeBase = dto.nome?.trim() || 'Paciente convite rapido';
+        const draftPaciente = {
+            usuarioId: profissional.id,
+            nomeCompleto: nomeBase,
+            cpf: cpfTemporario,
+            dataNascimento: new Date('1900-01-01'),
+            sexo: paciente_entity_1.Sexo.OUTRO,
+            profissao: '',
+            enderecoRua: '-',
+            enderecoNumero: '-',
+            enderecoBairro: '-',
+            enderecoCep: '00000000',
+            enderecoCidade: '-',
+            enderecoUf: 'NA',
+            contatoWhatsapp: whatsappDigits || '0000000000',
+            contatoEmail: email || undefined,
+            cadastroOrigem: paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO,
+            vinculoStatus: paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO,
+            anamneseLiberadaPaciente: false,
+            pacienteUsuarioId: null,
+            conviteEnviadoEm: null,
+            conviteAceitoEm: null,
+            ativo: true,
+        };
+        const saved = await this.pacienteRepository.save(this.pacienteRepository.create(draftPaciente));
+        const invite = await this.gerarConvitePaciente(profissional, saved.id, dto.diasExpiracao);
+        return {
+            pacienteId: saved.id,
+            token: invite.token,
+            link: invite.link,
+            expiraEmDias: invite.expiraEmDias,
+        };
     }
     async gerarConvitePaciente(profissional, pacienteId, diasExpiracao) {
         if (profissional.role !== usuario_entity_1.UserRole.ADMIN &&
@@ -267,6 +337,9 @@ let AuthService = AuthService_1 = class AuthService {
         });
         const sep = inviteBaseUrl.includes('?') ? '&' : '?';
         const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
+        paciente.vinculoStatus = paciente_entity_1.PacienteVinculoStatus.CONVITE_ENVIADO;
+        paciente.conviteEnviadoEm = new Date();
+        await this.pacienteRepository.save(paciente);
         return { token, link, expiraEmDias };
     }
     async aceitarConvitePaciente(pacienteUsuario, conviteToken) {

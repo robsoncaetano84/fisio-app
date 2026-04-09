@@ -5,10 +5,8 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
-import { PacienteUsuarioQueryDto } from './dto/paciente-usuario-query.dto';
-import { SearchPacienteUsuariosQueryDto } from './dto/search-paciente-usuarios-query.dto';
-import { PacienteUsuarioResponseDto } from './dto/paciente-usuario-response.dto';
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
+import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { AceitarPacienteInviteDto } from './dto/aceitar-paciente-convite.dto';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
@@ -27,6 +25,12 @@ export declare class AuthController {
         };
     }>;
     gerarConvitePaciente(usuario: Usuario, body: CreatePacienteInviteDto): Promise<{
+        token: string;
+        link: string;
+        expiraEmDias: number;
+    }>;
+    gerarConviteRapidoPaciente(usuario: Usuario, body: CreatePacienteConviteRapidoDto): Promise<{
+        pacienteId: string;
         token: string;
         link: string;
         expiraEmDias: number;
@@ -63,6 +67,4 @@ export declare class AuthController {
         especialidade: string;
         role: UserRole;
     }>;
-    getPacienteUsuarioByEmail(usuario: Usuario, query: PacienteUsuarioQueryDto): Promise<PacienteUsuarioResponseDto | null>;
-    searchPacienteUsuarios(usuario: Usuario, query: SearchPacienteUsuariosQueryDto): Promise<PacienteUsuarioResponseDto[]>;
 }

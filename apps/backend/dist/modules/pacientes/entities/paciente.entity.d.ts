@@ -12,6 +12,17 @@ export declare enum EstadoCivil {
     DIVORCIADO = "DIVORCIADO",
     UNIAO_ESTAVEL = "UNIAO_ESTAVEL"
 }
+export declare enum PacienteCadastroOrigem {
+    CADASTRO_ASSISTIDO = "CADASTRO_ASSISTIDO",
+    CONVITE_RAPIDO = "CONVITE_RAPIDO"
+}
+export declare enum PacienteVinculoStatus {
+    SEM_VINCULO = "SEM_VINCULO",
+    CONVITE_ENVIADO = "CONVITE_ENVIADO",
+    VINCULADO = "VINCULADO",
+    VINCULADO_PENDENTE_COMPLEMENTO = "VINCULADO_PENDENTE_COMPLEMENTO",
+    BLOQUEADO_CONFLITO = "BLOQUEADO_CONFLITO"
+}
 export declare class Paciente extends BaseEntity {
     nomeCompleto: string;
     cpf: string;
@@ -36,4 +47,8 @@ export declare class Paciente extends BaseEntity {
     pacienteUsuario: Usuario | null;
     pacienteUsuarioId: string | null;
     anamneseLiberadaPaciente: boolean;
+    cadastroOrigem: PacienteCadastroOrigem;
+    vinculoStatus: PacienteVinculoStatus;
+    conviteEnviadoEm: Date | null;
+    conviteAceitoEm: Date | null;
 }

@@ -32,6 +32,8 @@ class UpdatePacienteDto {
     contatoEmail;
     pacienteUsuarioId;
     anamneseLiberadaPaciente;
+    cadastroOrigem;
+    vinculoStatus;
 }
 exports.UpdatePacienteDto = UpdatePacienteDto;
 __decorate([
@@ -129,4 +131,14 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], UpdatePacienteDto.prototype, "anamneseLiberadaPaciente", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(paciente_entity_1.PacienteCadastroOrigem),
+    __metadata("design:type", String)
+], UpdatePacienteDto.prototype, "cadastroOrigem", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(paciente_entity_1.PacienteVinculoStatus),
+    __metadata("design:type", String)
+], UpdatePacienteDto.prototype, "vinculoStatus", void 0);
 //# sourceMappingURL=update-paciente.dto.js.map

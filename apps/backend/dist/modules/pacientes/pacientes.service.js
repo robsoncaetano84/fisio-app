@@ -35,6 +35,15 @@ let PacientesService = class PacientesService {
         this.usuarioRepository = usuarioRepository;
         this.pacienteExameRepository = pacienteExameRepository;
     }
+    resolveInitialVinculoStatus(pacienteUsuarioId, cadastroOrigem) {
+        if (pacienteUsuarioId) {
+            if (cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
+                return paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO;
+            }
+            return paciente_entity_1.PacienteVinculoStatus.VINCULADO;
+        }
+        return paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO;
+    }
     async validatePacienteUsuarioId(pacienteUsuarioId, ignorePacienteId) {
         if (!pacienteUsuarioId) {
             return null;
@@ -64,8 +73,13 @@ let PacientesService = class PacientesService {
             throw new common_1.ConflictException('CPF ja cadastrado');
         }
         const pacienteUsuarioId = await this.validatePacienteUsuarioId(createPacienteDto.pacienteUsuarioId);
+        const cadastroOrigem = createPacienteDto.cadastroOrigem || paciente_entity_1.PacienteCadastroOrigem.CADASTRO_ASSISTIDO;
         const paciente = this.pacienteRepository.create({
             ...createPacienteDto,
+            cadastroOrigem,
+            vinculoStatus: this.resolveInitialVinculoStatus(pacienteUsuarioId, cadastroOrigem),
+            conviteEnviadoEm: null,
+            conviteAceitoEm: pacienteUsuarioId ? new Date() : null,
             usuarioId,
             pacienteUsuarioId,
         });
@@ -119,6 +133,21 @@ let PacientesService = class PacientesService {
         if (Object.prototype.hasOwnProperty.call(updatePacienteDto, 'pacienteUsuarioId')) {
             const pacienteUsuarioId = await this.validatePacienteUsuarioId(updatePacienteDto.pacienteUsuarioId, paciente.id);
             paciente.pacienteUsuarioId = pacienteUsuarioId;
+            paciente.vinculoStatus = pacienteUsuarioId
+                ? this.resolveInitialVinculoStatus(pacienteUsuarioId, paciente.cadastroOrigem || paciente_entity_1.PacienteCadastroOrigem.CADASTRO_ASSISTIDO)
+                : paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO;
+            if (!pacienteUsuarioId) {
+                paciente.conviteAceitoEm = null;
+            }
+            else if (!paciente.conviteAceitoEm) {
+                paciente.conviteAceitoEm = new Date();
+            }
+        }
+        if (updatePacienteDto.cadastroOrigem) {
+            paciente.cadastroOrigem = updatePacienteDto.cadastroOrigem;
+        }
+        if (updatePacienteDto.vinculoStatus) {
+            paciente.vinculoStatus = updatePacienteDto.vinculoStatus;
         }
         Object.assign(paciente, updatePacienteDto);
         return this.pacienteRepository.save(paciente);
@@ -129,6 +158,8 @@ let PacientesService = class PacientesService {
             throw new common_1.BadRequestException('Paciente nao possui usuario vinculado');
         }
         paciente.pacienteUsuarioId = null;
+        paciente.vinculoStatus = paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO;
+        paciente.conviteAceitoEm = null;
         return this.pacienteRepository.save(paciente);
     }
     async unlinkMyProfessional(usuario) {
@@ -137,6 +168,8 @@ let PacientesService = class PacientesService {
         }
         const paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
         paciente.pacienteUsuarioId = null;
+        paciente.vinculoStatus = paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO;
+        paciente.conviteAceitoEm = null;
         await this.pacienteRepository.save(paciente);
         return { pacienteId: paciente.id };
     }

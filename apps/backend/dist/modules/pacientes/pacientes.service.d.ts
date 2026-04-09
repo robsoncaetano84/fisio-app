@@ -14,6 +14,7 @@ export declare class PacientesService {
     private readonly usuarioRepository;
     private readonly pacienteExameRepository;
     constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>);
+    private resolveInitialVinculoStatus;
     private validatePacienteUsuarioId;
     create(createPacienteDto: CreatePacienteDto, usuarioId: string): Promise<Paciente>;
     findAll(usuarioId: string): Promise<Paciente[]>;

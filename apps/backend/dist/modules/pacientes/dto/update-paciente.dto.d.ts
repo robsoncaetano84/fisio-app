@@ -1,4 +1,4 @@
-import { Sexo, EstadoCivil } from '../entities/paciente.entity';
+import { Sexo, EstadoCivil, PacienteCadastroOrigem, PacienteVinculoStatus } from '../entities/paciente.entity';
 export declare class UpdatePacienteDto {
     nomeCompleto?: string;
     cpf?: string;
@@ -19,4 +19,6 @@ export declare class UpdatePacienteDto {
     contatoEmail?: string;
     pacienteUsuarioId?: string;
     anamneseLiberadaPaciente?: boolean;
+    cadastroOrigem?: PacienteCadastroOrigem;
+    vinculoStatus?: PacienteVinculoStatus;
 }

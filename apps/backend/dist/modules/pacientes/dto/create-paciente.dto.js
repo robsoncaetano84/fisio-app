@@ -32,16 +32,17 @@ class CreatePacienteDto {
     contatoEmail;
     pacienteUsuarioId;
     anamneseLiberadaPaciente;
+    cadastroOrigem;
 }
 exports.CreatePacienteDto = CreatePacienteDto;
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Nome completo é obrigatório' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Nome completo e obrigatorio' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "nomeCompleto", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'CPF é obrigatório' }),
-    (0, class_validator_1.Length)(11, 11, { message: 'CPF deve ter 11 dígitos' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'CPF e obrigatorio' }),
+    (0, class_validator_1.Length)(11, 11, { message: 'CPF deve ter 11 digitos' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "cpf", void 0);
 __decorate([
@@ -50,12 +51,12 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "rg", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Data de nascimento é obrigatória' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Data de nascimento e obrigatoria' }),
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "dataNascimento", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Sexo é obrigatório' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Sexo e obrigatorio' }),
     (0, class_validator_1.IsEnum)(paciente_entity_1.Sexo),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "sexo", void 0);
@@ -70,12 +71,12 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "profissao", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Rua é obrigatória' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Rua e obrigatoria' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoRua", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Número é obrigatório' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Numero e obrigatorio' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoNumero", void 0);
@@ -85,38 +86,38 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoComplemento", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Bairro é obrigatório' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Bairro e obrigatorio' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoBairro", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'CEP é obrigatório' }),
-    (0, class_validator_1.Length)(8, 8, { message: 'CEP deve ter 8 dígitos' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'CEP e obrigatorio' }),
+    (0, class_validator_1.Length)(8, 8, { message: 'CEP deve ter 8 digitos' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoCep", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Cidade é obrigatória' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Cidade e obrigatoria' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoCidade", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'UF é obrigatória' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'UF e obrigatoria' }),
     (0, class_validator_1.Length)(2, 2, { message: 'UF deve ter 2 caracteres' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "enderecoUf", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'WhatsApp é obrigatório' }),
-    (0, class_validator_1.Length)(10, 11, { message: 'WhatsApp deve ter 10 ou 11 dígitos' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'WhatsApp e obrigatorio' }),
+    (0, class_validator_1.Length)(10, 11, { message: 'WhatsApp deve ter 10 ou 11 digitos' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "contatoWhatsapp", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.Length)(10, 11, { message: 'Telefone deve ter 10 ou 11 dígitos' }),
+    (0, class_validator_1.Length)(10, 11, { message: 'Telefone deve ter 10 ou 11 digitos' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "contatoTelefone", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEmail)({}, { message: 'E-mail inválido' }),
+    (0, class_validator_1.IsEmail)({}, { message: 'E-mail invalido' }),
     __metadata("design:type", String)
 ], CreatePacienteDto.prototype, "contatoEmail", void 0);
 __decorate([
@@ -129,4 +130,9 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreatePacienteDto.prototype, "anamneseLiberadaPaciente", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(paciente_entity_1.PacienteCadastroOrigem),
+    __metadata("design:type", String)
+], CreatePacienteDto.prototype, "cadastroOrigem", void 0);
 //# sourceMappingURL=create-paciente.dto.js.map

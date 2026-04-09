@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Paciente = exports.EstadoCivil = exports.Sexo = void 0;
+exports.Paciente = exports.PacienteVinculoStatus = exports.PacienteCadastroOrigem = exports.EstadoCivil = exports.Sexo = void 0;
 const typeorm_1 = require("typeorm");
 const base_entity_1 = require("../../../common/entities/base.entity");
 const usuario_entity_1 = require("../../usuarios/entities/usuario.entity");
@@ -27,6 +27,19 @@ var EstadoCivil;
     EstadoCivil["DIVORCIADO"] = "DIVORCIADO";
     EstadoCivil["UNIAO_ESTAVEL"] = "UNIAO_ESTAVEL";
 })(EstadoCivil || (exports.EstadoCivil = EstadoCivil = {}));
+var PacienteCadastroOrigem;
+(function (PacienteCadastroOrigem) {
+    PacienteCadastroOrigem["CADASTRO_ASSISTIDO"] = "CADASTRO_ASSISTIDO";
+    PacienteCadastroOrigem["CONVITE_RAPIDO"] = "CONVITE_RAPIDO";
+})(PacienteCadastroOrigem || (exports.PacienteCadastroOrigem = PacienteCadastroOrigem = {}));
+var PacienteVinculoStatus;
+(function (PacienteVinculoStatus) {
+    PacienteVinculoStatus["SEM_VINCULO"] = "SEM_VINCULO";
+    PacienteVinculoStatus["CONVITE_ENVIADO"] = "CONVITE_ENVIADO";
+    PacienteVinculoStatus["VINCULADO"] = "VINCULADO";
+    PacienteVinculoStatus["VINCULADO_PENDENTE_COMPLEMENTO"] = "VINCULADO_PENDENTE_COMPLEMENTO";
+    PacienteVinculoStatus["BLOQUEADO_CONFLITO"] = "BLOQUEADO_CONFLITO";
+})(PacienteVinculoStatus || (exports.PacienteVinculoStatus = PacienteVinculoStatus = {}));
 let Paciente = class Paciente extends base_entity_1.BaseEntity {
     nomeCompleto;
     cpf;
@@ -51,6 +64,10 @@ let Paciente = class Paciente extends base_entity_1.BaseEntity {
     pacienteUsuario;
     pacienteUsuarioId;
     anamneseLiberadaPaciente;
+    cadastroOrigem;
+    vinculoStatus;
+    conviteEnviadoEm;
+    conviteAceitoEm;
 };
 exports.Paciente = Paciente;
 __decorate([
@@ -156,6 +173,32 @@ __decorate([
     }),
     __metadata("design:type", Boolean)
 ], Paciente.prototype, "anamneseLiberadaPaciente", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'cadastro_origem',
+        type: 'enum',
+        enum: PacienteCadastroOrigem,
+        default: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+    }),
+    __metadata("design:type", String)
+], Paciente.prototype, "cadastroOrigem", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'vinculo_status',
+        type: 'enum',
+        enum: PacienteVinculoStatus,
+        default: PacienteVinculoStatus.SEM_VINCULO,
+    }),
+    __metadata("design:type", String)
+], Paciente.prototype, "vinculoStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'convite_enviado_em', type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], Paciente.prototype, "conviteEnviadoEm", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'convite_aceito_em', type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], Paciente.prototype, "conviteAceitoEm", void 0);
 exports.Paciente = Paciente = __decorate([
     (0, typeorm_1.Entity)('pacientes'),
     (0, typeorm_1.Index)('IDX_PACIENTE_USUARIO_ATIVO', ['usuarioId', 'ativo']),

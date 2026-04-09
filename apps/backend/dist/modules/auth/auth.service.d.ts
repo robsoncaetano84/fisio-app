@@ -8,6 +8,7 @@ import { UserRole } from '../usuarios/entities/usuario.entity';
 import { Repository } from 'typeorm';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
+import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
 export interface JwtPayload {
     sub: string;
     email: string;
@@ -48,6 +49,14 @@ export declare class AuthService {
     private getInviteSecret;
     private resolveInviteContext;
     private vincularPacienteUsuarioAoCadastro;
+    private sanitizeDigits;
+    private generateUniquePacienteCpf;
+    gerarConviteRapidoPaciente(profissional: Usuario, dto: CreatePacienteConviteRapidoDto): Promise<{
+        pacienteId: string;
+        token: string;
+        link: string;
+        expiraEmDias: number;
+    }>;
     gerarConvitePaciente(profissional: Usuario, pacienteId: string, diasExpiracao?: number): Promise<{
         token: string;
         link: string;
