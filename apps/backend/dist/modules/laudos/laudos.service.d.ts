@@ -55,6 +55,9 @@ export declare class LaudosService {
     private getUtcDayString;
     private acquireDailyAiGenerationSlot;
     private buildAiInput;
+    private readonly structuredExamePrefix;
+    private formatExameFisicoForDisplay;
+    private parseStructuredExame;
     private addSection;
     private inferReferenceProfile;
     private getReferenceCatalog;

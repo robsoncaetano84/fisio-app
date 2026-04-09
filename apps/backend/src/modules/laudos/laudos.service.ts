@@ -249,7 +249,7 @@ export class LaudosService {
     if (tipo === 'laudo') {
       this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
       if (laudo.exameFisico) {
-        this.addSection(doc, 'Exame Fisico', laudo.exameFisico);
+        this.addSection(doc, 'Exame Fisico', this.formatExameFisicoForDisplay(laudo.exameFisico));
       }
       if (laudo.rascunhoProfissional) {
         this.addSection(doc, 'Notas do Profissional', laudo.rascunhoProfissional);
@@ -357,7 +357,7 @@ export class LaudosService {
     if (tipo === 'laudo') {
       this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
       if (laudo.exameFisico) {
-        this.addSection(doc, 'Exame Fisico', laudo.exameFisico);
+        this.addSection(doc, 'Exame Fisico', this.formatExameFisicoForDisplay(laudo.exameFisico));
       }
       if (laudo.rascunhoProfissional) {
         this.addSection(doc, 'Notas do Profissional', laudo.rascunhoProfissional);
@@ -718,6 +718,75 @@ ${JSON.stringify(input, null, 2)}
     });
     return { paciente, anamneses, evolucoes };
   }
+  private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
+
+  private formatExameFisicoForDisplay(value?: string | null): string {
+    const parsed = this.parseStructuredExame(value);
+    if (!parsed) return value?.trim() || 'Nao informado';
+
+    const rfPositivas = (parsed.redFlags?.answers || [])
+      .filter((item: any) => item?.positive)
+      .map((item: any) => '- ' + String(item.question || item.key || 'Red flag'))
+      .join('\n');
+
+    const lines = [
+      'Classificacao de dor',
+      'Principal: ' + String(parsed.dorPrincipal || 'Nao informado'),
+      'Subtipo clinico: ' + String(parsed.dorSubtipo || 'Nao informado'),
+      '',
+      'Movimento (chave)',
+      'Ativo: ' + String(parsed.movimento?.ativo || 'Nao informado'),
+      'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
+      'Resistido: ' + String(parsed.movimento?.resistido || 'Nao informado'),
+      'Reproduz dor: ' + String(parsed.movimento?.reproduzDor || 'Nao informado'),
+      '',
+      'Palpacao',
+      'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
+      'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),
+      'Pontos gatilho: ' + String(parsed.palpacao?.pontosGatilho || 'Nao informado'),
+      'Palpacao dinamica vertebral: ' + String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
+      '',
+      'Testes',
+      'Biomecanicos: ' + String(parsed.testes?.biomecanicos || 'Nao informado'),
+      'Ortopedicos: ' + String(parsed.testes?.ortopedicos || 'Nao informado'),
+      'Neurologicos: ' + String(parsed.testes?.neurologicos || 'Nao informado'),
+      'Imagem: ' + String(parsed.testes?.imagem || 'Nao informado'),
+      '',
+      'Cruzamento final',
+      'Hipotese principal: ' + String(parsed.cruzamentoFinal?.hipotesePrincipal || 'Nao informado'),
+      'Hipoteses secundarias: ' + String(parsed.cruzamentoFinal?.hipotesesSecundarias || 'Nao informado'),
+      'Inconsistencias: ' + String(parsed.cruzamentoFinal?.inconsistencias || 'Nao informado'),
+      'Direcao de conduta: ' + String(parsed.cruzamentoFinal?.condutaDirecionada || 'Nao informado'),
+      'Prioridade: ' + String(parsed.cruzamentoFinal?.prioridade || 'Nao informado'),
+      '',
+      'Red flags positivas',
+      rfPositivas || 'Nenhuma red flag positiva',
+      parsed.redFlags?.criticalTriggered
+        ? 'ALERTA: red flag critica detectada; encaminhamento imediato recomendado.'
+        : 'Sem red flag critica na triagem.',
+      parsed.redFlags?.referralDestination
+        ? 'Destino encaminhamento: ' + String(parsed.redFlags.referralDestination)
+        : '',
+      parsed.redFlags?.referralReason
+        ? 'Justificativa: ' + String(parsed.redFlags.referralReason)
+        : '',
+    ].filter(Boolean);
+
+    return lines.join('\n');
+  }
+
+  private parseStructuredExame(value?: string | null): any | null {
+    const raw = String(value || '').trim();
+    if (!raw.startsWith(this.structuredExamePrefix)) return null;
+    const json = raw.slice(this.structuredExamePrefix.length);
+    if (!json) return null;
+    try {
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
   private addSection(doc: PDFKit.PDFDocument, title: string, value?: string | null) {
     doc.fontSize(12).fillColor('#1b5e40').text(title);
     doc.moveDown(0.2);
