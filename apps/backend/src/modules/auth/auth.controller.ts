@@ -1,9 +1,10 @@
-﻿import {
+import {
   Controller,
   Post,
   Body,
   UseGuards,
   Get,
+  Patch,
   HttpCode,
   HttpStatus,
   Req,
@@ -16,6 +17,7 @@ import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 import { PacienteUsuarioQueryDto } from './dto/paciente-usuario-query.dto';
 import { SearchPacienteUsuariosQueryDto } from './dto/search-paciente-usuarios-query.dto';
 import { PacienteUsuarioResponseDto } from './dto/paciente-usuario-response.dto';
@@ -108,9 +110,29 @@ export class AuthController {
       id: usuario.id,
       nome: usuario.nome,
       email: usuario.email,
+      conselhoSigla: usuario.conselhoSigla,
+      conselhoUf: usuario.conselhoUf,
+      conselhoProf: usuario.conselhoProf,
       registroProf: usuario.registroProf,
       especialidade: usuario.especialidade,
       role: usuario.role,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  async updateMe(@CurrentUser() usuario: Usuario, @Body() dto: UpdateMeDto) {
+    const updated = await this.usuariosService.updateMe(usuario.id, dto);
+    return {
+      id: updated.id,
+      nome: updated.nome,
+      email: updated.email,
+      conselhoSigla: updated.conselhoSigla,
+      conselhoUf: updated.conselhoUf,
+      conselhoProf: updated.conselhoProf,
+      registroProf: updated.registroProf,
+      especialidade: updated.especialidade,
+      role: updated.role,
     };
   }
 

@@ -1,5 +1,6 @@
-﻿import {
+import {
   Injectable,
+  BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { Usuario, UserRole } from './entities/usuario.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { Paciente } from '../pacientes/entities/paciente.entity';
+import { UpdateMeDto } from '../auth/dto/update-me.dto';
 
 @Injectable()
 export class UsuariosService {
@@ -41,8 +43,17 @@ export class UsuariosService {
           ? UserRole.PACIENTE
           : UserRole.USER;
 
+    const conselhoSigla = createUsuarioDto.conselhoSigla?.trim().toUpperCase();
+    const conselhoUf = createUsuarioDto.conselhoUf?.trim().toUpperCase();
+    const conselhoProf =
+      createUsuarioDto.conselhoProf?.trim() ||
+      (conselhoSigla && conselhoUf ? `${conselhoSigla}-${conselhoUf}` : undefined);
+
     const usuario = this.usuarioRepository.create({
       ...createUsuarioDto,
+      conselhoSigla,
+      conselhoUf,
+      conselhoProf,
       role,
       senha: hashedPassword,
     });
@@ -117,6 +128,65 @@ export class UsuariosService {
     return usuario;
   }
 
+  async updateMe(usuarioId: string, dto: UpdateMeDto): Promise<Usuario> {
+    const usuario = await this.findById(usuarioId);
+
+    if (dto.nome !== undefined) {
+      usuario.nome = dto.nome.trim();
+    }
+
+    const hasProfessionalField =
+      dto.conselhoSigla !== undefined ||
+      dto.conselhoUf !== undefined ||
+      dto.registroProf !== undefined ||
+      dto.especialidade !== undefined;
+
+    if (usuario.role === UserRole.PACIENTE && hasProfessionalField) {
+      throw new BadRequestException(
+        'Paciente nao pode atualizar dados profissionais',
+      );
+    }
+
+    if (usuario.role !== UserRole.PACIENTE && hasProfessionalField) {
+      const conselhoSigla =
+        dto.conselhoSigla !== undefined
+          ? dto.conselhoSigla.trim().toUpperCase()
+          : (usuario.conselhoSigla ?? '');
+      const conselhoUf =
+        dto.conselhoUf !== undefined
+          ? dto.conselhoUf.trim().toUpperCase()
+          : (usuario.conselhoUf ?? '');
+
+      if (
+        (dto.conselhoSigla !== undefined || dto.conselhoUf !== undefined) &&
+        (!conselhoSigla || !conselhoUf)
+      ) {
+        throw new BadRequestException(
+          'Conselho e UF devem ser informados juntos',
+        );
+      }
+
+      if (dto.conselhoSigla !== undefined) {
+        usuario.conselhoSigla = conselhoSigla || "";
+      }
+      if (dto.conselhoUf !== undefined) {
+        usuario.conselhoUf = conselhoUf || "";
+      }
+      if (dto.registroProf !== undefined) {
+        usuario.registroProf = dto.registroProf.trim() || "";
+      }
+      if (dto.especialidade !== undefined) {
+        usuario.especialidade = dto.especialidade.trim() || "";
+      }
+
+      const finalSigla = usuario.conselhoSigla?.trim().toUpperCase();
+      const finalUf = usuario.conselhoUf?.trim().toUpperCase();
+      usuario.conselhoProf = finalSigla && finalUf ? `${finalSigla}-${finalUf}` : "";
+    }
+
+    return this.usuarioRepository.save(usuario);
+  }
+
   async validatePassword(
     plainPassword: string,
     hashedPassword: string,
@@ -124,3 +194,4 @@ export class UsuariosService {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
 }
+
