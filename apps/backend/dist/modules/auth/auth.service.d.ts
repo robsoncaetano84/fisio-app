@@ -20,6 +20,9 @@ export interface LoginResponse {
         id: string;
         nome: string;
         email: string;
+        conselhoSigla: string;
+        conselhoUf: string;
+        conselhoProf: string;
         registroProf: string;
         especialidade: string;
         role: UserRole;

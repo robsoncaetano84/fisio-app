@@ -7,7 +7,9 @@
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { promises as fs } from 'fs';
 import { Paciente } from './entities/paciente.entity';
+import { PacienteExame } from './entities/paciente-exame.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
@@ -26,6 +28,8 @@ export class PacientesService {
     private readonly laudoRepository: Repository<Laudo>,
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(PacienteExame)
+    private readonly pacienteExameRepository: Repository<PacienteExame>,
   ) {}
 
   private async validatePacienteUsuarioId(
@@ -281,5 +285,68 @@ export class PacientesService {
         statusLaudo: latestLaudo?.status || null,
       },
     };
+  }
+
+  async listExames(pacienteId: string, usuarioId: string): Promise<PacienteExame[]> {
+    await this.findOne(pacienteId, usuarioId);
+    return this.pacienteExameRepository.find({
+      where: { pacienteId, usuarioId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async createExame(
+    pacienteId: string,
+    usuarioId: string,
+    payload: {
+      nomeOriginal: string;
+      nomeArquivo: string;
+      mimeType: string;
+      tamanhoBytes: number;
+      caminhoArquivo: string;
+      tipoExame?: string;
+      observacao?: string;
+      dataExame?: Date | null;
+    },
+  ): Promise<PacienteExame> {
+    await this.findOne(pacienteId, usuarioId);
+    const exame = this.pacienteExameRepository.create({
+      pacienteId,
+      usuarioId,
+      nomeOriginal: payload.nomeOriginal,
+      nomeArquivo: payload.nomeArquivo,
+      mimeType: payload.mimeType,
+      tamanhoBytes: payload.tamanhoBytes,
+      caminhoArquivo: payload.caminhoArquivo,
+      tipoExame: payload.tipoExame?.trim() || null,
+      observacao: payload.observacao?.trim() || null,
+      dataExame: payload.dataExame || null,
+    });
+    return this.pacienteExameRepository.save(exame);
+  }
+
+  async findExameOrFail(
+    pacienteId: string,
+    exameId: string,
+    usuarioId: string,
+  ): Promise<PacienteExame> {
+    await this.findOne(pacienteId, usuarioId);
+    const exame = await this.pacienteExameRepository.findOne({
+      where: { id: exameId, pacienteId, usuarioId },
+    });
+    if (!exame) {
+      throw new NotFoundException('Exame nao encontrado');
+    }
+    return exame;
+  }
+
+  async removeExame(
+    pacienteId: string,
+    exameId: string,
+    usuarioId: string,
+  ): Promise<void> {
+    const exame = await this.findExameOrFail(pacienteId, exameId, usuarioId);
+    await this.pacienteExameRepository.remove(exame);
+    await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
   }
 }

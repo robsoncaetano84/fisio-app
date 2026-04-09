@@ -27,18 +27,21 @@ const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_ai_generation_entity_1 = require("./entities/laudo-ai-generation.entity");
 const laudo_patch_util_1 = require("./laudo-patch.util");
+const usuarios_service_1 = require("../usuarios/usuarios.service");
 let LaudosService = class LaudosService {
     laudoRepository;
     anamneseRepository;
     evolucaoRepository;
     laudoAiGenerationRepository;
     pacientesService;
-    constructor(laudoRepository, anamneseRepository, evolucaoRepository, laudoAiGenerationRepository, pacientesService) {
+    usuariosService;
+    constructor(laudoRepository, anamneseRepository, evolucaoRepository, laudoAiGenerationRepository, pacientesService, usuariosService) {
         this.laudoRepository = laudoRepository;
         this.anamneseRepository = anamneseRepository;
         this.evolucaoRepository = evolucaoRepository;
         this.laudoAiGenerationRepository = laudoAiGenerationRepository;
         this.pacientesService = pacientesService;
+        this.usuariosService = usuariosService;
     }
     async getSuggestedReferences(pacienteId, usuarioId) {
         await this.pacientesService.findOne(pacienteId, usuarioId);
@@ -131,6 +134,12 @@ let LaudosService = class LaudosService {
     async buildPdfBuffer(id, usuarioId, tipo, options) {
         const laudo = await this.findOne(id, usuarioId);
         const paciente = await this.pacientesService.findOne(laudo.pacienteId, usuarioId);
+        const profissional = await this.usuariosService.findById(usuarioId);
+        const profissionalConselho = profissional.conselhoProf ||
+            (profissional.conselhoSigla && profissional.conselhoUf
+                ? `${profissional.conselhoSigla}-${profissional.conselhoUf}`
+                : '-');
+        const profissionalRegistro = profissional.registroProf || '-';
         const chunks = [];
         const doc = new pdfkit_1.default({ size: 'A4', margin: 50, compress: false });
         doc.font('Helvetica');
@@ -166,7 +175,9 @@ let LaudosService = class LaudosService {
             .text(`Paciente: ${paciente.nomeCompleto}`, 50, 170)
             .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
             .text(`Status: ${statusText}`, 300, 170)
-            .text(`Profissional: ${usuarioId}`, 300, 186);
+            .text(`Profissional: ${profissional.nome}`, 300, 186)
+            .text(`Conselho: ${profissionalConselho}`, 300, 202)
+            .text(`Registro profissional: ${profissionalRegistro}`, 300, 218);
         doc.moveDown(3.2);
         doc.fillColor('#000');
         if (tipo === 'laudo') {
@@ -206,6 +217,12 @@ let LaudosService = class LaudosService {
             doc.on('end', () => resolve(Buffer.concat(chunks)));
         });
         const emittedAt = new Date();
+        const profissional = await this.usuariosService.findById(laudo.paciente.usuarioId);
+        const profissionalConselho = profissional.conselhoProf ||
+            (profissional.conselhoSigla && profissional.conselhoUf
+                ? `${profissional.conselhoSigla}-${profissional.conselhoUf}`
+                : '-');
+        const profissionalRegistro = profissional.registroProf || '-';
         const statusText = laudo.status === laudo_entity_2.LaudoStatus.VALIDADO_PROFISSIONAL
             ? 'Validado pelo profissional'
             : 'Rascunho IA';
@@ -230,7 +247,10 @@ let LaudosService = class LaudosService {
             .fillColor('#374151')
             .text(`Paciente: ${laudo.paciente.nomeCompleto}`, 50, 170)
             .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
-            .text(`Status: ${statusText}`, 300, 170);
+            .text(`Status: ${statusText}`, 300, 170)
+            .text(`Profissional: ${profissional.nome}`, 300, 186)
+            .text(`Conselho: ${profissionalConselho}`, 300, 202)
+            .text(`Registro profissional: ${profissionalRegistro}`, 300, 218);
         doc.moveDown(3.2);
         doc.fillColor('#000');
         if (tipo === 'laudo') {
@@ -691,6 +711,7 @@ exports.LaudosService = LaudosService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
-        pacientes_service_1.PacientesService])
+        pacientes_service_1.PacientesService,
+        usuarios_service_1.UsuariosService])
 ], LaudosService);
 //# sourceMappingURL=laudos.service.js.map

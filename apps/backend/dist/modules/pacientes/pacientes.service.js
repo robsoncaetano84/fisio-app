@@ -16,7 +16,9 @@ exports.PacientesService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const fs_1 = require("fs");
 const paciente_entity_1 = require("./entities/paciente.entity");
+const paciente_exame_entity_1 = require("./entities/paciente-exame.entity");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
@@ -25,11 +27,13 @@ let PacientesService = class PacientesService {
     evolucaoRepository;
     laudoRepository;
     usuarioRepository;
-    constructor(pacienteRepository, evolucaoRepository, laudoRepository, usuarioRepository) {
+    pacienteExameRepository;
+    constructor(pacienteRepository, evolucaoRepository, laudoRepository, usuarioRepository, pacienteExameRepository) {
         this.pacienteRepository = pacienteRepository;
         this.evolucaoRepository = evolucaoRepository;
         this.laudoRepository = laudoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.pacienteExameRepository = pacienteExameRepository;
     }
     async validatePacienteUsuarioId(pacienteUsuarioId, ignorePacienteId) {
         if (!pacienteUsuarioId) {
@@ -213,6 +217,44 @@ let PacientesService = class PacientesService {
             },
         };
     }
+    async listExames(pacienteId, usuarioId) {
+        await this.findOne(pacienteId, usuarioId);
+        return this.pacienteExameRepository.find({
+            where: { pacienteId, usuarioId },
+            order: { createdAt: 'DESC' },
+        });
+    }
+    async createExame(pacienteId, usuarioId, payload) {
+        await this.findOne(pacienteId, usuarioId);
+        const exame = this.pacienteExameRepository.create({
+            pacienteId,
+            usuarioId,
+            nomeOriginal: payload.nomeOriginal,
+            nomeArquivo: payload.nomeArquivo,
+            mimeType: payload.mimeType,
+            tamanhoBytes: payload.tamanhoBytes,
+            caminhoArquivo: payload.caminhoArquivo,
+            tipoExame: payload.tipoExame?.trim() || null,
+            observacao: payload.observacao?.trim() || null,
+            dataExame: payload.dataExame || null,
+        });
+        return this.pacienteExameRepository.save(exame);
+    }
+    async findExameOrFail(pacienteId, exameId, usuarioId) {
+        await this.findOne(pacienteId, usuarioId);
+        const exame = await this.pacienteExameRepository.findOne({
+            where: { id: exameId, pacienteId, usuarioId },
+        });
+        if (!exame) {
+            throw new common_1.NotFoundException('Exame nao encontrado');
+        }
+        return exame;
+    }
+    async removeExame(pacienteId, exameId, usuarioId) {
+        const exame = await this.findExameOrFail(pacienteId, exameId, usuarioId);
+        await this.pacienteExameRepository.remove(exame);
+        await fs_1.promises.unlink(exame.caminhoArquivo).catch(() => undefined);
+    }
 };
 exports.PacientesService = PacientesService;
 exports.PacientesService = PacientesService = __decorate([
@@ -221,7 +263,9 @@ exports.PacientesService = PacientesService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(evolucao_entity_1.Evolucao)),
     __param(2, (0, typeorm_1.InjectRepository)(laudo_entity_1.Laudo)),
     __param(3, (0, typeorm_1.InjectRepository)(usuario_entity_1.Usuario)),
+    __param(4, (0, typeorm_1.InjectRepository)(paciente_exame_entity_1.PacienteExame)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])

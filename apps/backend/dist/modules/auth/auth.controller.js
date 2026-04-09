@@ -20,6 +20,7 @@ const usuarios_service_1 = require("../usuarios/usuarios.service");
 const login_dto_1 = require("./dto/login.dto");
 const refresh_dto_1 = require("./dto/refresh.dto");
 const create_usuario_dto_1 = require("../usuarios/dto/create-usuario.dto");
+const update_me_dto_1 = require("./dto/update-me.dto");
 const paciente_usuario_query_dto_1 = require("./dto/paciente-usuario-query.dto");
 const search_paciente_usuarios_query_dto_1 = require("./dto/search-paciente-usuarios-query.dto");
 const create_paciente_invite_dto_1 = require("./dto/create-paciente-invite.dto");
@@ -69,9 +70,26 @@ let AuthController = class AuthController {
             id: usuario.id,
             nome: usuario.nome,
             email: usuario.email,
+            conselhoSigla: usuario.conselhoSigla,
+            conselhoUf: usuario.conselhoUf,
+            conselhoProf: usuario.conselhoProf,
             registroProf: usuario.registroProf,
             especialidade: usuario.especialidade,
             role: usuario.role,
+        };
+    }
+    async updateMe(usuario, dto) {
+        const updated = await this.usuariosService.updateMe(usuario.id, dto);
+        return {
+            id: updated.id,
+            nome: updated.nome,
+            email: updated.email,
+            conselhoSigla: updated.conselhoSigla,
+            conselhoUf: updated.conselhoUf,
+            conselhoProf: updated.conselhoProf,
+            registroProf: updated.registroProf,
+            especialidade: updated.especialidade,
+            role: updated.role,
         };
     }
     async getPacienteUsuarioByEmail(usuario, query) {
@@ -165,6 +183,15 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "me", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Patch)('me'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, update_me_dto_1.UpdateMeDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "updateMe", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('paciente-usuario'),

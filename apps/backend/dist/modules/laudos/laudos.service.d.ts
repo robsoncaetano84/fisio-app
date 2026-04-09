@@ -6,6 +6,7 @@ import { PacientesService } from '../pacientes/pacientes.service';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+import { UsuariosService } from '../usuarios/usuarios.service';
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 type LaudoReferenceItem = {
     id: string;
@@ -30,7 +31,8 @@ export declare class LaudosService {
     private readonly evolucaoRepository;
     private readonly laudoAiGenerationRepository;
     private readonly pacientesService;
-    constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacientesService: PacientesService);
+    private readonly usuariosService;
+    constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacientesService: PacientesService, usuariosService: UsuariosService);
     getSuggestedReferences(pacienteId: string, usuarioId: string): Promise<LaudoReferenceSuggestionResponse>;
     create(createLaudoDto: CreateLaudoDto, usuarioId: string): Promise<Laudo>;
     findByPaciente(pacienteId: string, usuarioId: string, autoGenerate?: boolean): Promise<Laudo | null>;

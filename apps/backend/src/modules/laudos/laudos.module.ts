@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // L AU DO S.M OD UL E
 // ==========================================
@@ -11,14 +11,17 @@ import { LaudosController } from './laudos.controller';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
+import { UsuariosModule } from '../usuarios/usuarios.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Laudo, LaudoAiGeneration, Anamnese, Evolucao]),
     PacientesModule,
+    UsuariosModule,
   ],
   controllers: [LaudosController],
   providers: [LaudosService],
   exports: [LaudosService],
 })
 export class LaudosModule {}
+

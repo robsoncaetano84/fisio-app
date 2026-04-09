@@ -4,6 +4,7 @@ import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 import { PacienteUsuarioQueryDto } from './dto/paciente-usuario-query.dto';
 import { SearchPacienteUsuariosQueryDto } from './dto/search-paciente-usuarios-query.dto';
 import { PacienteUsuarioResponseDto } from './dto/paciente-usuario-response.dto';
@@ -44,6 +45,20 @@ export declare class AuthController {
         id: string;
         nome: string;
         email: string;
+        conselhoSigla: string;
+        conselhoUf: string;
+        conselhoProf: string;
+        registroProf: string;
+        especialidade: string;
+        role: UserRole;
+    }>;
+    updateMe(usuario: Usuario, dto: UpdateMeDto): Promise<{
+        id: string;
+        nome: string;
+        email: string;
+        conselhoSigla: string;
+        conselhoUf: string;
+        conselhoProf: string;
         registroProf: string;
         especialidade: string;
         role: UserRole;

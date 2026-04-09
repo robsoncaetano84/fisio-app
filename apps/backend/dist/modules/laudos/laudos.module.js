@@ -16,6 +16,7 @@ const laudos_controller_1 = require("./laudos.controller");
 const pacientes_module_1 = require("../pacientes/pacientes.module");
 const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
+const usuarios_module_1 = require("../usuarios/usuarios.module");
 let LaudosModule = class LaudosModule {
 };
 exports.LaudosModule = LaudosModule;
@@ -24,6 +25,7 @@ exports.LaudosModule = LaudosModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([laudo_entity_1.Laudo, laudo_ai_generation_entity_1.LaudoAiGeneration, anamnese_entity_1.Anamnese, evolucao_entity_1.Evolucao]),
             pacientes_module_1.PacientesModule,
+            usuarios_module_1.UsuariosModule,
         ],
         controllers: [laudos_controller_1.LaudosController],
         providers: [laudos_service_1.LaudosService],

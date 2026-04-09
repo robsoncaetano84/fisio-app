@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // C RE AT E U SU AR IO.D TO
 // ==========================================
@@ -10,26 +10,42 @@ import {
   MinLength,
   Matches,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import { UserRole } from '../entities/usuario.entity';
 
 export class CreateUsuarioDto {
-  @IsNotEmpty({ message: 'Nome é obrigatório' })
+  @IsNotEmpty({ message: 'Nome e obrigatorio' })
   @IsString()
   nome: string;
 
-  @IsNotEmpty({ message: 'E-mail é obrigatório' })
-  @IsEmail({}, { message: 'E-mail inválido' })
+  @IsNotEmpty({ message: 'E-mail e obrigatorio' })
+  @IsEmail({}, { message: 'E-mail invalido' })
   email: string;
 
-  @IsNotEmpty({ message: 'Senha é obrigatória' })
+  @IsNotEmpty({ message: 'Senha e obrigatoria' })
   @MinLength(8, { message: 'Senha deve ter no minimo 8 caracteres' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
     message: 'Senha deve conter letra maiuscula, minuscula e numero',
   })
   senha: string;
 
+  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @IsNotEmpty({ message: 'Conselho profissional e obrigatorio' })
+  @IsString()
+  conselhoSigla?: string;
+
+  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @IsNotEmpty({ message: 'UF do conselho e obrigatoria' })
+  @Matches(/^[A-Z]{2}$/, { message: 'UF do conselho invalida' })
+  conselhoUf?: string;
+
   @IsOptional()
+  @IsString()
+  conselhoProf?: string;
+
+  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @IsNotEmpty({ message: 'Registro profissional e obrigatorio' })
   @IsString()
   registroProf?: string;
 
@@ -41,5 +57,3 @@ export class CreateUsuarioDto {
   @IsEnum(UserRole)
   role?: UserRole;
 }
-
-

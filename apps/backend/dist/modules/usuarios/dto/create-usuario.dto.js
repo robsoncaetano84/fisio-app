@@ -16,23 +16,26 @@ class CreateUsuarioDto {
     nome;
     email;
     senha;
+    conselhoSigla;
+    conselhoUf;
+    conselhoProf;
     registroProf;
     especialidade;
     role;
 }
 exports.CreateUsuarioDto = CreateUsuarioDto;
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Nome é obrigatório' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Nome e obrigatorio' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateUsuarioDto.prototype, "nome", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'E-mail é obrigatório' }),
-    (0, class_validator_1.IsEmail)({}, { message: 'E-mail inválido' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'E-mail e obrigatorio' }),
+    (0, class_validator_1.IsEmail)({}, { message: 'E-mail invalido' }),
     __metadata("design:type", String)
 ], CreateUsuarioDto.prototype, "email", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Senha é obrigatória' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Senha e obrigatoria' }),
     (0, class_validator_1.MinLength)(8, { message: 'Senha deve ter no minimo 8 caracteres' }),
     (0, class_validator_1.Matches)(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
         message: 'Senha deve conter letra maiuscula, minuscula e numero',
@@ -40,7 +43,25 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUsuarioDto.prototype, "senha", void 0);
 __decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role !== usuario_entity_1.UserRole.PACIENTE),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Conselho profissional e obrigatorio' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUsuarioDto.prototype, "conselhoSigla", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role !== usuario_entity_1.UserRole.PACIENTE),
+    (0, class_validator_1.IsNotEmpty)({ message: 'UF do conselho e obrigatoria' }),
+    (0, class_validator_1.Matches)(/^[A-Z]{2}$/, { message: 'UF do conselho invalida' }),
+    __metadata("design:type", String)
+], CreateUsuarioDto.prototype, "conselhoUf", void 0);
+__decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUsuarioDto.prototype, "conselhoProf", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role !== usuario_entity_1.UserRole.PACIENTE),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Registro profissional e obrigatorio' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateUsuarioDto.prototype, "registroProf", void 0);

@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import { Paciente } from './entities/paciente.entity';
+import { PacienteExame } from './entities/paciente-exame.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
@@ -11,7 +12,8 @@ export declare class PacientesService {
     private readonly evolucaoRepository;
     private readonly laudoRepository;
     private readonly usuarioRepository;
-    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>);
+    private readonly pacienteExameRepository;
+    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>);
     private validatePacienteUsuarioId;
     create(createPacienteDto: CreatePacienteDto, usuarioId: string): Promise<Paciente>;
     findAll(usuarioId: string): Promise<Paciente[]>;
@@ -37,4 +39,17 @@ export declare class PacientesService {
         atendidosMes: number;
     }>;
     getMyPacienteProfile(usuario: Usuario): Promise<PacienteProfileResponseDto>;
+    listExames(pacienteId: string, usuarioId: string): Promise<PacienteExame[]>;
+    createExame(pacienteId: string, usuarioId: string, payload: {
+        nomeOriginal: string;
+        nomeArquivo: string;
+        mimeType: string;
+        tamanhoBytes: number;
+        caminhoArquivo: string;
+        tipoExame?: string;
+        observacao?: string;
+        dataExame?: Date | null;
+    }): Promise<PacienteExame>;
+    findExameOrFail(pacienteId: string, exameId: string, usuarioId: string): Promise<PacienteExame>;
+    removeExame(pacienteId: string, exameId: string, usuarioId: string): Promise<void>;
 }

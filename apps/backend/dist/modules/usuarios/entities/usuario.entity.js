@@ -23,6 +23,9 @@ let Usuario = class Usuario extends base_entity_1.BaseEntity {
     nome;
     email;
     senha;
+    conselhoSigla;
+    conselhoUf;
+    conselhoProf;
     registroProf;
     especialidade;
     ativo;
@@ -42,6 +45,18 @@ __decorate([
     (0, class_transformer_1.Exclude)(),
     __metadata("design:type", String)
 ], Usuario.prototype, "senha", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'conselho_sigla', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], Usuario.prototype, "conselhoSigla", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'conselho_uf', length: 2, nullable: true }),
+    __metadata("design:type", String)
+], Usuario.prototype, "conselhoUf", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'conselho_prof', length: 50, nullable: true }),
+    __metadata("design:type", String)
+], Usuario.prototype, "conselhoProf", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'registro_prof', length: 50, nullable: true }),
     __metadata("design:type", String)

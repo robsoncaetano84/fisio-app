@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A UT H.S ER VI CE
 // ==========================================
@@ -43,6 +43,9 @@ export interface LoginResponse {
     id: string;
     nome: string;
     email: string;
+    conselhoSigla: string;
+    conselhoUf: string;
+    conselhoProf: string;
     registroProf: string;
     especialidade: string;
     role: UserRole;
@@ -114,6 +117,9 @@ export class AuthService {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
+        conselhoSigla: usuario.conselhoSigla,
+        conselhoUf: usuario.conselhoUf,
+        conselhoProf: usuario.conselhoProf,
         registroProf: usuario.registroProf,
         especialidade: usuario.especialidade,
         role: usuario.role,
@@ -207,7 +213,7 @@ export class AuthService {
 
       const usuario = await this.usuariosService.findById(payload.sub);
       if (!usuario || !usuario.ativo) {
-        throw new UnauthorizedException('Usuário inválido');
+        throw new UnauthorizedException('Usuario invalido');
       }
 
       this.logger.log(`Refresh token ok para ${usuario.email}`);
@@ -241,7 +247,7 @@ export class AuthService {
         success: false,
         reason: 'INVALID_REFRESH',
       });
-      throw new UnauthorizedException('Refresh token inválido');
+      throw new UnauthorizedException('Refresh token invalido');
     }
   }
 

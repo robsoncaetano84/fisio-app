@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // U SU AR IO.E NT IT Y
 // ==========================================
@@ -24,6 +24,15 @@ export class Usuario extends BaseEntity {
   @Exclude()
   senha: string;
 
+  @Column({ name: 'conselho_sigla', length: 20, nullable: true })
+  conselhoSigla: string;
+
+  @Column({ name: 'conselho_uf', length: 2, nullable: true })
+  conselhoUf: string;
+
+  @Column({ name: 'conselho_prof', length: 50, nullable: true })
+  conselhoProf: string;
+
   @Column({ name: 'registro_prof', length: 50, nullable: true })
   registroProf: string;
 
@@ -36,3 +45,5 @@ export class Usuario extends BaseEntity {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 }
+
+

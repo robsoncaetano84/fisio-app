@@ -15,6 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PacientesController = void 0;
 const common_1 = require("@nestjs/common");
 const throttler_1 = require("@nestjs/throttler");
+const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
+const path_1 = require("path");
+const fs_1 = require("fs");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 const pacientes_service_1 = require("./pacientes.service");
@@ -23,10 +27,40 @@ const update_paciente_dto_1 = require("./dto/update-paciente.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
 const usuario_entity_2 = require("../usuarios/entities/usuario.entity");
+const create_paciente_exame_dto_1 = require("./dto/create-paciente-exame.dto");
+const UPLOADS_DIR = (0, path_1.join)(process.cwd(), 'uploads', 'paciente-exames');
+const MAX_EXAME_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+]);
+const ensureUploadsDir = () => {
+    if (!(0, fs_1.existsSync)(UPLOADS_DIR)) {
+        (0, fs_1.mkdirSync)(UPLOADS_DIR, { recursive: true });
+    }
+};
 let PacientesController = class PacientesController {
     pacientesService;
     constructor(pacientesService) {
         this.pacientesService = pacientesService;
+    }
+    toExameResponse(pacienteId, exame) {
+        return {
+            id: exame.id,
+            pacienteId: exame.pacienteId,
+            nomeOriginal: exame.nomeOriginal,
+            mimeType: exame.mimeType,
+            tamanhoBytes: exame.tamanhoBytes,
+            tipoExame: exame.tipoExame,
+            observacao: exame.observacao,
+            dataExame: exame.dataExame,
+            createdAt: exame.createdAt,
+            updatedAt: exame.updatedAt,
+            downloadUrl: `/api/pacientes/${pacienteId}/exames/${exame.id}/arquivo`,
+        };
     }
     create(createPacienteDto, usuario) {
         return this.pacientesService.create(createPacienteDto, usuario.id);
@@ -48,6 +82,36 @@ let PacientesController = class PacientesController {
     }
     unlinkMyProfessional(usuario) {
         return this.pacientesService.unlinkMyProfessional(usuario);
+    }
+    async listExames(id, usuario) {
+        const exames = await this.pacientesService.listExames(id, usuario.id);
+        return exames.map((item) => this.toExameResponse(id, item));
+    }
+    async uploadExame(id, file, body, usuario) {
+        if (!file) {
+            throw new common_1.BadRequestException('Arquivo obrigatorio');
+        }
+        const exame = await this.pacientesService.createExame(id, usuario.id, {
+            nomeOriginal: file.originalname,
+            nomeArquivo: file.filename,
+            mimeType: file.mimetype,
+            tamanhoBytes: file.size,
+            caminhoArquivo: file.path,
+            tipoExame: body.tipoExame,
+            observacao: body.observacao,
+            dataExame: body.dataExame ? new Date(body.dataExame) : null,
+        });
+        return this.toExameResponse(id, exame);
+    }
+    async downloadExame(id, exameId, usuario, res) {
+        const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario.id);
+        res.setHeader('Content-Type', exame.mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${exame.nomeOriginal}"`);
+        return res.sendFile(exame.caminhoArquivo);
+    }
+    async deleteExame(id, exameId, usuario) {
+        await this.pacientesService.removeExame(id, exameId, usuario.id);
+        return { success: true };
     }
     findOne(id, usuario) {
         return this.pacientesService.findOne(id, usuario.id);
@@ -130,6 +194,73 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
     __metadata("design:returntype", void 0)
 ], PacientesController.prototype, "unlinkMyProfessional", null);
+__decorate([
+    (0, common_1.Get)(':id/exames'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "listExames", null);
+__decorate([
+    (0, common_1.Post)(':id/exames'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        storage: (0, multer_1.diskStorage)({
+            destination: (_req, _file, cb) => {
+                ensureUploadsDir();
+                cb(null, UPLOADS_DIR);
+            },
+            filename: (_req, file, cb) => {
+                const extension = (0, path_1.extname)(file.originalname || '').toLowerCase();
+                const safeExt = extension || '.bin';
+                const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
+                cb(null, fileName);
+            },
+        }),
+        limits: { fileSize: MAX_EXAME_SIZE_BYTES },
+        fileFilter: (_req, file, cb) => {
+            if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+                return cb(new common_1.BadRequestException('Tipo de arquivo nao suportado'), false);
+            }
+            cb(null, true);
+        },
+    })),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, create_paciente_exame_dto_1.CreatePacienteExameDto,
+        usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "uploadExame", null);
+__decorate([
+    (0, common_1.Get)(':id/exames/:exameId/arquivo'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Param)('exameId', common_1.ParseUUIDPipe)),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __param(3, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, usuario_entity_2.Usuario, Object]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "downloadExame", null);
+__decorate([
+    (0, common_1.Delete)(':id/exames/:exameId'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Param)('exameId', common_1.ParseUUIDPipe)),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "deleteExame", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),

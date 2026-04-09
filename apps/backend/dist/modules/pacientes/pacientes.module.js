@@ -13,6 +13,7 @@ const paciente_entity_1 = require("./entities/paciente.entity");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
+const paciente_exame_entity_1 = require("./entities/paciente-exame.entity");
 const pacientes_service_1 = require("./pacientes.service");
 const pacientes_controller_1 = require("./pacientes.controller");
 let PacientesModule = class PacientesModule {
@@ -20,7 +21,7 @@ let PacientesModule = class PacientesModule {
 exports.PacientesModule = PacientesModule;
 exports.PacientesModule = PacientesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([paciente_entity_1.Paciente, evolucao_entity_1.Evolucao, laudo_entity_1.Laudo, usuario_entity_1.Usuario])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([paciente_entity_1.Paciente, evolucao_entity_1.Evolucao, laudo_entity_1.Laudo, usuario_entity_1.Usuario, paciente_exame_entity_1.PacienteExame])],
         controllers: [pacientes_controller_1.PacientesController],
         providers: [pacientes_service_1.PacientesService],
         exports: [pacientes_service_1.PacientesService],

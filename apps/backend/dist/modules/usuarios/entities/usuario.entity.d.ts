@@ -8,6 +8,9 @@ export declare class Usuario extends BaseEntity {
     nome: string;
     email: string;
     senha: string;
+    conselhoSigla: string;
+    conselhoUf: string;
+    conselhoProf: string;
     registroProf: string;
     especialidade: string;
     ativo: boolean;

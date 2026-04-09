@@ -76,8 +76,15 @@ let UsuariosService = class UsuariosService {
             : createUsuarioDto.role === usuario_entity_1.UserRole.PACIENTE
                 ? usuario_entity_1.UserRole.PACIENTE
                 : usuario_entity_1.UserRole.USER;
+        const conselhoSigla = createUsuarioDto.conselhoSigla?.trim().toUpperCase();
+        const conselhoUf = createUsuarioDto.conselhoUf?.trim().toUpperCase();
+        const conselhoProf = createUsuarioDto.conselhoProf?.trim() ||
+            (conselhoSigla && conselhoUf ? `${conselhoSigla}-${conselhoUf}` : undefined);
         const usuario = this.usuarioRepository.create({
             ...createUsuarioDto,
+            conselhoSigla,
+            conselhoUf,
+            conselhoProf,
             role,
             senha: hashedPassword,
         });
@@ -121,6 +128,47 @@ let UsuariosService = class UsuariosService {
             throw new common_1.NotFoundException('Usuario nao encontrado');
         }
         return usuario;
+    }
+    async updateMe(usuarioId, dto) {
+        const usuario = await this.findById(usuarioId);
+        if (dto.nome !== undefined) {
+            usuario.nome = dto.nome.trim();
+        }
+        const hasProfessionalField = dto.conselhoSigla !== undefined ||
+            dto.conselhoUf !== undefined ||
+            dto.registroProf !== undefined ||
+            dto.especialidade !== undefined;
+        if (usuario.role === usuario_entity_1.UserRole.PACIENTE && hasProfessionalField) {
+            throw new common_1.BadRequestException('Paciente nao pode atualizar dados profissionais');
+        }
+        if (usuario.role !== usuario_entity_1.UserRole.PACIENTE && hasProfessionalField) {
+            const conselhoSigla = dto.conselhoSigla !== undefined
+                ? dto.conselhoSigla.trim().toUpperCase()
+                : (usuario.conselhoSigla ?? '');
+            const conselhoUf = dto.conselhoUf !== undefined
+                ? dto.conselhoUf.trim().toUpperCase()
+                : (usuario.conselhoUf ?? '');
+            if ((dto.conselhoSigla !== undefined || dto.conselhoUf !== undefined) &&
+                (!conselhoSigla || !conselhoUf)) {
+                throw new common_1.BadRequestException('Conselho e UF devem ser informados juntos');
+            }
+            if (dto.conselhoSigla !== undefined) {
+                usuario.conselhoSigla = conselhoSigla || "";
+            }
+            if (dto.conselhoUf !== undefined) {
+                usuario.conselhoUf = conselhoUf || "";
+            }
+            if (dto.registroProf !== undefined) {
+                usuario.registroProf = dto.registroProf.trim() || "";
+            }
+            if (dto.especialidade !== undefined) {
+                usuario.especialidade = dto.especialidade.trim() || "";
+            }
+            const finalSigla = usuario.conselhoSigla?.trim().toUpperCase();
+            const finalUf = usuario.conselhoUf?.trim().toUpperCase();
+            usuario.conselhoProf = finalSigla && finalUf ? `${finalSigla}-${finalUf}` : "";
+        }
+        return this.usuarioRepository.save(usuario);
     }
     async validatePassword(plainPassword, hashedPassword) {
         return bcrypt.compare(plainPassword, hashedPassword);

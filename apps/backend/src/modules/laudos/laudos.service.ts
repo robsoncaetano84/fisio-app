@@ -19,6 +19,7 @@ import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
 import { sanitizePartialUpdate } from './laudo-patch.util';
+import { UsuariosService } from '../usuarios/usuarios.service';
 
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 
@@ -54,6 +55,7 @@ export class LaudosService {
     @InjectRepository(LaudoAiGeneration)
     private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
     private readonly pacientesService: PacientesService,
+    private readonly usuariosService: UsuariosService,
   ) {}
 
   async getSuggestedReferences(
@@ -182,6 +184,13 @@ export class LaudosService {
   ): Promise<Buffer> {
     const laudo = await this.findOne(id, usuarioId);
     const paciente = await this.pacientesService.findOne(laudo.pacienteId, usuarioId);
+    const profissional = await this.usuariosService.findById(usuarioId);
+    const profissionalConselho =
+      profissional.conselhoProf ||
+      (profissional.conselhoSigla && profissional.conselhoUf
+        ? `${profissional.conselhoSigla}-${profissional.conselhoUf}`
+        : '-');
+    const profissionalRegistro = profissional.registroProf || '-';
 
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({ size: 'A4', margin: 50, compress: false });
@@ -230,7 +239,9 @@ export class LaudosService {
       .text(`Paciente: ${paciente.nomeCompleto}`, 50, 170)
       .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
       .text(`Status: ${statusText}`, 300, 170)
-      .text(`Profissional: ${usuarioId}`, 300, 186);
+      .text(`Profissional: ${profissional.nome}`, 300, 186)
+      .text(`Conselho: ${profissionalConselho}`, 300, 202)
+      .text(`Registro profissional: ${profissionalRegistro}`, 300, 218);
 
     doc.moveDown(3.2);
     doc.fillColor('#000');
@@ -298,6 +309,13 @@ export class LaudosService {
     });
 
     const emittedAt = new Date();
+    const profissional = await this.usuariosService.findById(laudo.paciente.usuarioId);
+    const profissionalConselho =
+      profissional.conselhoProf ||
+      (profissional.conselhoSigla && profissional.conselhoUf
+        ? `${profissional.conselhoSigla}-${profissional.conselhoUf}`
+        : '-');
+    const profissionalRegistro = profissional.registroProf || '-';
     const statusText =
       laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL
         ? 'Validado pelo profissional'
@@ -328,7 +346,10 @@ export class LaudosService {
       .fillColor('#374151')
       .text(`Paciente: ${laudo.paciente.nomeCompleto}`, 50, 170)
       .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
-      .text(`Status: ${statusText}`, 300, 170);
+      .text(`Status: ${statusText}`, 300, 170)
+      .text(`Profissional: ${profissional.nome}`, 300, 186)
+      .text(`Conselho: ${profissionalConselho}`, 300, 202)
+      .text(`Registro profissional: ${profissionalRegistro}`, 300, 218);
 
     doc.moveDown(3.2);
     doc.fillColor('#000');
@@ -886,6 +907,23 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

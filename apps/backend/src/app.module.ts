@@ -1,6 +1,6 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// APP MODULE - CONFIGURAÇÃO PRINCIPAL
+// APP MODULE - CONFIGURAÃ‡ÃƒO PRINCIPAL
 // ==========================================
 
 import { Module } from '@nestjs/common';
@@ -23,6 +23,7 @@ import { PushToken } from './modules/notificacoes/entities/push-token.entity';
 import { CrmLead } from './modules/crm/entities/crm-lead.entity';
 import { CrmTask } from './modules/crm/entities/crm-task.entity';
 import { CrmInteraction } from './modules/crm/entities/crm-interaction.entity';
+import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -37,7 +38,7 @@ import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
-    // Configuração de variáveis de ambiente
+    // ConfiguraÃ§Ã£o de variÃ¡veis de ambiente
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -76,7 +77,7 @@ import { HealthModule } from './modules/health/health.module';
       }),
     }),
 
-    // Configuração do TypeORM com PostgreSQL
+    // ConfiguraÃ§Ã£o do TypeORM com PostgreSQL
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -107,6 +108,7 @@ import { HealthModule } from './modules/health/health.module';
             CrmLead,
             CrmTask,
             CrmInteraction,
+            PacienteExame,
           ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',
@@ -130,7 +132,7 @@ import { HealthModule } from './modules/health/health.module';
       }),
     }),
 
-    // Módulos da aplicação
+    // MÃ³dulos da aplicaÃ§Ã£o
     AuthModule,
     UsuariosModule,
     PacientesModule,
@@ -154,3 +156,5 @@ import { HealthModule } from './modules/health/health.module';
   ],
 })
 export class AppModule {}
+
+
