@@ -26,7 +26,7 @@ export class PacienteExame extends BaseEntity {
   @Column({ name: 'caminho_arquivo', length: 500 })
   caminhoArquivo: string;
 
-  @Column({ name: 'tipo_exame', length: 120, nullable: true })
+  @Column({ name: 'tipo_exame', type: 'varchar', length: 120, nullable: true })
   tipoExame: string | null;
 
   @Column({ name: 'observacao', type: 'text', nullable: true })
@@ -35,3 +35,4 @@ export class PacienteExame extends BaseEntity {
   @Column({ name: 'data_exame', type: 'date', nullable: true })
   dataExame: Date | null;
 }
+

@@ -54,7 +54,7 @@ __decorate([
     __metadata("design:type", String)
 ], PacienteExame.prototype, "caminhoArquivo", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'tipo_exame', length: 120, nullable: true }),
+    (0, typeorm_1.Column)({ name: 'tipo_exame', type: 'varchar', length: 120, nullable: true }),
     __metadata("design:type", Object)
 ], PacienteExame.prototype, "tipoExame", void 0);
 __decorate([
