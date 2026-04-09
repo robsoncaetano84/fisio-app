@@ -25,8 +25,10 @@ import {
   Paciente,
   PacienteCadastroOrigem,
   PacienteVinculoStatus,
+  Sexo,
 } from '../pacientes/entities/paciente.entity';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
+import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
 
 export interface JwtPayload {
   sub: string;
@@ -339,6 +341,87 @@ export class AuthService {
     await this.pacienteRepository.save(pacienteParaVinculo);
   }
 
+  private sanitizeDigits(value?: string): string {
+    return (value || '').replace(/\D/g, '').trim();
+  }
+
+  private async generateUniquePacienteCpf(): Promise<string> {
+    for (let i = 0; i < 25; i++) {
+      const base = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      const cpf = base.slice(-11).padStart(11, '0');
+      const exists = await this.pacienteRepository.findOne({ where: { cpf } });
+      if (!exists) return cpf;
+    }
+    throw new BadRequestException('Nao foi possivel gerar CPF temporario para convite rapido');
+  }
+
+  async gerarConviteRapidoPaciente(
+    profissional: Usuario,
+    dto: CreatePacienteConviteRapidoDto,
+  ): Promise<{
+    pacienteId: string;
+    token: string;
+    link: string;
+    expiraEmDias: number;
+  }> {
+    if (
+      profissional.role !== UserRole.ADMIN &&
+      profissional.role !== UserRole.USER
+    ) {
+      throw new ForbiddenException('Apenas profissionais podem gerar convite');
+    }
+
+    const whatsappDigits = this.sanitizeDigits(dto.whatsapp);
+    const email = dto.email?.trim().toLowerCase() || '';
+
+    if (!whatsappDigits && !email) {
+      throw new BadRequestException('Informe WhatsApp ou e-mail para envio do convite');
+    }
+
+    const cpfTemporario = await this.generateUniquePacienteCpf();
+    const nomeBase = dto.nome?.trim() || 'Paciente convite rapido';
+
+    const draftPaciente: Partial<Paciente> = {
+      usuarioId: profissional.id,
+      nomeCompleto: nomeBase,
+      cpf: cpfTemporario,
+      dataNascimento: new Date('1900-01-01'),
+      sexo: Sexo.OUTRO,
+      profissao: '',
+      enderecoRua: '-',
+      enderecoNumero: '-',
+      enderecoBairro: '-',
+      enderecoCep: '00000000',
+      enderecoCidade: '-',
+      enderecoUf: 'NA',
+      contatoWhatsapp: whatsappDigits || '0000000000',
+      contatoEmail: email || undefined,
+      cadastroOrigem: PacienteCadastroOrigem.CONVITE_RAPIDO,
+      vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+      anamneseLiberadaPaciente: false,
+      pacienteUsuarioId: null,
+      conviteEnviadoEm: null,
+      conviteAceitoEm: null,
+      ativo: true,
+    };
+
+    const saved = await this.pacienteRepository.save(
+      this.pacienteRepository.create(draftPaciente),
+    );
+    const invite = await this.gerarConvitePaciente(
+      profissional,
+      saved.id,
+      dto.diasExpiracao,
+    );
+
+    return {
+      pacienteId: saved.id,
+      token: invite.token,
+      link: invite.link,
+      expiraEmDias: invite.expiraEmDias,
+    };
+  }
+
   async gerarConvitePaciente(
     profissional: Usuario,
     pacienteId: string,
@@ -456,6 +539,9 @@ export class AuthService {
     };
   }
 }
+
+
+
 
 
 

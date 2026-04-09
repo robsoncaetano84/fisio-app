@@ -8,7 +8,6 @@ import {
   HttpCode,
   HttpStatus,
   Req,
-  Query,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
@@ -19,6 +18,7 @@ import { RefreshDto } from './dto/refresh.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
+import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { AceitarPacienteInviteDto } from './dto/aceitar-paciente-convite.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -81,6 +81,17 @@ export class AuthController {
     );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('paciente-convite-rapido')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  async gerarConviteRapidoPaciente(
+    @CurrentUser() usuario: Usuario,
+    @Body() body: CreatePacienteConviteRapidoDto,
+  ) {
+    return this.authService.gerarConviteRapidoPaciente(usuario, body);
+  }
+
   @Post('registro-paciente-convite')
   @Throttle({ default: { ttl: 60, limit: 10 } })
   async registroPacientePorConvite(
@@ -133,4 +144,3 @@ export class AuthController {
     };
   }
 }
-
