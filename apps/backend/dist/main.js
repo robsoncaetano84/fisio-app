@@ -68,8 +68,14 @@ async function bootstrap() {
     const app = httpsOptions
         ? await core_1.NestFactory.create(app_module_1.AppModule, { httpsOptions })
         : await core_1.NestFactory.create(app_module_1.AppModule);
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.get('/', (_req, res) => {
+        res.status(200).json({ status: 'ok', service: 'fisio-backend' });
+    });
+    expressApp.head('/', (_req, res) => {
+        res.status(200).end();
+    });
     if (trustProxy) {
-        const expressApp = app.getHttpAdapter().getInstance();
         expressApp.set('trust proxy', 1);
     }
     const corsOrigins = process.env.CORS_ORIGIN?.split(',')
@@ -94,8 +100,7 @@ async function bootstrap() {
     }));
     app.use((req, res, next) => {
         const startedAt = Date.now();
-        const requestId = req.headers['x-request-id']?.trim() ||
-            (0, crypto_1.randomUUID)();
+        const requestId = req.headers['x-request-id']?.trim() || (0, crypto_1.randomUUID)();
         req.requestId = requestId;
         res.setHeader('X-Request-Id', requestId);
         res.on('finish', () => {

@@ -44,16 +44,25 @@ async function bootstrap() {
   const app = httpsOptions
     ? await NestFactory.create(AppModule, { httpsOptions })
     : await NestFactory.create(AppModule);
+  const expressApp = app.getHttpAdapter().getInstance();
+
+  // Root health response for platform probes (Render checks "/" with GET/HEAD).
+  expressApp.get('/', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok', service: 'fisio-backend' });
+  });
+  expressApp.head('/', (_req: Request, res: Response) => {
+    res.status(200).end();
+  });
+
   if (trustProxy) {
-    const expressApp = app.getHttpAdapter().getInstance();
     expressApp.set('trust proxy', 1);
   }
+
   const corsOrigins = process.env.CORS_ORIGIN?.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  const allowAllCors =
-    !isProd && (!corsOrigins || corsOrigins.length === 0);
+  const allowAllCors = !isProd && (!corsOrigins || corsOrigins.length === 0);
   if (isProd && (!corsOrigins || corsOrigins.length === 0)) {
     throw new Error('CORS_ORIGIN obrigatorio em producao');
   }
@@ -76,8 +85,7 @@ async function bootstrap() {
   app.use((req: Request & { requestId?: string }, res: Response, next: NextFunction) => {
     const startedAt = Date.now();
     const requestId =
-      (req.headers['x-request-id'] as string | undefined)?.trim() ||
-      randomUUID();
+      (req.headers['x-request-id'] as string | undefined)?.trim() || randomUUID();
 
     req.requestId = requestId;
     res.setHeader('X-Request-Id', requestId);
@@ -119,4 +127,3 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
-
