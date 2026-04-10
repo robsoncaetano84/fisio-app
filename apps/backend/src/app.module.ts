@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// APP MODULE - CONFIGURAÃ‡ÃƒO PRINCIPAL
+// APP MODULE - CONFIGURACAO PRINCIPAL
 // ==========================================
 
 import { Module } from '@nestjs/common';
@@ -38,7 +38,7 @@ import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
-    // ConfiguraÃ§Ã£o de variÃ¡veis de ambiente
+    // Configuracao de variaveis de ambiente
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -77,7 +77,7 @@ import { HealthModule } from './modules/health/health.module';
       }),
     }),
 
-    // ConfiguraÃ§Ã£o do TypeORM com PostgreSQL
+    // Configuracao do TypeORM com PostgreSQL
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -132,7 +132,7 @@ import { HealthModule } from './modules/health/health.module';
       }),
     }),
 
-    // MÃ³dulos da aplicaÃ§Ã£o
+    // Modulos da aplicacao
     AuthModule,
     UsuariosModule,
     PacientesModule,
