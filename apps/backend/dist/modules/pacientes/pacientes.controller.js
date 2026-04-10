@@ -35,8 +35,29 @@ const ALLOWED_MIME_TYPES = new Set([
     'image/jpeg',
     'image/jpg',
     'image/png',
+    'image/heic',
+    'image/heif',
     'image/webp',
+    'application/octet-stream',
 ]);
+const ALLOWED_EXTENSIONS = new Set([
+    '.pdf',
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.heic',
+    '.heif',
+]);
+const MIME_BY_EXTENSION = {
+    '.pdf': 'application/pdf',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.heic': 'image/heic',
+    '.heif': 'image/heif',
+};
 const ensureUploadsDir = () => {
     if (!(0, fs_1.existsSync)(UPLOADS_DIR)) {
         (0, fs_1.mkdirSync)(UPLOADS_DIR, { recursive: true });
@@ -91,10 +112,14 @@ let PacientesController = class PacientesController {
         if (!file) {
             throw new common_1.BadRequestException('Arquivo obrigatorio');
         }
+        const detectedExtension = (0, path_1.extname)(file.originalname || '').toLowerCase();
+        const safeMimeType = ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
+            ? file.mimetype
+            : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
         const exame = await this.pacientesService.createExame(id, usuario.id, {
             nomeOriginal: file.originalname,
             nomeArquivo: file.filename,
-            mimeType: file.mimetype,
+            mimeType: safeMimeType,
             tamanhoBytes: file.size,
             caminhoArquivo: file.path,
             tipoExame: body.tipoExame,
@@ -223,7 +248,11 @@ __decorate([
         }),
         limits: { fileSize: MAX_EXAME_SIZE_BYTES },
         fileFilter: (_req, file, cb) => {
-            if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+            const mimeType = String(file.mimetype || '').toLowerCase();
+            const extension = (0, path_1.extname)(file.originalname || '').toLowerCase();
+            const isMimeAllowed = ALLOWED_MIME_TYPES.has(mimeType);
+            const isExtensionAllowed = ALLOWED_EXTENSIONS.has(extension);
+            if (!isMimeAllowed && !isExtensionAllowed) {
                 return cb(new common_1.BadRequestException('Tipo de arquivo nao suportado'), false);
             }
             cb(null, true);

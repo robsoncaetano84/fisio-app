@@ -41,8 +41,29 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
   'image/jpg',
   'image/png',
+  'image/heic',
+  'image/heif',
   'image/webp',
+  'application/octet-stream',
 ]);
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.heic',
+  '.heif',
+]);
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.heic': 'image/heic',
+  '.heif': 'image/heif',
+};
 
 const ensureUploadsDir = () => {
   if (!existsSync(UPLOADS_DIR)) {
@@ -159,7 +180,11 @@ export class PacientesController {
       }),
       limits: { fileSize: MAX_EXAME_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
-        if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        const mimeType = String(file.mimetype || '').toLowerCase();
+        const extension = extname(file.originalname || '').toLowerCase();
+        const isMimeAllowed = ALLOWED_MIME_TYPES.has(mimeType);
+        const isExtensionAllowed = ALLOWED_EXTENSIONS.has(extension);
+        if (!isMimeAllowed && !isExtensionAllowed) {
           return cb(new BadRequestException('Tipo de arquivo nao suportado') as unknown as Error, false);
         }
         cb(null, true);
@@ -176,10 +201,15 @@ export class PacientesController {
       throw new BadRequestException('Arquivo obrigatorio');
     }
 
+    const detectedExtension = extname(file.originalname || '').toLowerCase();
+    const safeMimeType = ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
+      ? file.mimetype
+      : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
+
     const exame = await this.pacientesService.createExame(id, usuario.id, {
       nomeOriginal: file.originalname,
       nomeArquivo: file.filename,
-      mimeType: file.mimetype,
+      mimeType: safeMimeType,
       tamanhoBytes: file.size,
       caminhoArquivo: file.path,
       tipoExame: body.tipoExame,
@@ -258,5 +288,8 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
+
+
+
 
 
