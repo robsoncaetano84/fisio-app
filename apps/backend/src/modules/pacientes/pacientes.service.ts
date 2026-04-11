@@ -313,7 +313,11 @@ export class PacientesService {
     });
 
     if (!paciente) {
-      throw new NotFoundException('Nenhum cadastro de paciente vinculado');
+      return {
+        vinculado: false,
+        paciente: null,
+        resumo: null,
+      };
     }
 
     const latestEvolucao = await this.evolucaoRepository.findOne({
@@ -327,6 +331,7 @@ export class PacientesService {
     });
 
     return {
+      vinculado: true,
       paciente,
       resumo: {
         ultimaEvolucaoEm: latestEvolucao?.data || null,

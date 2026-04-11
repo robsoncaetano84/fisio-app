@@ -231,7 +231,11 @@ let PacientesService = class PacientesService {
             where: { pacienteUsuarioId: usuario.id, ativo: true },
         });
         if (!paciente) {
-            throw new common_1.NotFoundException('Nenhum cadastro de paciente vinculado');
+            return {
+                vinculado: false,
+                paciente: null,
+                resumo: null,
+            };
         }
         const latestEvolucao = await this.evolucaoRepository.findOne({
             where: { pacienteId: paciente.id },
@@ -242,6 +246,7 @@ let PacientesService = class PacientesService {
             order: { updatedAt: 'DESC' },
         });
         return {
+            vinculado: true,
             paciente,
             resumo: {
                 ultimaEvolucaoEm: latestEvolucao?.data || null,

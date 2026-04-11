@@ -8,6 +8,7 @@ class PacienteProfileResumoDto {
 }
 exports.PacienteProfileResumoDto = PacienteProfileResumoDto;
 class PacienteProfileResponseDto {
+    vinculado;
     paciente;
     resumo;
 }

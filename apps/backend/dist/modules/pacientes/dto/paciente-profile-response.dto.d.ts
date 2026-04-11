@@ -6,6 +6,7 @@ export declare class PacienteProfileResumoDto {
     statusLaudo: LaudoStatus | null;
 }
 export declare class PacienteProfileResponseDto {
-    paciente: Paciente;
-    resumo: PacienteProfileResumoDto;
+    vinculado: boolean;
+    paciente: Paciente | null;
+    resumo: PacienteProfileResumoDto | null;
 }

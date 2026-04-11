@@ -12,7 +12,9 @@ export class PacienteProfileResumoDto {
 }
 
 export class PacienteProfileResponseDto {
-  paciente: Paciente;
-  resumo: PacienteProfileResumoDto;
+  vinculado: boolean;
+  paciente: Paciente | null;
+  resumo: PacienteProfileResumoDto | null;
 }
+
 
