@@ -27,4 +27,9 @@ __decorate([
     (0, class_validator_1.MinLength)(6, { message: 'Senha deve ter no mínimo 6 caracteres' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "senha", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEmail)({}, { message: 'E-mail inválido' }),
+    __metadata("design:type", String)
+], LoginDto.prototype, "email", void 0);
 //# sourceMappingURL=login.dto.js.map

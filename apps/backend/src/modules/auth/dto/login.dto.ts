@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // LOGIN DTO
 // ==========================================
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
   @IsNotEmpty({ message: 'E-mail ou CPF é obrigatório' })
@@ -14,5 +14,8 @@ export class LoginDto {
   senha: string;
 
   // Compatibilidade com clientes antigos.
+  @IsOptional()
+  @IsEmail({}, { message: 'E-mail inválido' })
   email?: string;
 }
+
