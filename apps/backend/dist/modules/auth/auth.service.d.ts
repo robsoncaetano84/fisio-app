@@ -38,11 +38,12 @@ export declare class AuthService {
     private readonly pacienteRepository;
     private readonly logger;
     constructor(usuariosService: UsuariosService, jwtService: JwtService, configService: ConfigService, authLogsService: AuthLogsService, lockoutService: LockoutService, pacienteRepository: Repository<Paciente>);
-    validateUser(email: string, senha: string): Promise<Usuario | null>;
+    private normalizeLoginIdentifier;
+    validateUser(identificador: string, senha: string): Promise<Usuario | null>;
     private signAccessToken;
     private signRefreshToken;
     private buildLoginResponse;
-    login(email: string, senha: string, meta?: {
+    login(identificador: string, senha: string, meta?: {
         ip?: string;
     }): Promise<LoginResponse>;
     refresh(refreshToken: string): Promise<LoginResponse>;

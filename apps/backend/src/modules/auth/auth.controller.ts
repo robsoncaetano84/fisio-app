@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Post,
   Body,
@@ -40,7 +40,8 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Req() req: Request,
   ): Promise<LoginResponse> {
-    return this.authService.login(loginDto.email, loginDto.senha, {
+    const identificador = (loginDto.identificador || loginDto.email || "").trim();
+    return this.authService.login(identificador, loginDto.senha, {
       ip: req.ip,
     });
   }
@@ -144,3 +145,4 @@ export class AuthController {
     };
   }
 }
+

@@ -37,7 +37,8 @@ let AuthController = class AuthController {
         this.usuariosService = usuariosService;
     }
     async login(loginDto, req) {
-        return this.authService.login(loginDto.email, loginDto.senha, {
+        const identificador = (loginDto.identificador || loginDto.email || "").trim();
+        return this.authService.login(identificador, loginDto.senha, {
             ip: req.ip,
         });
     }

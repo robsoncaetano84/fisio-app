@@ -41,8 +41,28 @@ let AuthService = AuthService_1 = class AuthService {
         this.lockoutService = lockoutService;
         this.pacienteRepository = pacienteRepository;
     }
-    async validateUser(email, senha) {
-        const usuario = await this.usuariosService.findByEmail(email);
+    normalizeLoginIdentifier(identificador) {
+        return (identificador || '').trim().toLowerCase();
+    }
+    async validateUser(identificador, senha) {
+        const normalized = this.normalizeLoginIdentifier(identificador);
+        let usuario = null;
+        if (normalized.includes('@')) {
+            usuario = await this.usuariosService.findByEmail(normalized);
+        }
+        else {
+            const cpfDigits = this.sanitizeDigits(normalized);
+            if (cpfDigits.length === 11) {
+                const paciente = await this.pacienteRepository.findOne({
+                    where: { cpf: cpfDigits, ativo: true },
+                    relations: { pacienteUsuario: true },
+                });
+                usuario = paciente?.pacienteUsuario ?? null;
+            }
+            if (!usuario) {
+                usuario = await this.usuariosService.findByEmail(normalized);
+            }
+        }
         if (!usuario || !usuario.ativo) {
             return null;
         }
@@ -90,19 +110,20 @@ let AuthService = AuthService_1 = class AuthService {
             },
         };
     }
-    async login(email, senha, meta) {
-        const isLocked = await this.lockoutService.isLocked(email);
+    async login(identificador, senha, meta) {
+        const normalizedIdentifier = this.normalizeLoginIdentifier(identificador);
+        const isLocked = await this.lockoutService.isLocked(normalizedIdentifier);
         if (isLocked) {
-            this.logger.warn(`Login bloqueado para ${email} (ip=${meta?.ip ?? 'unknown'})`);
+            this.logger.warn(`Login bloqueado para ${normalizedIdentifier} (ip=${meta?.ip ?? 'unknown'})`);
             this.logger.log(JSON.stringify({
                 event: 'login',
-                email,
+                email: normalizedIdentifier,
                 ip: meta?.ip ?? null,
                 success: false,
                 reason: 'LOCKED',
             }));
             await this.authLogsService.record({
-                email,
+                email: normalizedIdentifier,
                 eventType: auth_log_entity_1.AuthEventType.LOGIN,
                 success: false,
                 ip: meta?.ip,
@@ -110,19 +131,19 @@ let AuthService = AuthService_1 = class AuthService {
             });
             throw new common_1.UnauthorizedException('Conta temporariamente bloqueada');
         }
-        const usuario = await this.validateUser(email, senha);
+        const usuario = await this.validateUser(normalizedIdentifier, senha);
         if (!usuario) {
-            await this.lockoutService.registerFailure(email);
-            this.logger.warn(`Login falhou para ${email} (ip=${meta?.ip ?? 'unknown'})`);
+            await this.lockoutService.registerFailure(normalizedIdentifier);
+            this.logger.warn(`Login falhou para ${normalizedIdentifier} (ip=${meta?.ip ?? 'unknown'})`);
             this.logger.log(JSON.stringify({
                 event: 'login',
-                email,
+                email: normalizedIdentifier,
                 ip: meta?.ip ?? null,
                 success: false,
                 reason: 'INVALID_CREDENTIALS',
             }));
             await this.authLogsService.record({
-                email,
+                email: normalizedIdentifier,
                 eventType: auth_log_entity_1.AuthEventType.LOGIN,
                 success: false,
                 ip: meta?.ip,
@@ -130,16 +151,16 @@ let AuthService = AuthService_1 = class AuthService {
             });
             throw new common_1.UnauthorizedException('Credenciais invalidas');
         }
-        await this.lockoutService.reset(email);
-        this.logger.log(`Login ok para ${email} (ip=${meta?.ip ?? 'unknown'})`);
+        await this.lockoutService.reset(normalizedIdentifier);
+        this.logger.log(`Login ok para ${usuario.email} (ip=${meta?.ip ?? 'unknown'})`);
         this.logger.log(JSON.stringify({
             event: 'login',
-            email,
+            email: usuario.email,
             ip: meta?.ip ?? null,
             success: true,
         }));
         await this.authLogsService.record({
-            email,
+            email: usuario.email,
             usuarioId: usuario.id,
             eventType: auth_log_entity_1.AuthEventType.LOGIN,
             success: true,

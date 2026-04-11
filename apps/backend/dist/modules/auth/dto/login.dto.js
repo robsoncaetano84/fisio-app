@@ -12,15 +12,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoginDto = void 0;
 const class_validator_1 = require("class-validator");
 class LoginDto {
-    email;
+    identificador;
     senha;
+    email;
 }
 exports.LoginDto = LoginDto;
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'E-mail é obrigatório' }),
-    (0, class_validator_1.IsEmail)({}, { message: 'E-mail inválido' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'E-mail ou CPF é obrigatório' }),
+    (0, class_validator_1.IsString)({ message: 'Informe um e-mail ou CPF válido' }),
     __metadata("design:type", String)
-], LoginDto.prototype, "email", void 0);
+], LoginDto.prototype, "identificador", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)({ message: 'Senha é obrigatória' }),
     (0, class_validator_1.MinLength)(6, { message: 'Senha deve ter no mínimo 6 caracteres' }),
