@@ -24,6 +24,7 @@ import { CrmLead } from './modules/crm/entities/crm-lead.entity';
 import { CrmTask } from './modules/crm/entities/crm-task.entity';
 import { CrmInteraction } from './modules/crm/entities/crm-interaction.entity';
 import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entity';
+import { ProfissionalPacienteVinculo } from './modules/pacientes/entities/profissional-paciente-vinculo.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -107,9 +108,9 @@ import { HealthModule } from './modules/health/health.module';
             PushToken,
             CrmLead,
             CrmTask,
-            CrmInteraction,
-            PacienteExame,
-          ],
+            CrmInteraction,          PacienteExame,
+          ProfissionalPacienteVinculo,
+        ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',
           logging: configService.get('NODE_ENV') === 'development',
@@ -156,5 +157,6 @@ import { HealthModule } from './modules/health/health.module';
   ],
 })
 export class AppModule {}
+
 
 

@@ -7,6 +7,7 @@ import { LockoutService } from './lockout.service';
 import { UserRole } from '../usuarios/entities/usuario.entity';
 import { Repository } from 'typeorm';
 import { Paciente } from '../pacientes/entities/paciente.entity';
+import { ProfissionalPacienteVinculo } from '../pacientes/entities/profissional-paciente-vinculo.entity';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
 export interface JwtPayload {
@@ -36,8 +37,9 @@ export declare class AuthService {
     private readonly authLogsService;
     private readonly lockoutService;
     private readonly pacienteRepository;
+    private readonly vinculoRepository;
     private readonly logger;
-    constructor(usuariosService: UsuariosService, jwtService: JwtService, configService: ConfigService, authLogsService: AuthLogsService, lockoutService: LockoutService, pacienteRepository: Repository<Paciente>);
+    constructor(usuariosService: UsuariosService, jwtService: JwtService, configService: ConfigService, authLogsService: AuthLogsService, lockoutService: LockoutService, pacienteRepository: Repository<Paciente>, vinculoRepository: Repository<ProfissionalPacienteVinculo>);
     private normalizeLoginIdentifier;
     validateUser(identificador: string, senha: string): Promise<Usuario | null>;
     private signAccessToken;
@@ -48,6 +50,8 @@ export declare class AuthService {
     }): Promise<LoginResponse>;
     refresh(refreshToken: string): Promise<LoginResponse>;
     private getInviteSecret;
+    private mapPacienteOrigemToVinculoOrigem;
+    private upsertVinculoAtivo;
     private resolveInviteContext;
     private vincularPacienteUsuarioAoCadastro;
     private sanitizeDigits;

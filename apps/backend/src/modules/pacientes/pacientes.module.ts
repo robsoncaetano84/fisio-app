@@ -9,14 +9,16 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
+import { ProfissionalPacienteVinculo } from './entities/profissional-paciente-vinculo.entity';
 import { PacientesService } from './pacientes.service';
 import { PacientesController } from './pacientes.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Paciente, Evolucao, Laudo, Usuario, PacienteExame])],
+  imports: [TypeOrmModule.forFeature([Paciente, Evolucao, Laudo, Usuario, PacienteExame, ProfissionalPacienteVinculo])],
   controllers: [PacientesController],
   providers: [PacientesService],
   exports: [PacientesService],
 })
 export class PacientesModule {}
+
 

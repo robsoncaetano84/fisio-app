@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { Paciente } from './entities/paciente.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
+import { ProfissionalPacienteVinculo } from './entities/profissional-paciente-vinculo.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
@@ -13,8 +14,12 @@ export declare class PacientesService {
     private readonly laudoRepository;
     private readonly usuarioRepository;
     private readonly pacienteExameRepository;
-    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>);
+    private readonly vinculoRepository;
+    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>);
     private resolveInitialVinculoStatus;
+    private mapOrigemToVinculo;
+    private upsertVinculoAtivo;
+    private closeVinculoAtivoByPaciente;
     private validatePacienteUsuarioId;
     create(createPacienteDto: CreatePacienteDto, usuarioId: string): Promise<Paciente>;
     findAll(usuarioId: string): Promise<Paciente[]>;

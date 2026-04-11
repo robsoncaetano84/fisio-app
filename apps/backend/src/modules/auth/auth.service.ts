@@ -27,6 +27,11 @@ import {
   PacienteVinculoStatus,
   Sexo,
 } from '../pacientes/entities/paciente.entity';
+import {
+  ProfissionalPacienteVinculo,
+  ProfissionalPacienteVinculoOrigem,
+  ProfissionalPacienteVinculoStatus,
+} from '../pacientes/entities/profissional-paciente-vinculo.entity';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
 
@@ -70,6 +75,8 @@ export class AuthService {
     private readonly lockoutService: LockoutService,
     @InjectRepository(Paciente)
     private readonly pacienteRepository: Repository<Paciente>,
+    @InjectRepository(ProfissionalPacienteVinculo)
+    private readonly vinculoRepository: Repository<ProfissionalPacienteVinculo>,
   ) {}
 
   private normalizeLoginIdentifier(identificador: string): string {
@@ -90,6 +97,24 @@ export class AuthService {
           relations: { pacienteUsuario: true },
         });
         usuario = paciente?.pacienteUsuario ?? null;
+
+        if (!usuario && paciente) {
+          const vinculoAtivo = await this.vinculoRepository.findOne({
+            where: {
+              pacienteId: paciente.id,
+              status: ProfissionalPacienteVinculoStatus.ATIVO,
+            },
+            order: { createdAt: 'DESC' },
+          });
+
+          if (vinculoAtivo) {
+            try {
+              usuario = await this.usuariosService.findById(vinculoAtivo.pacienteUsuarioId);
+            } catch {
+              usuario = null;
+            }
+          }
+        }
       }
 
       if (!usuario) {
@@ -112,7 +137,6 @@ export class AuthService {
 
     return usuario;
   }
-
 
   private signAccessToken(payload: JwtPayload): string {
     const secret = this.configService.get<string>('JWT_SECRET');
@@ -289,6 +313,53 @@ export class AuthService {
     );
   }
 
+
+  private mapPacienteOrigemToVinculoOrigem(
+    paciente: Paciente,
+  ): ProfissionalPacienteVinculoOrigem {
+    if (paciente.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO) {
+      return ProfissionalPacienteVinculoOrigem.CONVITE_RAPIDO;
+    }
+    return ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
+  }
+
+  private async upsertVinculoAtivo(
+    paciente: Paciente,
+    pacienteUsuarioId: string,
+  ): Promise<void> {
+    await this.vinculoRepository.update(
+      {
+        pacienteId: paciente.id,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      {
+        status: ProfissionalPacienteVinculoStatus.ENCERRADO,
+        endedAt: new Date(),
+      },
+    );
+
+    await this.vinculoRepository.update(
+      {
+        pacienteUsuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      {
+        status: ProfissionalPacienteVinculoStatus.ENCERRADO,
+        endedAt: new Date(),
+      },
+    );
+
+    await this.vinculoRepository.save(
+      this.vinculoRepository.create({
+        profissionalId: paciente.usuarioId,
+        pacienteId: paciente.id,
+        pacienteUsuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+        origem: this.mapPacienteOrigemToVinculoOrigem(paciente),
+        endedAt: null,
+      }),
+    );
+  }
   private async resolveInviteContext(
     conviteToken: string,
   ): Promise<{ profissional: Usuario; pacienteParaVinculo: Paciente }> {
@@ -343,6 +414,7 @@ export class AuthService {
           pacienteParaVinculo.conviteAceitoEm = new Date();
         }
         await this.pacienteRepository.save(pacienteParaVinculo);
+        await this.upsertVinculoAtivo(pacienteParaVinculo, pacienteUsuario.id);
         return;
       }
       throw new BadRequestException('Paciente ja possui usuario vinculado');
@@ -356,6 +428,17 @@ export class AuthService {
       throw new BadRequestException('Usuario paciente ja vinculado a outro cadastro');
     }
 
+    const vinculoAtivoTabela = await this.vinculoRepository.findOne({
+      where: {
+        pacienteUsuarioId: pacienteUsuario.id,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+    });
+
+    if (vinculoAtivoTabela && vinculoAtivoTabela.pacienteId !== pacienteParaVinculo.id) {
+      throw new BadRequestException('Usuario paciente ja vinculado a outro cadastro');
+    }
+
     pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
     pacienteParaVinculo.vinculoStatus =
       pacienteParaVinculo.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
@@ -363,6 +446,7 @@ export class AuthService {
         : PacienteVinculoStatus.VINCULADO;
     pacienteParaVinculo.conviteAceitoEm = new Date();
     await this.pacienteRepository.save(pacienteParaVinculo);
+    await this.upsertVinculoAtivo(pacienteParaVinculo, pacienteUsuario.id);
   }
 
   private sanitizeDigits(value?: string): string {
@@ -563,6 +647,12 @@ export class AuthService {
     };
   }
 }
+
+
+
+
+
+
 
 
 

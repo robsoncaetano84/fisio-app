@@ -20,6 +20,7 @@ const auth_log_entity_1 = require("./entities/auth-log.entity");
 const auth_logs_service_1 = require("./auth-logs.service");
 const lockout_service_1 = require("./lockout.service");
 const paciente_entity_1 = require("../pacientes/entities/paciente.entity");
+const profissional_paciente_vinculo_entity_1 = require("../pacientes/entities/profissional-paciente-vinculo.entity");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -27,7 +28,7 @@ exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
             usuarios_module_1.UsuariosModule,
-            typeorm_1.TypeOrmModule.forFeature([auth_log_entity_1.AuthLog, paciente_entity_1.Paciente]),
+            typeorm_1.TypeOrmModule.forFeature([auth_log_entity_1.AuthLog, paciente_entity_1.Paciente, profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo]),
             passport_1.PassportModule,
             jwt_1.JwtModule.registerAsync({
                 imports: [config_1.ConfigModule],

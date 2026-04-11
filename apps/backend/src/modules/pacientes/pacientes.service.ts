@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -14,6 +14,11 @@ import {
   PacienteVinculoStatus,
 } from './entities/paciente.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
+import {
+  ProfissionalPacienteVinculo,
+  ProfissionalPacienteVinculoOrigem,
+  ProfissionalPacienteVinculoStatus,
+} from './entities/profissional-paciente-vinculo.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
@@ -34,6 +39,8 @@ export class PacientesService {
     private readonly usuarioRepository: Repository<Usuario>,
     @InjectRepository(PacienteExame)
     private readonly pacienteExameRepository: Repository<PacienteExame>,
+    @InjectRepository(ProfissionalPacienteVinculo)
+    private readonly vinculoRepository: Repository<ProfissionalPacienteVinculo>,
   ) {}
 
   private resolveInitialVinculoStatus(
@@ -47,6 +54,78 @@ export class PacientesService {
       return PacienteVinculoStatus.VINCULADO;
     }
     return PacienteVinculoStatus.SEM_VINCULO;
+  }
+
+  private mapOrigemToVinculo(
+    cadastroOrigem?: PacienteCadastroOrigem,
+  ): ProfissionalPacienteVinculoOrigem {
+    if (cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO) {
+      return ProfissionalPacienteVinculoOrigem.CONVITE_RAPIDO;
+    }
+    return ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
+  }
+
+  private async upsertVinculoAtivo(
+    paciente: Paciente,
+    pacienteUsuarioId: string,
+  ): Promise<void> {
+    await this.vinculoRepository.update(
+      {
+        pacienteId: paciente.id,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      {
+        status: ProfissionalPacienteVinculoStatus.ENCERRADO,
+        endedAt: new Date(),
+      },
+    );
+
+    const existingAtivoByPacienteUsuario = await this.vinculoRepository.findOne({
+      where: {
+        pacienteUsuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+    });
+
+    if (existingAtivoByPacienteUsuario) {
+      if (existingAtivoByPacienteUsuario.pacienteId !== paciente.id) {
+        throw new ConflictException('Este usuario paciente ja esta vinculado');
+      }
+
+      await this.vinculoRepository.update(
+        { id: existingAtivoByPacienteUsuario.id },
+        {
+          profissionalId: paciente.usuarioId,
+          origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
+          endedAt: null,
+        },
+      );
+      return;
+    }
+
+    await this.vinculoRepository.save(
+      this.vinculoRepository.create({
+        profissionalId: paciente.usuarioId,
+        pacienteId: paciente.id,
+        pacienteUsuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+        origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
+        endedAt: null,
+      }),
+    );
+  }
+
+  private async closeVinculoAtivoByPaciente(pacienteId: string): Promise<void> {
+    await this.vinculoRepository.update(
+      {
+        pacienteId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      {
+        status: ProfissionalPacienteVinculoStatus.ENCERRADO,
+        endedAt: new Date(),
+      },
+    );
   }
 
   private async validatePacienteUsuarioId(
@@ -74,6 +153,17 @@ export class PacientesService {
     });
 
     if (existingLink && existingLink.id !== ignorePacienteId) {
+      throw new ConflictException('Este usuario paciente ja esta vinculado');
+    }
+
+    const existingActiveVinculo = await this.vinculoRepository.findOne({
+      where: {
+        pacienteUsuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+    });
+
+    if (existingActiveVinculo && existingActiveVinculo.pacienteId !== ignorePacienteId) {
       throw new ConflictException('Este usuario paciente ja esta vinculado');
     }
 
@@ -109,7 +199,13 @@ export class PacientesService {
       pacienteUsuarioId,
     });
 
-    return this.pacienteRepository.save(paciente);
+    const saved = await this.pacienteRepository.save(paciente);
+
+    if (saved.pacienteUsuarioId) {
+      await this.upsertVinculoAtivo(saved, saved.pacienteUsuarioId);
+    }
+
+    return saved;
   }
 
   async findAll(usuarioId: string): Promise<Paciente[]> {
@@ -171,6 +267,7 @@ export class PacientesService {
       }
     }
 
+    let shouldSyncVinculo = false;
     if (Object.prototype.hasOwnProperty.call(updatePacienteDto, 'pacienteUsuarioId')) {
       const pacienteUsuarioId = await this.validatePacienteUsuarioId(
         updatePacienteDto.pacienteUsuarioId,
@@ -190,10 +287,14 @@ export class PacientesService {
       } else if (!paciente.conviteAceitoEm) {
         paciente.conviteAceitoEm = new Date();
       }
+      shouldSyncVinculo = true;
     }
 
     if (updatePacienteDto.cadastroOrigem) {
       paciente.cadastroOrigem = updatePacienteDto.cadastroOrigem;
+      if (paciente.pacienteUsuarioId) {
+        shouldSyncVinculo = true;
+      }
     }
 
     if (updatePacienteDto.vinculoStatus) {
@@ -201,7 +302,17 @@ export class PacientesService {
     }
 
     Object.assign(paciente, updatePacienteDto);
-    return this.pacienteRepository.save(paciente);
+    const saved = await this.pacienteRepository.save(paciente);
+
+    if (shouldSyncVinculo) {
+      if (saved.pacienteUsuarioId) {
+        await this.upsertVinculoAtivo(saved, saved.pacienteUsuarioId);
+      } else {
+        await this.closeVinculoAtivoByPaciente(saved.id);
+      }
+    }
+
+    return saved;
   }
 
   async unlinkPacienteUsuarioByProfessional(
@@ -217,7 +328,9 @@ export class PacientesService {
     paciente.pacienteUsuarioId = null;
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
     paciente.conviteAceitoEm = null;
-    return this.pacienteRepository.save(paciente);
+    const saved = await this.pacienteRepository.save(paciente);
+    await this.closeVinculoAtivoByPaciente(saved.id);
+    return saved;
   }
 
   async unlinkMyProfessional(usuario: Usuario): Promise<{ pacienteId: string }> {
@@ -231,11 +344,30 @@ export class PacientesService {
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
     paciente.conviteAceitoEm = null;
     await this.pacienteRepository.save(paciente);
+    await this.closeVinculoAtivoByPaciente(paciente.id);
 
     return { pacienteId: paciente.id };
   }
 
   async findLinkedPacienteByUsuarioId(usuarioId: string): Promise<Paciente> {
+    const vinculoAtivo = await this.vinculoRepository.findOne({
+      where: {
+        pacienteUsuarioId: usuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (vinculoAtivo) {
+      const pacienteByVinculo = await this.pacienteRepository.findOne({
+        where: { id: vinculoAtivo.pacienteId, ativo: true },
+      });
+
+      if (pacienteByVinculo) {
+        return pacienteByVinculo;
+      }
+    }
+
     const paciente = await this.pacienteRepository.findOne({
       where: { pacienteUsuarioId: usuarioId, ativo: true },
     });
@@ -251,6 +383,7 @@ export class PacientesService {
     const paciente = await this.findOne(id, usuarioId);
     paciente.ativo = false;
     await this.pacienteRepository.save(paciente);
+    await this.closeVinculoAtivoByPaciente(paciente.id);
   }
 
   async getAttentionMap(usuarioId: string): Promise<Record<string, number | null>> {
@@ -308,9 +441,12 @@ export class PacientesService {
       throw new ForbiddenException('Acesso permitido somente para pacientes');
     }
 
-    const paciente = await this.pacienteRepository.findOne({
-      where: { pacienteUsuarioId: usuario.id, ativo: true },
-    });
+    let paciente: Paciente | null = null;
+    try {
+      paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
+    } catch {
+      paciente = null;
+    }
 
     if (!paciente) {
       return {

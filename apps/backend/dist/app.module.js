@@ -61,6 +61,7 @@ const crm_lead_entity_1 = require("./modules/crm/entities/crm-lead.entity");
 const crm_task_entity_1 = require("./modules/crm/entities/crm-task.entity");
 const crm_interaction_entity_1 = require("./modules/crm/entities/crm-interaction.entity");
 const paciente_exame_entity_1 = require("./modules/pacientes/entities/paciente-exame.entity");
+const profissional_paciente_vinculo_entity_1 = require("./modules/pacientes/entities/profissional-paciente-vinculo.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
 const usuarios_module_1 = require("./modules/usuarios/usuarios.module");
 const pacientes_module_1 = require("./modules/pacientes/pacientes.module");
@@ -141,8 +142,8 @@ exports.AppModule = AppModule = __decorate([
                             push_token_entity_1.PushToken,
                             crm_lead_entity_1.CrmLead,
                             crm_task_entity_1.CrmTask,
-                            crm_interaction_entity_1.CrmInteraction,
-                            paciente_exame_entity_1.PacienteExame,
+                            crm_interaction_entity_1.CrmInteraction, paciente_exame_entity_1.PacienteExame,
+                            profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo,
                         ],
                         migrations: [__dirname + '/migrations/*{.ts,.js}'],
                         synchronize: configService.get('NODE_ENV') === 'development',

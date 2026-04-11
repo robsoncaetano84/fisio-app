@@ -16,11 +16,12 @@ import { AuthLog } from './entities/auth-log.entity';
 import { AuthLogsService } from './auth-logs.service';
 import { LockoutService } from './lockout.service';
 import { Paciente } from '../pacientes/entities/paciente.entity';
+import { ProfissionalPacienteVinculo } from '../pacientes/entities/profissional-paciente-vinculo.entity';
 
 @Module({
   imports: [
     UsuariosModule,
-    TypeOrmModule.forFeature([AuthLog, Paciente]),
+    TypeOrmModule.forFeature([AuthLog, Paciente, ProfissionalPacienteVinculo]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -47,5 +48,6 @@ import { Paciente } from '../pacientes/entities/paciente.entity';
   exports: [AuthService],
 })
 export class AuthModule {}
+
 
 

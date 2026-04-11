@@ -25,6 +25,7 @@ const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const paciente_entity_1 = require("../pacientes/entities/paciente.entity");
+const profissional_paciente_vinculo_entity_1 = require("../pacientes/entities/profissional-paciente-vinculo.entity");
 let AuthService = AuthService_1 = class AuthService {
     usuariosService;
     jwtService;
@@ -32,14 +33,16 @@ let AuthService = AuthService_1 = class AuthService {
     authLogsService;
     lockoutService;
     pacienteRepository;
+    vinculoRepository;
     logger = new common_1.Logger(AuthService_1.name);
-    constructor(usuariosService, jwtService, configService, authLogsService, lockoutService, pacienteRepository) {
+    constructor(usuariosService, jwtService, configService, authLogsService, lockoutService, pacienteRepository, vinculoRepository) {
         this.usuariosService = usuariosService;
         this.jwtService = jwtService;
         this.configService = configService;
         this.authLogsService = authLogsService;
         this.lockoutService = lockoutService;
         this.pacienteRepository = pacienteRepository;
+        this.vinculoRepository = vinculoRepository;
     }
     normalizeLoginIdentifier(identificador) {
         return (identificador || '').trim().toLowerCase();
@@ -58,6 +61,23 @@ let AuthService = AuthService_1 = class AuthService {
                     relations: { pacienteUsuario: true },
                 });
                 usuario = paciente?.pacienteUsuario ?? null;
+                if (!usuario && paciente) {
+                    const vinculoAtivo = await this.vinculoRepository.findOne({
+                        where: {
+                            pacienteId: paciente.id,
+                            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+                        },
+                        order: { createdAt: 'DESC' },
+                    });
+                    if (vinculoAtivo) {
+                        try {
+                            usuario = await this.usuariosService.findById(vinculoAtivo.pacienteUsuarioId);
+                        }
+                        catch {
+                            usuario = null;
+                        }
+                    }
+                }
             }
             if (!usuario) {
                 usuario = await this.usuariosService.findByEmail(normalized);
@@ -214,6 +234,36 @@ let AuthService = AuthService_1 = class AuthService {
             this.configService.get('JWT_SECRET') ||
             'invite-default-secret');
     }
+    mapPacienteOrigemToVinculoOrigem(paciente) {
+        if (paciente.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
+            return profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoOrigem.CONVITE_RAPIDO;
+        }
+        return profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
+    }
+    async upsertVinculoAtivo(paciente, pacienteUsuarioId) {
+        await this.vinculoRepository.update({
+            pacienteId: paciente.id,
+            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+        }, {
+            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
+            endedAt: new Date(),
+        });
+        await this.vinculoRepository.update({
+            pacienteUsuarioId,
+            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+        }, {
+            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
+            endedAt: new Date(),
+        });
+        await this.vinculoRepository.save(this.vinculoRepository.create({
+            profissionalId: paciente.usuarioId,
+            pacienteId: paciente.id,
+            pacienteUsuarioId,
+            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            origem: this.mapPacienteOrigemToVinculoOrigem(paciente),
+            endedAt: null,
+        }));
+    }
     async resolveInviteContext(conviteToken) {
         let payload;
         try {
@@ -256,6 +306,7 @@ let AuthService = AuthService_1 = class AuthService {
                     pacienteParaVinculo.conviteAceitoEm = new Date();
                 }
                 await this.pacienteRepository.save(pacienteParaVinculo);
+                await this.upsertVinculoAtivo(pacienteParaVinculo, pacienteUsuario.id);
                 return;
             }
             throw new common_1.BadRequestException('Paciente ja possui usuario vinculado');
@@ -266,6 +317,15 @@ let AuthService = AuthService_1 = class AuthService {
         if (vinculoExistente && vinculoExistente.id !== pacienteParaVinculo.id) {
             throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
         }
+        const vinculoAtivoTabela = await this.vinculoRepository.findOne({
+            where: {
+                pacienteUsuarioId: pacienteUsuario.id,
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            },
+        });
+        if (vinculoAtivoTabela && vinculoAtivoTabela.pacienteId !== pacienteParaVinculo.id) {
+            throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
+        }
         pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
         pacienteParaVinculo.vinculoStatus =
             pacienteParaVinculo.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
@@ -273,6 +333,7 @@ let AuthService = AuthService_1 = class AuthService {
                 : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
         pacienteParaVinculo.conviteAceitoEm = new Date();
         await this.pacienteRepository.save(pacienteParaVinculo);
+        await this.upsertVinculoAtivo(pacienteParaVinculo, pacienteUsuario.id);
     }
     sanitizeDigits(value) {
         return (value || '').replace(/\D/g, '').trim();
@@ -399,11 +460,13 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(5, (0, typeorm_1.InjectRepository)(paciente_entity_1.Paciente)),
+    __param(6, (0, typeorm_1.InjectRepository)(profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo)),
     __metadata("design:paramtypes", [usuarios_service_1.UsuariosService,
         jwt_1.JwtService,
         config_1.ConfigService,
         auth_logs_service_1.AuthLogsService,
         lockout_service_1.LockoutService,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
