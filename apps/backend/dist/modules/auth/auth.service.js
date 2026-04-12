@@ -56,10 +56,15 @@ let AuthService = AuthService_1 = class AuthService {
         else {
             const cpfDigits = this.sanitizeDigits(normalized);
             if (cpfDigits.length === 11) {
-                const paciente = await this.pacienteRepository.findOne({
-                    where: { cpf: cpfDigits, ativo: true },
-                    relations: { pacienteUsuario: true },
-                });
+                const paciente = await this.pacienteRepository
+                    .createQueryBuilder('paciente')
+                    .leftJoinAndSelect('paciente.pacienteUsuario', 'pacienteUsuario')
+                    .where('paciente.cpf = :cpf', { cpf: cpfDigits })
+                    .andWhere('paciente.ativo = :ativo', { ativo: true })
+                    .andWhere('paciente.paciente_usuario_id IS NOT NULL')
+                    .orderBy('paciente.convite_aceito_em', 'DESC', 'NULLS LAST')
+                    .addOrderBy('paciente.updated_at', 'DESC')
+                    .getOne();
                 usuario = paciente?.pacienteUsuario ?? null;
                 if (!usuario && paciente) {
                     const vinculoAtivo = await this.vinculoRepository.findOne({
@@ -438,9 +443,17 @@ let AuthService = AuthService_1 = class AuthService {
     }
     async registrarPacientePorConvite(dto) {
         const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(dto.conviteToken);
+        const normalizedEmail = dto.email.trim().toLowerCase();
+        const existingUser = await this.usuariosService.findByEmail(normalizedEmail);
+        if (existingUser) {
+            if (existingUser.role !== usuario_entity_1.UserRole.PACIENTE) {
+                throw new common_1.ConflictException('Este e-mail ja esta em uso por outro tipo de conta');
+            }
+            throw new common_1.ConflictException('Este e-mail ja possui cadastro. Faca login para aceitar o convite');
+        }
         const createUsuarioDto = {
             nome: dto.nome.trim(),
-            email: dto.email.trim().toLowerCase(),
+            email: normalizedEmail,
             senha: dto.senha,
             role: usuario_entity_1.UserRole.PACIENTE,
         };

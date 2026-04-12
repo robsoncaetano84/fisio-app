@@ -75,7 +75,7 @@ __decorate([
     __metadata("design:type", String)
 ], Paciente.prototype, "nomeCompleto", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 11, unique: true }),
+    (0, typeorm_1.Column)({ length: 11 }),
     __metadata("design:type", String)
 ], Paciente.prototype, "cpf", void 0);
 __decorate([
@@ -203,6 +203,7 @@ exports.Paciente = Paciente = __decorate([
     (0, typeorm_1.Entity)('pacientes'),
     (0, typeorm_1.Index)('IDX_PACIENTE_USUARIO_ATIVO', ['usuarioId', 'ativo']),
     (0, typeorm_1.Index)('IDX_PACIENTE_USUARIO_NOME', ['usuarioId', 'nomeCompleto']),
-    (0, typeorm_1.Index)('IDX_PACIENTE_PACIENTE_USUARIO', ['pacienteUsuarioId'])
+    (0, typeorm_1.Index)('IDX_PACIENTE_PACIENTE_USUARIO', ['pacienteUsuarioId']),
+    (0, typeorm_1.Index)('UQ_PACIENTE_USUARIO_CPF', ['usuarioId', 'cpf'], { unique: true })
 ], Paciente);
 //# sourceMappingURL=paciente.entity.js.map

@@ -4,6 +4,7 @@
 // ==========================================
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -92,10 +93,15 @@ export class AuthService {
     } else {
       const cpfDigits = this.sanitizeDigits(normalized);
       if (cpfDigits.length === 11) {
-        const paciente = await this.pacienteRepository.findOne({
-          where: { cpf: cpfDigits, ativo: true },
-          relations: { pacienteUsuario: true },
-        });
+        const paciente = await this.pacienteRepository
+          .createQueryBuilder('paciente')
+          .leftJoinAndSelect('paciente.pacienteUsuario', 'pacienteUsuario')
+          .where('paciente.cpf = :cpf', { cpf: cpfDigits })
+          .andWhere('paciente.ativo = :ativo', { ativo: true })
+          .andWhere('paciente.paciente_usuario_id IS NOT NULL')
+          .orderBy('paciente.convite_aceito_em', 'DESC', 'NULLS LAST')
+          .addOrderBy('paciente.updated_at', 'DESC')
+          .getOne();
         usuario = paciente?.pacienteUsuario ?? null;
 
         if (!usuario && paciente) {
@@ -622,9 +628,23 @@ export class AuthService {
       dto.conviteToken,
     );
 
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const existingUser = await this.usuariosService.findByEmail(normalizedEmail);
+
+    if (existingUser) {
+      if (existingUser.role !== UserRole.PACIENTE) {
+        throw new ConflictException(
+          'Este e-mail ja esta em uso por outro tipo de conta',
+        );
+      }
+      throw new ConflictException(
+        'Este e-mail ja possui cadastro. Faca login para aceitar o convite',
+      );
+    }
+
     const createUsuarioDto: CreateUsuarioDto = {
       nome: dto.nome.trim(),
-      email: dto.email.trim().toLowerCase(),
+      email: normalizedEmail,
       senha: dto.senha,
       role: UserRole.PACIENTE,
     };
@@ -647,6 +667,8 @@ export class AuthService {
     };
   }
 }
+
+
 
 
 

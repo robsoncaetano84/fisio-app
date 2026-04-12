@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // P AC IE NT E.E NT IT Y
 // ==========================================
@@ -37,11 +37,12 @@ export enum PacienteVinculoStatus {
 @Index('IDX_PACIENTE_USUARIO_ATIVO', ['usuarioId', 'ativo'])
 @Index('IDX_PACIENTE_USUARIO_NOME', ['usuarioId', 'nomeCompleto'])
 @Index('IDX_PACIENTE_PACIENTE_USUARIO', ['pacienteUsuarioId'])
+@Index('UQ_PACIENTE_USUARIO_CPF', ['usuarioId', 'cpf'], { unique: true })
 export class Paciente extends BaseEntity {
   @Column({ name: 'nome_completo', length: 255 })
   nomeCompleto: string;
 
-  @Column({ length: 11, unique: true })
+  @Column({ length: 11 })
   cpf: string;
 
   @Column({ length: 20, nullable: true })
@@ -140,3 +141,4 @@ export class Paciente extends BaseEntity {
   @Column({ name: 'convite_aceito_em', type: 'timestamp', nullable: true })
   conviteAceitoEm: Date | null;
 }
+

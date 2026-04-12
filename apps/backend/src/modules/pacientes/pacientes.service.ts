@@ -175,7 +175,7 @@ export class PacientesService {
     usuarioId: string,
   ): Promise<Paciente> {
     const existingPaciente = await this.pacienteRepository.findOne({
-      where: { cpf: createPacienteDto.cpf },
+      where: { cpf: createPacienteDto.cpf, usuarioId },
     });
 
     if (existingPaciente) {
@@ -259,7 +259,7 @@ export class PacientesService {
 
     if (updatePacienteDto.cpf && updatePacienteDto.cpf !== paciente.cpf) {
       const existingPaciente = await this.pacienteRepository.findOne({
-        where: { cpf: updatePacienteDto.cpf },
+        where: { cpf: updatePacienteDto.cpf, usuarioId },
       });
 
       if (existingPaciente) {
@@ -540,3 +540,4 @@ export class PacientesService {
     await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
   }
 }
+

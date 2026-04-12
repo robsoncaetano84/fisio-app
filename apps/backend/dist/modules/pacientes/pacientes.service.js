@@ -128,7 +128,7 @@ let PacientesService = class PacientesService {
     }
     async create(createPacienteDto, usuarioId) {
         const existingPaciente = await this.pacienteRepository.findOne({
-            where: { cpf: createPacienteDto.cpf },
+            where: { cpf: createPacienteDto.cpf, usuarioId },
         });
         if (existingPaciente) {
             throw new common_1.ConflictException('CPF ja cadastrado');
@@ -189,7 +189,7 @@ let PacientesService = class PacientesService {
         const paciente = await this.findOne(id, usuarioId);
         if (updatePacienteDto.cpf && updatePacienteDto.cpf !== paciente.cpf) {
             const existingPaciente = await this.pacienteRepository.findOne({
-                where: { cpf: updatePacienteDto.cpf },
+                where: { cpf: updatePacienteDto.cpf, usuarioId },
             });
             if (existingPaciente) {
                 throw new common_1.ConflictException('CPF ja cadastrado');
