@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A UT H.S ER VI CE
 // ==========================================
@@ -459,6 +459,37 @@ export class AuthService {
     return (value || '').replace(/\D/g, '').trim();
   }
 
+  private shouldReplaceQuickInviteName(nomeCompleto: string): boolean {
+    const normalized = (nomeCompleto || '').trim().toLowerCase();
+    return !normalized || normalized === 'paciente convite rapido';
+  }
+
+  private async syncQuickInvitePacienteDados(
+    pacienteParaVinculo: Paciente,
+    pacienteUsuario: Usuario,
+  ): Promise<void> {
+    if (pacienteParaVinculo.cadastroOrigem !== PacienteCadastroOrigem.CONVITE_RAPIDO) {
+      return;
+    }
+
+    let changed = false;
+
+    if (this.shouldReplaceQuickInviteName(pacienteParaVinculo.nomeCompleto)) {
+      pacienteParaVinculo.nomeCompleto = pacienteUsuario.nome;
+      changed = true;
+    }
+
+    const emailUsuario = (pacienteUsuario.email || '').trim().toLowerCase();
+    if (emailUsuario && (!pacienteParaVinculo.contatoEmail || !pacienteParaVinculo.contatoEmail.trim())) {
+      pacienteParaVinculo.contatoEmail = emailUsuario;
+      changed = true;
+    }
+
+    if (changed) {
+      await this.pacienteRepository.save(pacienteParaVinculo);
+    }
+  }
+
   private async generateUniquePacienteCpf(): Promise<string> {
     for (let i = 0; i < 25; i++) {
       const base = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -607,6 +638,7 @@ export class AuthService {
       pacienteParaVinculo,
       pacienteUsuario,
     );
+    await this.syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario);
 
     return {
       vinculadoAutomaticamente: true,
@@ -655,6 +687,7 @@ export class AuthService {
       pacienteParaVinculo,
       pacienteUsuario,
     );
+    await this.syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario);
     const pacienteId: string | null = pacienteParaVinculo.id;
 
     const loginResponse = this.buildLoginResponse(pacienteUsuario);
@@ -667,6 +700,8 @@ export class AuthService {
     };
   }
 }
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -63,6 +63,22 @@ export class PacientesService {
       return ProfissionalPacienteVinculoOrigem.CONVITE_RAPIDO;
     }
     return ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
+  }
+
+  private shouldReplaceQuickInviteName(nomeCompleto: string): boolean {
+    const normalized = (nomeCompleto || '').trim().toLowerCase();
+    return !normalized || normalized === 'paciente convite rapido';
+  }
+
+  private applyDisplayNameFallback(paciente: Paciente): Paciente {
+    if (
+      paciente.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO &&
+      this.shouldReplaceQuickInviteName(paciente.nomeCompleto) &&
+      paciente.pacienteUsuario?.nome
+    ) {
+      paciente.nomeCompleto = paciente.pacienteUsuario.nome;
+    }
+    return paciente;
   }
 
   private async upsertVinculoAtivo(
@@ -209,10 +225,12 @@ export class PacientesService {
   }
 
   async findAll(usuarioId: string): Promise<Paciente[]> {
-    return this.pacienteRepository.find({
+    const pacientes = await this.pacienteRepository.find({
       where: { usuarioId, ativo: true },
       order: { nomeCompleto: 'ASC' },
+      relations: ['pacienteUsuario'],
     });
+    return pacientes.map((paciente) => this.applyDisplayNameFallback(paciente));
   }
 
   async findPaged(usuarioId: string, page: number, limit: number) {
@@ -227,10 +245,11 @@ export class PacientesService {
       order: { nomeCompleto: 'ASC' },
       take: safeLimit,
       skip,
+      relations: ['pacienteUsuario'],
     });
 
     return {
-      data,
+      data: data.map((paciente) => this.applyDisplayNameFallback(paciente)),
       total,
       page: safePage,
       limit: safeLimit,
@@ -241,13 +260,14 @@ export class PacientesService {
   async findOne(id: string, usuarioId: string): Promise<Paciente> {
     const paciente = await this.pacienteRepository.findOne({
       where: { id, usuarioId },
+      relations: ['pacienteUsuario'],
     });
 
     if (!paciente) {
       throw new NotFoundException('Paciente nao encontrado');
     }
 
-    return paciente;
+    return this.applyDisplayNameFallback(paciente);
   }
 
   async update(
@@ -581,6 +601,10 @@ export class PacientesService {
     await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
   }
 }
+
+
+
+
 
 
 
