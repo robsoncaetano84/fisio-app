@@ -43,7 +43,7 @@ export class AuthController {
   ): Promise<LoginResponse> {
     const identificador = (loginDto.identificador || loginDto.email || '').trim();
     if (!identificador) {
-      throw new BadRequestException('E-mail ou CPF é obrigatório');
+      throw new BadRequestException('E-mail ou CPF Ã© obrigatÃ³rio');
     }
     return this.authService.login(identificador, loginDto.senha, {
       ip: req.ip,

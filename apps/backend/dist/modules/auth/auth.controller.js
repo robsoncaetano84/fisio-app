@@ -39,7 +39,7 @@ let AuthController = class AuthController {
     async login(loginDto, req) {
         const identificador = (loginDto.identificador || loginDto.email || '').trim();
         if (!identificador) {
-            throw new common_1.BadRequestException('E-mail ou CPF � obrigat�rio');
+            throw new common_1.BadRequestException('E-mail ou CPF é obrigatório');
         }
         return this.authService.login(identificador, loginDto.senha, {
             ip: req.ip,

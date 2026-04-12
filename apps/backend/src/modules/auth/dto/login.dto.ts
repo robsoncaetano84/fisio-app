@@ -5,17 +5,17 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
-  // Novo contrato (frontend atual): e-mail OU CPF em um único campo.
+  // Novo contrato (frontend atual): e-mail OU CPF em um Ãºnico campo.
   @IsOptional()
-  @IsString({ message: 'Informe um e-mail ou CPF válido' })
+  @IsString({ message: 'Informe um e-mail ou CPF vÃ¡lido' })
   identificador?: string;
 
   // Compatibilidade com clientes antigos.
   @IsOptional()
-  @IsEmail({}, { message: 'E-mail inválido' })
+  @IsEmail({}, { message: 'E-mail invÃ¡lido' })
   email?: string;
 
-  @IsNotEmpty({ message: 'Senha é obrigatória' })
-  @MinLength(6, { message: 'Senha deve ter no mínimo 6 caracteres' })
+  @IsNotEmpty({ message: 'Senha Ã© obrigatÃ³ria' })
+  @MinLength(6, { message: 'Senha deve ter no mÃ­nimo 6 caracteres' })
   senha: string;
 }
