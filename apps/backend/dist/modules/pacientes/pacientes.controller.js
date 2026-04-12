@@ -104,6 +104,12 @@ let PacientesController = class PacientesController {
     unlinkMyProfessional(usuario) {
         return this.pacientesService.unlinkMyProfessional(usuario);
     }
+    requestAnamneseUnlock(usuario) {
+        return this.pacientesService.requestAnamneseUnlock(usuario);
+    }
+    releaseAllAnamneseRequests(usuario) {
+        return this.pacientesService.releaseAllAnamneseRequestsForProfessional(usuario.id);
+    }
     async listExames(id, usuario) {
         const exames = await this.pacientesService.listExames(id, usuario.id);
         return exames.map((item) => this.toExameResponse(id, item));
@@ -219,6 +225,24 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
     __metadata("design:returntype", void 0)
 ], PacientesController.prototype, "unlinkMyProfessional", null);
+__decorate([
+    (0, common_1.Post)('me/solicitar-liberacao-anamnese'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 5 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
+    __metadata("design:returntype", void 0)
+], PacientesController.prototype, "requestAnamneseUnlock", null);
+__decorate([
+    (0, common_1.Post)('anamnese/liberar-todas'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 10 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
+    __metadata("design:returntype", void 0)
+], PacientesController.prototype, "releaseAllAnamneseRequests", null);
 __decorate([
     (0, common_1.Get)(':id/exames'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),

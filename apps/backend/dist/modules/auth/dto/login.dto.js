@@ -13,23 +13,23 @@ exports.LoginDto = void 0;
 const class_validator_1 = require("class-validator");
 class LoginDto {
     identificador;
-    senha;
     email;
+    senha;
 }
 exports.LoginDto = LoginDto;
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'E-mail ou CPF é obrigatório' }),
-    (0, class_validator_1.IsString)({ message: 'Informe um e-mail ou CPF válido' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: 'Informe um e-mail ou CPF v�lido' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "identificador", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'Senha é obrigatória' }),
-    (0, class_validator_1.MinLength)(6, { message: 'Senha deve ter no mínimo 6 caracteres' }),
-    __metadata("design:type", String)
-], LoginDto.prototype, "senha", void 0);
-__decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEmail)({}, { message: 'E-mail inválido' }),
+    (0, class_validator_1.IsEmail)({}, { message: 'E-mail inv�lido' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "email", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)({ message: 'Senha � obrigat�ria' }),
+    (0, class_validator_1.MinLength)(6, { message: 'Senha deve ter no m�nimo 6 caracteres' }),
+    __metadata("design:type", String)
+], LoginDto.prototype, "senha", void 0);
 //# sourceMappingURL=login.dto.js.map

@@ -47,6 +47,9 @@ export declare class Paciente extends BaseEntity {
     pacienteUsuario: Usuario | null;
     pacienteUsuarioId: string | null;
     anamneseLiberadaPaciente: boolean;
+    anamneseSolicitacaoPendente: boolean;
+    anamneseSolicitacaoEm: Date | null;
+    anamneseSolicitacaoUltimaEm: Date | null;
     cadastroOrigem: PacienteCadastroOrigem;
     vinculoStatus: PacienteVinculoStatus;
     conviteEnviadoEm: Date | null;

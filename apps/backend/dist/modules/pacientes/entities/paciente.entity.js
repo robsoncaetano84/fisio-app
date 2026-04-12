@@ -64,6 +64,9 @@ let Paciente = class Paciente extends base_entity_1.BaseEntity {
     pacienteUsuario;
     pacienteUsuarioId;
     anamneseLiberadaPaciente;
+    anamneseSolicitacaoPendente;
+    anamneseSolicitacaoEm;
+    anamneseSolicitacaoUltimaEm;
     cadastroOrigem;
     vinculoStatus;
     conviteEnviadoEm;
@@ -173,6 +176,26 @@ __decorate([
     }),
     __metadata("design:type", Boolean)
 ], Paciente.prototype, "anamneseLiberadaPaciente", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'anamnese_solicitacao_pendente',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Paciente.prototype, "anamneseSolicitacaoPendente", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'anamnese_solicitacao_em', type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], Paciente.prototype, "anamneseSolicitacaoEm", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'anamnese_solicitacao_ultima_em',
+        type: 'timestamp',
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Paciente.prototype, "anamneseSolicitacaoUltimaEm", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         name: 'cadastro_origem',

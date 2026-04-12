@@ -55,6 +55,8 @@ export declare class AuthService {
     private resolveInviteContext;
     private vincularPacienteUsuarioAoCadastro;
     private sanitizeDigits;
+    private shouldReplaceQuickInviteName;
+    private syncQuickInvitePacienteDados;
     private generateUniquePacienteCpf;
     gerarConviteRapidoPaciente(profissional: Usuario, dto: CreatePacienteConviteRapidoDto): Promise<{
         pacienteId: string;

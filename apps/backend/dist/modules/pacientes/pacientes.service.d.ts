@@ -18,6 +18,8 @@ export declare class PacientesService {
     constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>);
     private resolveInitialVinculoStatus;
     private mapOrigemToVinculo;
+    private shouldReplaceQuickInviteName;
+    private applyDisplayNameFallback;
     private upsertVinculoAtivo;
     private closeVinculoAtivoByPaciente;
     private validatePacienteUsuarioId;
@@ -35,6 +37,14 @@ export declare class PacientesService {
     unlinkPacienteUsuarioByProfessional(id: string, usuarioId: string): Promise<Paciente>;
     unlinkMyProfessional(usuario: Usuario): Promise<{
         pacienteId: string;
+    }>;
+    requestAnamneseUnlock(usuario: Usuario): Promise<{
+        pacienteId: string;
+        solicitadoEm: Date;
+    }>;
+    releaseAllAnamneseRequestsForProfessional(usuarioId: string): Promise<{
+        totalPendentes: number;
+        liberados: number;
     }>;
     findLinkedPacienteByUsuarioId(usuarioId: string): Promise<Paciente>;
     remove(id: string, usuarioId: string): Promise<void>;

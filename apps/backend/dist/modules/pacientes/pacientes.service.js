@@ -53,6 +53,18 @@ let PacientesService = class PacientesService {
         }
         return profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
     }
+    shouldReplaceQuickInviteName(nomeCompleto) {
+        const normalized = (nomeCompleto || '').trim().toLowerCase();
+        return !normalized || normalized === 'paciente convite rapido';
+    }
+    applyDisplayNameFallback(paciente) {
+        if (paciente.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO &&
+            this.shouldReplaceQuickInviteName(paciente.nomeCompleto) &&
+            paciente.pacienteUsuario?.nome) {
+            paciente.nomeCompleto = paciente.pacienteUsuario.nome;
+        }
+        return paciente;
+    }
     async upsertVinculoAtivo(paciente, pacienteUsuarioId) {
         await this.vinculoRepository.update({
             pacienteId: paciente.id,
@@ -151,10 +163,12 @@ let PacientesService = class PacientesService {
         return saved;
     }
     async findAll(usuarioId) {
-        return this.pacienteRepository.find({
+        const pacientes = await this.pacienteRepository.find({
             where: { usuarioId, ativo: true },
             order: { nomeCompleto: 'ASC' },
+            relations: ['pacienteUsuario'],
         });
+        return pacientes.map((paciente) => this.applyDisplayNameFallback(paciente));
     }
     async findPaged(usuarioId, page, limit) {
         const safePage = Number.isFinite(page) ? Math.max(1, page) : 1;
@@ -167,9 +181,10 @@ let PacientesService = class PacientesService {
             order: { nomeCompleto: 'ASC' },
             take: safeLimit,
             skip,
+            relations: ['pacienteUsuario'],
         });
         return {
-            data,
+            data: data.map((paciente) => this.applyDisplayNameFallback(paciente)),
             total,
             page: safePage,
             limit: safeLimit,
@@ -179,11 +194,12 @@ let PacientesService = class PacientesService {
     async findOne(id, usuarioId) {
         const paciente = await this.pacienteRepository.findOne({
             where: { id, usuarioId },
+            relations: ['pacienteUsuario'],
         });
         if (!paciente) {
             throw new common_1.NotFoundException('Paciente nao encontrado');
         }
-        return paciente;
+        return this.applyDisplayNameFallback(paciente);
     }
     async update(id, updatePacienteDto, usuarioId) {
         const paciente = await this.findOne(id, usuarioId);
@@ -218,6 +234,10 @@ let PacientesService = class PacientesService {
         }
         if (updatePacienteDto.vinculoStatus) {
             paciente.vinculoStatus = updatePacienteDto.vinculoStatus;
+        }
+        if (updatePacienteDto.anamneseLiberadaPaciente === true) {
+            paciente.anamneseSolicitacaoPendente = false;
+            paciente.anamneseSolicitacaoEm = null;
         }
         Object.assign(paciente, updatePacienteDto);
         const saved = await this.pacienteRepository.save(paciente);
@@ -254,6 +274,65 @@ let PacientesService = class PacientesService {
         await this.pacienteRepository.save(paciente);
         await this.closeVinculoAtivoByPaciente(paciente.id);
         return { pacienteId: paciente.id };
+    }
+    async requestAnamneseUnlock(usuario) {
+        if (usuario.role !== usuario_entity_1.UserRole.PACIENTE) {
+            throw new common_1.ForbiddenException('Acesso permitido somente para pacientes');
+        }
+        const paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
+        if (paciente.anamneseLiberadaPaciente) {
+            throw new common_1.BadRequestException('Anamnese ja liberada para preenchimento');
+        }
+        if (paciente.anamneseSolicitacaoPendente) {
+            throw new common_1.ConflictException('Ja existe solicitacao pendente');
+        }
+        const now = new Date();
+        if (paciente.anamneseSolicitacaoUltimaEm) {
+            const elapsedMs = now.getTime() - new Date(paciente.anamneseSolicitacaoUltimaEm).getTime();
+            const minCooldownMs = 24 * 60 * 60 * 1000;
+            if (elapsedMs < minCooldownMs) {
+                throw new common_1.BadRequestException('Aguarde 24h para nova solicitacao');
+            }
+        }
+        paciente.anamneseSolicitacaoPendente = true;
+        paciente.anamneseSolicitacaoEm = now;
+        paciente.anamneseSolicitacaoUltimaEm = now;
+        await this.pacienteRepository.save(paciente);
+        return {
+            pacienteId: paciente.id,
+            solicitadoEm: now,
+        };
+    }
+    async releaseAllAnamneseRequestsForProfessional(usuarioId) {
+        const pendentes = await this.pacienteRepository.count({
+            where: {
+                usuarioId,
+                ativo: true,
+                anamneseSolicitacaoPendente: true,
+            },
+        });
+        if (!pendentes) {
+            return {
+                totalPendentes: 0,
+                liberados: 0,
+            };
+        }
+        const result = await this.pacienteRepository
+            .createQueryBuilder()
+            .update(paciente_entity_1.Paciente)
+            .set({
+            anamneseLiberadaPaciente: true,
+            anamneseSolicitacaoPendente: false,
+            anamneseSolicitacaoEm: null,
+        })
+            .where('usuario_id = :usuarioId', { usuarioId })
+            .andWhere('ativo = :ativo', { ativo: true })
+            .andWhere('anamnese_solicitacao_pendente = :pendente', { pendente: true })
+            .execute();
+        return {
+            totalPendentes: pendentes,
+            liberados: result.affected || 0,
+        };
     }
     async findLinkedPacienteByUsuarioId(usuarioId) {
         const vinculoAtivo = await this.vinculoRepository.findOne({

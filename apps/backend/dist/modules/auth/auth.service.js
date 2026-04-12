@@ -343,6 +343,28 @@ let AuthService = AuthService_1 = class AuthService {
     sanitizeDigits(value) {
         return (value || '').replace(/\D/g, '').trim();
     }
+    shouldReplaceQuickInviteName(nomeCompleto) {
+        const normalized = (nomeCompleto || '').trim().toLowerCase();
+        return !normalized || normalized === 'paciente convite rapido';
+    }
+    async syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario) {
+        if (pacienteParaVinculo.cadastroOrigem !== paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
+            return;
+        }
+        let changed = false;
+        if (this.shouldReplaceQuickInviteName(pacienteParaVinculo.nomeCompleto)) {
+            pacienteParaVinculo.nomeCompleto = pacienteUsuario.nome;
+            changed = true;
+        }
+        const emailUsuario = (pacienteUsuario.email || '').trim().toLowerCase();
+        if (emailUsuario && (!pacienteParaVinculo.contatoEmail || !pacienteParaVinculo.contatoEmail.trim())) {
+            pacienteParaVinculo.contatoEmail = emailUsuario;
+            changed = true;
+        }
+        if (changed) {
+            await this.pacienteRepository.save(pacienteParaVinculo);
+        }
+    }
     async generateUniquePacienteCpf() {
         for (let i = 0; i < 25; i++) {
             const base = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -435,6 +457,7 @@ let AuthService = AuthService_1 = class AuthService {
         }
         const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(conviteToken);
         await this.vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario);
+        await this.syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario);
         return {
             vinculadoAutomaticamente: true,
             pacienteId: pacienteParaVinculo.id,
@@ -459,6 +482,7 @@ let AuthService = AuthService_1 = class AuthService {
         };
         const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
         await this.vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario);
+        await this.syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario);
         const pacienteId = pacienteParaVinculo.id;
         const loginResponse = this.buildLoginResponse(pacienteUsuario);
         return {
