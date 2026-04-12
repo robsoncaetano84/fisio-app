@@ -410,6 +410,42 @@ export class PacientesService {
       solicitadoEm: now,
     };
   }
+  async releaseAllAnamneseRequestsForProfessional(
+    usuarioId: string,
+  ): Promise<{ totalPendentes: number; liberados: number }> {
+    const pendentes = await this.pacienteRepository.count({
+      where: {
+        usuarioId,
+        ativo: true,
+        anamneseSolicitacaoPendente: true,
+      },
+    });
+
+    if (!pendentes) {
+      return {
+        totalPendentes: 0,
+        liberados: 0,
+      };
+    }
+
+    const result = await this.pacienteRepository
+      .createQueryBuilder()
+      .update(Paciente)
+      .set({
+        anamneseLiberadaPaciente: true,
+        anamneseSolicitacaoPendente: false,
+        anamneseSolicitacaoEm: null,
+      })
+      .where('usuario_id = :usuarioId', { usuarioId })
+      .andWhere('ativo = :ativo', { ativo: true })
+      .andWhere('anamnese_solicitacao_pendente = :pendente', { pendente: true })
+      .execute();
+
+    return {
+      totalPendentes: pendentes,
+      liberados: result.affected || 0,
+    };
+  }
   async findLinkedPacienteByUsuarioId(usuarioId: string): Promise<Paciente> {
     const vinculoAtivo = await this.vinculoRepository.findOne({
       where: {
@@ -601,6 +637,7 @@ export class PacientesService {
     await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
   }
 }
+
 
 
 

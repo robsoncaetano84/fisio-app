@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -156,7 +156,12 @@ export class PacientesController {
   requestAnamneseUnlock(@CurrentUser() usuario: Usuario) {
     return this.pacientesService.requestAnamneseUnlock(usuario);
   }
-
+  @Post('anamnese/liberar-todas')
+  @Throttle({ default: { ttl: 60, limit: 10 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  releaseAllAnamneseRequests(@CurrentUser() usuario: Usuario) {
+    return this.pacientesService.releaseAllAnamneseRequestsForProfessional(usuario.id);
+  }
   @Get(':id/exames')
   @Throttle({ default: { ttl: 60, limit: 120 } })
   @Roles(UserRole.ADMIN, UserRole.USER)
@@ -295,6 +300,9 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
+
+
+
 
 
 
