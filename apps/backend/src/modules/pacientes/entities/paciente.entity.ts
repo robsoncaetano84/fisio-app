@@ -120,6 +120,23 @@ export class Paciente extends BaseEntity {
   anamneseLiberadaPaciente: boolean;
 
   @Column({
+    name: 'anamnese_solicitacao_pendente',
+    type: 'boolean',
+    default: false,
+  })
+  anamneseSolicitacaoPendente: boolean;
+
+  @Column({ name: 'anamnese_solicitacao_em', type: 'timestamp', nullable: true })
+  anamneseSolicitacaoEm: Date | null;
+
+  @Column({
+    name: 'anamnese_solicitacao_ultima_em',
+    type: 'timestamp',
+    nullable: true,
+  })
+  anamneseSolicitacaoUltimaEm: Date | null;
+
+  @Column({
     name: 'cadastro_origem',
     type: 'enum',
     enum: PacienteCadastroOrigem,
@@ -141,4 +158,5 @@ export class Paciente extends BaseEntity {
   @Column({ name: 'convite_aceito_em', type: 'timestamp', nullable: true })
   conviteAceitoEm: Date | null;
 }
+
 
