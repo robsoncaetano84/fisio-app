@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A TI VI DA DE C HE CK IN.E NT IT Y
+// ATIVIDADE CHECKIN ENTITY
 // ==========================================
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -12,6 +12,12 @@ export enum DificuldadeExecucao {
   FACIL = 'FACIL',
   MEDIO = 'MEDIO',
   DIFICIL = 'DIFICIL',
+}
+
+export enum MelhoriaSessao {
+  MELHOROU = 'MELHOROU',
+  MANTEVE = 'MANTEVE',
+  PIOROU = 'PIOROU',
 }
 
 @Entity('atividade_checkins')
@@ -36,6 +42,17 @@ export class AtividadeCheckin extends BaseEntity {
 
   @Column({ name: 'tempo_minutos', type: 'int', nullable: true })
   tempoMinutos: number | null;
+
+  @Column({
+    name: 'melhoria_sessao',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  melhoriaSessao: MelhoriaSessao | null;
+
+  @Column({ name: 'melhoria_descricao', type: 'text', nullable: true })
+  melhoriaDescricao: string | null;
 
   @Column({ name: 'motivo_nao_execucao', type: 'text', nullable: true })
   motivoNaoExecucao: string | null;
@@ -64,4 +81,3 @@ export class AtividadeCheckin extends BaseEntity {
   @Column({ name: 'usuario_id', type: 'uuid' })
   usuarioId: string;
 }
-

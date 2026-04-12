@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E A TI VI DA DE C HE CK IN.D TO
+// CREATE ATIVIDADE CHECKIN DTO
 // ==========================================
 import {
   IsBoolean,
@@ -12,7 +12,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { DificuldadeExecucao } from '../entities/atividade-checkin.entity';
+import {
+  DificuldadeExecucao,
+  MelhoriaSessao,
+} from '../entities/atividade-checkin.entity';
 
 export class CreateAtividadeCheckinDto {
   @IsBoolean()
@@ -41,6 +44,15 @@ export class CreateAtividadeCheckinDto {
   tempoMinutos?: number;
 
   @IsOptional()
+  @IsEnum(MelhoriaSessao)
+  melhoriaSessao?: MelhoriaSessao;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  melhoriaDescricao?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(600)
   motivoNaoExecucao?: string;
@@ -50,4 +62,3 @@ export class CreateAtividadeCheckinDto {
   @MaxLength(1500)
   feedbackLivre?: string;
 }
-

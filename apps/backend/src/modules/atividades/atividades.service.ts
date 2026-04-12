@@ -16,6 +16,7 @@ import { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity
 import {
   AtividadeCheckin,
   DificuldadeExecucao,
+  MelhoriaSessao,
 } from './entities/atividade-checkin.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
@@ -329,6 +330,12 @@ export class AtividadesService {
       );
     }
 
+    if (dto.concluiu && !dto.melhoriaSessao) {
+      throw new BadRequestException(
+        'Informe como foi a melhoria percebida durante a sessao',
+      );
+    }
+
     const checkin = this.checkinRepository.create({
       atividadeId: atividade.id,
       pacienteId: paciente.id,
@@ -343,6 +350,8 @@ export class AtividadesService {
         typeof dto.tempoMinutos === 'number'
           ? Math.max(1, Math.min(300, dto.tempoMinutos))
           : null,
+      melhoriaSessao: dto.concluiu ? dto.melhoriaSessao ?? null : null,
+      melhoriaDescricao: dto.concluiu ? dto.melhoriaDescricao?.trim() || null : null,
       motivoNaoExecucao: dto.motivoNaoExecucao?.trim() || null,
       feedbackLivre: dto.feedbackLivre?.trim() || null,
     });
@@ -425,6 +434,8 @@ export class AtividadesService {
         checkin_tempo_minutos: number | null;
         checkin_motivo_nao_execucao: string | null;
         checkin_feedback_livre: string | null;
+        checkin_melhoria_sessao: MelhoriaSessao | null;
+        checkin_melhoria_descricao: string | null;
         checkin_created_at: Date;
         atividade_titulo: string;
       }>();
@@ -440,6 +451,8 @@ export class AtividadesService {
       tempoMinutos: row.checkin_tempo_minutos,
       motivoNaoExecucao: row.checkin_motivo_nao_execucao,
       feedbackLivre: row.checkin_feedback_livre,
+      melhoriaSessao: row.checkin_melhoria_sessao,
+      melhoriaDescricao: row.checkin_melhoria_descricao,
       createdAt: row.checkin_created_at,
     }));
   }
@@ -460,6 +473,8 @@ export class AtividadesService {
       dificuldade: DificuldadeExecucao | null;
       tempoMinutos: number | null;
       motivoNaoExecucao: string | null;
+      melhoriaSessao: MelhoriaSessao | null;
+      melhoriaDescricao: string | null;
       createdAt: Date;
     }>
   > {
@@ -493,6 +508,8 @@ export class AtividadesService {
         checkin_dificuldade: DificuldadeExecucao | null;
         checkin_tempo_minutos: number | null;
         checkin_motivo_nao_execucao: string | null;
+        checkin_melhoria_sessao: MelhoriaSessao | null;
+        checkin_melhoria_descricao: string | null;
         checkin_created_at: Date;
         atividade_titulo: string;
         paciente_id: string;
@@ -511,6 +528,8 @@ export class AtividadesService {
       dificuldade: row.checkin_dificuldade,
       tempoMinutos: row.checkin_tempo_minutos,
       motivoNaoExecucao: row.checkin_motivo_nao_execucao,
+      melhoriaSessao: row.checkin_melhoria_sessao,
+      melhoriaDescricao: row.checkin_melhoria_descricao,
       createdAt: row.checkin_created_at,
     }));
   }
@@ -627,18 +646,18 @@ export class AtividadesService {
 
     const titulo =
       dto.titulo?.trim() ||
-      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapêutico funcional');
+      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapÃƒÆ’Ã‚Âªutico funcional');
 
     const referencias = this.getDefaultBibliographicReferences().slice(0, 3);
     const descricaoBase =
       dto.descricao?.trim() ||
       [
-        'Prescrição sugerida com base na anamnese mais recente.',
+        'PrescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o sugerida com base na anamnese mais recente.',
         objetivo ? `Meta principal: ${objetivo}.` : undefined,
-        limitacoes ? `Limitações funcionais: ${limitacoes}.` : undefined,
-        piora ? `Atenção para piora com: ${piora}.` : undefined,
-        alivio ? `Estratégias que aliviam: ${alivio}.` : undefined,
-        'Executar com progressão gradual e monitorar resposta clínica.',
+        limitacoes ? `LimitaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes funcionais: ${limitacoes}.` : undefined,
+        piora ? `AtenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o para piora com: ${piora}.` : undefined,
+        alivio ? `EstratÃƒÆ’Ã‚Â©gias que aliviam: ${alivio}.` : undefined,
+        'Executar com progressÃƒÆ’Ã‚Â£o gradual e monitorar resposta clÃƒÆ’Ã‚Â­nica.',
       ]
         .filter(Boolean)
         .join(' ')
@@ -677,17 +696,17 @@ export class AtividadesService {
     const model = (process.env.OPENAI_ATIVIDADE_MODEL || 'gpt-5-mini').trim();
     const referenciasCanonicas = this.getDefaultBibliographicReferences();
     const systemPrompt =
-      'Você é um assistente clínico de fisioterapia tradicional. Gere prescrição de atividade segura, objetiva e executável. Baseie-se em literatura técnica e não invente dados ausentes.';
+      'VocÃƒÆ’Ã‚Âª ÃƒÆ’Ã‚Â© um assistente clÃƒÆ’Ã‚Â­nico de fisioterapia tradicional. Gere prescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de atividade segura, objetiva e executÃƒÆ’Ã‚Â¡vel. Baseie-se em literatura tÃƒÆ’Ã‚Â©cnica e nÃƒÆ’Ã‚Â£o invente dados ausentes.';
     const userPrompt = `
-Retorne SOMENTE JSON válido com as chaves:
-titulo (string até 140 chars),
-descricao (string até 1000 chars),
-referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referências abaixo, sem inventar novas).
+Retorne SOMENTE JSON vÃƒÆ’Ã‚Â¡lido com as chaves:
+titulo (string atÃƒÆ’Ã‚Â© 140 chars),
+descricao (string atÃƒÆ’Ã‚Â© 1000 chars),
+referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referÃƒÆ’Ã‚Âªncias abaixo, sem inventar novas).
 
-Lista de referências permitidas:
+Lista de referÃƒÆ’Ã‚Âªncias permitidas:
 ${referenciasCanonicas.map((r, index) => `${index + 1}. ${r}`).join('\n')}
 
-Contexto clínico:
+Contexto clÃƒÆ’Ã‚Â­nico:
 ${JSON.stringify(input, null, 2)}
 `;
 
