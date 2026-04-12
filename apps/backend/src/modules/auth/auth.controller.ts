@@ -1,4 +1,4 @@
-ï»¿import {
+import {
   Controller,
   Post,
   Body,
@@ -8,6 +8,7 @@
   HttpCode,
   HttpStatus,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
@@ -40,7 +41,10 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Req() req: Request,
   ): Promise<LoginResponse> {
-    const identificador = (loginDto.identificador || loginDto.email || "").trim();
+    const identificador = (loginDto.identificador || loginDto.email || '').trim();
+    if (!identificador) {
+      throw new BadRequestException('E-mail ou CPF é obrigatório');
+    }
     return this.authService.login(identificador, loginDto.senha, {
       ip: req.ip,
     });
@@ -145,4 +149,6 @@ export class AuthController {
     };
   }
 }
+
+
 
