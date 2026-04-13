@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A TI VI DA DE S.S ER VI CE
 // ==========================================
@@ -646,18 +646,18 @@ export class AtividadesService {
 
     const titulo =
       dto.titulo?.trim() ||
-      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapÃƒÆ’Ã‚Âªutico funcional');
+      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapêutico funcional');
 
     const referencias = this.getDefaultBibliographicReferences().slice(0, 3);
     const descricaoBase =
       dto.descricao?.trim() ||
       [
-        'PrescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o sugerida com base na anamnese mais recente.',
+        'Prescrição sugerida com base na anamnese mais recente.',
         objetivo ? `Meta principal: ${objetivo}.` : undefined,
-        limitacoes ? `LimitaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes funcionais: ${limitacoes}.` : undefined,
-        piora ? `AtenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o para piora com: ${piora}.` : undefined,
-        alivio ? `EstratÃƒÆ’Ã‚Â©gias que aliviam: ${alivio}.` : undefined,
-        'Executar com progressÃƒÆ’Ã‚Â£o gradual e monitorar resposta clÃƒÆ’Ã‚Â­nica.',
+        limitacoes ? `Limitações funcionais: ${limitacoes}.` : undefined,
+        piora ? `Atenção para piora com: ${piora}.` : undefined,
+        alivio ? `Estratégias que aliviam: ${alivio}.` : undefined,
+        'Executar com progressão gradual e monitorar resposta clínica.',
       ]
         .filter(Boolean)
         .join(' ')
@@ -696,17 +696,17 @@ export class AtividadesService {
     const model = (process.env.OPENAI_ATIVIDADE_MODEL || 'gpt-5-mini').trim();
     const referenciasCanonicas = this.getDefaultBibliographicReferences();
     const systemPrompt =
-      'VocÃƒÆ’Ã‚Âª ÃƒÆ’Ã‚Â© um assistente clÃƒÆ’Ã‚Â­nico de fisioterapia tradicional. Gere prescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de atividade segura, objetiva e executÃƒÆ’Ã‚Â¡vel. Baseie-se em literatura tÃƒÆ’Ã‚Â©cnica e nÃƒÆ’Ã‚Â£o invente dados ausentes.';
+      'Você é um assistente clínico de fisioterapia tradicional. Gere prescrição de atividade segura, objetiva e executável. Baseie-se em literatura técnica e não invente dados ausentes.';
     const userPrompt = `
-Retorne SOMENTE JSON vÃƒÆ’Ã‚Â¡lido com as chaves:
-titulo (string atÃƒÆ’Ã‚Â© 140 chars),
-descricao (string atÃƒÆ’Ã‚Â© 1000 chars),
-referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referÃƒÆ’Ã‚Âªncias abaixo, sem inventar novas).
+Retorne SOMENTE JSON válido com as chaves:
+titulo (string até 140 chars),
+descricao (string até 1000 chars),
+referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referências abaixo, sem inventar novas).
 
-Lista de referÃƒÆ’Ã‚Âªncias permitidas:
+Lista de referências permitidas:
 ${referenciasCanonicas.map((r, index) => `${index + 1}. ${r}`).join('\n')}
 
-Contexto clÃƒÆ’Ã‚Â­nico:
+Contexto clínico:
 ${JSON.stringify(input, null, 2)}
 `;
 
