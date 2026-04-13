@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -476,6 +476,31 @@ export class PacientesService {
     return paciente;
   }
 
+  async findPacienteByUsuarioId(usuarioId: string): Promise<Paciente | null> {
+    const vinculoAtivo = await this.vinculoRepository.findOne({
+      where: {
+        pacienteUsuarioId: usuarioId,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (vinculoAtivo) {
+      const pacienteByVinculo = await this.pacienteRepository.findOne({
+        where: { id: vinculoAtivo.pacienteId, ativo: true },
+      });
+
+      if (pacienteByVinculo) {
+        return pacienteByVinculo;
+      }
+    }
+
+    return this.pacienteRepository.findOne({
+      where: { pacienteUsuarioId: usuarioId, ativo: true },
+      order: { conviteAceitoEm: 'DESC', updatedAt: 'DESC' },
+    });
+  }
+
   async remove(id: string, usuarioId: string): Promise<void> {
     const paciente = await this.findOne(id, usuarioId);
     paciente.ativo = false;
@@ -538,17 +563,28 @@ export class PacientesService {
       throw new ForbiddenException('Acesso permitido somente para pacientes');
     }
 
-    let paciente: Paciente | null = null;
-    try {
-      paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
-    } catch {
-      paciente = null;
-    }
+    const paciente = await this.findPacienteByUsuarioId(usuario.id);
 
     if (!paciente) {
       return {
         vinculado: false,
         paciente: null,
+        resumo: null,
+      };
+    }
+
+    const vinculoAtivo = await this.vinculoRepository.findOne({
+      where: {
+        pacienteUsuarioId: usuario.id,
+        status: ProfissionalPacienteVinculoStatus.ATIVO,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!vinculoAtivo) {
+      return {
+        vinculado: false,
+        paciente,
         resumo: null,
       };
     }
@@ -637,6 +673,8 @@ export class PacientesService {
     await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
   }
 }
+
+
 
 
 

@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A NA MN ES ES.S ER VI CE
 // ==========================================
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Anamnese } from './entities/anamnese.entity';
@@ -11,13 +11,7 @@ import { UpdateAnamneseDto } from './dto/update-anamnese.dto';
 import { PacientesService } from '../pacientes/pacientes.service';
 
 @Injectable()
-export class AnamnesesService {
-  private ensurePacienteCanFillOwnAnamnese(anamneseLiberadaPaciente: boolean): void {
-    if (!anamneseLiberadaPaciente) {
-      throw new ForbiddenException('Preenchimento de anamnese nao liberado pelo profissional');
-    }
-  }
-  constructor(
+export class AnamnesesService {  constructor(
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
     private readonly pacientesService: PacientesService,
@@ -39,8 +33,6 @@ export class AnamnesesService {
     const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
       usuarioId,
     );
-
-    this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
 
     const anamnese = this.anamneseRepository.create({
       ...createAnamneseDto,
@@ -65,8 +57,6 @@ export class AnamnesesService {
     const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
       usuarioId,
     );
-
-    this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
 
     return this.anamneseRepository.findOne({
       where: { pacienteId: paciente.id },
@@ -98,8 +88,6 @@ export class AnamnesesService {
     const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
       usuarioId,
     );
-
-    this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
 
     const anamnese = await this.anamneseRepository.findOne({
       where: { id, pacienteId: paciente.id },
@@ -137,5 +125,6 @@ export class AnamnesesService {
     await this.anamneseRepository.remove(anamnese);
   }
 }
+
 
 
