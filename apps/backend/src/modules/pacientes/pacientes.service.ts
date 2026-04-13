@@ -374,78 +374,6 @@ export class PacientesService {
     return { pacienteId: paciente.id };
   }
 
-  async requestAnamneseUnlock(
-    usuario: Usuario,
-  ): Promise<{ pacienteId: string; solicitadoEm: Date }> {
-    if (usuario.role !== UserRole.PACIENTE) {
-      throw new ForbiddenException('Acesso permitido somente para pacientes');
-    }
-
-    const paciente = await this.findLinkedPacienteByUsuarioId(usuario.id);
-
-    if (paciente.anamneseLiberadaPaciente) {
-      throw new BadRequestException('Anamnese ja liberada para preenchimento');
-    }
-
-    if (paciente.anamneseSolicitacaoPendente) {
-      throw new ConflictException('Ja existe solicitacao pendente');
-    }
-
-    const now = new Date();
-    if (paciente.anamneseSolicitacaoUltimaEm) {
-      const elapsedMs = now.getTime() - new Date(paciente.anamneseSolicitacaoUltimaEm).getTime();
-      const minCooldownMs = 24 * 60 * 60 * 1000;
-      if (elapsedMs < minCooldownMs) {
-        throw new BadRequestException('Aguarde 24h para nova solicitacao');
-      }
-    }
-
-    paciente.anamneseSolicitacaoPendente = true;
-    paciente.anamneseSolicitacaoEm = now;
-    paciente.anamneseSolicitacaoUltimaEm = now;
-    await this.pacienteRepository.save(paciente);
-
-    return {
-      pacienteId: paciente.id,
-      solicitadoEm: now,
-    };
-  }
-  async releaseAllAnamneseRequestsForProfessional(
-    usuarioId: string,
-  ): Promise<{ totalPendentes: number; liberados: number }> {
-    const pendentes = await this.pacienteRepository.count({
-      where: {
-        usuarioId,
-        ativo: true,
-        anamneseSolicitacaoPendente: true,
-      },
-    });
-
-    if (!pendentes) {
-      return {
-        totalPendentes: 0,
-        liberados: 0,
-      };
-    }
-
-    const result = await this.pacienteRepository
-      .createQueryBuilder()
-      .update(Paciente)
-      .set({
-        anamneseLiberadaPaciente: true,
-        anamneseSolicitacaoPendente: false,
-        anamneseSolicitacaoEm: null,
-      })
-      .where('usuario_id = :usuarioId', { usuarioId })
-      .andWhere('ativo = :ativo', { ativo: true })
-      .andWhere('anamnese_solicitacao_pendente = :pendente', { pendente: true })
-      .execute();
-
-    return {
-      totalPendentes: pendentes,
-      liberados: result.affected || 0,
-    };
-  }
   async findLinkedPacienteByUsuarioId(usuarioId: string): Promise<Paciente> {
     const vinculoAtivo = await this.vinculoRepository.findOne({
       where: {
@@ -673,6 +601,7 @@ export class PacientesService {
     await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
   }
 }
+
 
 
 
