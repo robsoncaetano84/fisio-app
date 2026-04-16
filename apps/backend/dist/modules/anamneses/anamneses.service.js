@@ -21,11 +21,6 @@ const pacientes_service_1 = require("../pacientes/pacientes.service");
 let AnamnesesService = class AnamnesesService {
     anamneseRepository;
     pacientesService;
-    ensurePacienteCanFillOwnAnamnese(anamneseLiberadaPaciente) {
-        if (!anamneseLiberadaPaciente) {
-            throw new common_1.ForbiddenException('Preenchimento de anamnese nao liberado pelo profissional');
-        }
-    }
     constructor(anamneseRepository, pacientesService) {
         this.anamneseRepository = anamneseRepository;
         this.pacientesService = pacientesService;
@@ -37,7 +32,6 @@ let AnamnesesService = class AnamnesesService {
     }
     async createForPacienteUsuario(createAnamneseDto, usuarioId) {
         const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
-        this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
         const anamnese = this.anamneseRepository.create({
             ...createAnamneseDto,
             pacienteId: paciente.id,
@@ -53,7 +47,6 @@ let AnamnesesService = class AnamnesesService {
     }
     async findLatestByPacienteUsuario(usuarioId) {
         const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
-        this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
         return this.anamneseRepository.findOne({
             where: { pacienteId: paciente.id },
             order: { createdAt: 'DESC' },
@@ -74,7 +67,6 @@ let AnamnesesService = class AnamnesesService {
     }
     async findOneByPacienteUsuario(id, usuarioId) {
         const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
-        this.ensurePacienteCanFillOwnAnamnese(paciente.anamneseLiberadaPaciente);
         const anamnese = await this.anamneseRepository.findOne({
             where: { id, pacienteId: paciente.id },
         });

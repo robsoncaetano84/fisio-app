@@ -38,15 +38,8 @@ export declare class PacientesService {
     unlinkMyProfessional(usuario: Usuario): Promise<{
         pacienteId: string;
     }>;
-    requestAnamneseUnlock(usuario: Usuario): Promise<{
-        pacienteId: string;
-        solicitadoEm: Date;
-    }>;
-    releaseAllAnamneseRequestsForProfessional(usuarioId: string): Promise<{
-        totalPendentes: number;
-        liberados: number;
-    }>;
     findLinkedPacienteByUsuarioId(usuarioId: string): Promise<Paciente>;
+    findPacienteByUsuarioId(usuarioId: string): Promise<Paciente | null>;
     remove(id: string, usuarioId: string): Promise<void>;
     getAttentionMap(usuarioId: string): Promise<Record<string, number | null>>;
     getStats(usuarioId: string): Promise<{

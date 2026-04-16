@@ -18,6 +18,8 @@ class CreateAtividadeCheckinDto {
     dorDepois;
     dificuldade;
     tempoMinutos;
+    melhoriaSessao;
+    melhoriaDescricao;
     motivoNaoExecucao;
     feedbackLivre;
 }
@@ -52,6 +54,17 @@ __decorate([
     (0, class_validator_1.Max)(300),
     __metadata("design:type", Number)
 ], CreateAtividadeCheckinDto.prototype, "tempoMinutos", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(atividade_checkin_entity_1.MelhoriaSessao),
+    __metadata("design:type", String)
+], CreateAtividadeCheckinDto.prototype, "melhoriaSessao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(1500),
+    __metadata("design:type", String)
+], CreateAtividadeCheckinDto.prototype, "melhoriaDescricao", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

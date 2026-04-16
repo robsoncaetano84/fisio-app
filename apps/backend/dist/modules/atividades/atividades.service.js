@@ -251,6 +251,9 @@ let AtividadesService = class AtividadesService {
         if (!dto.concluiu && !dto.motivoNaoExecucao?.trim()) {
             throw new common_1.BadRequestException('Informe o motivo quando a atividade nao for concluida');
         }
+        if (dto.concluiu && !dto.melhoriaSessao) {
+            throw new common_1.BadRequestException('Informe como foi a melhoria percebida durante a sessao');
+        }
         const checkin = this.checkinRepository.create({
             atividadeId: atividade.id,
             pacienteId: paciente.id,
@@ -262,6 +265,8 @@ let AtividadesService = class AtividadesService {
             tempoMinutos: typeof dto.tempoMinutos === 'number'
                 ? Math.max(1, Math.min(300, dto.tempoMinutos))
                 : null,
+            melhoriaSessao: dto.concluiu ? dto.melhoriaSessao ?? null : null,
+            melhoriaDescricao: dto.concluiu ? dto.melhoriaDescricao?.trim() || null : null,
             motivoNaoExecucao: dto.motivoNaoExecucao?.trim() || null,
             feedbackLivre: dto.feedbackLivre?.trim() || null,
         });
@@ -319,6 +324,8 @@ let AtividadesService = class AtividadesService {
             tempoMinutos: row.checkin_tempo_minutos,
             motivoNaoExecucao: row.checkin_motivo_nao_execucao,
             feedbackLivre: row.checkin_feedback_livre,
+            melhoriaSessao: row.checkin_melhoria_sessao,
+            melhoriaDescricao: row.checkin_melhoria_descricao,
             createdAt: row.checkin_created_at,
         }));
     }
@@ -353,6 +360,8 @@ let AtividadesService = class AtividadesService {
             dificuldade: row.checkin_dificuldade,
             tempoMinutos: row.checkin_tempo_minutos,
             motivoNaoExecucao: row.checkin_motivo_nao_execucao,
+            melhoriaSessao: row.checkin_melhoria_sessao,
+            melhoriaDescricao: row.checkin_melhoria_descricao,
             createdAt: row.checkin_created_at,
         }));
     }

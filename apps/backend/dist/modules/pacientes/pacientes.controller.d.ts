@@ -28,14 +28,6 @@ export declare class PacientesController {
     unlinkMyProfessional(usuario: Usuario): Promise<{
         pacienteId: string;
     }>;
-    requestAnamneseUnlock(usuario: Usuario): Promise<{
-        pacienteId: string;
-        solicitadoEm: Date;
-    }>;
-    releaseAllAnamneseRequests(usuario: Usuario): Promise<{
-        totalPendentes: number;
-        liberados: number;
-    }>;
     listExames(id: string, usuario: Usuario): Promise<{
         id: string;
         pacienteId: string;

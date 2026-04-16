@@ -55,6 +55,8 @@ export declare class AtividadesController {
         dificuldade: import("./entities/atividade-checkin.entity").DificuldadeExecucao | null;
         tempoMinutos: number | null;
         motivoNaoExecucao: string | null;
+        melhoriaSessao: import("./entities/atividade-checkin.entity").MelhoriaSessao | null;
+        melhoriaDescricao: string | null;
         createdAt: Date;
     }[]>;
     createMeuCheckin(atividadeId: string, dto: CreateAtividadeCheckinDto, usuario: Usuario): Promise<import("./entities/atividade-checkin.entity").AtividadeCheckin>;

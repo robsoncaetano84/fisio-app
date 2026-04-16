@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$BaseUrl = "http://localhost:3000/api",
   [string]$Email = "admin@teste.com",
   [string]$Senha = "Teste1234",
@@ -42,6 +42,8 @@ if (-not $token) {
       email = $attemptEmail
       senha = $Senha
       registroProf = $RegistroProf
+      conselhoSigla = "CREFITO"
+      conselhoUf = "SP"
       especialidade = $Especialidade
       role = $Role
     } | ConvertTo-Json
@@ -54,6 +56,8 @@ if (-not $token) {
         email = $attemptEmail
         senha = $Senha
         registroProf = $RegistroProf
+        conselhoSigla = "CREFITO"
+        conselhoUf = "SP"
         especialidade = $Especialidade
         role = $Role
       } | ConvertTo-Json
@@ -143,3 +147,5 @@ $evolucaoId = $evolucao.id
 Write-Host "Evolucao criada: $evolucaoId"
 
 Write-Host "OK: fluxo completo executado."
+
+

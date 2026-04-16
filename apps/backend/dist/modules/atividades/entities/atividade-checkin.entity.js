@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AtividadeCheckin = exports.DificuldadeExecucao = void 0;
+exports.AtividadeCheckin = exports.MelhoriaSessao = exports.DificuldadeExecucao = void 0;
 const typeorm_1 = require("typeorm");
 const base_entity_1 = require("../../../common/entities/base.entity");
 const atividade_entity_1 = require("./atividade.entity");
@@ -21,12 +21,20 @@ var DificuldadeExecucao;
     DificuldadeExecucao["MEDIO"] = "MEDIO";
     DificuldadeExecucao["DIFICIL"] = "DIFICIL";
 })(DificuldadeExecucao || (exports.DificuldadeExecucao = DificuldadeExecucao = {}));
+var MelhoriaSessao;
+(function (MelhoriaSessao) {
+    MelhoriaSessao["MELHOROU"] = "MELHOROU";
+    MelhoriaSessao["MANTEVE"] = "MANTEVE";
+    MelhoriaSessao["PIOROU"] = "PIOROU";
+})(MelhoriaSessao || (exports.MelhoriaSessao = MelhoriaSessao = {}));
 let AtividadeCheckin = class AtividadeCheckin extends base_entity_1.BaseEntity {
     concluiu;
     dorAntes;
     dorDepois;
     dificuldade;
     tempoMinutos;
+    melhoriaSessao;
+    melhoriaDescricao;
     motivoNaoExecucao;
     feedbackLivre;
     atividade;
@@ -62,6 +70,19 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'tempo_minutos', type: 'int', nullable: true }),
     __metadata("design:type", Object)
 ], AtividadeCheckin.prototype, "tempoMinutos", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'melhoria_sessao',
+        type: 'varchar',
+        length: 20,
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], AtividadeCheckin.prototype, "melhoriaSessao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'melhoria_descricao', type: 'text', nullable: true }),
+    __metadata("design:type", Object)
+], AtividadeCheckin.prototype, "melhoriaDescricao", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'motivo_nao_execucao', type: 'text', nullable: true }),
     __metadata("design:type", Object)

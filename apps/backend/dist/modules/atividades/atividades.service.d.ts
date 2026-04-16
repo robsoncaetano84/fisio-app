@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { Atividade } from './entities/atividade.entity';
-import { AtividadeCheckin, DificuldadeExecucao } from './entities/atividade-checkin.entity';
+import { AtividadeCheckin, DificuldadeExecucao, MelhoriaSessao } from './entities/atividade-checkin.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
@@ -62,6 +62,8 @@ export declare class AtividadesService {
         dificuldade: DificuldadeExecucao | null;
         tempoMinutos: number | null;
         motivoNaoExecucao: string | null;
+        melhoriaSessao: MelhoriaSessao | null;
+        melhoriaDescricao: string | null;
         createdAt: Date;
     }>>;
     generateAiSuggestion(dto: GenerateAtividadeAiDto, usuarioId: string): Promise<{
