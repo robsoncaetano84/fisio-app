@@ -386,7 +386,10 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.BadRequestException('Informe WhatsApp ou e-mail para envio do convite');
         }
         const cpfTemporario = await this.generateUniquePacienteCpf();
-        const nomeBase = dto.nome?.trim() || 'Paciente convite rapido';
+        const nomeBase = dto.nome?.trim();
+        if (!nomeBase) {
+            throw new common_1.BadRequestException('Informe o nome do paciente');
+        }
         const draftPaciente = {
             usuarioId: profissional.id,
             nomeCompleto: nomeBase,

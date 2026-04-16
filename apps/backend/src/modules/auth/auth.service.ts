@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A UT H.S ER VI CE
 // ==========================================
@@ -524,7 +524,10 @@ export class AuthService {
     }
 
     const cpfTemporario = await this.generateUniquePacienteCpf();
-    const nomeBase = dto.nome?.trim() || 'Paciente convite rapido';
+    const nomeBase = dto.nome?.trim();
+    if (!nomeBase) {
+      throw new BadRequestException('Informe o nome do paciente');
+    }
 
     const draftPaciente: Partial<Paciente> = {
       usuarioId: profissional.id,
@@ -700,6 +703,7 @@ export class AuthService {
     };
   }
 }
+
 
 
 

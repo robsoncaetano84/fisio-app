@@ -1,6 +1,7 @@
-import {
+﻿import {
   IsEmail,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Max,
@@ -8,9 +9,9 @@ import {
 } from 'class-validator';
 
 export class CreatePacienteConviteRapidoDto {
-  @IsOptional()
   @IsString()
-  nome?: string;
+  @IsNotEmpty()
+  nome: string;
 
   @IsOptional()
   @IsString()
