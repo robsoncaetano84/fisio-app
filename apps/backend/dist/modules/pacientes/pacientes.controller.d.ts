@@ -43,10 +43,9 @@ export declare class PacientesController {
     }[]>;
     uploadExame(id: string, file: {
         originalname: string;
-        filename: string;
         mimetype: string;
         size: number;
-        path: string;
+        buffer: Buffer;
     }, body: CreatePacienteExameDto, usuario: Usuario): Promise<{
         id: string;
         pacienteId: string;
@@ -60,7 +59,7 @@ export declare class PacientesController {
         updatedAt: Date;
         downloadUrl: string;
     }>;
-    downloadExame(id: string, exameId: string, usuario: Usuario, res: Response): Promise<void>;
+    downloadExame(id: string, exameId: string, usuario: Usuario, res: Response): Promise<Response<any, Record<string, any>>>;
     deleteExame(id: string, exameId: string, usuario: Usuario): Promise<{
         success: boolean;
     }>;

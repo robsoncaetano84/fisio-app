@@ -7,7 +7,6 @@
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { promises as fs } from 'fs';
 import {
   Paciente,
   PacienteCadastroOrigem,
@@ -595,12 +594,14 @@ export class PacientesService {
     pacienteId: string,
     exameId: string,
     usuarioId: string,
-  ): Promise<void> {
+  ): Promise<PacienteExame> {
     const exame = await this.findExameOrFail(pacienteId, exameId, usuarioId);
     await this.pacienteExameRepository.remove(exame);
-    await fs.unlink(exame.caminhoArquivo).catch(() => undefined);
+    return exame;
   }
 }
+
+
 
 
 

@@ -16,7 +16,6 @@ exports.PacientesService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
-const fs_1 = require("fs");
 const paciente_entity_1 = require("./entities/paciente.entity");
 const paciente_exame_entity_1 = require("./entities/paciente-exame.entity");
 const profissional_paciente_vinculo_entity_1 = require("./entities/profissional-paciente-vinculo.entity");
@@ -442,7 +441,7 @@ let PacientesService = class PacientesService {
     async removeExame(pacienteId, exameId, usuarioId) {
         const exame = await this.findExameOrFail(pacienteId, exameId, usuarioId);
         await this.pacienteExameRepository.remove(exame);
-        await fs_1.promises.unlink(exame.caminhoArquivo).catch(() => undefined);
+        return exame;
     }
 };
 exports.PacientesService = PacientesService;

@@ -18,9 +18,8 @@
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
+import { extname } from 'path';
 import type { Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../usuarios/entities/usuario.entity';
@@ -33,8 +32,8 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
 import { CreatePacienteExameDto } from './dto/create-paciente-exame.dto';
 import { PacienteExame } from './entities/paciente-exame.entity';
+import { buildExameObjectKey, deleteExameFile, persistExameFile, readExameFile } from './exame-storage';
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads', 'paciente-exames');
 const MAX_EXAME_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
@@ -63,12 +62,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   '.webp': 'image/webp',
   '.heic': 'image/heic',
   '.heif': 'image/heif',
-};
-
-const ensureUploadsDir = () => {
-  if (!existsSync(UPLOADS_DIR)) {
-    mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
 };
 
 @Controller('pacientes')
@@ -166,18 +159,7 @@ export class PacientesController {
   @Roles(UserRole.ADMIN, UserRole.USER)
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          ensureUploadsDir();
-          cb(null, UPLOADS_DIR);
-        },
-        filename: (_req, file, cb) => {
-          const extension = extname(file.originalname || '').toLowerCase();
-          const safeExt = extension || '.bin';
-          const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
-          cb(null, fileName);
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: MAX_EXAME_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
         const mimeType = String(file.mimetype || '').toLowerCase();
@@ -193,7 +175,7 @@ export class PacientesController {
   )
   async uploadExame(
     @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() file: { originalname: string; filename: string; mimetype: string; size: number; path: string },
+    @UploadedFile() file: { originalname: string; mimetype: string; size: number; buffer: Buffer },
     @Body() body: CreatePacienteExameDto,
     @CurrentUser() usuario: Usuario,
   ) {
@@ -206,18 +188,32 @@ export class PacientesController {
       ? file.mimetype
       : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
 
-    const exame = await this.pacientesService.createExame(id, usuario.id, {
-      nomeOriginal: file.originalname,
-      nomeArquivo: file.filename,
+    const objectKey = buildExameObjectKey(usuario.id, id, file.originalname || 'arquivo');
+    const persisted = await persistExameFile({
+      usuarioId: usuario.id,
+      pacienteId: id,
+      objectKey,
       mimeType: safeMimeType,
-      tamanhoBytes: file.size,
-      caminhoArquivo: file.path,
-      tipoExame: body.tipoExame,
-      observacao: body.observacao,
-      dataExame: body.dataExame ? new Date(body.dataExame) : null,
+      fileBuffer: file.buffer,
     });
 
-    return this.toExameResponse(id, exame);
+    try {
+      const exame = await this.pacientesService.createExame(id, usuario.id, {
+        nomeOriginal: file.originalname,
+        nomeArquivo: persisted.nomeArquivo,
+        mimeType: safeMimeType,
+        tamanhoBytes: file.size,
+        caminhoArquivo: persisted.caminhoArquivo,
+        tipoExame: body.tipoExame,
+        observacao: body.observacao,
+        dataExame: body.dataExame ? new Date(body.dataExame) : null,
+      });
+
+      return this.toExameResponse(id, exame);
+    } catch (error) {
+      await deleteExameFile(persisted.caminhoArquivo).catch(() => undefined);
+      throw error;
+    }
   }
 
   @Get(':id/exames/:exameId/arquivo')
@@ -232,7 +228,8 @@ export class PacientesController {
     const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario.id);
     res.setHeader('Content-Type', exame.mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${exame.nomeOriginal}"`);
-    return res.sendFile(exame.caminhoArquivo);
+    const fileBuffer = await readExameFile(exame.caminhoArquivo);
+    return res.send(fileBuffer);
   }
 
   @Delete(':id/exames/:exameId')
@@ -243,7 +240,8 @@ export class PacientesController {
     @Param('exameId', ParseUUIDPipe) exameId: string,
     @CurrentUser() usuario: Usuario,
   ) {
-    await this.pacientesService.removeExame(id, exameId, usuario.id);
+    const exame = await this.pacientesService.removeExame(id, exameId, usuario.id);
+    await deleteExameFile(exame.caminhoArquivo).catch(() => undefined);
     return { success: true };
   }
 
@@ -288,6 +286,11 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
+
+
+
+
+
 
 
 

@@ -60,5 +60,5 @@ export declare class PacientesService {
         dataExame?: Date | null;
     }): Promise<PacienteExame>;
     findExameOrFail(pacienteId: string, exameId: string, usuarioId: string): Promise<PacienteExame>;
-    removeExame(pacienteId: string, exameId: string, usuarioId: string): Promise<void>;
+    removeExame(pacienteId: string, exameId: string, usuarioId: string): Promise<PacienteExame>;
 }
