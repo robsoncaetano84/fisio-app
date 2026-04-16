@@ -1,0 +1,9 @@
+
+> mobile@1.0.0 web
+> expo start --web
+
+env: load .env
+env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_ENABLE_SPEECH_TO_TEXT EXPO_PUBLIC_MASTER_ADMIN_EMAILS
+Starting project at C:\Projetos\fisio-app\apps\mobile
+› Port 8081 is being used by another process
+› Skipping dev server
