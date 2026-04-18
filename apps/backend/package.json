@@ -14,6 +14,8 @@
     "start:prod": "node dist/main",
     "quick-test": "powershell -ExecutionPolicy Bypass -File scripts/quick-test.ps1",
     "smoke:health": "powershell -ExecutionPolicy Bypass -File scripts/smoke-health.ps1",
+    "validate:critical": "npm run build && npm run quick-test",
+    "validate:critical:ci": "npm run build && npm run test -- --runInBand",
     "migration:generate": "node -e \"const {execSync}=require('child_process');const name=process.env.npm_config_name||'Init';execSync(`typeorm-ts-node-commonjs -d src/data-source.ts migration:generate src/migrations/${name}`,{stdio:'inherit'});\"",
     "migration:run": "typeorm-ts-node-commonjs -d src/data-source.ts migration:run",
     "migration:revert": "typeorm-ts-node-commonjs -d src/data-source.ts migration:revert",

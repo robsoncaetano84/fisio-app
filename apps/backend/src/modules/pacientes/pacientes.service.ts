@@ -6,7 +6,7 @@
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import {
   Paciente,
   PacienteCadastroOrigem,
@@ -24,6 +24,10 @@ import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
+import {
+  PacienteListItemDto,
+  PacientePagedResponseDto,
+} from './dto/paciente-list-item.dto';
 
 @Injectable()
 export class PacientesService {
@@ -98,6 +102,82 @@ export class PacientesService {
       paciente.nomeCompleto = paciente.pacienteUsuario.nome;
     }
     return paciente;
+  }
+
+  private addPacienteListSelects(query: SelectQueryBuilder<Paciente>) {
+    return query
+      .select([
+        'p.id',
+        'p.nomeCompleto',
+        'p.cpf',
+        'p.rg',
+        'p.dataNascimento',
+        'p.sexo',
+        'p.estadoCivil',
+        'p.profissao',
+        'p.enderecoRua',
+        'p.enderecoNumero',
+        'p.enderecoComplemento',
+        'p.enderecoBairro',
+        'p.enderecoCep',
+        'p.enderecoCidade',
+        'p.enderecoUf',
+        'p.contatoWhatsapp',
+        'p.contatoTelefone',
+        'p.contatoEmail',
+        'p.ativo',
+        'p.usuarioId',
+        'p.pacienteUsuarioId',
+        'p.anamneseLiberadaPaciente',
+        'p.anamneseSolicitacaoPendente',
+        'p.anamneseSolicitacaoEm',
+        'p.anamneseSolicitacaoUltimaEm',
+        'p.cadastroOrigem',
+        'p.vinculoStatus',
+        'p.conviteEnviadoEm',
+        'p.conviteAceitoEm',
+        'p.createdAt',
+        'p.updatedAt',
+      ])
+      .leftJoin('p.pacienteUsuario', 'pacienteUsuario')
+      .addSelect(['pacienteUsuario.id', 'pacienteUsuario.nome']);
+  }
+
+  private toPacienteListItem(paciente: Paciente): PacienteListItemDto {
+    return {
+      id: paciente.id,
+      nomeCompleto: paciente.nomeCompleto,
+      cpf: paciente.cpf,
+      rg: paciente.rg || null,
+      dataNascimento: paciente.dataNascimento,
+      sexo: paciente.sexo,
+      estadoCivil: paciente.estadoCivil || null,
+      profissao: paciente.profissao || null,
+      enderecoRua: paciente.enderecoRua,
+      enderecoNumero: paciente.enderecoNumero,
+      enderecoComplemento: paciente.enderecoComplemento || null,
+      enderecoBairro: paciente.enderecoBairro,
+      enderecoCep: paciente.enderecoCep,
+      enderecoCidade: paciente.enderecoCidade,
+      enderecoUf: paciente.enderecoUf,
+      contatoWhatsapp: paciente.contatoWhatsapp,
+      contatoTelefone: paciente.contatoTelefone || null,
+      contatoEmail: paciente.contatoEmail || null,
+      ativo: paciente.ativo,
+      usuarioId: paciente.usuarioId,
+      pacienteUsuarioId: paciente.pacienteUsuarioId || null,
+      anamneseLiberadaPaciente: paciente.anamneseLiberadaPaciente,
+      anamneseSolicitacaoPendente: paciente.anamneseSolicitacaoPendente,
+      anamneseSolicitacaoEm: paciente.anamneseSolicitacaoEm || null,
+      anamneseSolicitacaoUltimaEm:
+        paciente.anamneseSolicitacaoUltimaEm || null,
+      cadastroOrigem: paciente.cadastroOrigem,
+      vinculoStatus: paciente.vinculoStatus,
+      conviteEnviadoEm: paciente.conviteEnviadoEm || null,
+      conviteAceitoEm: paciente.conviteAceitoEm || null,
+      createdAt: paciente.createdAt,
+      updatedAt: paciente.updatedAt,
+    };
   }
 
   private async upsertVinculoAtivo(
@@ -243,15 +323,22 @@ export class PacientesService {
     return saved;
   }
 
-  async findAll(usuarioId: string): Promise<Paciente[]> {
-    const pacientes = await this.buildScopedPacientesQuery(usuarioId)
-      .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+  async findAll(usuarioId: string): Promise<PacienteListItemDto[]> {
+    const pacientes = await this.addPacienteListSelects(
+      this.buildScopedPacientesQuery(usuarioId),
+    )
       .orderBy('p.nome_completo', 'ASC')
       .getMany();
-    return pacientes.map((paciente) => this.applyDisplayNameFallback(paciente));
+    return pacientes.map((paciente) =>
+      this.toPacienteListItem(this.applyDisplayNameFallback(paciente)),
+    );
   }
 
-  async findPaged(usuarioId: string, page: number, limit: number) {
+  async findPaged(
+    usuarioId: string,
+    page: number,
+    limit: number,
+  ): Promise<PacientePagedResponseDto> {
     const safePage = Number.isFinite(page) ? Math.max(1, page) : 1;
     const safeLimit = Number.isFinite(limit)
       ? Math.min(100, Math.max(10, limit))
@@ -260,15 +347,16 @@ export class PacientesService {
 
     const baseQuery = this.buildScopedPacientesQuery(usuarioId);
     const total = await baseQuery.clone().getCount();
-    const data = await baseQuery
-      .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+    const data = await this.addPacienteListSelects(baseQuery)
       .orderBy('p.nome_completo', 'ASC')
       .take(safeLimit)
       .skip(skip)
       .getMany();
 
     return {
-      data: data.map((paciente) => this.applyDisplayNameFallback(paciente)),
+      data: data.map((paciente) =>
+        this.toPacienteListItem(this.applyDisplayNameFallback(paciente)),
+      ),
       total,
       page: safePage,
       limit: safeLimit,
@@ -279,7 +367,8 @@ export class PacientesService {
   async findOne(id: string, usuarioId: string): Promise<Paciente> {
     const paciente = await this.buildScopedPacientesQuery(usuarioId)
       .andWhere('p.id = :id', { id })
-      .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+      .leftJoin('p.pacienteUsuario', 'pacienteUsuario')
+      .addSelect(['pacienteUsuario.id', 'pacienteUsuario.nome'])
       .getOne();
 
     if (!paciente) {
@@ -661,7 +750,6 @@ export class PacientesService {
     return exame;
   }
 }
-
 
 
 

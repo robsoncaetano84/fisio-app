@@ -32,6 +32,10 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
 import { CreatePacienteExameDto } from './dto/create-paciente-exame.dto';
 import { PacienteExame } from './entities/paciente-exame.entity';
+import {
+  PacienteListItemDto,
+  PacientePagedResponseDto,
+} from './dto/paciente-list-item.dto';
 import { buildExameObjectKey, deleteExameFile, persistExameFile, readExameFile } from './exame-storage';
 
 const MAX_EXAME_SIZE_BYTES = 10 * 1024 * 1024;
@@ -98,7 +102,7 @@ export class PacientesController {
   @Get()
   @Throttle({ default: { ttl: 60, limit: 120 } })
   @Roles(UserRole.ADMIN, UserRole.USER)
-  findAll(@CurrentUser() usuario: Usuario) {
+  findAll(@CurrentUser() usuario: Usuario): Promise<PacienteListItemDto[]> {
     return this.pacientesService.findAll(usuario.id);
   }
 
@@ -109,7 +113,7 @@ export class PacientesController {
     @CurrentUser() usuario: Usuario,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(30), ParseIntPipe) limit: number,
-  ) {
+  ): Promise<PacientePagedResponseDto> {
     return this.pacientesService.findPaged(usuario.id, page, limit);
   }
 
@@ -291,7 +295,6 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
-
 
 
 

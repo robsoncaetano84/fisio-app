@@ -38,4 +38,51 @@ export class HealthService {
       },
     };
   }
+
+  async getOperationalMetrics() {
+    const [pendingRows, semAnamneseRows, semEvolucaoRows, exames24hRows] =
+      await Promise.all([
+        this.dataSource.query(`
+          SELECT COUNT(*)::int AS total
+          FROM pacientes p
+          WHERE p.ativo = true
+            AND p.anamnese_solicitacao_pendente = true
+        `),
+        this.dataSource.query(`
+          SELECT COUNT(*)::int AS total
+          FROM pacientes p
+          WHERE p.ativo = true
+            AND NOT EXISTS (
+              SELECT 1
+              FROM anamneses a
+              WHERE a.paciente_id = p.id
+            )
+        `),
+        this.dataSource.query(`
+          SELECT COUNT(*)::int AS total
+          FROM pacientes p
+          WHERE p.ativo = true
+            AND NOT EXISTS (
+              SELECT 1
+              FROM evolucoes e
+              WHERE e.paciente_id = p.id
+            )
+        `),
+        this.dataSource.query(`
+          SELECT COUNT(*)::int AS total
+          FROM paciente_exames pe
+          WHERE pe.created_at >= NOW() - INTERVAL '24 hours'
+        `),
+      ]);
+
+    return {
+      timestamp: new Date().toISOString(),
+      metrics: {
+        solicitacoesAnamnesePendentes: Number(pendingRows?.[0]?.total || 0),
+        pacientesSemAnamnese: Number(semAnamneseRows?.[0]?.total || 0),
+        pacientesSemEvolucao: Number(semEvolucaoRows?.[0]?.total || 0),
+        uploadsExamesUltimas24h: Number(exames24hRows?.[0]?.total || 0),
+      },
+    };
+  }
 }

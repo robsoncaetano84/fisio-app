@@ -19,4 +19,9 @@ export class HealthController {
 
     return payload;
   }
+
+  @Get('operational')
+  async getOperational() {
+    return this.healthService.getOperationalMetrics();
+  }
 }

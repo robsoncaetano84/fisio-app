@@ -19,10 +19,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
       - run: npm ci
-      - run: npx tsc --noEmit
-      - name: Check encoding markers
-        run: |
-          node -e "const fs=require('fs');const path=require('path');const roots=['src/i18n/locales','src/screens'];let bad=[];for(const root of roots){if(!fs.existsSync(root))continue;const walk=(d)=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(/\.(ts|tsx)$/.test(p)){const s=fs.readFileSync(p,'utf8');if(/[�]|Ã|ï¿½/.test(s))bad.push(p);}}};walk(root);}if(bad.length){console.error('Encoding issues in:\n'+bad.join('\n'));process.exit(1);}"
+      - run: npm run validate:critical
 
   backend:
     runs-on: ubuntu-latest
@@ -37,6 +34,4 @@ jobs:
           cache: npm
           cache-dependency-path: apps/backend/package-lock.json
       - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npx eslint "{src,test}/**/*.ts"
-      - run: npm run test -- --runInBand
+      - run: npm run validate:critical:ci
