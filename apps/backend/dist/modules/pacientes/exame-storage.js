@@ -60,14 +60,12 @@ const persistExameFile = async (params) => {
             },
             body: new Uint8Array(params.fileBuffer),
         });
-        if (!response.ok) {
-            const payload = await response.text().catch(() => '');
-            throw new common_1.BadGatewayException(`Falha ao enviar arquivo para storage: ${response.status} ${payload}`);
+        if (response.ok) {
+            return {
+                nomeArquivo: params.objectKey,
+                caminhoArquivo: `supabase://${config.bucket}/${params.objectKey}`,
+            };
         }
-        return {
-            nomeArquivo: params.objectKey,
-            caminhoArquivo: `supabase://${config.bucket}/${params.objectKey}`,
-        };
     }
     ensureLocalUploadsDir();
     const localFileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${(0, path_1.extname)(params.objectKey) || '.bin'}`;

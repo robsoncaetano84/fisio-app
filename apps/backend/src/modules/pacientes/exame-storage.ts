@@ -77,15 +77,12 @@ export const persistExameFile = async (params: {
       body: new Uint8Array(params.fileBuffer),
     });
 
-    if (!response.ok) {
-      const payload = await response.text().catch(() => '');
-      throw new BadGatewayException(`Falha ao enviar arquivo para storage: ${response.status} ${payload}`);
+    if (response.ok) {
+      return {
+        nomeArquivo: params.objectKey,
+        caminhoArquivo: `supabase://${config.bucket}/${params.objectKey}`,
+      };
     }
-
-    return {
-      nomeArquivo: params.objectKey,
-      caminhoArquivo: `supabase://${config.bucket}/${params.objectKey}`,
-    };
   }
 
   ensureLocalUploadsDir();
@@ -159,4 +156,3 @@ export const deleteExameFile = async (caminhoArquivo: string): Promise<void> => 
     },
   }).catch(() => undefined);
 };
-
