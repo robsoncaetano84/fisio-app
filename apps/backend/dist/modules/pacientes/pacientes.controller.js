@@ -18,7 +18,6 @@ const throttler_1 = require("@nestjs/throttler");
 const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
 const path_1 = require("path");
-const fs_1 = require("fs");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 const pacientes_service_1 = require("./pacientes.service");
@@ -28,7 +27,7 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
 const usuario_entity_2 = require("../usuarios/entities/usuario.entity");
 const create_paciente_exame_dto_1 = require("./dto/create-paciente-exame.dto");
-const UPLOADS_DIR = (0, path_1.join)(process.cwd(), 'uploads', 'paciente-exames');
+const exame_storage_1 = require("./exame-storage");
 const MAX_EXAME_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
     'application/pdf',
@@ -57,11 +56,6 @@ const MIME_BY_EXTENSION = {
     '.webp': 'image/webp',
     '.heic': 'image/heic',
     '.heif': 'image/heif',
-};
-const ensureUploadsDir = () => {
-    if (!(0, fs_1.existsSync)(UPLOADS_DIR)) {
-        (0, fs_1.mkdirSync)(UPLOADS_DIR, { recursive: true });
-    }
 };
 let PacientesController = class PacientesController {
     pacientesService;
@@ -116,26 +110,42 @@ let PacientesController = class PacientesController {
         const safeMimeType = ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
             ? file.mimetype
             : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
-        const exame = await this.pacientesService.createExame(id, usuario.id, {
-            nomeOriginal: file.originalname,
-            nomeArquivo: file.filename,
+        const objectKey = (0, exame_storage_1.buildExameObjectKey)(usuario.id, id, file.originalname || 'arquivo');
+        const persisted = await (0, exame_storage_1.persistExameFile)({
+            usuarioId: usuario.id,
+            pacienteId: id,
+            objectKey,
             mimeType: safeMimeType,
-            tamanhoBytes: file.size,
-            caminhoArquivo: file.path,
-            tipoExame: body.tipoExame,
-            observacao: body.observacao,
-            dataExame: body.dataExame ? new Date(body.dataExame) : null,
+            fileBuffer: file.buffer,
         });
-        return this.toExameResponse(id, exame);
+        try {
+            const exame = await this.pacientesService.createExame(id, usuario.id, {
+                nomeOriginal: file.originalname,
+                nomeArquivo: persisted.nomeArquivo,
+                mimeType: safeMimeType,
+                tamanhoBytes: file.size,
+                caminhoArquivo: persisted.caminhoArquivo,
+                tipoExame: body.tipoExame,
+                observacao: body.observacao,
+                dataExame: body.dataExame ? new Date(body.dataExame) : null,
+            });
+            return this.toExameResponse(id, exame);
+        }
+        catch (error) {
+            await (0, exame_storage_1.deleteExameFile)(persisted.caminhoArquivo).catch(() => undefined);
+            throw error;
+        }
     }
     async downloadExame(id, exameId, usuario, res) {
         const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario.id);
         res.setHeader('Content-Type', exame.mimeType);
         res.setHeader('Content-Disposition', `inline; filename="${exame.nomeOriginal}"`);
-        return res.sendFile(exame.caminhoArquivo);
+        const fileBuffer = await (0, exame_storage_1.readExameFile)(exame.caminhoArquivo);
+        return res.send(fileBuffer);
     }
     async deleteExame(id, exameId, usuario) {
-        await this.pacientesService.removeExame(id, exameId, usuario.id);
+        const exame = await this.pacientesService.removeExame(id, exameId, usuario.id);
+        await (0, exame_storage_1.deleteExameFile)(exame.caminhoArquivo).catch(() => undefined);
         return { success: true };
     }
     findOne(id, usuario) {
@@ -234,18 +244,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
-        storage: (0, multer_1.diskStorage)({
-            destination: (_req, _file, cb) => {
-                ensureUploadsDir();
-                cb(null, UPLOADS_DIR);
-            },
-            filename: (_req, file, cb) => {
-                const extension = (0, path_1.extname)(file.originalname || '').toLowerCase();
-                const safeExt = extension || '.bin';
-                const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
-                cb(null, fileName);
-            },
-        }),
+        storage: (0, multer_1.memoryStorage)(),
         limits: { fileSize: MAX_EXAME_SIZE_BYTES },
         fileFilter: (_req, file, cb) => {
             const mimeType = String(file.mimetype || '').toLowerCase();
