@@ -99,27 +99,28 @@ let PacientesController = class PacientesController {
         return this.pacientesService.unlinkMyProfessional(usuario);
     }
     async listExames(id, usuario) {
-        const exames = await this.pacientesService.listExames(id, usuario.id);
+        const exames = await this.pacientesService.listExames(id, usuario);
         return exames.map((item) => this.toExameResponse(id, item));
     }
     async uploadExame(id, file, body, usuario) {
         if (!file) {
             throw new common_1.BadRequestException('Arquivo obrigatorio');
         }
+        const ownerUsuarioId = await this.pacientesService.resolveExameOwnerUsuarioId(id, usuario);
         const detectedExtension = (0, path_1.extname)(file.originalname || '').toLowerCase();
         const safeMimeType = ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
             ? file.mimetype
             : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
-        const objectKey = (0, exame_storage_1.buildExameObjectKey)(usuario.id, id, file.originalname || 'arquivo');
+        const objectKey = (0, exame_storage_1.buildExameObjectKey)(ownerUsuarioId, id, file.originalname || 'arquivo');
         const persisted = await (0, exame_storage_1.persistExameFile)({
-            usuarioId: usuario.id,
+            usuarioId: ownerUsuarioId,
             pacienteId: id,
             objectKey,
             mimeType: safeMimeType,
             fileBuffer: file.buffer,
         });
         try {
-            const exame = await this.pacientesService.createExame(id, usuario.id, {
+            const exame = await this.pacientesService.createExame(id, usuario, {
                 nomeOriginal: file.originalname,
                 nomeArquivo: persisted.nomeArquivo,
                 mimeType: safeMimeType,
@@ -137,14 +138,14 @@ let PacientesController = class PacientesController {
         }
     }
     async downloadExame(id, exameId, usuario, res) {
-        const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario.id);
+        const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario);
         res.setHeader('Content-Type', exame.mimeType);
         res.setHeader('Content-Disposition', `inline; filename="${exame.nomeOriginal}"`);
         const fileBuffer = await (0, exame_storage_1.readExameFile)(exame.caminhoArquivo);
         return res.send(fileBuffer);
     }
     async deleteExame(id, exameId, usuario) {
-        const exame = await this.pacientesService.removeExame(id, exameId, usuario.id);
+        const exame = await this.pacientesService.removeExame(id, exameId, usuario);
         await (0, exame_storage_1.deleteExameFile)(exame.caminhoArquivo).catch(() => undefined);
         return { success: true };
     }
@@ -232,7 +233,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id/exames'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
-    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -242,7 +243,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)(':id/exames'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
-    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
         storage: (0, multer_1.memoryStorage)(),
         limits: { fileSize: MAX_EXAME_SIZE_BYTES },
@@ -269,7 +270,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id/exames/:exameId/arquivo'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
-    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __param(1, (0, common_1.Param)('exameId', common_1.ParseUUIDPipe)),
     __param(2, (0, current_user_decorator_1.CurrentUser)()),
@@ -281,7 +282,7 @@ __decorate([
 __decorate([
     (0, common_1.Delete)(':id/exames/:exameId'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
-    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __param(1, (0, common_1.Param)('exameId', common_1.ParseUUIDPipe)),
     __param(2, (0, current_user_decorator_1.CurrentUser)()),

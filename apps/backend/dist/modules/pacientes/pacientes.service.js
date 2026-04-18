@@ -37,6 +37,22 @@ let PacientesService = class PacientesService {
         this.pacienteExameRepository = pacienteExameRepository;
         this.vinculoRepository = vinculoRepository;
     }
+    buildScopedPacientesQuery(usuarioId) {
+        const vinculoTable = this.vinculoRepository.metadata.tableName;
+        return this.pacienteRepository
+            .createQueryBuilder('p')
+            .where('p.ativo = :ativo', { ativo: true })
+            .andWhere(`(p.usuario_id = :usuarioId OR EXISTS (
+          SELECT 1
+          FROM ${vinculoTable} v
+          WHERE v.paciente_id = p.id
+            AND v.profissional_id = :usuarioId
+            AND v.status = :vinculoStatusAtivo
+        ))`, {
+            usuarioId,
+            vinculoStatusAtivo: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+        });
+    }
     resolveInitialVinculoStatus(pacienteUsuarioId, cadastroOrigem) {
         if (pacienteUsuarioId) {
             if (cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
@@ -162,11 +178,10 @@ let PacientesService = class PacientesService {
         return saved;
     }
     async findAll(usuarioId) {
-        const pacientes = await this.pacienteRepository.find({
-            where: { usuarioId, ativo: true },
-            order: { nomeCompleto: 'ASC' },
-            relations: ['pacienteUsuario'],
-        });
+        const pacientes = await this.buildScopedPacientesQuery(usuarioId)
+            .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+            .orderBy('p.nome_completo', 'ASC')
+            .getMany();
         return pacientes.map((paciente) => this.applyDisplayNameFallback(paciente));
     }
     async findPaged(usuarioId, page, limit) {
@@ -175,13 +190,14 @@ let PacientesService = class PacientesService {
             ? Math.min(100, Math.max(10, limit))
             : 30;
         const skip = (safePage - 1) * safeLimit;
-        const [data, total] = await this.pacienteRepository.findAndCount({
-            where: { usuarioId, ativo: true },
-            order: { nomeCompleto: 'ASC' },
-            take: safeLimit,
-            skip,
-            relations: ['pacienteUsuario'],
-        });
+        const baseQuery = this.buildScopedPacientesQuery(usuarioId);
+        const total = await baseQuery.clone().getCount();
+        const data = await baseQuery
+            .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+            .orderBy('p.nome_completo', 'ASC')
+            .take(safeLimit)
+            .skip(skip)
+            .getMany();
         return {
             data: data.map((paciente) => this.applyDisplayNameFallback(paciente)),
             total,
@@ -191,10 +207,10 @@ let PacientesService = class PacientesService {
         };
     }
     async findOne(id, usuarioId) {
-        const paciente = await this.pacienteRepository.findOne({
-            where: { id, usuarioId },
-            relations: ['pacienteUsuario'],
-        });
+        const paciente = await this.buildScopedPacientesQuery(usuarioId)
+            .andWhere('p.id = :id', { id })
+            .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+            .getOne();
         if (!paciente) {
             throw new common_1.NotFoundException('Paciente nao encontrado');
         }
@@ -326,11 +342,21 @@ let PacientesService = class PacientesService {
         await this.closeVinculoAtivoByPaciente(paciente.id);
     }
     async getAttentionMap(usuarioId) {
+        const vinculoTable = this.vinculoRepository.metadata.tableName;
         const rows = await this.pacienteRepository
             .createQueryBuilder('p')
             .leftJoin(this.evolucaoRepository.metadata.tableName, 'e', 'e.paciente_id = p.id')
-            .where('p.usuario_id = :usuarioId', { usuarioId })
             .andWhere('p.ativo = :ativo', { ativo: true })
+            .andWhere(`(p.usuario_id = :usuarioId OR EXISTS (
+          SELECT 1
+          FROM ${vinculoTable} v
+          WHERE v.paciente_id = p.id
+            AND v.profissional_id = :usuarioId
+            AND v.status = :vinculoStatusAtivo
+        ))`, {
+            usuarioId,
+            vinculoStatusAtivo: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+        })
             .select('p.id', 'pacienteId')
             .addSelect('MAX(e.data)', 'lastEvolucaoAt')
             .groupBy('p.id')
@@ -352,9 +378,7 @@ let PacientesService = class PacientesService {
         return result;
     }
     async getStats(usuarioId) {
-        const total = await this.pacienteRepository.count({
-            where: { usuarioId, ativo: true },
-        });
+        const total = await this.buildScopedPacientesQuery(usuarioId).getCount();
         return {
             totalPacientes: total,
             atendidosHoje: 0,
@@ -405,18 +429,39 @@ let PacientesService = class PacientesService {
             },
         };
     }
-    async listExames(pacienteId, usuarioId) {
-        await this.findOne(pacienteId, usuarioId);
+    async resolveExameScope(pacienteId, actor) {
+        if (actor.role === usuario_entity_1.UserRole.PACIENTE) {
+            const linkedPaciente = await this.findLinkedPacienteByUsuarioId(actor.id);
+            if (linkedPaciente.id !== pacienteId) {
+                throw new common_1.ForbiddenException('Paciente sem permissao para este recurso');
+            }
+            return {
+                paciente: linkedPaciente,
+                ownerUsuarioId: linkedPaciente.usuarioId,
+            };
+        }
+        const paciente = await this.findOne(pacienteId, actor.id);
+        return {
+            paciente,
+            ownerUsuarioId: paciente.usuarioId,
+        };
+    }
+    async resolveExameOwnerUsuarioId(pacienteId, actor) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
+        return ownerUsuarioId;
+    }
+    async listExames(pacienteId, actor) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
         return this.pacienteExameRepository.find({
-            where: { pacienteId, usuarioId },
+            where: { pacienteId, usuarioId: ownerUsuarioId },
             order: { createdAt: 'DESC' },
         });
     }
-    async createExame(pacienteId, usuarioId, payload) {
-        await this.findOne(pacienteId, usuarioId);
+    async createExame(pacienteId, actor, payload) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
         const exame = this.pacienteExameRepository.create({
             pacienteId,
-            usuarioId,
+            usuarioId: ownerUsuarioId,
             nomeOriginal: payload.nomeOriginal,
             nomeArquivo: payload.nomeArquivo,
             mimeType: payload.mimeType,
@@ -428,18 +473,18 @@ let PacientesService = class PacientesService {
         });
         return this.pacienteExameRepository.save(exame);
     }
-    async findExameOrFail(pacienteId, exameId, usuarioId) {
-        await this.findOne(pacienteId, usuarioId);
+    async findExameOrFail(pacienteId, exameId, actor) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
         const exame = await this.pacienteExameRepository.findOne({
-            where: { id: exameId, pacienteId, usuarioId },
+            where: { id: exameId, pacienteId, usuarioId: ownerUsuarioId },
         });
         if (!exame) {
             throw new common_1.NotFoundException('Exame nao encontrado');
         }
         return exame;
     }
-    async removeExame(pacienteId, exameId, usuarioId) {
-        const exame = await this.findExameOrFail(pacienteId, exameId, usuarioId);
+    async removeExame(pacienteId, exameId, actor) {
+        const exame = await this.findExameOrFail(pacienteId, exameId, actor);
         await this.pacienteExameRepository.remove(exame);
         return exame;
     }

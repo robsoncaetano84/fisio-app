@@ -42,6 +42,26 @@ export class PacientesService {
     private readonly vinculoRepository: Repository<ProfissionalPacienteVinculo>,
   ) {}
 
+  private buildScopedPacientesQuery(usuarioId: string) {
+    const vinculoTable = this.vinculoRepository.metadata.tableName;
+    return this.pacienteRepository
+      .createQueryBuilder('p')
+      .where('p.ativo = :ativo', { ativo: true })
+      .andWhere(
+        `(p.usuario_id = :usuarioId OR EXISTS (
+          SELECT 1
+          FROM ${vinculoTable} v
+          WHERE v.paciente_id = p.id
+            AND v.profissional_id = :usuarioId
+            AND v.status = :vinculoStatusAtivo
+        ))`,
+        {
+          usuarioId,
+          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+      );
+  }
+
   private resolveInitialVinculoStatus(
     pacienteUsuarioId: string | null,
     cadastroOrigem?: PacienteCadastroOrigem,
@@ -224,11 +244,10 @@ export class PacientesService {
   }
 
   async findAll(usuarioId: string): Promise<Paciente[]> {
-    const pacientes = await this.pacienteRepository.find({
-      where: { usuarioId, ativo: true },
-      order: { nomeCompleto: 'ASC' },
-      relations: ['pacienteUsuario'],
-    });
+    const pacientes = await this.buildScopedPacientesQuery(usuarioId)
+      .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+      .orderBy('p.nome_completo', 'ASC')
+      .getMany();
     return pacientes.map((paciente) => this.applyDisplayNameFallback(paciente));
   }
 
@@ -239,13 +258,14 @@ export class PacientesService {
       : 30;
     const skip = (safePage - 1) * safeLimit;
 
-    const [data, total] = await this.pacienteRepository.findAndCount({
-      where: { usuarioId, ativo: true },
-      order: { nomeCompleto: 'ASC' },
-      take: safeLimit,
-      skip,
-      relations: ['pacienteUsuario'],
-    });
+    const baseQuery = this.buildScopedPacientesQuery(usuarioId);
+    const total = await baseQuery.clone().getCount();
+    const data = await baseQuery
+      .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+      .orderBy('p.nome_completo', 'ASC')
+      .take(safeLimit)
+      .skip(skip)
+      .getMany();
 
     return {
       data: data.map((paciente) => this.applyDisplayNameFallback(paciente)),
@@ -257,10 +277,10 @@ export class PacientesService {
   }
 
   async findOne(id: string, usuarioId: string): Promise<Paciente> {
-    const paciente = await this.pacienteRepository.findOne({
-      where: { id, usuarioId },
-      relations: ['pacienteUsuario'],
-    });
+    const paciente = await this.buildScopedPacientesQuery(usuarioId)
+      .andWhere('p.id = :id', { id })
+      .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+      .getOne();
 
     if (!paciente) {
       throw new NotFoundException('Paciente nao encontrado');
@@ -436,6 +456,7 @@ export class PacientesService {
   }
 
   async getAttentionMap(usuarioId: string): Promise<Record<string, number | null>> {
+    const vinculoTable = this.vinculoRepository.metadata.tableName;
     const rows = await this.pacienteRepository
       .createQueryBuilder('p')
       .leftJoin(
@@ -443,8 +464,20 @@ export class PacientesService {
         'e',
         'e.paciente_id = p.id',
       )
-      .where('p.usuario_id = :usuarioId', { usuarioId })
       .andWhere('p.ativo = :ativo', { ativo: true })
+      .andWhere(
+        `(p.usuario_id = :usuarioId OR EXISTS (
+          SELECT 1
+          FROM ${vinculoTable} v
+          WHERE v.paciente_id = p.id
+            AND v.profissional_id = :usuarioId
+            AND v.status = :vinculoStatusAtivo
+        ))`,
+        {
+          usuarioId,
+          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+      )
       .select('p.id', 'pacienteId')
       .addSelect('MAX(e.data)', 'lastEvolucaoAt')
       .groupBy('p.id')
@@ -472,9 +505,7 @@ export class PacientesService {
   }
 
   async getStats(usuarioId: string) {
-    const total = await this.pacienteRepository.count({
-      where: { usuarioId, ativo: true },
-    });
+    const total = await this.buildScopedPacientesQuery(usuarioId).getCount();
 
     return {
       totalPacientes: total,
@@ -630,7 +661,6 @@ export class PacientesService {
     return exame;
   }
 }
-
 
 
 

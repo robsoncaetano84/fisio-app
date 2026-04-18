@@ -16,6 +16,7 @@ export declare class PacientesService {
     private readonly pacienteExameRepository;
     private readonly vinculoRepository;
     constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>);
+    private buildScopedPacientesQuery;
     private resolveInitialVinculoStatus;
     private mapOrigemToVinculo;
     private shouldReplaceQuickInviteName;
@@ -48,8 +49,10 @@ export declare class PacientesService {
         atendidosMes: number;
     }>;
     getMyPacienteProfile(usuario: Usuario): Promise<PacienteProfileResponseDto>;
-    listExames(pacienteId: string, usuarioId: string): Promise<PacienteExame[]>;
-    createExame(pacienteId: string, usuarioId: string, payload: {
+    private resolveExameScope;
+    resolveExameOwnerUsuarioId(pacienteId: string, actor: Usuario): Promise<string>;
+    listExames(pacienteId: string, actor: Usuario): Promise<PacienteExame[]>;
+    createExame(pacienteId: string, actor: Usuario, payload: {
         nomeOriginal: string;
         nomeArquivo: string;
         mimeType: string;
@@ -59,6 +62,6 @@ export declare class PacientesService {
         observacao?: string;
         dataExame?: Date | null;
     }): Promise<PacienteExame>;
-    findExameOrFail(pacienteId: string, exameId: string, usuarioId: string): Promise<PacienteExame>;
-    removeExame(pacienteId: string, exameId: string, usuarioId: string): Promise<PacienteExame>;
+    findExameOrFail(pacienteId: string, exameId: string, actor: Usuario): Promise<PacienteExame>;
+    removeExame(pacienteId: string, exameId: string, actor: Usuario): Promise<PacienteExame>;
 }
