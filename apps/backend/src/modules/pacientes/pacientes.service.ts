@@ -11,6 +11,7 @@ import {
   Paciente,
   PacienteCadastroOrigem,
   PacienteVinculoStatus,
+  Sexo,
 } from './entities/paciente.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
 import {
@@ -274,7 +275,11 @@ export class PacientesService {
     });
 
     if (existingLink && existingLink.id !== ignorePacienteId) {
-      throw new ConflictException('Este usuario paciente ja esta vinculado');
+      const isPacienteAutonomo =
+        existingLink.ativo && existingLink.usuarioId === pacienteUsuarioId;
+      if (!isPacienteAutonomo) {
+        throw new ConflictException('Este usuario paciente ja esta vinculado');
+      }
     }
 
     const existingActiveVinculo = await this.vinculoRepository.findOne({
@@ -289,6 +294,64 @@ export class PacientesService {
     }
 
     return pacienteUsuarioId;
+  }
+
+  private async generateUniquePacienteCpf(): Promise<string> {
+    for (let i = 0; i < 25; i++) {
+      const base = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      const cpf = base.slice(-11).padStart(11, '0');
+      const exists = await this.pacienteRepository.findOne({ where: { cpf } });
+      if (!exists) return cpf;
+    }
+    throw new BadRequestException(
+      'Nao foi possivel gerar CPF temporario para paciente',
+    );
+  }
+
+  async findOrCreateSelfPacienteForUsuario(usuarioId: string): Promise<Paciente> {
+    const existente = await this.pacienteRepository.findOne({
+      where: { pacienteUsuarioId: usuarioId, ativo: true },
+      order: { createdAt: 'DESC' },
+    });
+    if (existente) {
+      return existente;
+    }
+
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id: usuarioId, ativo: true },
+    });
+
+    if (!usuario || usuario.role !== UserRole.PACIENTE) {
+      throw new NotFoundException('Usuario paciente nao encontrado');
+    }
+
+    const cpfTemporario = await this.generateUniquePacienteCpf();
+
+    const paciente = this.pacienteRepository.create({
+      nomeCompleto: usuario.nome || 'Paciente',
+      cpf: cpfTemporario,
+      dataNascimento: new Date('1900-01-01'),
+      sexo: Sexo.OUTRO,
+      profissao: '',
+      enderecoRua: '-',
+      enderecoNumero: '-',
+      enderecoBairro: '-',
+      enderecoCep: '00000000',
+      enderecoCidade: '-',
+      enderecoUf: 'NA',
+      contatoWhatsapp: '00000000000',
+      contatoEmail: usuario.email,
+      ativo: true,
+      usuarioId: usuario.id,
+      pacienteUsuarioId: usuario.id,
+      anamneseLiberadaPaciente: true,
+      cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+      vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+      conviteEnviadoEm: null,
+      conviteAceitoEm: null,
+    });
+
+    return this.pacienteRepository.save(paciente);
   }
 
   async create(
@@ -309,6 +372,32 @@ export class PacientesService {
 
     const cadastroOrigem =
       createPacienteDto.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO;
+
+    if (pacienteUsuarioId) {
+      const pacienteAutonomo = await this.pacienteRepository.findOne({
+        where: { pacienteUsuarioId, ativo: true },
+      });
+      const podeAdotarCadastroAutonomo =
+        !!pacienteAutonomo && pacienteAutonomo.usuarioId === pacienteUsuarioId;
+
+      if (podeAdotarCadastroAutonomo && pacienteAutonomo) {
+        Object.assign(pacienteAutonomo, {
+          ...createPacienteDto,
+          cadastroOrigem,
+          vinculoStatus: this.resolveInitialVinculoStatus(
+            pacienteUsuarioId,
+            cadastroOrigem,
+          ),
+          conviteEnviadoEm: null,
+          conviteAceitoEm: new Date(),
+          usuarioId,
+          pacienteUsuarioId,
+        });
+        const savedAutonomo = await this.pacienteRepository.save(pacienteAutonomo);
+        await this.upsertVinculoAtivo(savedAutonomo, pacienteUsuarioId);
+        return savedAutonomo;
+      }
+    }
 
     const paciente = this.pacienteRepository.create({
       ...createPacienteDto,
@@ -756,8 +845,6 @@ export class PacientesService {
     return exame;
   }
 }
-
-
 
 
 

@@ -411,8 +411,8 @@ export class AuthService {
   private async vincularPacienteUsuarioAoCadastro(
     pacienteParaVinculo: Paciente,
     pacienteUsuario: Usuario,
-  ): Promise<void> {
-    await this.pacienteRepository.manager.transaction(async (manager) => {
+  ): Promise<Paciente> {
+    return this.pacienteRepository.manager.transaction(async (manager) => {
       const pacienteRepo = manager.getRepository(Paciente);
       const vinculoRepo = manager.getRepository(ProfissionalPacienteVinculo);
 
@@ -426,6 +426,8 @@ export class AuthService {
         throw new BadRequestException('Paciente do convite nao encontrado');
       }
 
+      let pacienteDestino = pacienteLocked;
+
       if (pacienteLocked.pacienteUsuarioId) {
         if (pacienteLocked.pacienteUsuarioId === pacienteUsuario.id) {
           pacienteLocked.vinculoStatus =
@@ -435,7 +437,7 @@ export class AuthService {
           if (!pacienteLocked.conviteAceitoEm) {
             pacienteLocked.conviteAceitoEm = new Date();
           }
-          await pacienteRepo.save(pacienteLocked);
+          pacienteDestino = await pacienteRepo.save(pacienteLocked);
         } else {
           throw new BadRequestException('Paciente ja possui usuario vinculado');
         }
@@ -445,39 +447,75 @@ export class AuthService {
         });
 
         if (vinculoExistente && vinculoExistente.id !== pacienteLocked.id) {
-          throw new BadRequestException(
-            'Usuario paciente ja vinculado a outro cadastro',
-          );
+          const cadastroAutonomoDoPaciente =
+            vinculoExistente.ativo &&
+            vinculoExistente.usuarioId === pacienteUsuario.id;
+
+          if (!cadastroAutonomoDoPaciente) {
+            throw new BadRequestException(
+              'Usuario paciente ja vinculado a outro cadastro',
+            );
+          }
+
+          vinculoExistente.usuarioId = pacienteLocked.usuarioId;
+          vinculoExistente.cadastroOrigem = pacienteLocked.cadastroOrigem;
+          vinculoExistente.vinculoStatus =
+            pacienteLocked.cadastroOrigem ===
+            PacienteCadastroOrigem.CONVITE_RAPIDO
+              ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+              : PacienteVinculoStatus.VINCULADO;
+          vinculoExistente.conviteAceitoEm = new Date();
+
+          if (
+            this.shouldReplaceQuickInviteName(vinculoExistente.nomeCompleto) &&
+            pacienteLocked.nomeCompleto
+          ) {
+            vinculoExistente.nomeCompleto = pacienteLocked.nomeCompleto;
+          }
+          if (!vinculoExistente.contatoEmail && pacienteLocked.contatoEmail) {
+            vinculoExistente.contatoEmail = pacienteLocked.contatoEmail;
+          }
+          if (!vinculoExistente.contatoWhatsapp && pacienteLocked.contatoWhatsapp) {
+            vinculoExistente.contatoWhatsapp = pacienteLocked.contatoWhatsapp;
+          }
+
+          pacienteDestino = await pacienteRepo.save(vinculoExistente);
+
+          pacienteLocked.ativo = false;
+          pacienteLocked.pacienteUsuarioId = null;
+          pacienteLocked.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+          pacienteLocked.conviteAceitoEm = null;
+          await pacienteRepo.save(pacienteLocked);
+        } else {
+          const vinculoAtivoTabela = await vinculoRepo.findOne({
+            where: {
+              pacienteUsuarioId: pacienteUsuario.id,
+              status: ProfissionalPacienteVinculoStatus.ATIVO,
+            },
+          });
+
+          if (
+            vinculoAtivoTabela &&
+            vinculoAtivoTabela.pacienteId !== pacienteLocked.id
+          ) {
+            throw new BadRequestException(
+              'Usuario paciente ja vinculado a outro cadastro',
+            );
+          }
+
+          pacienteLocked.pacienteUsuarioId = pacienteUsuario.id;
+          pacienteLocked.vinculoStatus =
+            pacienteLocked.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
+              ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+              : PacienteVinculoStatus.VINCULADO;
+          pacienteLocked.conviteAceitoEm = new Date();
+          pacienteDestino = await pacienteRepo.save(pacienteLocked);
         }
-
-        const vinculoAtivoTabela = await vinculoRepo.findOne({
-          where: {
-            pacienteUsuarioId: pacienteUsuario.id,
-            status: ProfissionalPacienteVinculoStatus.ATIVO,
-          },
-        });
-
-        if (
-          vinculoAtivoTabela &&
-          vinculoAtivoTabela.pacienteId !== pacienteLocked.id
-        ) {
-          throw new BadRequestException(
-            'Usuario paciente ja vinculado a outro cadastro',
-          );
-        }
-
-        pacienteLocked.pacienteUsuarioId = pacienteUsuario.id;
-        pacienteLocked.vinculoStatus =
-          pacienteLocked.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
-            ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
-            : PacienteVinculoStatus.VINCULADO;
-        pacienteLocked.conviteAceitoEm = new Date();
-        await pacienteRepo.save(pacienteLocked);
       }
 
       await vinculoRepo.update(
         {
-          pacienteId: pacienteLocked.id,
+          pacienteId: pacienteDestino.id,
           status: ProfissionalPacienteVinculoStatus.ATIVO,
         },
         {
@@ -499,14 +537,16 @@ export class AuthService {
 
       await vinculoRepo.save(
         vinculoRepo.create({
-          profissionalId: pacienteLocked.usuarioId,
-          pacienteId: pacienteLocked.id,
+          profissionalId: pacienteDestino.usuarioId,
+          pacienteId: pacienteDestino.id,
           pacienteUsuarioId: pacienteUsuario.id,
           status: ProfissionalPacienteVinculoStatus.ATIVO,
-          origem: this.mapPacienteOrigemToVinculoOrigem(pacienteLocked),
+          origem: this.mapPacienteOrigemToVinculoOrigem(pacienteDestino),
           endedAt: null,
         }),
       );
+
+      return pacienteDestino;
     });
   }
 
@@ -692,15 +732,15 @@ export class AuthService {
       conviteToken,
     );
 
-    await this.vincularPacienteUsuarioAoCadastro(
+    const pacienteVinculado = await this.vincularPacienteUsuarioAoCadastro(
       pacienteParaVinculo,
       pacienteUsuario,
     );
-    await this.syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario);
+    await this.syncQuickInvitePacienteDados(pacienteVinculado, pacienteUsuario);
 
     return {
       vinculadoAutomaticamente: true,
-      pacienteId: pacienteParaVinculo.id,
+      pacienteId: pacienteVinculado.id,
       profissionalId: profissional.id,
     };
   }
@@ -745,12 +785,12 @@ export class AuthService {
 
     const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
 
-    await this.vincularPacienteUsuarioAoCadastro(
+    const pacienteVinculado = await this.vincularPacienteUsuarioAoCadastro(
       pacienteParaVinculo,
       pacienteUsuario,
     );
-    await this.syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario);
-    const pacienteId: string | null = pacienteParaVinculo.id;
+    await this.syncQuickInvitePacienteDados(pacienteVinculado, pacienteUsuario);
+    const pacienteId: string | null = pacienteVinculado.id;
 
     const loginResponse = this.buildLoginResponse(pacienteUsuario);
 

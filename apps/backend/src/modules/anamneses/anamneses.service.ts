@@ -30,7 +30,7 @@ export class AnamnesesService {  constructor(
     createAnamneseDto: Omit<CreateAnamneseDto, 'pacienteId'>,
     usuarioId: string,
   ): Promise<Anamnese> {
-    const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
+    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
       usuarioId,
     );
 
@@ -54,7 +54,7 @@ export class AnamnesesService {  constructor(
   }
 
   async findLatestByPacienteUsuario(usuarioId: string): Promise<Anamnese | null> {
-    const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
+    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
       usuarioId,
     );
 
@@ -85,7 +85,7 @@ export class AnamnesesService {  constructor(
     id: string,
     usuarioId: string,
   ): Promise<Anamnese> {
-    const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(
+    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
       usuarioId,
     );
 
