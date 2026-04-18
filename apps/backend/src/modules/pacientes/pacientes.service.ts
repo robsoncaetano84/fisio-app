@@ -663,16 +663,31 @@ export class PacientesService {
         },
       )
       .select('p.id', 'pacienteId')
+      .addSelect('p.created_at', 'createdAt')
       .addSelect('MAX(e.data)', 'lastEvolucaoAt')
       .groupBy('p.id')
-      .getRawMany<{ pacienteId: string; lastEvolucaoAt: string | null }>();
+      .addGroupBy('p.created_at')
+      .getRawMany<{
+        pacienteId: string;
+        createdAt: string | null;
+        lastEvolucaoAt: string | null;
+      }>();
 
     const now = Date.now();
     const result: Record<string, number | null> = {};
 
     for (const row of rows) {
       if (!row.lastEvolucaoAt) {
-        result[row.pacienteId] = null;
+        const createdAt = row.createdAt ? new Date(row.createdAt).getTime() : NaN;
+        if (Number.isNaN(createdAt)) {
+          result[row.pacienteId] = null;
+          continue;
+        }
+
+        const daysSinceCreation = Math.floor(
+          (now - createdAt) / (1000 * 60 * 60 * 24),
+        );
+        result[row.pacienteId] = daysSinceCreation > 7 ? null : 0;
         continue;
       }
 
@@ -845,7 +860,6 @@ export class PacientesService {
     return exame;
   }
 }
-
 
 
 
