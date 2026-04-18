@@ -537,17 +537,47 @@ export class PacientesService {
     };
   }
 
-  async listExames(pacienteId: string, usuarioId: string): Promise<PacienteExame[]> {
-    await this.findOne(pacienteId, usuarioId);
+  private async resolveExameScope(
+    pacienteId: string,
+    actor: Usuario,
+  ): Promise<{ paciente: Paciente; ownerUsuarioId: string }> {
+    if (actor.role === UserRole.PACIENTE) {
+      const linkedPaciente = await this.findLinkedPacienteByUsuarioId(actor.id);
+      if (linkedPaciente.id !== pacienteId) {
+        throw new ForbiddenException('Paciente sem permissao para este recurso');
+      }
+      return {
+        paciente: linkedPaciente,
+        ownerUsuarioId: linkedPaciente.usuarioId,
+      };
+    }
+
+    const paciente = await this.findOne(pacienteId, actor.id);
+    return {
+      paciente,
+      ownerUsuarioId: paciente.usuarioId,
+    };
+  }
+
+  async resolveExameOwnerUsuarioId(
+    pacienteId: string,
+    actor: Usuario,
+  ): Promise<string> {
+    const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
+    return ownerUsuarioId;
+  }
+
+  async listExames(pacienteId: string, actor: Usuario): Promise<PacienteExame[]> {
+    const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
     return this.pacienteExameRepository.find({
-      where: { pacienteId, usuarioId },
+      where: { pacienteId, usuarioId: ownerUsuarioId },
       order: { createdAt: 'DESC' },
     });
   }
 
   async createExame(
     pacienteId: string,
-    usuarioId: string,
+    actor: Usuario,
     payload: {
       nomeOriginal: string;
       nomeArquivo: string;
@@ -559,10 +589,10 @@ export class PacientesService {
       dataExame?: Date | null;
     },
   ): Promise<PacienteExame> {
-    await this.findOne(pacienteId, usuarioId);
+    const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
     const exame = this.pacienteExameRepository.create({
       pacienteId,
-      usuarioId,
+      usuarioId: ownerUsuarioId,
       nomeOriginal: payload.nomeOriginal,
       nomeArquivo: payload.nomeArquivo,
       mimeType: payload.mimeType,
@@ -578,11 +608,11 @@ export class PacientesService {
   async findExameOrFail(
     pacienteId: string,
     exameId: string,
-    usuarioId: string,
+    actor: Usuario,
   ): Promise<PacienteExame> {
-    await this.findOne(pacienteId, usuarioId);
+    const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
     const exame = await this.pacienteExameRepository.findOne({
-      where: { id: exameId, pacienteId, usuarioId },
+      where: { id: exameId, pacienteId, usuarioId: ownerUsuarioId },
     });
     if (!exame) {
       throw new NotFoundException('Exame nao encontrado');
@@ -593,14 +623,13 @@ export class PacientesService {
   async removeExame(
     pacienteId: string,
     exameId: string,
-    usuarioId: string,
+    actor: Usuario,
   ): Promise<PacienteExame> {
-    const exame = await this.findExameOrFail(pacienteId, exameId, usuarioId);
+    const exame = await this.findExameOrFail(pacienteId, exameId, actor);
     await this.pacienteExameRepository.remove(exame);
     return exame;
   }
 }
-
 
 
 

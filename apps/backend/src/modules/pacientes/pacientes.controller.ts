@@ -145,18 +145,18 @@ export class PacientesController {
 
   @Get(':id/exames')
   @Throttle({ default: { ttl: 60, limit: 120 } })
-  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Roles(UserRole.ADMIN, UserRole.USER, UserRole.PACIENTE)
   async listExames(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario: Usuario,
   ) {
-    const exames = await this.pacientesService.listExames(id, usuario.id);
+    const exames = await this.pacientesService.listExames(id, usuario);
     return exames.map((item) => this.toExameResponse(id, item));
   }
 
   @Post(':id/exames')
   @Throttle({ default: { ttl: 60, limit: 20 } })
-  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Roles(UserRole.ADMIN, UserRole.USER, UserRole.PACIENTE)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -183,14 +183,19 @@ export class PacientesController {
       throw new BadRequestException('Arquivo obrigatorio');
     }
 
+    const ownerUsuarioId = await this.pacientesService.resolveExameOwnerUsuarioId(
+      id,
+      usuario,
+    );
+
     const detectedExtension = extname(file.originalname || '').toLowerCase();
     const safeMimeType = ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
       ? file.mimetype
       : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
 
-    const objectKey = buildExameObjectKey(usuario.id, id, file.originalname || 'arquivo');
+    const objectKey = buildExameObjectKey(ownerUsuarioId, id, file.originalname || 'arquivo');
     const persisted = await persistExameFile({
-      usuarioId: usuario.id,
+      usuarioId: ownerUsuarioId,
       pacienteId: id,
       objectKey,
       mimeType: safeMimeType,
@@ -198,7 +203,7 @@ export class PacientesController {
     });
 
     try {
-      const exame = await this.pacientesService.createExame(id, usuario.id, {
+      const exame = await this.pacientesService.createExame(id, usuario, {
         nomeOriginal: file.originalname,
         nomeArquivo: persisted.nomeArquivo,
         mimeType: safeMimeType,
@@ -218,14 +223,14 @@ export class PacientesController {
 
   @Get(':id/exames/:exameId/arquivo')
   @Throttle({ default: { ttl: 60, limit: 120 } })
-  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Roles(UserRole.ADMIN, UserRole.USER, UserRole.PACIENTE)
   async downloadExame(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('exameId', ParseUUIDPipe) exameId: string,
     @CurrentUser() usuario: Usuario,
     @Res() res: Response,
   ) {
-    const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario.id);
+    const exame = await this.pacientesService.findExameOrFail(id, exameId, usuario);
     res.setHeader('Content-Type', exame.mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${exame.nomeOriginal}"`);
     const fileBuffer = await readExameFile(exame.caminhoArquivo);
@@ -234,13 +239,13 @@ export class PacientesController {
 
   @Delete(':id/exames/:exameId')
   @Throttle({ default: { ttl: 60, limit: 20 } })
-  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Roles(UserRole.ADMIN, UserRole.USER, UserRole.PACIENTE)
   async deleteExame(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('exameId', ParseUUIDPipe) exameId: string,
     @CurrentUser() usuario: Usuario,
   ) {
-    const exame = await this.pacientesService.removeExame(id, exameId, usuario.id);
+    const exame = await this.pacientesService.removeExame(id, exameId, usuario);
     await deleteExameFile(exame.caminhoArquivo).catch(() => undefined);
     return { success: true };
   }
@@ -286,7 +291,6 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
-
 
 
 
