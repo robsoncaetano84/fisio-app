@@ -16,6 +16,7 @@ import { AuthService, LoginResponse } from './auth.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
@@ -55,6 +56,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() refreshDto: RefreshDto): Promise<LoginResponse> {
     return this.authService.refresh(refreshDto.refreshToken);
+  }
+
+  @Post('forgot-password')
+  @Throttle({ default: { ttl: 60, limit: 5 } })
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.requestPasswordReset(dto.email);
   }
 
   @Post('registro')
@@ -149,6 +157,5 @@ export class AuthController {
     };
   }
 }
-
 
 

@@ -56,31 +56,25 @@ let AuthService = AuthService_1 = class AuthService {
         else {
             const cpfDigits = this.sanitizeDigits(normalized);
             if (cpfDigits.length === 11) {
-                const paciente = await this.pacienteRepository
+                const pacientes = await this.pacienteRepository
                     .createQueryBuilder('paciente')
                     .leftJoinAndSelect('paciente.pacienteUsuario', 'pacienteUsuario')
                     .where('paciente.cpf = :cpf', { cpf: cpfDigits })
                     .andWhere('paciente.ativo = :ativo', { ativo: true })
                     .andWhere('paciente.paciente_usuario_id IS NOT NULL')
-                    .orderBy('paciente.convite_aceito_em', 'DESC', 'NULLS LAST')
-                    .addOrderBy('paciente.updated_at', 'DESC')
-                    .getOne();
-                usuario = paciente?.pacienteUsuario ?? null;
-                if (!usuario && paciente) {
-                    const vinculoAtivo = await this.vinculoRepository.findOne({
-                        where: {
-                            pacienteId: paciente.id,
-                            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-                        },
-                        order: { createdAt: 'DESC' },
-                    });
-                    if (vinculoAtivo) {
-                        try {
-                            usuario = await this.usuariosService.findById(vinculoAtivo.pacienteUsuarioId);
-                        }
-                        catch {
-                            usuario = null;
-                        }
+                    .getMany();
+                const distinctUsuarioIds = Array.from(new Set(pacientes
+                    .map((paciente) => paciente.pacienteUsuarioId)
+                    .filter((value) => !!value)));
+                if (distinctUsuarioIds.length > 1) {
+                    throw new common_1.UnauthorizedException('CPF encontrado em mais de um cadastro. Faça login com e-mail.');
+                }
+                if (distinctUsuarioIds.length === 1) {
+                    try {
+                        usuario = await this.usuariosService.findById(distinctUsuarioIds[0]);
+                    }
+                    catch {
+                        usuario = null;
                     }
                 }
             }
@@ -234,40 +228,35 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.UnauthorizedException('Refresh token invalido');
         }
     }
+    async requestPasswordReset(email) {
+        const normalizedEmail = (email || '').trim().toLowerCase();
+        if (!normalizedEmail) {
+            throw new common_1.BadRequestException('E-mail invalido');
+        }
+        const user = await this.usuariosService.findByEmail(normalizedEmail);
+        await this.authLogsService.record({
+            email: normalizedEmail,
+            usuarioId: user?.id,
+            eventType: auth_log_entity_1.AuthEventType.LOGIN,
+            success: true,
+            reason: user ? 'RECOVERY_REQUESTED' : 'RECOVERY_REQUESTED_UNKNOWN_EMAIL',
+        });
+        return {
+            message: 'Se o e-mail existir em nossa base, enviaremos instrucoes de recuperacao.',
+        };
+    }
     getInviteSecret() {
-        return (this.configService.get('INVITE_SECRET') ||
-            this.configService.get('JWT_SECRET') ||
-            'invite-default-secret');
+        const inviteSecret = this.configService.get('INVITE_SECRET')?.trim();
+        if (!inviteSecret) {
+            throw new common_1.InternalServerErrorException('INVITE_SECRET nao configurado no ambiente');
+        }
+        return inviteSecret;
     }
     mapPacienteOrigemToVinculoOrigem(paciente) {
         if (paciente.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
             return profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoOrigem.CONVITE_RAPIDO;
         }
         return profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
-    }
-    async upsertVinculoAtivo(paciente, pacienteUsuarioId) {
-        await this.vinculoRepository.update({
-            pacienteId: paciente.id,
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-        }, {
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
-            endedAt: new Date(),
-        });
-        await this.vinculoRepository.update({
-            pacienteUsuarioId,
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-        }, {
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
-            endedAt: new Date(),
-        });
-        await this.vinculoRepository.save(this.vinculoRepository.create({
-            profissionalId: paciente.usuarioId,
-            pacienteId: paciente.id,
-            pacienteUsuarioId,
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-            origem: this.mapPacienteOrigemToVinculoOrigem(paciente),
-            endedAt: null,
-        }));
     }
     async resolveInviteContext(conviteToken) {
         let payload;
@@ -301,44 +290,80 @@ let AuthService = AuthService_1 = class AuthService {
         return { profissional, pacienteParaVinculo };
     }
     async vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario) {
-        if (pacienteParaVinculo.pacienteUsuarioId) {
-            if (pacienteParaVinculo.pacienteUsuarioId === pacienteUsuario.id) {
-                pacienteParaVinculo.vinculoStatus =
-                    pacienteParaVinculo.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
+        await this.pacienteRepository.manager.transaction(async (manager) => {
+            const pacienteRepo = manager.getRepository(paciente_entity_1.Paciente);
+            const vinculoRepo = manager.getRepository(profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo);
+            const pacienteLocked = await pacienteRepo
+                .createQueryBuilder('paciente')
+                .where('paciente.id = :id', { id: pacienteParaVinculo.id })
+                .setLock('pessimistic_write')
+                .getOne();
+            if (!pacienteLocked) {
+                throw new common_1.BadRequestException('Paciente do convite nao encontrado');
+            }
+            if (pacienteLocked.pacienteUsuarioId) {
+                if (pacienteLocked.pacienteUsuarioId === pacienteUsuario.id) {
+                    pacienteLocked.vinculoStatus =
+                        pacienteLocked.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
+                            ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
+                            : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
+                    if (!pacienteLocked.conviteAceitoEm) {
+                        pacienteLocked.conviteAceitoEm = new Date();
+                    }
+                    await pacienteRepo.save(pacienteLocked);
+                }
+                else {
+                    throw new common_1.BadRequestException('Paciente ja possui usuario vinculado');
+                }
+            }
+            else {
+                const vinculoExistente = await pacienteRepo.findOne({
+                    where: { pacienteUsuarioId: pacienteUsuario.id },
+                });
+                if (vinculoExistente && vinculoExistente.id !== pacienteLocked.id) {
+                    throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
+                }
+                const vinculoAtivoTabela = await vinculoRepo.findOne({
+                    where: {
+                        pacienteUsuarioId: pacienteUsuario.id,
+                        status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+                    },
+                });
+                if (vinculoAtivoTabela &&
+                    vinculoAtivoTabela.pacienteId !== pacienteLocked.id) {
+                    throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
+                }
+                pacienteLocked.pacienteUsuarioId = pacienteUsuario.id;
+                pacienteLocked.vinculoStatus =
+                    pacienteLocked.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
                         ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
                         : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
-                if (!pacienteParaVinculo.conviteAceitoEm) {
-                    pacienteParaVinculo.conviteAceitoEm = new Date();
-                }
-                await this.pacienteRepository.save(pacienteParaVinculo);
-                await this.upsertVinculoAtivo(pacienteParaVinculo, pacienteUsuario.id);
-                return;
+                pacienteLocked.conviteAceitoEm = new Date();
+                await pacienteRepo.save(pacienteLocked);
             }
-            throw new common_1.BadRequestException('Paciente ja possui usuario vinculado');
-        }
-        const vinculoExistente = await this.pacienteRepository.findOne({
-            where: { pacienteUsuarioId: pacienteUsuario.id },
-        });
-        if (vinculoExistente && vinculoExistente.id !== pacienteParaVinculo.id) {
-            throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
-        }
-        const vinculoAtivoTabela = await this.vinculoRepository.findOne({
-            where: {
+            await vinculoRepo.update({
+                pacienteId: pacienteLocked.id,
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            }, {
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
+                endedAt: new Date(),
+            });
+            await vinculoRepo.update({
                 pacienteUsuarioId: pacienteUsuario.id,
                 status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-            },
+            }, {
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
+                endedAt: new Date(),
+            });
+            await vinculoRepo.save(vinculoRepo.create({
+                profissionalId: pacienteLocked.usuarioId,
+                pacienteId: pacienteLocked.id,
+                pacienteUsuarioId: pacienteUsuario.id,
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+                origem: this.mapPacienteOrigemToVinculoOrigem(pacienteLocked),
+                endedAt: null,
+            }));
         });
-        if (vinculoAtivoTabela && vinculoAtivoTabela.pacienteId !== pacienteParaVinculo.id) {
-            throw new common_1.BadRequestException('Usuario paciente ja vinculado a outro cadastro');
-        }
-        pacienteParaVinculo.pacienteUsuarioId = pacienteUsuario.id;
-        pacienteParaVinculo.vinculoStatus =
-            pacienteParaVinculo.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
-                ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
-                : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
-        pacienteParaVinculo.conviteAceitoEm = new Date();
-        await this.pacienteRepository.save(pacienteParaVinculo);
-        await this.upsertVinculoAtivo(pacienteParaVinculo, pacienteUsuario.id);
     }
     sanitizeDigits(value) {
         return (value || '').replace(/\D/g, '').trim();
@@ -403,7 +428,7 @@ let AuthService = AuthService_1 = class AuthService {
             enderecoCep: '00000000',
             enderecoCidade: '-',
             enderecoUf: 'NA',
-            contatoWhatsapp: whatsappDigits || '0000000000',
+            contatoWhatsapp: whatsappDigits || '',
             contatoEmail: email || undefined,
             cadastroOrigem: paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO,
             vinculoStatus: paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO,

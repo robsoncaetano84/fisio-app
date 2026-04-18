@@ -49,9 +49,11 @@ export declare class AuthService {
         ip?: string;
     }): Promise<LoginResponse>;
     refresh(refreshToken: string): Promise<LoginResponse>;
+    requestPasswordReset(email: string): Promise<{
+        message: string;
+    }>;
     private getInviteSecret;
     private mapPacienteOrigemToVinculoOrigem;
-    private upsertVinculoAtivo;
     private resolveInviteContext;
     private vincularPacienteUsuarioAoCadastro;
     private sanitizeDigits;

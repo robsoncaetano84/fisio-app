@@ -184,63 +184,69 @@ export class PacientesService {
     paciente: Paciente,
     pacienteUsuarioId: string,
   ): Promise<void> {
-    await this.vinculoRepository.update(
-      {
-        pacienteId: paciente.id,
-        status: ProfissionalPacienteVinculoStatus.ATIVO,
-      },
-      {
-        status: ProfissionalPacienteVinculoStatus.ENCERRADO,
-        endedAt: new Date(),
-      },
-    );
+    await this.vinculoRepository.manager.transaction(async (manager) => {
+      const vinculoRepo = manager.getRepository(ProfissionalPacienteVinculo);
 
-    const existingAtivoByPacienteUsuario = await this.vinculoRepository.findOne({
-      where: {
-        pacienteUsuarioId,
-        status: ProfissionalPacienteVinculoStatus.ATIVO,
-      },
-    });
-
-    if (existingAtivoByPacienteUsuario) {
-      if (existingAtivoByPacienteUsuario.pacienteId !== paciente.id) {
-        throw new ConflictException('Este usuario paciente ja esta vinculado');
-      }
-
-      await this.vinculoRepository.update(
-        { id: existingAtivoByPacienteUsuario.id },
+      await vinculoRepo.update(
         {
-          profissionalId: paciente.usuarioId,
-          origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
-          endedAt: null,
+          pacienteId: paciente.id,
+          status: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+        {
+          status: ProfissionalPacienteVinculoStatus.ENCERRADO,
+          endedAt: new Date(),
         },
       );
-      return;
-    }
 
-    await this.vinculoRepository.save(
-      this.vinculoRepository.create({
-        profissionalId: paciente.usuarioId,
-        pacienteId: paciente.id,
-        pacienteUsuarioId,
-        status: ProfissionalPacienteVinculoStatus.ATIVO,
-        origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
-        endedAt: null,
-      }),
-    );
+      const existingAtivoByPacienteUsuario = await vinculoRepo.findOne({
+        where: {
+          pacienteUsuarioId,
+          status: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+      });
+
+      if (existingAtivoByPacienteUsuario) {
+        if (existingAtivoByPacienteUsuario.pacienteId !== paciente.id) {
+          throw new ConflictException('Este usuario paciente ja esta vinculado');
+        }
+
+        await vinculoRepo.update(
+          { id: existingAtivoByPacienteUsuario.id },
+          {
+            profissionalId: paciente.usuarioId,
+            origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
+            endedAt: null,
+          },
+        );
+        return;
+      }
+
+      await vinculoRepo.save(
+        vinculoRepo.create({
+          profissionalId: paciente.usuarioId,
+          pacienteId: paciente.id,
+          pacienteUsuarioId,
+          status: ProfissionalPacienteVinculoStatus.ATIVO,
+          origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
+          endedAt: null,
+        }),
+      );
+    });
   }
 
   private async closeVinculoAtivoByPaciente(pacienteId: string): Promise<void> {
-    await this.vinculoRepository.update(
-      {
-        pacienteId,
-        status: ProfissionalPacienteVinculoStatus.ATIVO,
-      },
-      {
-        status: ProfissionalPacienteVinculoStatus.ENCERRADO,
-        endedAt: new Date(),
-      },
-    );
+    await this.vinculoRepository.manager.transaction(async (manager) => {
+      await manager.getRepository(ProfissionalPacienteVinculo).update(
+        {
+          pacienteId,
+          status: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+        {
+          status: ProfissionalPacienteVinculoStatus.ENCERRADO,
+          endedAt: new Date(),
+        },
+      );
+    });
   }
 
   private async validatePacienteUsuarioId(
@@ -750,7 +756,6 @@ export class PacientesService {
     return exame;
   }
 }
-
 
 
 

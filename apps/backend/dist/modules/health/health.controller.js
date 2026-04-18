@@ -12,6 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HealthController = void 0;
 const common_1 = require("@nestjs/common");
 const health_service_1 = require("./health.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 let HealthController = class HealthController {
     healthService;
     constructor(healthService) {
@@ -24,6 +27,9 @@ let HealthController = class HealthController {
         }
         return payload;
     }
+    async getOperational() {
+        return this.healthService.getOperationalMetrics();
+    }
 };
 exports.HealthController = HealthController;
 __decorate([
@@ -32,6 +38,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], HealthController.prototype, "getHealth", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, common_1.Get)('operational'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HealthController.prototype, "getOperational", null);
 exports.HealthController = HealthController = __decorate([
     (0, common_1.Controller)('health'),
     __metadata("design:paramtypes", [health_service_1.HealthService])

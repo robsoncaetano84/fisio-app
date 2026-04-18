@@ -80,47 +80,125 @@ let PacientesService = class PacientesService {
         }
         return paciente;
     }
+    addPacienteListSelects(query) {
+        return query
+            .select([
+            'p.id',
+            'p.nomeCompleto',
+            'p.cpf',
+            'p.rg',
+            'p.dataNascimento',
+            'p.sexo',
+            'p.estadoCivil',
+            'p.profissao',
+            'p.enderecoRua',
+            'p.enderecoNumero',
+            'p.enderecoComplemento',
+            'p.enderecoBairro',
+            'p.enderecoCep',
+            'p.enderecoCidade',
+            'p.enderecoUf',
+            'p.contatoWhatsapp',
+            'p.contatoTelefone',
+            'p.contatoEmail',
+            'p.ativo',
+            'p.usuarioId',
+            'p.pacienteUsuarioId',
+            'p.anamneseLiberadaPaciente',
+            'p.anamneseSolicitacaoPendente',
+            'p.anamneseSolicitacaoEm',
+            'p.anamneseSolicitacaoUltimaEm',
+            'p.cadastroOrigem',
+            'p.vinculoStatus',
+            'p.conviteEnviadoEm',
+            'p.conviteAceitoEm',
+            'p.createdAt',
+            'p.updatedAt',
+        ])
+            .leftJoin('p.pacienteUsuario', 'pacienteUsuario')
+            .addSelect(['pacienteUsuario.id', 'pacienteUsuario.nome']);
+    }
+    toPacienteListItem(paciente) {
+        return {
+            id: paciente.id,
+            nomeCompleto: paciente.nomeCompleto,
+            cpf: paciente.cpf,
+            rg: paciente.rg || null,
+            dataNascimento: paciente.dataNascimento,
+            sexo: paciente.sexo,
+            estadoCivil: paciente.estadoCivil || null,
+            profissao: paciente.profissao || null,
+            enderecoRua: paciente.enderecoRua,
+            enderecoNumero: paciente.enderecoNumero,
+            enderecoComplemento: paciente.enderecoComplemento || null,
+            enderecoBairro: paciente.enderecoBairro,
+            enderecoCep: paciente.enderecoCep,
+            enderecoCidade: paciente.enderecoCidade,
+            enderecoUf: paciente.enderecoUf,
+            contatoWhatsapp: paciente.contatoWhatsapp,
+            contatoTelefone: paciente.contatoTelefone || null,
+            contatoEmail: paciente.contatoEmail || null,
+            ativo: paciente.ativo,
+            usuarioId: paciente.usuarioId,
+            pacienteUsuarioId: paciente.pacienteUsuarioId || null,
+            anamneseLiberadaPaciente: paciente.anamneseLiberadaPaciente,
+            anamneseSolicitacaoPendente: paciente.anamneseSolicitacaoPendente,
+            anamneseSolicitacaoEm: paciente.anamneseSolicitacaoEm || null,
+            anamneseSolicitacaoUltimaEm: paciente.anamneseSolicitacaoUltimaEm || null,
+            cadastroOrigem: paciente.cadastroOrigem,
+            vinculoStatus: paciente.vinculoStatus,
+            conviteEnviadoEm: paciente.conviteEnviadoEm || null,
+            conviteAceitoEm: paciente.conviteAceitoEm || null,
+            createdAt: paciente.createdAt,
+            updatedAt: paciente.updatedAt,
+        };
+    }
     async upsertVinculoAtivo(paciente, pacienteUsuarioId) {
-        await this.vinculoRepository.update({
-            pacienteId: paciente.id,
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-        }, {
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
-            endedAt: new Date(),
-        });
-        const existingAtivoByPacienteUsuario = await this.vinculoRepository.findOne({
-            where: {
+        await this.vinculoRepository.manager.transaction(async (manager) => {
+            const vinculoRepo = manager.getRepository(profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo);
+            await vinculoRepo.update({
+                pacienteId: paciente.id,
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            }, {
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
+                endedAt: new Date(),
+            });
+            const existingAtivoByPacienteUsuario = await vinculoRepo.findOne({
+                where: {
+                    pacienteUsuarioId,
+                    status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+                },
+            });
+            if (existingAtivoByPacienteUsuario) {
+                if (existingAtivoByPacienteUsuario.pacienteId !== paciente.id) {
+                    throw new common_1.ConflictException('Este usuario paciente ja esta vinculado');
+                }
+                await vinculoRepo.update({ id: existingAtivoByPacienteUsuario.id }, {
+                    profissionalId: paciente.usuarioId,
+                    origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
+                    endedAt: null,
+                });
+                return;
+            }
+            await vinculoRepo.save(vinculoRepo.create({
+                profissionalId: paciente.usuarioId,
+                pacienteId: paciente.id,
                 pacienteUsuarioId,
                 status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-            },
-        });
-        if (existingAtivoByPacienteUsuario) {
-            if (existingAtivoByPacienteUsuario.pacienteId !== paciente.id) {
-                throw new common_1.ConflictException('Este usuario paciente ja esta vinculado');
-            }
-            await this.vinculoRepository.update({ id: existingAtivoByPacienteUsuario.id }, {
-                profissionalId: paciente.usuarioId,
                 origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
                 endedAt: null,
-            });
-            return;
-        }
-        await this.vinculoRepository.save(this.vinculoRepository.create({
-            profissionalId: paciente.usuarioId,
-            pacienteId: paciente.id,
-            pacienteUsuarioId,
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-            origem: this.mapOrigemToVinculo(paciente.cadastroOrigem),
-            endedAt: null,
-        }));
+            }));
+        });
     }
     async closeVinculoAtivoByPaciente(pacienteId) {
-        await this.vinculoRepository.update({
-            pacienteId,
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
-        }, {
-            status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
-            endedAt: new Date(),
+        await this.vinculoRepository.manager.transaction(async (manager) => {
+            await manager.getRepository(profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo).update({
+                pacienteId,
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            }, {
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ENCERRADO,
+                endedAt: new Date(),
+            });
         });
     }
     async validatePacienteUsuarioId(pacienteUsuarioId, ignorePacienteId) {
@@ -178,11 +256,10 @@ let PacientesService = class PacientesService {
         return saved;
     }
     async findAll(usuarioId) {
-        const pacientes = await this.buildScopedPacientesQuery(usuarioId)
-            .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+        const pacientes = await this.addPacienteListSelects(this.buildScopedPacientesQuery(usuarioId))
             .orderBy('p.nome_completo', 'ASC')
             .getMany();
-        return pacientes.map((paciente) => this.applyDisplayNameFallback(paciente));
+        return pacientes.map((paciente) => this.toPacienteListItem(this.applyDisplayNameFallback(paciente)));
     }
     async findPaged(usuarioId, page, limit) {
         const safePage = Number.isFinite(page) ? Math.max(1, page) : 1;
@@ -192,14 +269,13 @@ let PacientesService = class PacientesService {
         const skip = (safePage - 1) * safeLimit;
         const baseQuery = this.buildScopedPacientesQuery(usuarioId);
         const total = await baseQuery.clone().getCount();
-        const data = await baseQuery
-            .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+        const data = await this.addPacienteListSelects(baseQuery)
             .orderBy('p.nome_completo', 'ASC')
             .take(safeLimit)
             .skip(skip)
             .getMany();
         return {
-            data: data.map((paciente) => this.applyDisplayNameFallback(paciente)),
+            data: data.map((paciente) => this.toPacienteListItem(this.applyDisplayNameFallback(paciente))),
             total,
             page: safePage,
             limit: safeLimit,
@@ -209,7 +285,8 @@ let PacientesService = class PacientesService {
     async findOne(id, usuarioId) {
         const paciente = await this.buildScopedPacientesQuery(usuarioId)
             .andWhere('p.id = :id', { id })
-            .leftJoinAndSelect('p.pacienteUsuario', 'pacienteUsuario')
+            .leftJoin('p.pacienteUsuario', 'pacienteUsuario')
+            .addSelect(['pacienteUsuario.id', 'pacienteUsuario.nome'])
             .getOne();
         if (!paciente) {
             throw new common_1.NotFoundException('Paciente nao encontrado');

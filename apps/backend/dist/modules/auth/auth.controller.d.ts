@@ -3,6 +3,7 @@ import { AuthService, LoginResponse } from './auth.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
@@ -16,6 +17,9 @@ export declare class AuthController {
     constructor(authService: AuthService, usuariosService: UsuariosService);
     login(loginDto: LoginDto, req: Request): Promise<LoginResponse>;
     refresh(refreshDto: RefreshDto): Promise<LoginResponse>;
+    forgotPassword(dto: ForgotPasswordDto): Promise<{
+        message: string;
+    }>;
     registro(createUsuarioDto: CreateUsuarioDto): Promise<{
         message: string;
         usuario: {

@@ -17,4 +17,13 @@ export declare class HealthService {
             };
         };
     }>;
+    getOperationalMetrics(): Promise<{
+        timestamp: string;
+        metrics: {
+            solicitacoesAnamnesePendentes: number;
+            pacientesSemAnamnese: number;
+            pacientesSemEvolucao: number;
+            uploadsExamesUltimas24h: number;
+        };
+    }>;
 }

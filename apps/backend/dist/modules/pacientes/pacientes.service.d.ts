@@ -8,6 +8,7 @@ import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
+import { PacienteListItemDto, PacientePagedResponseDto } from './dto/paciente-list-item.dto';
 export declare class PacientesService {
     private readonly pacienteRepository;
     private readonly evolucaoRepository;
@@ -21,18 +22,14 @@ export declare class PacientesService {
     private mapOrigemToVinculo;
     private shouldReplaceQuickInviteName;
     private applyDisplayNameFallback;
+    private addPacienteListSelects;
+    private toPacienteListItem;
     private upsertVinculoAtivo;
     private closeVinculoAtivoByPaciente;
     private validatePacienteUsuarioId;
     create(createPacienteDto: CreatePacienteDto, usuarioId: string): Promise<Paciente>;
-    findAll(usuarioId: string): Promise<Paciente[]>;
-    findPaged(usuarioId: string, page: number, limit: number): Promise<{
-        data: Paciente[];
-        total: number;
-        page: number;
-        limit: number;
-        hasNext: boolean;
-    }>;
+    findAll(usuarioId: string): Promise<PacienteListItemDto[]>;
+    findPaged(usuarioId: string, page: number, limit: number): Promise<PacientePagedResponseDto>;
     findOne(id: string, usuarioId: string): Promise<Paciente>;
     update(id: string, updatePacienteDto: UpdatePacienteDto, usuarioId: string): Promise<Paciente>;
     unlinkPacienteUsuarioByProfessional(id: string, usuarioId: string): Promise<Paciente>;

@@ -5,19 +5,14 @@ import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
 import { CreatePacienteExameDto } from './dto/create-paciente-exame.dto';
+import { PacienteListItemDto, PacientePagedResponseDto } from './dto/paciente-list-item.dto';
 export declare class PacientesController {
     private readonly pacientesService;
     constructor(pacientesService: PacientesService);
     private toExameResponse;
     create(createPacienteDto: CreatePacienteDto, usuario: Usuario): Promise<import("./entities/paciente.entity").Paciente>;
-    findAll(usuario: Usuario): Promise<import("./entities/paciente.entity").Paciente[]>;
-    findPaged(usuario: Usuario, page: number, limit: number): Promise<{
-        data: import("./entities/paciente.entity").Paciente[];
-        total: number;
-        page: number;
-        limit: number;
-        hasNext: boolean;
-    }>;
+    findAll(usuario: Usuario): Promise<PacienteListItemDto[]>;
+    findPaged(usuario: Usuario, page: number, limit: number): Promise<PacientePagedResponseDto>;
     getAttention(usuario: Usuario): Promise<Record<string, number | null>>;
     getStats(usuario: Usuario): Promise<{
         totalPacientes: number;

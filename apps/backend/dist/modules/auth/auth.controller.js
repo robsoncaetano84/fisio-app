@@ -19,6 +19,7 @@ const auth_service_1 = require("./auth.service");
 const usuarios_service_1 = require("../usuarios/usuarios.service");
 const login_dto_1 = require("./dto/login.dto");
 const refresh_dto_1 = require("./dto/refresh.dto");
+const forgot_password_dto_1 = require("./dto/forgot-password.dto");
 const create_usuario_dto_1 = require("../usuarios/dto/create-usuario.dto");
 const update_me_dto_1 = require("./dto/update-me.dto");
 const create_paciente_invite_dto_1 = require("./dto/create-paciente-invite.dto");
@@ -47,6 +48,9 @@ let AuthController = class AuthController {
     }
     async refresh(refreshDto) {
         return this.authService.refresh(refreshDto.refreshToken);
+    }
+    async forgotPassword(dto) {
+        return this.authService.requestPasswordReset(dto.email);
     }
     async registro(createUsuarioDto) {
         const usuario = await this.usuariosService.create(createUsuarioDto);
@@ -119,6 +123,15 @@ __decorate([
     __metadata("design:paramtypes", [refresh_dto_1.RefreshDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "refresh", null);
+__decorate([
+    (0, common_1.Post)('forgot-password'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 5 } }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forgotPassword", null);
 __decorate([
     (0, common_1.Post)('registro'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 3 } }),

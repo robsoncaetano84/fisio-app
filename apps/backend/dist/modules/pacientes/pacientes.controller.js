@@ -181,7 +181,7 @@ __decorate([
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PacientesController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('paged'),
@@ -192,7 +192,7 @@ __decorate([
     __param(2, (0, common_1.Query)('limit', new common_1.DefaultValuePipe(30), common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [usuario_entity_2.Usuario, Number, Number]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PacientesController.prototype, "findPaged", null);
 __decorate([
     (0, common_1.Get)('attention'),
