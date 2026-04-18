@@ -25,6 +25,7 @@ import { CrmTask } from './modules/crm/entities/crm-task.entity';
 import { CrmInteraction } from './modules/crm/entities/crm-interaction.entity';
 import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entity';
 import { ProfissionalPacienteVinculo } from './modules/pacientes/entities/profissional-paciente-vinculo.entity';
+import { ClinicalFlowEvent } from './modules/metrics/entities/clinical-flow-event.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -36,6 +37,7 @@ import { AtividadesModule } from './modules/atividades/atividades.module';
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { HealthModule } from './modules/health/health.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 
 @Module({
   imports: [
@@ -110,6 +112,7 @@ import { HealthModule } from './modules/health/health.module';
             CrmTask,
             CrmInteraction,          PacienteExame,
           ProfissionalPacienteVinculo,
+          ClinicalFlowEvent,
         ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',
@@ -144,6 +147,7 @@ import { HealthModule } from './modules/health/health.module';
     NotificacoesModule,
     CrmModule,
     HealthModule,
+    MetricsModule,
   ],
   providers: [
     {
@@ -157,6 +161,5 @@ import { HealthModule } from './modules/health/health.module';
   ],
 })
 export class AppModule {}
-
 
 
