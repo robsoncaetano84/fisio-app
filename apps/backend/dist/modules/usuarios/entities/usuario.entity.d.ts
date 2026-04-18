@@ -15,4 +15,10 @@ export declare class Usuario extends BaseEntity {
     especialidade: string;
     ativo: boolean;
     role: UserRole;
+    consentTermsRequired: boolean;
+    consentPrivacyRequired: boolean;
+    consentResearchOptional: boolean;
+    consentAiOptional: boolean;
+    consentAcceptedAt: Date | null;
+    consentProfessionalLgpdRequired: boolean;
 }

@@ -56,6 +56,34 @@ export class UsuariosService {
       conselhoProf,
       role,
       senha: hashedPassword,
+      consentTermsRequired:
+        role === UserRole.PACIENTE
+          ? !!createUsuarioDto.consentTermsRequired
+          : false,
+      consentPrivacyRequired:
+        role === UserRole.PACIENTE
+          ? !!createUsuarioDto.consentPrivacyRequired
+          : false,
+      consentResearchOptional:
+        role === UserRole.PACIENTE
+          ? !!createUsuarioDto.consentResearchOptional
+          : false,
+      consentAiOptional:
+        role === UserRole.PACIENTE
+          ? !!createUsuarioDto.consentAiOptional
+          : false,
+      consentAcceptedAt:
+        ((role === UserRole.PACIENTE &&
+          createUsuarioDto.consentTermsRequired &&
+          createUsuarioDto.consentPrivacyRequired) ||
+          (role !== UserRole.PACIENTE &&
+            createUsuarioDto.consentProfessionalLgpdRequired)) 
+          ? new Date()
+          : null,
+      consentProfessionalLgpdRequired:
+        role !== UserRole.PACIENTE
+          ? !!createUsuarioDto.consentProfessionalLgpdRequired
+          : false,
     });
 
     return this.usuarioRepository.save(usuario);
@@ -141,9 +169,19 @@ export class UsuariosService {
       dto.registroProf !== undefined ||
       dto.especialidade !== undefined;
 
+    const hasPatientConsentField =
+      dto.consentResearchOptional !== undefined ||
+      dto.consentAiOptional !== undefined;
+
     if (usuario.role === UserRole.PACIENTE && hasProfessionalField) {
       throw new BadRequestException(
         'Paciente nao pode atualizar dados profissionais',
+      );
+    }
+
+    if (usuario.role !== UserRole.PACIENTE && hasPatientConsentField) {
+      throw new BadRequestException(
+        'Apenas pacientes podem atualizar consentimentos opcionais',
       );
     }
 
@@ -184,6 +222,15 @@ export class UsuariosService {
       usuario.conselhoProf = finalSigla && finalUf ? `${finalSigla}-${finalUf}` : "";
     }
 
+    if (usuario.role === UserRole.PACIENTE && hasPatientConsentField) {
+      if (dto.consentResearchOptional !== undefined) {
+        usuario.consentResearchOptional = dto.consentResearchOptional;
+      }
+      if (dto.consentAiOptional !== undefined) {
+        usuario.consentAiOptional = dto.consentAiOptional;
+      }
+    }
+
     return this.usuarioRepository.save(usuario);
   }
 
@@ -194,4 +241,3 @@ export class UsuariosService {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
 }
-

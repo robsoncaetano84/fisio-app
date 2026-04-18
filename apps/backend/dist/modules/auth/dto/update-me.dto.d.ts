@@ -4,4 +4,6 @@ export declare class UpdateMeDto {
     conselhoUf?: string;
     registroProf?: string;
     especialidade?: string;
+    consentResearchOptional?: boolean;
+    consentAiOptional?: boolean;
 }

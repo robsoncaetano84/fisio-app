@@ -30,6 +30,12 @@ let Usuario = class Usuario extends base_entity_1.BaseEntity {
     especialidade;
     ativo;
     role;
+    consentTermsRequired;
+    consentPrivacyRequired;
+    consentResearchOptional;
+    consentAiOptional;
+    consentAcceptedAt;
+    consentProfessionalLgpdRequired;
 };
 exports.Usuario = Usuario;
 __decorate([
@@ -73,6 +79,54 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'enum', enum: UserRole, default: UserRole.USER }),
     __metadata("design:type", String)
 ], Usuario.prototype, "role", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'consent_terms_required',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Usuario.prototype, "consentTermsRequired", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'consent_privacy_required',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Usuario.prototype, "consentPrivacyRequired", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'consent_research_optional',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Usuario.prototype, "consentResearchOptional", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'consent_ai_optional',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Usuario.prototype, "consentAiOptional", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'consent_accepted_at',
+        type: 'timestamp',
+        nullable: true,
+    }),
+    __metadata("design:type", Object)
+], Usuario.prototype, "consentAcceptedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        name: 'consent_professional_lgpd_required',
+        type: 'boolean',
+        default: false,
+    }),
+    __metadata("design:type", Boolean)
+], Usuario.prototype, "consentProfessionalLgpdRequired", void 0);
 exports.Usuario = Usuario = __decorate([
     (0, typeorm_1.Entity)('usuarios')
 ], Usuario);

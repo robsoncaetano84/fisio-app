@@ -16,6 +16,10 @@ class RegistroPacientePorConviteDto {
     nome;
     email;
     senha;
+    consentTermsRequired;
+    consentPrivacyRequired;
+    consentResearchOptional;
+    consentAiOptional;
 }
 exports.RegistroPacientePorConviteDto = RegistroPacientePorConviteDto;
 __decorate([
@@ -41,4 +45,22 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], RegistroPacientePorConviteDto.prototype, "senha", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.Equals)(true, { message: 'Aceite dos termos de uso e obrigatorio' }),
+    __metadata("design:type", Boolean)
+], RegistroPacientePorConviteDto.prototype, "consentTermsRequired", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.Equals)(true, { message: 'Aceite da politica de privacidade e obrigatorio' }),
+    __metadata("design:type", Boolean)
+], RegistroPacientePorConviteDto.prototype, "consentPrivacyRequired", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], RegistroPacientePorConviteDto.prototype, "consentResearchOptional", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], RegistroPacientePorConviteDto.prototype, "consentAiOptional", void 0);
 //# sourceMappingURL=registro-paciente-por-convite.dto.js.map

@@ -3,6 +3,8 @@
 // C RE AT E U SU AR IO.D TO
 // ==========================================
 import {
+  IsBoolean,
+  Equals,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -56,4 +58,30 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  @ValidateIf((o) => o.role === UserRole.PACIENTE)
+  @IsBoolean()
+  @Equals(true, { message: 'Aceite dos termos de uso e obrigatorio' })
+  consentTermsRequired?: boolean;
+
+  @ValidateIf((o) => o.role === UserRole.PACIENTE)
+  @IsBoolean()
+  @Equals(true, { message: 'Aceite da politica de privacidade e obrigatorio' })
+  consentPrivacyRequired?: boolean;
+
+  @ValidateIf((o) => o.role === UserRole.PACIENTE && o.consentResearchOptional !== undefined)
+  @IsBoolean()
+  consentResearchOptional?: boolean;
+
+  @ValidateIf((o) => o.role === UserRole.PACIENTE && o.consentAiOptional !== undefined)
+  @IsBoolean()
+  consentAiOptional?: boolean;
+
+  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @IsBoolean()
+  @Equals(true, {
+    message:
+      'Aceite LGPD e uso de dados/exames do paciente e obrigatorio para profissionais',
+  })
+  consentProfessionalLgpdRequired?: boolean;
 }

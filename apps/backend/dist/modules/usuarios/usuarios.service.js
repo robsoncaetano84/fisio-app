@@ -87,6 +87,28 @@ let UsuariosService = class UsuariosService {
             conselhoProf,
             role,
             senha: hashedPassword,
+            consentTermsRequired: role === usuario_entity_1.UserRole.PACIENTE
+                ? !!createUsuarioDto.consentTermsRequired
+                : false,
+            consentPrivacyRequired: role === usuario_entity_1.UserRole.PACIENTE
+                ? !!createUsuarioDto.consentPrivacyRequired
+                : false,
+            consentResearchOptional: role === usuario_entity_1.UserRole.PACIENTE
+                ? !!createUsuarioDto.consentResearchOptional
+                : false,
+            consentAiOptional: role === usuario_entity_1.UserRole.PACIENTE
+                ? !!createUsuarioDto.consentAiOptional
+                : false,
+            consentAcceptedAt: ((role === usuario_entity_1.UserRole.PACIENTE &&
+                createUsuarioDto.consentTermsRequired &&
+                createUsuarioDto.consentPrivacyRequired) ||
+                (role !== usuario_entity_1.UserRole.PACIENTE &&
+                    createUsuarioDto.consentProfessionalLgpdRequired))
+                ? new Date()
+                : null,
+            consentProfessionalLgpdRequired: role !== usuario_entity_1.UserRole.PACIENTE
+                ? !!createUsuarioDto.consentProfessionalLgpdRequired
+                : false,
         });
         return this.usuarioRepository.save(usuario);
     }
@@ -138,8 +160,13 @@ let UsuariosService = class UsuariosService {
             dto.conselhoUf !== undefined ||
             dto.registroProf !== undefined ||
             dto.especialidade !== undefined;
+        const hasPatientConsentField = dto.consentResearchOptional !== undefined ||
+            dto.consentAiOptional !== undefined;
         if (usuario.role === usuario_entity_1.UserRole.PACIENTE && hasProfessionalField) {
             throw new common_1.BadRequestException('Paciente nao pode atualizar dados profissionais');
+        }
+        if (usuario.role !== usuario_entity_1.UserRole.PACIENTE && hasPatientConsentField) {
+            throw new common_1.BadRequestException('Apenas pacientes podem atualizar consentimentos opcionais');
         }
         if (usuario.role !== usuario_entity_1.UserRole.PACIENTE && hasProfessionalField) {
             const conselhoSigla = dto.conselhoSigla !== undefined
@@ -167,6 +194,14 @@ let UsuariosService = class UsuariosService {
             const finalSigla = usuario.conselhoSigla?.trim().toUpperCase();
             const finalUf = usuario.conselhoUf?.trim().toUpperCase();
             usuario.conselhoProf = finalSigla && finalUf ? `${finalSigla}-${finalUf}` : "";
+        }
+        if (usuario.role === usuario_entity_1.UserRole.PACIENTE && hasPatientConsentField) {
+            if (dto.consentResearchOptional !== undefined) {
+                usuario.consentResearchOptional = dto.consentResearchOptional;
+            }
+            if (dto.consentAiOptional !== undefined) {
+                usuario.consentAiOptional = dto.consentAiOptional;
+            }
         }
         return this.usuarioRepository.save(usuario);
     }

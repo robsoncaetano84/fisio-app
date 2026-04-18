@@ -61,6 +61,12 @@ export interface LoginResponse {
     conselhoProf: string;
     registroProf: string;
     especialidade: string;
+    consentTermsRequired: boolean;
+    consentPrivacyRequired: boolean;
+    consentResearchOptional: boolean;
+    consentAiOptional: boolean;
+    consentAcceptedAt: Date | null;
+    consentProfessionalLgpdRequired: boolean;
     role: UserRole;
   };
 }
@@ -183,6 +189,13 @@ export class AuthService {
         conselhoProf: usuario.conselhoProf,
         registroProf: usuario.registroProf,
         especialidade: usuario.especialidade,
+        consentTermsRequired: usuario.consentTermsRequired,
+        consentPrivacyRequired: usuario.consentPrivacyRequired,
+        consentResearchOptional: usuario.consentResearchOptional,
+        consentAiOptional: usuario.consentAiOptional,
+        consentAcceptedAt: usuario.consentAcceptedAt,
+        consentProfessionalLgpdRequired:
+          usuario.consentProfessionalLgpdRequired,
         role: usuario.role,
       },
     };
@@ -724,6 +737,10 @@ export class AuthService {
       email: normalizedEmail,
       senha: dto.senha,
       role: UserRole.PACIENTE,
+      consentTermsRequired: dto.consentTermsRequired,
+      consentPrivacyRequired: dto.consentPrivacyRequired,
+      consentResearchOptional: dto.consentResearchOptional,
+      consentAiOptional: dto.consentAiOptional,
     };
 
     const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);

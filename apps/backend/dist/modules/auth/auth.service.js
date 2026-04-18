@@ -125,6 +125,12 @@ let AuthService = AuthService_1 = class AuthService {
                 conselhoProf: usuario.conselhoProf,
                 registroProf: usuario.registroProf,
                 especialidade: usuario.especialidade,
+                consentTermsRequired: usuario.consentTermsRequired,
+                consentPrivacyRequired: usuario.consentPrivacyRequired,
+                consentResearchOptional: usuario.consentResearchOptional,
+                consentAiOptional: usuario.consentAiOptional,
+                consentAcceptedAt: usuario.consentAcceptedAt,
+                consentProfessionalLgpdRequired: usuario.consentProfessionalLgpdRequired,
                 role: usuario.role,
             },
         };
@@ -507,6 +513,10 @@ let AuthService = AuthService_1 = class AuthService {
             email: normalizedEmail,
             senha: dto.senha,
             role: usuario_entity_1.UserRole.PACIENTE,
+            consentTermsRequired: dto.consentTermsRequired,
+            consentPrivacyRequired: dto.consentPrivacyRequired,
+            consentResearchOptional: dto.consentResearchOptional,
+            consentAiOptional: dto.consentAiOptional,
         };
         const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
         await this.vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario);

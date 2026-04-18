@@ -3,4 +3,8 @@ export declare class RegistroPacientePorConviteDto {
     nome: string;
     email: string;
     senha: string;
+    consentTermsRequired: boolean;
+    consentPrivacyRequired: boolean;
+    consentResearchOptional: boolean;
+    consentAiOptional: boolean;
 }

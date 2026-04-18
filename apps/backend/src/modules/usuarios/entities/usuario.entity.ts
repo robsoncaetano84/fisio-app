@@ -44,6 +44,46 @@ export class Usuario extends BaseEntity {
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
+
+  @Column({
+    name: 'consent_terms_required',
+    type: 'boolean',
+    default: false,
+  })
+  consentTermsRequired: boolean;
+
+  @Column({
+    name: 'consent_privacy_required',
+    type: 'boolean',
+    default: false,
+  })
+  consentPrivacyRequired: boolean;
+
+  @Column({
+    name: 'consent_research_optional',
+    type: 'boolean',
+    default: false,
+  })
+  consentResearchOptional: boolean;
+
+  @Column({
+    name: 'consent_ai_optional',
+    type: 'boolean',
+    default: false,
+  })
+  consentAiOptional: boolean;
+
+  @Column({
+    name: 'consent_accepted_at',
+    type: 'timestamp',
+    nullable: true,
+  })
+  consentAcceptedAt: Date | null;
+
+  @Column({
+    name: 'consent_professional_lgpd_required',
+    type: 'boolean',
+    default: false,
+  })
+  consentProfessionalLgpdRequired: boolean;
 }
-
-

@@ -3,6 +3,8 @@
 // R EG IS TR O P AC IE NT E P OR C ON VI TE.D TO
 // ==========================================
 import {
+  IsBoolean,
+  Equals,
   IsEmail,
   IsNotEmpty,
   IsString,
@@ -29,5 +31,19 @@ export class RegistroPacientePorConviteDto {
     message: 'Senha deve conter letra maiuscula, minuscula e numero',
   })
   senha: string;
+
+  @IsBoolean()
+  @Equals(true, { message: 'Aceite dos termos de uso e obrigatorio' })
+  consentTermsRequired: boolean;
+
+  @IsBoolean()
+  @Equals(true, { message: 'Aceite da politica de privacidade e obrigatorio' })
+  consentPrivacyRequired: boolean;
+
+  @IsBoolean()
+  consentResearchOptional: boolean;
+
+  @IsBoolean()
+  consentAiOptional: boolean;
 }
 

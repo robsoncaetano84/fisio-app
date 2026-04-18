@@ -22,6 +22,11 @@ class CreateUsuarioDto {
     registroProf;
     especialidade;
     role;
+    consentTermsRequired;
+    consentPrivacyRequired;
+    consentResearchOptional;
+    consentAiOptional;
+    consentProfessionalLgpdRequired;
 }
 exports.CreateUsuarioDto = CreateUsuarioDto;
 __decorate([
@@ -75,4 +80,34 @@ __decorate([
     (0, class_validator_1.IsEnum)(usuario_entity_1.UserRole),
     __metadata("design:type", String)
 ], CreateUsuarioDto.prototype, "role", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role === usuario_entity_1.UserRole.PACIENTE),
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.Equals)(true, { message: 'Aceite dos termos de uso e obrigatorio' }),
+    __metadata("design:type", Boolean)
+], CreateUsuarioDto.prototype, "consentTermsRequired", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role === usuario_entity_1.UserRole.PACIENTE),
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.Equals)(true, { message: 'Aceite da politica de privacidade e obrigatorio' }),
+    __metadata("design:type", Boolean)
+], CreateUsuarioDto.prototype, "consentPrivacyRequired", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role === usuario_entity_1.UserRole.PACIENTE && o.consentResearchOptional !== undefined),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateUsuarioDto.prototype, "consentResearchOptional", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role === usuario_entity_1.UserRole.PACIENTE && o.consentAiOptional !== undefined),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateUsuarioDto.prototype, "consentAiOptional", void 0);
+__decorate([
+    (0, class_validator_1.ValidateIf)((o) => o.role !== usuario_entity_1.UserRole.PACIENTE),
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.Equals)(true, {
+        message: 'Aceite LGPD e uso de dados/exames do paciente e obrigatorio para profissionais',
+    }),
+    __metadata("design:type", Boolean)
+], CreateUsuarioDto.prototype, "consentProfessionalLgpdRequired", void 0);
 //# sourceMappingURL=create-usuario.dto.js.map

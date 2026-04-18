@@ -17,6 +17,8 @@ class UpdateMeDto {
     conselhoUf;
     registroProf;
     especialidade;
+    consentResearchOptional;
+    consentAiOptional;
 }
 exports.UpdateMeDto = UpdateMeDto;
 __decorate([
@@ -48,4 +50,14 @@ __decorate([
     (0, class_validator_1.MaxLength)(100),
     __metadata("design:type", String)
 ], UpdateMeDto.prototype, "especialidade", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateMeDto.prototype, "consentResearchOptional", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateMeDto.prototype, "consentAiOptional", void 0);
 //# sourceMappingURL=update-me.dto.js.map

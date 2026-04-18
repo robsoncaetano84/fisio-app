@@ -27,6 +27,12 @@ export interface LoginResponse {
         conselhoProf: string;
         registroProf: string;
         especialidade: string;
+        consentTermsRequired: boolean;
+        consentPrivacyRequired: boolean;
+        consentResearchOptional: boolean;
+        consentAiOptional: boolean;
+        consentAcceptedAt: Date | null;
+        consentProfessionalLgpdRequired: boolean;
         role: UserRole;
     };
 }

@@ -1,4 +1,10 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateMeDto {
   @IsOptional()
@@ -24,4 +30,12 @@ export class UpdateMeDto {
   @IsString()
   @MaxLength(100)
   especialidade?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  consentResearchOptional?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  consentAiOptional?: boolean;
 }

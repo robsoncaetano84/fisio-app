@@ -58,6 +58,12 @@ export declare class AuthController {
         conselhoProf: string;
         registroProf: string;
         especialidade: string;
+        consentTermsRequired: boolean;
+        consentPrivacyRequired: boolean;
+        consentResearchOptional: boolean;
+        consentAiOptional: boolean;
+        consentAcceptedAt: Date | null;
+        consentProfessionalLgpdRequired: boolean;
         role: UserRole;
     }>;
     updateMe(usuario: Usuario, dto: UpdateMeDto): Promise<{
@@ -69,6 +75,12 @@ export declare class AuthController {
         conselhoProf: string;
         registroProf: string;
         especialidade: string;
+        consentTermsRequired: boolean;
+        consentPrivacyRequired: boolean;
+        consentResearchOptional: boolean;
+        consentAiOptional: boolean;
+        consentAcceptedAt: Date | null;
+        consentProfessionalLgpdRequired: boolean;
         role: UserRole;
     }>;
 }

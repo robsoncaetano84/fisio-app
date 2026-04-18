@@ -9,4 +9,9 @@ export declare class CreateUsuarioDto {
     registroProf?: string;
     especialidade?: string;
     role?: UserRole;
+    consentTermsRequired?: boolean;
+    consentPrivacyRequired?: boolean;
+    consentResearchOptional?: boolean;
+    consentAiOptional?: boolean;
+    consentProfessionalLgpdRequired?: boolean;
 }

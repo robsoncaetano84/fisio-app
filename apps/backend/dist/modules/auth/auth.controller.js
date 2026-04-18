@@ -85,6 +85,12 @@ let AuthController = class AuthController {
             conselhoProf: usuario.conselhoProf,
             registroProf: usuario.registroProf,
             especialidade: usuario.especialidade,
+            consentTermsRequired: usuario.consentTermsRequired,
+            consentPrivacyRequired: usuario.consentPrivacyRequired,
+            consentResearchOptional: usuario.consentResearchOptional,
+            consentAiOptional: usuario.consentAiOptional,
+            consentAcceptedAt: usuario.consentAcceptedAt,
+            consentProfessionalLgpdRequired: usuario.consentProfessionalLgpdRequired,
             role: usuario.role,
         };
     }
@@ -99,6 +105,12 @@ let AuthController = class AuthController {
             conselhoProf: updated.conselhoProf,
             registroProf: updated.registroProf,
             especialidade: updated.especialidade,
+            consentTermsRequired: updated.consentTermsRequired,
+            consentPrivacyRequired: updated.consentPrivacyRequired,
+            consentResearchOptional: updated.consentResearchOptional,
+            consentAiOptional: updated.consentAiOptional,
+            consentAcceptedAt: updated.consentAcceptedAt,
+            consentProfessionalLgpdRequired: updated.consentProfessionalLgpdRequired,
             role: updated.role,
         };
     }
