@@ -53,7 +53,7 @@ export class PacientesService {
       .createQueryBuilder('p')
       .where('p.ativo = :ativo', { ativo: true })
       .andWhere(
-        `(p.usuario_id = :usuarioId OR EXISTS (
+        `((p.usuario_id = :usuarioId AND p.paciente_usuario_id IS NULL) OR EXISTS (
           SELECT 1
           FROM ${vinculoTable} v
           WHERE v.paciente_id = p.id
@@ -633,7 +633,28 @@ export class PacientesService {
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {
-    const paciente = await this.findOne(id, usuarioId);
+    let paciente: Paciente;
+    try {
+      paciente = await this.findOne(id, usuarioId);
+    } catch (error) {
+      // Idempotencia: se nao estiver mais no escopo (ja removido/desvinculado),
+      // nao quebrar o fluxo de exclusao no cliente.
+      if (error instanceof NotFoundException) {
+        return;
+      }
+      throw error;
+    }
+
+    if (paciente.pacienteUsuarioId) {
+      // Paciente com conta no app: remove da carteira do profissional
+      // mantendo o cadastro ativo para o proprio paciente.
+      paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+      await this.pacienteRepository.save(paciente);
+      await this.closeVinculoAtivoByPaciente(paciente.id);
+      return;
+    }
+
+    // Paciente sem conta vinculada: inativacao do cadastro do profissional.
     paciente.ativo = false;
     await this.pacienteRepository.save(paciente);
     await this.closeVinculoAtivoByPaciente(paciente.id);
@@ -860,7 +881,6 @@ export class PacientesService {
     return exame;
   }
 }
-
 
 
 

@@ -42,7 +42,7 @@ let PacientesService = class PacientesService {
         return this.pacienteRepository
             .createQueryBuilder('p')
             .where('p.ativo = :ativo', { ativo: true })
-            .andWhere(`(p.usuario_id = :usuarioId OR EXISTS (
+            .andWhere(`((p.usuario_id = :usuarioId AND p.paciente_usuario_id IS NULL) OR EXISTS (
           SELECT 1
           FROM ${vinculoTable} v
           WHERE v.paciente_id = p.id
@@ -486,7 +486,22 @@ let PacientesService = class PacientesService {
         });
     }
     async remove(id, usuarioId) {
-        const paciente = await this.findOne(id, usuarioId);
+        let paciente;
+        try {
+            paciente = await this.findOne(id, usuarioId);
+        }
+        catch (error) {
+            if (error instanceof common_1.NotFoundException) {
+                return;
+            }
+            throw error;
+        }
+        if (paciente.pacienteUsuarioId) {
+            paciente.vinculoStatus = paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO;
+            await this.pacienteRepository.save(paciente);
+            await this.closeVinculoAtivoByPaciente(paciente.id);
+            return;
+        }
         paciente.ativo = false;
         await this.pacienteRepository.save(paciente);
         await this.closeVinculoAtivoByPaciente(paciente.id);
