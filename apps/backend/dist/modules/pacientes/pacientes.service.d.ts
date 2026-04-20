@@ -27,6 +27,8 @@ export declare class PacientesService {
     private upsertVinculoAtivo;
     private closeVinculoAtivoByPaciente;
     private validatePacienteUsuarioId;
+    private generateUniquePacienteCpf;
+    findOrCreateSelfPacienteForUsuario(usuarioId: string): Promise<Paciente>;
     create(createPacienteDto: CreatePacienteDto, usuarioId: string): Promise<Paciente>;
     findAll(usuarioId: string): Promise<PacienteListItemDto[]>;
     findPaged(usuarioId: string, page: number, limit: number): Promise<PacientePagedResponseDto>;

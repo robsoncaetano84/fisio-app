@@ -62,6 +62,7 @@ const crm_task_entity_1 = require("./modules/crm/entities/crm-task.entity");
 const crm_interaction_entity_1 = require("./modules/crm/entities/crm-interaction.entity");
 const paciente_exame_entity_1 = require("./modules/pacientes/entities/paciente-exame.entity");
 const profissional_paciente_vinculo_entity_1 = require("./modules/pacientes/entities/profissional-paciente-vinculo.entity");
+const clinical_flow_event_entity_1 = require("./modules/metrics/entities/clinical-flow-event.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
 const usuarios_module_1 = require("./modules/usuarios/usuarios.module");
 const pacientes_module_1 = require("./modules/pacientes/pacientes.module");
@@ -72,6 +73,7 @@ const atividades_module_1 = require("./modules/atividades/atividades.module");
 const notificacoes_module_1 = require("./modules/notificacoes/notificacoes.module");
 const crm_module_1 = require("./modules/crm/crm.module");
 const health_module_1 = require("./modules/health/health.module");
+const metrics_module_1 = require("./modules/metrics/metrics.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -144,6 +146,7 @@ exports.AppModule = AppModule = __decorate([
                             crm_task_entity_1.CrmTask,
                             crm_interaction_entity_1.CrmInteraction, paciente_exame_entity_1.PacienteExame,
                             profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo,
+                            clinical_flow_event_entity_1.ClinicalFlowEvent,
                         ],
                         migrations: [__dirname + '/migrations/*{.ts,.js}'],
                         synchronize: configService.get('NODE_ENV') === 'development',
@@ -175,6 +178,7 @@ exports.AppModule = AppModule = __decorate([
             notificacoes_module_1.NotificacoesModule,
             crm_module_1.CrmModule,
             health_module_1.HealthModule,
+            metrics_module_1.MetricsModule,
         ],
         providers: [
             {

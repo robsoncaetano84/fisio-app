@@ -7,6 +7,7 @@ import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 type LaudoReferenceItem = {
     id: string;
@@ -30,9 +31,12 @@ export declare class LaudosService {
     private readonly anamneseRepository;
     private readonly evolucaoRepository;
     private readonly laudoAiGenerationRepository;
+    private readonly pacienteExameRepository;
     private readonly pacientesService;
     private readonly usuariosService;
-    constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacientesService: PacientesService, usuariosService: UsuariosService);
+    private isTruthyEnv;
+    private shouldUseExamAi;
+    constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacienteExameRepository: Repository<PacienteExame>, pacientesService: PacientesService, usuariosService: UsuariosService);
     getSuggestedReferences(pacienteId: string, usuarioId: string): Promise<LaudoReferenceSuggestionResponse>;
     create(createLaudoDto: CreateLaudoDto, usuarioId: string): Promise<Laudo>;
     findByPaciente(pacienteId: string, usuarioId: string, autoGenerate?: boolean): Promise<Laudo | null>;
@@ -48,13 +52,19 @@ export declare class LaudosService {
     generateAndSaveByPaciente(pacienteId: string, usuarioId: string): Promise<Laudo>;
     generateSuggestionPreview(pacienteId: string, usuarioId: string): Promise<{
         source: "ai" | "rules";
+        examesConsiderados: number;
+        examesComLeituraIa: number;
     } & Partial<CreateLaudoDto>>;
     private calculateAge;
     private extractJsonObject;
+    private isAiReadableExamMime;
+    private interpretExamWithAI;
+    private buildExamInsights;
     private generateSuggestionWithAI;
     private getUtcDayString;
     private acquireDailyAiGenerationSlot;
     private buildAiInput;
+    private buildExamCorrelationSuffix;
     private readonly structuredExamePrefix;
     private formatExameFisicoForDisplay;
     private parseStructuredExame;

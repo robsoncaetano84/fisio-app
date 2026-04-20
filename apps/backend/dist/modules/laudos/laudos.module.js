@@ -17,13 +17,20 @@ const pacientes_module_1 = require("../pacientes/pacientes.module");
 const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const usuarios_module_1 = require("../usuarios/usuarios.module");
+const paciente_exame_entity_1 = require("../pacientes/entities/paciente-exame.entity");
 let LaudosModule = class LaudosModule {
 };
 exports.LaudosModule = LaudosModule;
 exports.LaudosModule = LaudosModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([laudo_entity_1.Laudo, laudo_ai_generation_entity_1.LaudoAiGeneration, anamnese_entity_1.Anamnese, evolucao_entity_1.Evolucao]),
+            typeorm_1.TypeOrmModule.forFeature([
+                laudo_entity_1.Laudo,
+                laudo_ai_generation_entity_1.LaudoAiGeneration,
+                anamnese_entity_1.Anamnese,
+                evolucao_entity_1.Evolucao,
+                paciente_exame_entity_1.PacienteExame,
+            ]),
             pacientes_module_1.PacientesModule,
             usuarios_module_1.UsuariosModule,
         ],

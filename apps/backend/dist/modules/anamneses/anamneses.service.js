@@ -31,7 +31,7 @@ let AnamnesesService = class AnamnesesService {
         return this.anamneseRepository.save(anamnese);
     }
     async createForPacienteUsuario(createAnamneseDto, usuarioId) {
-        const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
+        const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
         const anamnese = this.anamneseRepository.create({
             ...createAnamneseDto,
             pacienteId: paciente.id,
@@ -46,7 +46,7 @@ let AnamnesesService = class AnamnesesService {
         });
     }
     async findLatestByPacienteUsuario(usuarioId) {
-        const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
+        const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
         return this.anamneseRepository.findOne({
             where: { pacienteId: paciente.id },
             order: { createdAt: 'DESC' },
@@ -66,7 +66,7 @@ let AnamnesesService = class AnamnesesService {
         return anamnese;
     }
     async findOneByPacienteUsuario(id, usuarioId) {
-        const paciente = await this.pacientesService.findLinkedPacienteByUsuarioId(usuarioId);
+        const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
         const anamnese = await this.anamneseRepository.findOne({
             where: { id, pacienteId: paciente.id },
         });

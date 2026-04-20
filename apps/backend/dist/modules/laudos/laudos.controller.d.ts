@@ -16,6 +16,8 @@ export declare class LaudosController {
     generateByPaciente(generateLaudoDto: GenerateLaudoDto, usuario: Usuario): Promise<import("./entities/laudo.entity").Laudo>;
     suggestByPaciente(generateLaudoDto: GenerateLaudoDto, usuario: Usuario): Promise<{
         source: "ai" | "rules";
+        examesConsiderados: number;
+        examesComLeituraIa: number;
     } & Partial<CreateLaudoDto>>;
     getSuggestedReferences(pacienteId: string, usuario: Usuario): Promise<{
         profile: "GERAL" | "LOMBAR" | "CERVICAL" | "JOELHO";

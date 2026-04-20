@@ -218,7 +218,10 @@ let PacientesService = class PacientesService {
             where: { pacienteUsuarioId },
         });
         if (existingLink && existingLink.id !== ignorePacienteId) {
-            throw new common_1.ConflictException('Este usuario paciente ja esta vinculado');
+            const isPacienteAutonomo = existingLink.ativo && existingLink.usuarioId === pacienteUsuarioId;
+            if (!isPacienteAutonomo) {
+                throw new common_1.ConflictException('Este usuario paciente ja esta vinculado');
+            }
         }
         const existingActiveVinculo = await this.vinculoRepository.findOne({
             where: {
@@ -231,6 +234,56 @@ let PacientesService = class PacientesService {
         }
         return pacienteUsuarioId;
     }
+    async generateUniquePacienteCpf() {
+        for (let i = 0; i < 25; i++) {
+            const base = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+            const cpf = base.slice(-11).padStart(11, '0');
+            const exists = await this.pacienteRepository.findOne({ where: { cpf } });
+            if (!exists)
+                return cpf;
+        }
+        throw new common_1.BadRequestException('Nao foi possivel gerar CPF temporario para paciente');
+    }
+    async findOrCreateSelfPacienteForUsuario(usuarioId) {
+        const existente = await this.pacienteRepository.findOne({
+            where: { pacienteUsuarioId: usuarioId, ativo: true },
+            order: { createdAt: 'DESC' },
+        });
+        if (existente) {
+            return existente;
+        }
+        const usuario = await this.usuarioRepository.findOne({
+            where: { id: usuarioId, ativo: true },
+        });
+        if (!usuario || usuario.role !== usuario_entity_1.UserRole.PACIENTE) {
+            throw new common_1.NotFoundException('Usuario paciente nao encontrado');
+        }
+        const cpfTemporario = await this.generateUniquePacienteCpf();
+        const paciente = this.pacienteRepository.create({
+            nomeCompleto: usuario.nome || 'Paciente',
+            cpf: cpfTemporario,
+            dataNascimento: new Date('1900-01-01'),
+            sexo: paciente_entity_1.Sexo.OUTRO,
+            profissao: '',
+            enderecoRua: '-',
+            enderecoNumero: '-',
+            enderecoBairro: '-',
+            enderecoCep: '00000000',
+            enderecoCidade: '-',
+            enderecoUf: 'NA',
+            contatoWhatsapp: '00000000000',
+            contatoEmail: usuario.email,
+            ativo: true,
+            usuarioId: usuario.id,
+            pacienteUsuarioId: usuario.id,
+            anamneseLiberadaPaciente: true,
+            cadastroOrigem: paciente_entity_1.PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+            vinculoStatus: paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO,
+            conviteEnviadoEm: null,
+            conviteAceitoEm: null,
+        });
+        return this.pacienteRepository.save(paciente);
+    }
     async create(createPacienteDto, usuarioId) {
         const existingPaciente = await this.pacienteRepository.findOne({
             where: { cpf: createPacienteDto.cpf, usuarioId },
@@ -240,6 +293,26 @@ let PacientesService = class PacientesService {
         }
         const pacienteUsuarioId = await this.validatePacienteUsuarioId(createPacienteDto.pacienteUsuarioId);
         const cadastroOrigem = createPacienteDto.cadastroOrigem || paciente_entity_1.PacienteCadastroOrigem.CADASTRO_ASSISTIDO;
+        if (pacienteUsuarioId) {
+            const pacienteAutonomo = await this.pacienteRepository.findOne({
+                where: { pacienteUsuarioId, ativo: true },
+            });
+            const podeAdotarCadastroAutonomo = !!pacienteAutonomo && pacienteAutonomo.usuarioId === pacienteUsuarioId;
+            if (podeAdotarCadastroAutonomo && pacienteAutonomo) {
+                Object.assign(pacienteAutonomo, {
+                    ...createPacienteDto,
+                    cadastroOrigem,
+                    vinculoStatus: this.resolveInitialVinculoStatus(pacienteUsuarioId, cadastroOrigem),
+                    conviteEnviadoEm: null,
+                    conviteAceitoEm: new Date(),
+                    usuarioId,
+                    pacienteUsuarioId,
+                });
+                const savedAutonomo = await this.pacienteRepository.save(pacienteAutonomo);
+                await this.upsertVinculoAtivo(savedAutonomo, pacienteUsuarioId);
+                return savedAutonomo;
+            }
+        }
         const paciente = this.pacienteRepository.create({
             ...createPacienteDto,
             cadastroOrigem,
@@ -435,14 +508,22 @@ let PacientesService = class PacientesService {
             vinculoStatusAtivo: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
         })
             .select('p.id', 'pacienteId')
+            .addSelect('p.created_at', 'createdAt')
             .addSelect('MAX(e.data)', 'lastEvolucaoAt')
             .groupBy('p.id')
+            .addGroupBy('p.created_at')
             .getRawMany();
         const now = Date.now();
         const result = {};
         for (const row of rows) {
             if (!row.lastEvolucaoAt) {
-                result[row.pacienteId] = null;
+                const createdAt = row.createdAt ? new Date(row.createdAt).getTime() : NaN;
+                if (Number.isNaN(createdAt)) {
+                    result[row.pacienteId] = null;
+                    continue;
+                }
+                const daysSinceCreation = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
+                result[row.pacienteId] = daysSinceCreation > 7 ? null : 0;
                 continue;
             }
             const latest = new Date(row.lastEvolucaoAt).getTime();
