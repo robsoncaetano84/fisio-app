@@ -2,3 +2,5 @@ apps/backend/.env
 apps/mobile/.env
 node_modules
 *.tsbuildinfo
+apps/backend/backend-dev.log
+apps/backend/uploads/
