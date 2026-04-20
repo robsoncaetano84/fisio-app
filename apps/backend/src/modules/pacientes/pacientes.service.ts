@@ -788,6 +788,63 @@ export class PacientesService {
     };
   }
 
+  async updateMyPacienteProfile(
+    usuario: Usuario,
+    updatePacienteDto: UpdatePacienteDto,
+  ): Promise<Paciente> {
+    if (usuario.role !== UserRole.PACIENTE) {
+      throw new ForbiddenException('Acesso permitido somente para pacientes');
+    }
+
+    const pacienteExistente = await this.findPacienteByUsuarioId(usuario.id);
+    const paciente =
+      pacienteExistente || (await this.findOrCreateSelfPacienteForUsuario(usuario.id));
+
+    if (updatePacienteDto.cpf && updatePacienteDto.cpf !== paciente.cpf) {
+      const existingPaciente = await this.pacienteRepository.findOne({
+        where: {
+          cpf: updatePacienteDto.cpf,
+          usuarioId: paciente.usuarioId,
+        },
+      });
+
+      if (existingPaciente && existingPaciente.id !== paciente.id) {
+        throw new ConflictException('CPF ja cadastrado');
+      }
+    }
+
+    const allowedFields: (keyof UpdatePacienteDto)[] = [
+      'nomeCompleto',
+      'cpf',
+      'rg',
+      'dataNascimento',
+      'sexo',
+      'estadoCivil',
+      'profissao',
+      'enderecoRua',
+      'enderecoNumero',
+      'enderecoComplemento',
+      'enderecoBairro',
+      'enderecoCep',
+      'enderecoCidade',
+      'enderecoUf',
+      'contatoWhatsapp',
+      'contatoTelefone',
+      'contatoEmail',
+    ];
+
+    const safePatch: Partial<UpdatePacienteDto> = {};
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(updatePacienteDto, field)) {
+        (safePatch as Record<string, unknown>)[field] = (updatePacienteDto as Record<string, unknown>)[field];
+      }
+    }
+
+    Object.assign(paciente, safePatch);
+    const saved = await this.pacienteRepository.save(paciente);
+    return this.applyDisplayNameFallback(saved);
+  }
+
   private async resolveExameScope(
     pacienteId: string,
     actor: Usuario,
@@ -881,8 +938,6 @@ export class PacientesService {
     return exame;
   }
 }
-
-
 
 
 

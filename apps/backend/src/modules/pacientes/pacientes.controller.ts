@@ -169,6 +169,16 @@ export class PacientesController {
     return this.pacientesService.getMyPacienteProfile(usuario);
   }
 
+  @Patch('me')
+  @Throttle({ default: { ttl: 60, limit: 30 } })
+  @Roles(UserRole.PACIENTE)
+  updateMyPacienteProfile(
+    @CurrentUser() usuario: Usuario,
+    @Body() updatePacienteDto: UpdatePacienteDto,
+  ) {
+    return this.pacientesService.updateMyPacienteProfile(usuario, updatePacienteDto);
+  }
+
   @Post('me/desvincular-profissional')
   @Throttle({ default: { ttl: 60, limit: 10 } })
   @Roles(UserRole.PACIENTE)
@@ -336,7 +346,6 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
-
 
 
 
