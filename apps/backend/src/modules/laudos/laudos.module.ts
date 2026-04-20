@@ -12,10 +12,17 @@ import { PacientesModule } from '../pacientes/pacientes.module';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { UsuariosModule } from '../usuarios/usuarios.module';
+import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Laudo, LaudoAiGeneration, Anamnese, Evolucao]),
+    TypeOrmModule.forFeature([
+      Laudo,
+      LaudoAiGeneration,
+      Anamnese,
+      Evolucao,
+      PacienteExame,
+    ]),
     PacientesModule,
     UsuariosModule,
   ],
@@ -24,4 +31,3 @@ import { UsuariosModule } from '../usuarios/usuarios.module';
   exports: [LaudosService],
 })
 export class LaudosModule {}
-

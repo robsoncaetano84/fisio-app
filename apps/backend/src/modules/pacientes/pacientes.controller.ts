@@ -47,7 +47,6 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/heic',
   'image/heif',
   'image/webp',
-  'application/octet-stream',
 ]);
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
@@ -67,6 +66,36 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   '.heic': 'image/heic',
   '.heif': 'image/heif',
 };
+
+function hasPrefix(buffer: Buffer, bytes: number[]): boolean {
+  if (!buffer || buffer.length < bytes.length) return false;
+  return bytes.every((value, index) => buffer[index] === value);
+}
+
+function hasAsciiAt(buffer: Buffer, offset: number, value: string): boolean {
+  if (!buffer || buffer.length < offset + value.length) return false;
+  return buffer.subarray(offset, offset + value.length).toString('ascii') === value;
+}
+
+function isValidBySignature(extension: string, buffer: Buffer): boolean {
+  switch (extension) {
+    case '.pdf':
+      return hasAsciiAt(buffer, 0, '%PDF-');
+    case '.png':
+      return hasPrefix(buffer, [0x89, 0x50, 0x4e, 0x47]);
+    case '.jpg':
+    case '.jpeg':
+      return hasPrefix(buffer, [0xff, 0xd8, 0xff]);
+    case '.webp':
+      return hasAsciiAt(buffer, 0, 'RIFF') && hasAsciiAt(buffer, 8, 'WEBP');
+    case '.heic':
+      return hasAsciiAt(buffer, 4, 'ftypheic') || hasAsciiAt(buffer, 4, 'ftypmif1');
+    case '.heif':
+      return hasAsciiAt(buffer, 4, 'ftypheif') || hasAsciiAt(buffer, 4, 'ftypmif1');
+    default:
+      return false;
+  }
+}
 
 @Controller('pacientes')
 @UseGuards(JwtAuthGuard)
@@ -168,7 +197,10 @@ export class PacientesController {
       fileFilter: (_req, file, cb) => {
         const mimeType = String(file.mimetype || '').toLowerCase();
         const extension = extname(file.originalname || '').toLowerCase();
-        const isMimeAllowed = ALLOWED_MIME_TYPES.has(mimeType);
+        const expectedMime = MIME_BY_EXTENSION[extension];
+        const isMimeAllowed =
+          ALLOWED_MIME_TYPES.has(mimeType) &&
+          (!expectedMime || mimeType === expectedMime);
         const isExtensionAllowed = ALLOWED_EXTENSIONS.has(extension);
         if (!isMimeAllowed && !isExtensionAllowed) {
           return cb(new BadRequestException('Tipo de arquivo nao suportado') as unknown as Error, false);
@@ -193,9 +225,18 @@ export class PacientesController {
     );
 
     const detectedExtension = extname(file.originalname || '').toLowerCase();
-    const safeMimeType = ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
-      ? file.mimetype
-      : (MIME_BY_EXTENSION[detectedExtension] || 'application/octet-stream');
+    if (!ALLOWED_EXTENSIONS.has(detectedExtension)) {
+      throw new BadRequestException('Extensao de arquivo nao suportada');
+    }
+    if (!isValidBySignature(detectedExtension, file.buffer)) {
+      throw new BadRequestException('Assinatura de arquivo invalida para a extensao informada');
+    }
+
+    const safeMimeType =
+      MIME_BY_EXTENSION[detectedExtension] ||
+      (ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
+        ? file.mimetype
+        : 'application/octet-stream');
 
     const objectKey = buildExameObjectKey(ownerUsuarioId, id, file.originalname || 'arquivo');
     const persisted = await persistExameFile({
@@ -295,7 +336,6 @@ export class PacientesController {
     return this.pacientesService.remove(id, usuario.id);
   }
 }
-
 
 
 

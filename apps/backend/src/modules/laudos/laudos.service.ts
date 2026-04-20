@@ -20,6 +20,8 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
 import { sanitizePartialUpdate } from './laudo-patch.util';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
+import { readExameFile } from '../pacientes/exame-storage';
 
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 
@@ -45,6 +47,17 @@ type LaudoReferenceSuggestionResponse = {
 
 @Injectable()
 export class LaudosService {
+  private isTruthyEnv(value?: string): boolean {
+    const normalized = String(value || '').trim().toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(normalized);
+  }
+
+  private shouldUseExamAi(): boolean {
+    const raw = process.env.OPENAI_EXAM_AI_ENABLED;
+    if (raw == null || String(raw).trim() === '') return true;
+    return this.isTruthyEnv(raw);
+  }
+
   constructor(
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
@@ -54,6 +67,8 @@ export class LaudosService {
     private readonly evolucaoRepository: Repository<Evolucao>,
     @InjectRepository(LaudoAiGeneration)
     private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
+    @InjectRepository(PacienteExame)
+    private readonly pacienteExameRepository: Repository<PacienteExame>,
     private readonly pacientesService: PacientesService,
     private readonly usuariosService: UsuariosService,
   ) {}
@@ -405,7 +420,8 @@ export class LaudosService {
     pacienteId: string,
     usuarioId: string,
   ): Promise<Laudo> {
-    const { paciente, anamneses, evolucoes } = await this.buildAiInput(pacienteId, usuarioId);
+    const { paciente, anamneses, evolucoes, exames } =
+      await this.buildAiInput(pacienteId, usuarioId);
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId },
       order: { createdAt: 'DESC' },
@@ -439,6 +455,14 @@ export class LaudosService {
             planoSessao: e.plano ?? '',
             observacoes: e.observacoes ?? '',
           })),
+          exames: exames.map((exame) => ({
+            nomeOriginal: exame.nomeOriginal,
+            tipoExame: exame.tipoExame ?? '',
+            dataExame: exame.dataExame ?? null,
+            mimeType: exame.mimeType,
+            observacao: exame.observacao ?? '',
+            uploadedAt: exame.uploadedAt,
+          })),
         })
       : {};
 
@@ -446,17 +470,17 @@ export class LaudosService {
       pacienteId,
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ??
-        'Diagnostico funcional inicial a confirmar em consulta.',
+        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}`,
       objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo,
       objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo,
       frequenciaSemanal: aiSuggestion.frequenciaSemanal,
       duracaoSemanas: aiSuggestion.duracaoSemanas,
       condutas:
         aiSuggestion.condutas ??
-        'Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.',
+        `Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.${this.buildExamCorrelationSuffix(exames.length)}`,
       planoTratamentoIA:
         aiSuggestion.planoTratamentoIA ??
-        'Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.',
+        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.${this.buildExamCorrelationSuffix(exames.length)}`,
       criteriosAlta: aiSuggestion.criteriosAlta,
     };
 
@@ -472,8 +496,14 @@ export class LaudosService {
   async generateSuggestionPreview(
     pacienteId: string,
     usuarioId: string,
-  ): Promise<{ source: "ai" | "rules" } & Partial<CreateLaudoDto>> {
-    const { paciente, anamneses, evolucoes } = await this.buildAiInput(
+  ): Promise<
+    {
+      source: "ai" | "rules";
+      examesConsiderados: number;
+      examesComLeituraIa: number;
+    } & Partial<CreateLaudoDto>
+  > {
+    const { paciente, anamneses, evolucoes, exames } = await this.buildAiInput(
       pacienteId,
       usuarioId,
     );
@@ -501,15 +531,27 @@ export class LaudosService {
         planoSessao: e.plano ?? "",
         observacoes: e.observacoes ?? "",
       })),
+      exames: exames.map((exame) => ({
+        nomeOriginal: exame.nomeOriginal,
+        tipoExame: exame.tipoExame ?? "",
+        dataExame: exame.dataExame ?? null,
+        mimeType: exame.mimeType,
+        observacao: exame.observacao ?? "",
+        uploadedAt: exame.uploadedAt,
+      })),
     });
 
     const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
+    const examesConsiderados = exames.length;
+    const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
 
     return {
       source,
+      examesConsiderados,
+      examesComLeituraIa,
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ??
-        "Diagnostico funcional inicial a confirmar em consulta.",
+        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}`,
       objetivosCurtoPrazo:
         aiSuggestion.objetivosCurtoPrazo ??
         "Reduzir dor percebida e melhorar controle motor inicial.",
@@ -520,10 +562,10 @@ export class LaudosService {
       duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
       condutas:
         aiSuggestion.condutas ??
-        "Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.",
+        `Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.${this.buildExamCorrelationSuffix(exames.length)}`,
       planoTratamentoIA:
         aiSuggestion.planoTratamentoIA ??
-        "Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.",
+        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}`,
       criteriosAlta:
         aiSuggestion.criteriosAlta ??
         "Dor controlada, funcao satisfatoria e independencia para autocuidado.",
@@ -553,6 +595,199 @@ export class LaudosService {
     }
   }
 
+  private isAiReadableExamMime(mimeType: string): boolean {
+    return mimeType.startsWith('image/') || mimeType === 'application/pdf';
+  }
+
+  private async interpretExamWithAI(input: {
+    nomeOriginal: string;
+    mimeType: string;
+    observacao: string;
+    fileBuffer: Buffer;
+  }): Promise<string | null> {
+    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
+    if (!apiKey) return null;
+    if (!this.shouldUseExamAi()) return null;
+    if (!this.isAiReadableExamMime(input.mimeType)) return null;
+
+    const model = (
+      process.env.OPENAI_EXAM_MODEL ||
+      process.env.OPENAI_LAUDO_MODEL ||
+      process.env.OPENAI_MODEL ||
+      'gpt-4.1-mini'
+    ).trim();
+
+    const systemPrompt =
+      'Voce e um assistente clinico para fisioterapia. Leia exames de imagem com prudencia. Nao invente achados.';
+
+    const userPrompt = `Analise este exame (imagem ou PDF) e retorne SOMENTE JSON com:
+achadosPrincipais (array de strings),
+impressaoClinica (string curta),
+sinaisAlarme (array de strings),
+observacoesLimitacao (string curta).
+
+Contexto adicional informado pelo profissional:
+${input.observacao || 'Sem observacao adicional.'}
+`;
+
+    try {
+      const base64 = input.fileBuffer.toString('base64');
+      const dataUrl = `data:${input.mimeType};base64,${base64}`;
+      const content: Array<Record<string, unknown>> = [
+        { type: 'input_text', text: userPrompt },
+      ];
+
+      if (input.mimeType.startsWith('image/')) {
+        content.push({ type: 'input_image', image_url: dataUrl });
+      } else if (input.mimeType === 'application/pdf') {
+        content.push({
+          type: 'input_file',
+          filename: input.nomeOriginal || 'exame.pdf',
+          file_data: dataUrl,
+        });
+      } else {
+        return null;
+      }
+
+      const controller = new AbortController();
+      const timeoutMs = 8000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            { role: 'system', content: systemPrompt },
+            {
+              role: 'user',
+              content,
+            },
+          ],
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+
+      if (!response.ok) return null;
+
+      const data = (await response.json()) as {
+        output_text?: string;
+        output?: Array<{
+          content?: Array<{ text?: string }>;
+        }>;
+      };
+
+      const outputText =
+        data.output_text ||
+        data.output
+          ?.flatMap((item) => item.content || [])
+          .map((c) => c.text || '')
+          .join('\n') ||
+        '';
+
+      const parsed = this.extractJsonObject(outputText);
+      if (!parsed) return null;
+
+      const achados = Array.isArray(parsed.achadosPrincipais)
+        ? parsed.achadosPrincipais
+            .filter((v) => typeof v === 'string')
+            .slice(0, 5)
+            .map((v) => `- ${v}`)
+            .join('\n')
+        : '';
+      const impressao =
+        typeof parsed.impressaoClinica === 'string'
+          ? parsed.impressaoClinica
+          : '';
+      const sinaisAlarme = Array.isArray(parsed.sinaisAlarme)
+        ? parsed.sinaisAlarme
+            .filter((v) => typeof v === 'string')
+            .slice(0, 4)
+            .map((v) => `- ${v}`)
+            .join('\n')
+        : '';
+      const limitacao =
+        typeof parsed.observacoesLimitacao === 'string'
+          ? parsed.observacoesLimitacao
+          : '';
+
+      return [
+        `Exame: ${input.nomeOriginal}`,
+        achados ? `Achados principais:\n${achados}` : '',
+        impressao ? `Impressao clinica: ${impressao}` : '',
+        sinaisAlarme ? `Sinais de alerta:\n${sinaisAlarme}` : '',
+        limitacao ? `Limitacoes: ${limitacao}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    } catch {
+      return null;
+    }
+  }
+
+  private async buildExamInsights(
+    exames: PacienteExame[],
+  ): Promise<
+    Array<{
+      nomeOriginal: string;
+      tipoExame: string;
+      dataExame: Date | null;
+      mimeType: string;
+      observacao: string;
+      uploadedAt: Date;
+      aiInterpretacao?: string;
+    }>
+  > {
+    const recent = exames.slice(0, 3);
+    const result: Array<{
+      nomeOriginal: string;
+      tipoExame: string;
+      dataExame: Date | null;
+      mimeType: string;
+      observacao: string;
+      uploadedAt: Date;
+      aiInterpretacao?: string;
+    }> = [];
+
+    for (const exame of recent) {
+      const base = {
+        nomeOriginal: exame.nomeOriginal,
+        tipoExame: exame.tipoExame ?? '',
+        dataExame: exame.dataExame ?? null,
+        mimeType: exame.mimeType,
+        observacao: exame.observacao ?? '',
+        uploadedAt: exame.createdAt,
+      };
+
+      if (!this.isAiReadableExamMime(exame.mimeType)) {
+        result.push(base);
+        continue;
+      }
+
+      try {
+        const fileBuffer = await readExameFile(exame.caminhoArquivo);
+        const aiInterpretacao = await this.interpretExamWithAI({
+          nomeOriginal: exame.nomeOriginal,
+          mimeType: exame.mimeType,
+          observacao: exame.observacao ?? '',
+          fileBuffer,
+        });
+        result.push({
+          ...base,
+          ...(aiInterpretacao ? { aiInterpretacao } : {}),
+        });
+      } catch {
+        result.push(base);
+      }
+    }
+
+    return result;
+  }
+
   private async generateSuggestionWithAI(input: {
     paciente: {
       nomeCompleto: string;
@@ -575,6 +810,15 @@ export class LaudosService {
       planoSessao: string;
       observacoes: string;
     }>;
+    exames: Array<{
+      nomeOriginal: string;
+      tipoExame: string;
+      dataExame: Date | null;
+      mimeType: string;
+      observacao: string;
+      uploadedAt: Date;
+      aiInterpretacao?: string;
+    }>;
   }): Promise<Partial<CreateLaudoDto>> {
     const apiKey = (process.env.OPENAI_API_KEY || '').trim();
     if (!apiKey) {
@@ -594,6 +838,12 @@ duracaoSemanas (number 1-52),
 condutas (string),
 planoTratamentoIA (string com plano por fases/semanas),
 criteriosAlta (string).
+
+Regras clinicas:
+- Considere os exames anexados (tipoExame, observacao, dataExame, mimeType e aiInterpretacao quando houver) para orientar diagnostico funcional, condutas e plano.
+- Nao invente achados de imagem nao descritos no contexto.
+- Se houver informacao insuficiente dos exames, explicite a limitacao e mantenha conduta prudente.
+- Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
 
 Contexto do paciente:
 ${JSON.stringify(input, null, 2)}
@@ -716,7 +966,18 @@ ${JSON.stringify(input, null, 2)}
       where: { pacienteId },
       order: { createdAt: 'DESC' },
     });
-    return { paciente, anamneses, evolucoes };
+    const exames = await this.pacienteExameRepository.find({
+      where: { pacienteId, usuarioId },
+      order: { createdAt: 'DESC' },
+      take: 12,
+    });
+    const examesInterpretados = await this.buildExamInsights(exames);
+    return { paciente, anamneses, evolucoes, exames: examesInterpretados };
+  }
+
+  private buildExamCorrelationSuffix(examesCount: number): string {
+    if (examesCount <= 0) return '';
+    return ` Correlacionar com ${examesCount} exame(s) anexado(s).`;
   }
   private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
 
@@ -976,16 +1237,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
