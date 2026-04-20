@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
+import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
 import { CreateClinicalFlowEventDto } from './dto/create-clinical-flow-event.dto';
+import { CreatePatientCheckClickDto } from './dto/create-patient-check-click.dto';
 import {
   ClinicalFlowEvent,
   ClinicalFlowStage,
 } from './entities/clinical-flow-event.entity';
+import { PatientCheckClickEvent } from './entities/patient-check-click-event.entity';
 
 const STAGES: ClinicalFlowStage[] = ['ANAMNESE', 'EXAME_FISICO', 'EVOLUCAO'];
 
@@ -14,6 +17,10 @@ export class MetricsService {
   constructor(
     @InjectRepository(ClinicalFlowEvent)
     private readonly clinicalFlowRepo: Repository<ClinicalFlowEvent>,
+    @InjectRepository(PatientCheckClickEvent)
+    private readonly patientCheckClickRepo: Repository<PatientCheckClickEvent>,
+    @InjectRepository(AtividadeCheckin)
+    private readonly atividadeCheckinRepo: Repository<AtividadeCheckin>,
   ) {}
 
   async trackClinicalFlowEvent(
@@ -124,5 +131,50 @@ export class MetricsService {
       trackedStages: STAGES,
     };
   }
-}
 
+  async trackPatientCheckClick(
+    professionalId: string,
+    dto: CreatePatientCheckClickDto,
+  ): Promise<{ ok: true }> {
+    const source = dto.source?.trim().slice(0, 40) || null;
+    const created = this.patientCheckClickRepo.create({
+      professionalId,
+      patientId: dto.patientId || null,
+      source,
+    });
+    await this.patientCheckClickRepo.save(created);
+    return { ok: true };
+  }
+
+  async getPatientCheckEngagementSummary(professionalId: string, windowDays = 7) {
+    const days = Number.isFinite(windowDays)
+      ? Math.max(1, Math.floor(windowDays))
+      : 7;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const [checkClicks, checkinsSubmitted] = await Promise.all([
+      this.patientCheckClickRepo.count({
+        where: {
+          professionalId,
+          occurredAt: MoreThanOrEqual(since),
+        },
+      }),
+      this.atividadeCheckinRepo.count({
+        where: {
+          usuarioId: professionalId,
+          createdAt: MoreThanOrEqual(since),
+        },
+      }),
+    ]);
+
+    const conversionRate =
+      checkClicks > 0 ? Math.round((checkinsSubmitted / checkClicks) * 100) : 0;
+
+    return {
+      windowDays: days,
+      checkClicks,
+      checkinsSubmitted,
+      conversionRate,
+    };
+  }
+}

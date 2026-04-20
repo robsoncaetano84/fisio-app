@@ -5,10 +5,31 @@ type RepoMock = {
   create: jest.Mock;
   save: jest.Mock;
   find: jest.Mock;
+  count: jest.Mock;
 };
 
-const makeService = (repo: RepoMock) =>
-  new MetricsService(repo as unknown as never);
+const makeService = (
+  clinicalRepo: RepoMock,
+  checkClickRepo?: RepoMock,
+  checkinRepo?: RepoMock,
+) =>
+  new MetricsService(
+    clinicalRepo as unknown as never,
+    (checkClickRepo ||
+      ({
+        create: jest.fn((v) => v),
+        save: jest.fn(async (v) => v),
+        find: jest.fn(async () => []),
+        count: jest.fn(async () => 0),
+      } as RepoMock)) as unknown as never,
+    (checkinRepo ||
+      ({
+        create: jest.fn((v) => v),
+        save: jest.fn(async (v) => v),
+        find: jest.fn(async () => []),
+        count: jest.fn(async () => 0),
+      } as RepoMock)) as unknown as never,
+  );
 
 describe('MetricsService', () => {
   it('summarizes clinical flow events correctly', async () => {
@@ -45,6 +66,7 @@ describe('MetricsService', () => {
           mk('STAGE_BLOCKED', 'EXAME_FISICO', { blockedReason: 'MISSING_REQUIRED_FIELDS' }),
         ];
       }),
+      count: jest.fn(async () => 0),
     };
 
     const service = makeService(repo);
@@ -69,6 +91,7 @@ describe('MetricsService', () => {
       create: jest.fn((v) => v),
       save: jest.fn(async (v) => v),
       find: jest.fn(),
+      count: jest.fn(async () => 0),
     };
     const service = makeService(repo);
 
@@ -89,5 +112,33 @@ describe('MetricsService', () => {
     );
     expect(repo.save).toHaveBeenCalled();
   });
-});
 
+  it('summarizes patient check engagement', async () => {
+    const clinicalRepo: RepoMock = {
+      create: jest.fn((v) => v),
+      save: jest.fn(async (v) => v),
+      find: jest.fn(async () => []),
+      count: jest.fn(async () => 0),
+    };
+    const clickRepo: RepoMock = {
+      create: jest.fn((v) => v),
+      save: jest.fn(async (v) => v),
+      find: jest.fn(async () => []),
+      count: jest.fn(async () => 10),
+    };
+    const checkinRepo: RepoMock = {
+      create: jest.fn((v) => v),
+      save: jest.fn(async (v) => v),
+      find: jest.fn(async () => []),
+      count: jest.fn(async () => 6),
+    };
+
+    const service = makeService(clinicalRepo, clickRepo, checkinRepo);
+    const summary = await service.getPatientCheckEngagementSummary('prof-1', 7);
+
+    expect(summary.windowDays).toBe(7);
+    expect(summary.checkClicks).toBe(10);
+    expect(summary.checkinsSubmitted).toBe(6);
+    expect(summary.conversionRate).toBe(60);
+  });
+});

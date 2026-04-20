@@ -63,6 +63,7 @@ const crm_interaction_entity_1 = require("./modules/crm/entities/crm-interaction
 const paciente_exame_entity_1 = require("./modules/pacientes/entities/paciente-exame.entity");
 const profissional_paciente_vinculo_entity_1 = require("./modules/pacientes/entities/profissional-paciente-vinculo.entity");
 const clinical_flow_event_entity_1 = require("./modules/metrics/entities/clinical-flow-event.entity");
+const patient_check_click_event_entity_1 = require("./modules/metrics/entities/patient-check-click-event.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
 const usuarios_module_1 = require("./modules/usuarios/usuarios.module");
 const pacientes_module_1 = require("./modules/pacientes/pacientes.module");
@@ -147,6 +148,7 @@ exports.AppModule = AppModule = __decorate([
                             crm_interaction_entity_1.CrmInteraction, paciente_exame_entity_1.PacienteExame,
                             profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo,
                             clinical_flow_event_entity_1.ClinicalFlowEvent,
+                            patient_check_click_event_entity_1.PatientCheckClickEvent,
                         ],
                         migrations: [__dirname + '/migrations/*{.ts,.js}'],
                         synchronize: configService.get('NODE_ENV') === 'development',

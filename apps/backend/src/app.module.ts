@@ -26,6 +26,7 @@ import { CrmInteraction } from './modules/crm/entities/crm-interaction.entity';
 import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entity';
 import { ProfissionalPacienteVinculo } from './modules/pacientes/entities/profissional-paciente-vinculo.entity';
 import { ClinicalFlowEvent } from './modules/metrics/entities/clinical-flow-event.entity';
+import { PatientCheckClickEvent } from './modules/metrics/entities/patient-check-click-event.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -113,6 +114,7 @@ import { MetricsModule } from './modules/metrics/metrics.module';
             CrmInteraction,          PacienteExame,
           ProfissionalPacienteVinculo,
           ClinicalFlowEvent,
+          PatientCheckClickEvent,
         ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',
@@ -161,5 +163,4 @@ import { MetricsModule } from './modules/metrics/metrics.module';
   ],
 })
 export class AppModule {}
-
 

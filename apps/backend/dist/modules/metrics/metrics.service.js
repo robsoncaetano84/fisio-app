@@ -16,12 +16,18 @@ exports.MetricsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const atividade_checkin_entity_1 = require("../atividades/entities/atividade-checkin.entity");
 const clinical_flow_event_entity_1 = require("./entities/clinical-flow-event.entity");
+const patient_check_click_event_entity_1 = require("./entities/patient-check-click-event.entity");
 const STAGES = ['ANAMNESE', 'EXAME_FISICO', 'EVOLUCAO'];
 let MetricsService = class MetricsService {
     clinicalFlowRepo;
-    constructor(clinicalFlowRepo) {
+    patientCheckClickRepo;
+    atividadeCheckinRepo;
+    constructor(clinicalFlowRepo, patientCheckClickRepo, atividadeCheckinRepo) {
         this.clinicalFlowRepo = clinicalFlowRepo;
+        this.patientCheckClickRepo = patientCheckClickRepo;
+        this.atividadeCheckinRepo = atividadeCheckinRepo;
     }
     async trackClinicalFlowEvent(professionalId, dto) {
         const blockedReason = dto.eventType === 'STAGE_BLOCKED' && dto.blockedReason
@@ -112,11 +118,52 @@ let MetricsService = class MetricsService {
             trackedStages: STAGES,
         };
     }
+    async trackPatientCheckClick(professionalId, dto) {
+        const source = dto.source?.trim().slice(0, 40) || null;
+        const created = this.patientCheckClickRepo.create({
+            professionalId,
+            patientId: dto.patientId || null,
+            source,
+        });
+        await this.patientCheckClickRepo.save(created);
+        return { ok: true };
+    }
+    async getPatientCheckEngagementSummary(professionalId, windowDays = 7) {
+        const days = Number.isFinite(windowDays)
+            ? Math.max(1, Math.floor(windowDays))
+            : 7;
+        const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        const [checkClicks, checkinsSubmitted] = await Promise.all([
+            this.patientCheckClickRepo.count({
+                where: {
+                    professionalId,
+                    occurredAt: (0, typeorm_2.MoreThanOrEqual)(since),
+                },
+            }),
+            this.atividadeCheckinRepo.count({
+                where: {
+                    usuarioId: professionalId,
+                    createdAt: (0, typeorm_2.MoreThanOrEqual)(since),
+                },
+            }),
+        ]);
+        const conversionRate = checkClicks > 0 ? Math.round((checkinsSubmitted / checkClicks) * 100) : 0;
+        return {
+            windowDays: days,
+            checkClicks,
+            checkinsSubmitted,
+            conversionRate,
+        };
+    }
 };
 exports.MetricsService = MetricsService;
 exports.MetricsService = MetricsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(clinical_flow_event_entity_1.ClinicalFlowEvent)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(patient_check_click_event_entity_1.PatientCheckClickEvent)),
+    __param(2, (0, typeorm_1.InjectRepository)(atividade_checkin_entity_1.AtividadeCheckin)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository])
 ], MetricsService);
 //# sourceMappingURL=metrics.service.js.map

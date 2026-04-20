@@ -1,10 +1,14 @@
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { CreateClinicalFlowEventDto } from './dto/create-clinical-flow-event.dto';
+import { CreatePatientCheckClickDto } from './dto/create-patient-check-click.dto';
 import { MetricsService } from './metrics.service';
 export declare class MetricsController {
     private readonly metricsService;
     constructor(metricsService: MetricsService);
     trackClinicalFlowEvent(usuario: Usuario, dto: CreateClinicalFlowEventDto): Promise<{
+        ok: true;
+    }>;
+    trackPatientCheckClick(usuario: Usuario, dto: CreatePatientCheckClickDto): Promise<{
         ok: true;
     }>;
     getClinicalFlowSummary(usuario: Usuario, windowDays: number): Promise<{
@@ -20,5 +24,11 @@ export declare class MetricsController {
             count: number;
         }[];
         trackedStages: import("./entities/clinical-flow-event.entity").ClinicalFlowStage[];
+    }>;
+    getPatientCheckEngagementSummary(usuario: Usuario, windowDays: number): Promise<{
+        windowDays: number;
+        checkClicks: number;
+        checkinsSubmitted: number;
+        conversionRate: number;
     }>;
 }
