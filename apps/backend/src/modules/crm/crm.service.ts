@@ -8,7 +8,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
+import { PacienteVinculoStatus } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Evolucao } from '../evolucoes/entities/evolucao.entity';
+import { Atividade } from '../atividades/entities/atividade.entity';
+import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
+import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
 import { CreateCrmLeadDto } from './dto/create-crm-lead.dto';
 import { UpdateCrmLeadDto } from './dto/update-crm-lead.dto';
 import { CreateCrmTaskDto } from './dto/create-crm-task.dto';
@@ -18,6 +23,7 @@ import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
 import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
+import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 
 @Injectable()
 export class CrmService {
@@ -35,7 +41,32 @@ export class CrmService {
     private readonly usuarioRepository: Repository<Usuario>,
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
+    @InjectRepository(Evolucao)
+    private readonly evolucaoRepository: Repository<Evolucao>,
+    @InjectRepository(Atividade)
+    private readonly atividadeRepository: Repository<Atividade>,
+    @InjectRepository(AtividadeCheckin)
+    private readonly atividadeCheckinRepository: Repository<AtividadeCheckin>,
+    @InjectRepository(Laudo)
+    private readonly laudoRepository: Repository<Laudo>,
+    @InjectRepository(ClinicalFlowEvent)
+    private readonly clinicalFlowEventRepository: Repository<ClinicalFlowEvent>,
   ) {}
+
+  private maskEmail(email?: string | null): string | null {
+    if (!email) return null;
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return '***';
+    const head = localPart.slice(0, 2);
+    return `${head}***@${domain}`;
+  }
+
+  private maskPhone(phone?: string | null): string | null {
+    if (!phone) return null;
+    const digits = String(phone).replace(/\D/g, '');
+    if (digits.length <= 4) return '***';
+    return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
+  }
 
   assertMasterAdmin(usuario: Usuario): void {
     if (usuario.role !== UserRole.ADMIN) {
@@ -81,6 +112,7 @@ export class CrmService {
     q?: string;
     ativo?: boolean;
     especialidade?: string;
+    includeSensitive?: boolean;
   }) {
     const q = (params?.q || '').trim().toLowerCase();
     const especialidade = (params?.especialidade || '').trim().toLowerCase();
@@ -133,7 +165,7 @@ export class CrmService {
         return {
           id: prof.id,
           nome: prof.nome,
-          email: prof.email,
+          email: params?.includeSensitive ? prof.email : this.maskEmail(prof.email),
           registroProf: prof.registroProf || null,
           especialidade: prof.especialidade || null,
           ativo: prof.ativo,
@@ -151,6 +183,7 @@ export class CrmService {
     q?: string;
     ativo?: boolean;
     especialidade?: string;
+    includeSensitive?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -174,6 +207,7 @@ export class CrmService {
     vinculadoUsuarioPaciente?: boolean;
     cidade?: string;
     uf?: string;
+    includeSensitive?: boolean;
   }) {
     const q = (params?.q || '').trim().toLowerCase();
     const cidade = (params?.cidade || '').trim().toLowerCase();
@@ -254,8 +288,12 @@ export class CrmService {
       return {
         id: p.id,
         nomeCompleto: p.nomeCompleto,
-        contatoEmail: p.contatoEmail || null,
-        contatoWhatsapp: p.contatoWhatsapp || null,
+        contatoEmail: params?.includeSensitive
+          ? p.contatoEmail || null
+          : this.maskEmail(p.contatoEmail),
+        contatoWhatsapp: params?.includeSensitive
+          ? p.contatoWhatsapp || null
+          : this.maskPhone(p.contatoWhatsapp),
         enderecoCidade: p.enderecoCidade || null,
         enderecoUf: p.enderecoUf || null,
         profissao: p.profissao || null,
@@ -264,9 +302,13 @@ export class CrmService {
         updatedAt: p.updatedAt,
         usuarioId: p.usuarioId,
         profissionalNome: p.usuario?.nome || null,
-        profissionalEmail: p.usuario?.email || null,
+        profissionalEmail: params?.includeSensitive
+          ? p.usuario?.email || null
+          : this.maskEmail(p.usuario?.email || null),
         pacienteUsuarioId: p.pacienteUsuarioId,
-        pacienteUsuarioEmail: p.pacienteUsuario?.email || null,
+        pacienteUsuarioEmail: params?.includeSensitive
+          ? p.pacienteUsuario?.email || null
+          : this.maskEmail(p.pacienteUsuario?.email || null),
         emocional,
       };
     });
@@ -278,6 +320,7 @@ export class CrmService {
     vinculadoUsuarioPaciente?: boolean;
     cidade?: string;
     uf?: string;
+    includeSensitive?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -292,6 +335,238 @@ export class CrmService {
       page,
       limit,
       totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  async getClinicalDashboardSummary(params?: {
+    windowDays?: number;
+    semEvolucaoDias?: number;
+  }) {
+    const windowDays = Math.max(1, Math.min(Number(params?.windowDays || 7), 90));
+    const semEvolucaoDias = Math.max(
+      3,
+      Math.min(Number(params?.semEvolucaoDias || 10), 90),
+    );
+    const now = Date.now();
+    const activityWindowMs = windowDays * 24 * 60 * 60 * 1000;
+    const semEvolucaoWindowMs = semEvolucaoDias * 24 * 60 * 60 * 1000;
+
+    const pacientes = await this.pacienteRepository.find({ where: { ativo: true } });
+    const pacienteIds = pacientes.map((p) => p.id);
+    if (!pacienteIds.length) {
+      return {
+        pipeline: {
+          novoPaciente: 0,
+          aguardandoVinculo: 0,
+          anamnesePendente: 0,
+          emTratamento: 0,
+          alta: 0,
+        },
+        alertas: {
+          semCheckin: 0,
+          semEvolucao: 0,
+          conviteNaoAceito: 0,
+          anamnesePendente: 0,
+        },
+        metricas: {
+          abandonoRate: 0,
+          conclusaoPlanoRate: 0,
+          pacientesEmAtencao: 0,
+          tempoMedioPorEtapaMs: {
+            ANAMNESE: 0,
+            EXAME_FISICO: 0,
+            EVOLUCAO: 0,
+          },
+        },
+      };
+    }
+
+    const latestAnamneses = await this.anamneseRepository
+      .createQueryBuilder('a')
+      .where('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .orderBy('a.pacienteId', 'ASC')
+      .addOrderBy('a.createdAt', 'DESC')
+      .getMany();
+    const anamneseByPaciente = new Map<string, Anamnese>();
+    latestAnamneses.forEach((item) => {
+      if (!anamneseByPaciente.has(item.pacienteId)) anamneseByPaciente.set(item.pacienteId, item);
+    });
+
+    const latestEvolucoes = await this.evolucaoRepository
+      .createQueryBuilder('e')
+      .where('e.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .orderBy('e.pacienteId', 'ASC')
+      .addOrderBy('e.data', 'DESC')
+      .getMany();
+    const evolucaoByPaciente = new Map<string, Evolucao>();
+    latestEvolucoes.forEach((item) => {
+      if (!evolucaoByPaciente.has(item.pacienteId)) evolucaoByPaciente.set(item.pacienteId, item);
+    });
+
+    const latestLaudos = await this.laudoRepository
+      .createQueryBuilder('l')
+      .where('l.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .orderBy('l.pacienteId', 'ASC')
+      .addOrderBy('l.updatedAt', 'DESC')
+      .getMany();
+    const laudoByPaciente = new Map<string, Laudo>();
+    latestLaudos.forEach((item) => {
+      if (!laudoByPaciente.has(item.pacienteId)) laudoByPaciente.set(item.pacienteId, item);
+    });
+
+    const latestCheckins = await this.atividadeCheckinRepository
+      .createQueryBuilder('c')
+      .select('c.pacienteId', 'pacienteId')
+      .addSelect('MAX(c.createdAt)', 'lastCheckin')
+      .where('c.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .groupBy('c.pacienteId')
+      .getRawMany<{ pacienteId: string; lastCheckin: string | null }>();
+    const checkinByPaciente = new Map<string, string | null>();
+    latestCheckins.forEach((row) => checkinByPaciente.set(row.pacienteId, row.lastCheckin));
+
+    const pacientesComAtividade = await this.atividadeRepository
+      .createQueryBuilder('a')
+      .select('a.pacienteId', 'pacienteId')
+      .where('a.ativo = :ativo', { ativo: true })
+      .andWhere('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .groupBy('a.pacienteId')
+      .getRawMany<{ pacienteId: string }>();
+    const atividadePacienteIds = new Set(pacientesComAtividade.map((row) => row.pacienteId));
+
+    let novoPaciente = 0;
+    let aguardandoVinculo = 0;
+    let anamnesePendente = 0;
+    let emTratamento = 0;
+    let alta = 0;
+    let semCheckin = 0;
+    let semEvolucao = 0;
+    let conviteNaoAceito = 0;
+    let pacientesEmAtencao = 0;
+
+    for (const paciente of pacientes) {
+      const hasAnamnese = anamneseByPaciente.has(paciente.id);
+      const lastEvolucao = evolucaoByPaciente.get(paciente.id);
+      const lastLaudo = laudoByPaciente.get(paciente.id);
+      const createdAtMs = new Date(paciente.createdAt).getTime();
+      const lastEvolucaoMs = lastEvolucao?.data
+        ? new Date(lastEvolucao.data).getTime()
+        : NaN;
+
+      if (!hasAnamnese && now - createdAtMs <= activityWindowMs) {
+        novoPaciente += 1;
+      }
+      if (
+        !paciente.pacienteUsuarioId ||
+        paciente.vinculoStatus === PacienteVinculoStatus.SEM_VINCULO ||
+        paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO
+      ) {
+        aguardandoVinculo += 1;
+      }
+      if (!hasAnamnese) {
+        anamnesePendente += 1;
+      }
+      if (
+        hasAnamnese &&
+        (!lastLaudo ||
+          lastLaudo.status !== LaudoStatus.VALIDADO_PROFISSIONAL ||
+          !lastLaudo.criteriosAlta)
+      ) {
+        emTratamento += 1;
+      }
+      if (
+        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        !!lastLaudo.criteriosAlta
+      ) {
+        alta += 1;
+      }
+
+      const lastCheckinRaw = checkinByPaciente.get(paciente.id);
+      const lastCheckinMs = lastCheckinRaw ? new Date(lastCheckinRaw).getTime() : NaN;
+      if (atividadePacienteIds.has(paciente.id)) {
+        if (
+          Number.isNaN(lastCheckinMs) ||
+          now - lastCheckinMs > activityWindowMs
+        ) {
+          semCheckin += 1;
+        }
+      }
+      if (Number.isNaN(lastEvolucaoMs) || now - lastEvolucaoMs > semEvolucaoWindowMs) {
+        semEvolucao += 1;
+        pacientesEmAtencao += 1;
+      }
+      if (paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO) {
+        conviteNaoAceito += 1;
+      }
+    }
+
+    const flowRows = await this.clinicalFlowEventRepository
+      .createQueryBuilder('e')
+      .select('e.stage', 'stage')
+      .addSelect('AVG(e.durationMs)', 'avgDuration')
+      .addSelect(
+        `SUM(CASE WHEN e.eventType = 'STAGE_OPENED' THEN 1 ELSE 0 END)`,
+        'opened',
+      )
+      .addSelect(
+        `SUM(CASE WHEN e.eventType = 'STAGE_ABANDONED' THEN 1 ELSE 0 END)`,
+        'abandoned',
+      )
+      .addSelect(
+        `SUM(CASE WHEN e.eventType = 'STAGE_COMPLETED' THEN 1 ELSE 0 END)`,
+        'completed',
+      )
+      .where('e.occurredAt >= :since', {
+        since: new Date(now - activityWindowMs),
+      })
+      .groupBy('e.stage')
+      .getRawMany<{
+        stage: 'ANAMNESE' | 'EXAME_FISICO' | 'EVOLUCAO';
+        avgDuration: string | null;
+        opened: string;
+        abandoned: string;
+        completed: string;
+      }>();
+
+    const tempoMedioPorEtapaMs = {
+      ANAMNESE: 0,
+      EXAME_FISICO: 0,
+      EVOLUCAO: 0,
+    };
+    let openedTotal = 0;
+    let abandonedTotal = 0;
+    let completedTotal = 0;
+    flowRows.forEach((row) => {
+      tempoMedioPorEtapaMs[row.stage] = Number(row.avgDuration || 0);
+      openedTotal += Number(row.opened || 0);
+      abandonedTotal += Number(row.abandoned || 0);
+      completedTotal += Number(row.completed || 0);
+    });
+
+    const abandonoRate = openedTotal > 0 ? Number(((abandonedTotal / openedTotal) * 100).toFixed(1)) : 0;
+    const conclusaoPlanoRate =
+      pacienteIds.length > 0 ? Number(((alta / pacienteIds.length) * 100).toFixed(1)) : 0;
+
+    return {
+      pipeline: {
+        novoPaciente,
+        aguardandoVinculo,
+        anamnesePendente,
+        emTratamento,
+        alta,
+      },
+      alertas: {
+        semCheckin,
+        semEvolucao,
+        conviteNaoAceito,
+        anamnesePendente,
+      },
+      metricas: {
+        abandonoRate,
+        conclusaoPlanoRate,
+        pacientesEmAtencao,
+        tempoMedioPorEtapaMs,
+        completedTotal,
+      },
     };
   }
 

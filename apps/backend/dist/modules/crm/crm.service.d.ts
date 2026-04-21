@@ -3,6 +3,10 @@ import { Repository } from 'typeorm';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Evolucao } from '../evolucoes/entities/evolucao.entity';
+import { Atividade } from '../atividades/entities/atividade.entity';
+import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { CreateCrmLeadDto } from './dto/create-crm-lead.dto';
 import { UpdateCrmLeadDto } from './dto/update-crm-lead.dto';
 import { CreateCrmTaskDto } from './dto/create-crm-task.dto';
@@ -12,6 +16,7 @@ import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
 import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
+import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 export declare class CrmService {
     private readonly configService;
     private readonly crmLeadRepository;
@@ -20,7 +25,14 @@ export declare class CrmService {
     private readonly pacienteRepository;
     private readonly usuarioRepository;
     private readonly anamneseRepository;
-    constructor(configService: ConfigService, crmLeadRepository: Repository<CrmLead>, crmTaskRepository: Repository<CrmTask>, crmInteractionRepository: Repository<CrmInteraction>, pacienteRepository: Repository<Paciente>, usuarioRepository: Repository<Usuario>, anamneseRepository: Repository<Anamnese>);
+    private readonly evolucaoRepository;
+    private readonly atividadeRepository;
+    private readonly atividadeCheckinRepository;
+    private readonly laudoRepository;
+    private readonly clinicalFlowEventRepository;
+    constructor(configService: ConfigService, crmLeadRepository: Repository<CrmLead>, crmTaskRepository: Repository<CrmTask>, crmInteractionRepository: Repository<CrmInteraction>, pacienteRepository: Repository<Paciente>, usuarioRepository: Repository<Usuario>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, atividadeRepository: Repository<Atividade>, atividadeCheckinRepository: Repository<AtividadeCheckin>, laudoRepository: Repository<Laudo>, clinicalFlowEventRepository: Repository<ClinicalFlowEvent>);
+    private maskEmail;
+    private maskPhone;
     assertMasterAdmin(usuario: Usuario): void;
     getPipelineSummary(): Promise<{
         totalLeads: number;
@@ -34,10 +46,11 @@ export declare class CrmService {
         q?: string;
         ativo?: boolean;
         especialidade?: string;
+        includeSensitive?: boolean;
     }): Promise<{
         id: string;
         nome: string;
-        email: string;
+        email: string | null;
         registroProf: string | null;
         especialidade: string | null;
         ativo: boolean;
@@ -52,13 +65,14 @@ export declare class CrmService {
         q?: string;
         ativo?: boolean;
         especialidade?: string;
+        includeSensitive?: boolean;
         page?: number;
         limit?: number;
     }): Promise<{
         items: {
             id: string;
             nome: string;
-            email: string;
+            email: string | null;
             registroProf: string | null;
             especialidade: string | null;
             ativo: boolean;
@@ -80,6 +94,7 @@ export declare class CrmService {
         vinculadoUsuarioPaciente?: boolean;
         cidade?: string;
         uf?: string;
+        includeSensitive?: boolean;
     }): Promise<{
         id: string;
         nomeCompleto: string;
@@ -112,6 +127,7 @@ export declare class CrmService {
         vinculadoUsuarioPaciente?: boolean;
         cidade?: string;
         uf?: string;
+        includeSensitive?: boolean;
         page?: number;
         limit?: number;
     }): Promise<{
@@ -145,6 +161,60 @@ export declare class CrmService {
         page: number;
         limit: number;
         totalPages: number;
+    }>;
+    getClinicalDashboardSummary(params?: {
+        windowDays?: number;
+        semEvolucaoDias?: number;
+    }): Promise<{
+        pipeline: {
+            novoPaciente: number;
+            aguardandoVinculo: number;
+            anamnesePendente: number;
+            emTratamento: number;
+            alta: number;
+        };
+        alertas: {
+            semCheckin: number;
+            semEvolucao: number;
+            conviteNaoAceito: number;
+            anamnesePendente: number;
+        };
+        metricas: {
+            abandonoRate: number;
+            conclusaoPlanoRate: number;
+            pacientesEmAtencao: number;
+            tempoMedioPorEtapaMs: {
+                ANAMNESE: number;
+                EXAME_FISICO: number;
+                EVOLUCAO: number;
+            };
+            completedTotal?: undefined;
+        };
+    } | {
+        pipeline: {
+            novoPaciente: number;
+            aguardandoVinculo: number;
+            anamnesePendente: number;
+            emTratamento: number;
+            alta: number;
+        };
+        alertas: {
+            semCheckin: number;
+            semEvolucao: number;
+            conviteNaoAceito: number;
+            anamnesePendente: number;
+        };
+        metricas: {
+            abandonoRate: number;
+            conclusaoPlanoRate: number;
+            pacientesEmAtencao: number;
+            tempoMedioPorEtapaMs: {
+                ANAMNESE: number;
+                EXAME_FISICO: number;
+                EVOLUCAO: number;
+            };
+            completedTotal: number;
+        };
     }>;
     listLeads(params?: {
         q?: string;

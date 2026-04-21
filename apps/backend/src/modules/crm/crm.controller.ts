@@ -7,6 +7,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -31,12 +32,48 @@ import { CrmTaskStatus } from './entities/crm-task.entity';
 @UseGuards(JwtAuthGuard)
 @Roles(UserRole.ADMIN)
 export class CrmController {
+  private readonly logger = new Logger(CrmController.name);
+
   constructor(private readonly crmService: CrmService) {}
+
+  private auditAdminAccess(
+    usuario: Usuario,
+    action: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    this.logger.log(
+      JSON.stringify({
+        event: 'crm_admin_access',
+        actorId: usuario.id,
+        actorEmail: usuario.email,
+        action,
+        ...(metadata || {}),
+      }),
+    );
+  }
 
   @Get('pipeline/summary')
   async getPipelineSummary(@CurrentUser() usuario: Usuario) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'pipeline_summary');
     return this.crmService.getPipelineSummary();
+  }
+
+  @Get('clinical/dashboard-summary')
+  async getClinicalDashboardSummary(
+    @CurrentUser() usuario: Usuario,
+    @Query('windowDays') windowDays?: string,
+    @Query('semEvolucaoDias') semEvolucaoDias?: string,
+  ) {
+    this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'clinical_dashboard_summary', {
+      windowDays,
+      semEvolucaoDias,
+    });
+    return this.crmService.getClinicalDashboardSummary({
+      windowDays: windowDays ? Number(windowDays) : 7,
+      semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
+    });
   }
 
   @Get('admin/profissionais')
@@ -45,12 +82,20 @@ export class CrmController {
     @Query('q') q?: string,
     @Query('ativo') ativo?: string,
     @Query('especialidade') especialidade?: string,
+    @Query('includeSensitive') includeSensitive?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'admin_profissionais_list', {
+      q,
+      ativo,
+      especialidade,
+      includeSensitive,
+    });
     return this.crmService.listAdminProfissionais({
       q,
       ativo: parseBoolQuery(ativo),
       especialidade,
+      includeSensitive: parseBoolQuery(includeSensitive),
     });
   }
 
@@ -60,14 +105,24 @@ export class CrmController {
     @Query('q') q?: string,
     @Query('ativo') ativo?: string,
     @Query('especialidade') especialidade?: string,
+    @Query('includeSensitive') includeSensitive?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'admin_profissionais_paged', {
+      q,
+      ativo,
+      especialidade,
+      includeSensitive,
+      page,
+      limit,
+    });
     return this.crmService.listAdminProfissionaisPaged({
       q,
       ativo: parseBoolQuery(ativo),
       especialidade,
+      includeSensitive: parseBoolQuery(includeSensitive),
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     });
@@ -81,14 +136,24 @@ export class CrmController {
     @Query('vinculadoUsuarioPaciente') vinculadoUsuarioPaciente?: string,
     @Query('cidade') cidade?: string,
     @Query('uf') uf?: string,
+    @Query('includeSensitive') includeSensitive?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'admin_pacientes_list', {
+      q,
+      ativo,
+      vinculadoUsuarioPaciente,
+      cidade,
+      uf,
+      includeSensitive,
+    });
     return this.crmService.listAdminPacientes({
       q,
       ativo: parseBoolQuery(ativo),
       vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
       cidade,
       uf,
+      includeSensitive: parseBoolQuery(includeSensitive),
     });
   }
 
@@ -100,16 +165,28 @@ export class CrmController {
     @Query('vinculadoUsuarioPaciente') vinculadoUsuarioPaciente?: string,
     @Query('cidade') cidade?: string,
     @Query('uf') uf?: string,
+    @Query('includeSensitive') includeSensitive?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'admin_pacientes_paged', {
+      q,
+      ativo,
+      vinculadoUsuarioPaciente,
+      cidade,
+      uf,
+      includeSensitive,
+      page,
+      limit,
+    });
     return this.crmService.listAdminPacientesPaged({
       q,
       ativo: parseBoolQuery(ativo),
       vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
       cidade,
       uf,
+      includeSensitive: parseBoolQuery(includeSensitive),
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     });
@@ -122,6 +199,7 @@ export class CrmController {
     @Query('stage') stage?: CrmLeadStage | 'TODOS',
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'leads_list', { q, stage });
     return this.crmService.listLeads({ q, stage });
   }
 
@@ -134,6 +212,7 @@ export class CrmController {
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'leads_paged', { q, stage, page, limit });
     return this.crmService.listLeadsPaged({
       q,
       stage,
@@ -145,12 +224,14 @@ export class CrmController {
   @Get('leads/:id')
   async getLeadById(@CurrentUser() usuario: Usuario, @Param('id') id: string) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'lead_detail', { id });
     return this.crmService.getLeadById(id);
   }
 
   @Post('leads')
   async createLead(@CurrentUser() usuario: Usuario, @Body() dto: CreateCrmLeadDto) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'lead_create');
     return this.crmService.createLead(dto, usuario);
   }
 
@@ -161,12 +242,14 @@ export class CrmController {
     @Body() dto: UpdateCrmLeadDto,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'lead_update', { id });
     return this.crmService.updateLead(id, dto);
   }
 
   @Delete('leads/:id')
   async deleteLead(@CurrentUser() usuario: Usuario, @Param('id') id: string) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'lead_delete', { id });
     await this.crmService.deleteLead(id);
     return { success: true };
   }
@@ -178,6 +261,7 @@ export class CrmController {
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'tasks_list', { status, limit });
     return this.crmService.listTasks({
       status,
       limit: limit ? Number(limit) : undefined,
@@ -194,6 +278,13 @@ export class CrmController {
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'tasks_paged', {
+      status,
+      leadId,
+      q,
+      page,
+      limit,
+    });
     return this.crmService.listTasksPaged({
       status,
       leadId,
@@ -206,6 +297,7 @@ export class CrmController {
   @Post('tasks')
   async createTask(@CurrentUser() usuario: Usuario, @Body() dto: CreateCrmTaskDto) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'task_create');
     return this.crmService.createTask(dto, usuario);
   }
 
@@ -216,12 +308,14 @@ export class CrmController {
     @Body() dto: UpdateCrmTaskDto,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'task_update', { id });
     return this.crmService.updateTask(id, dto);
   }
 
   @Delete('tasks/:id')
   async deleteTask(@CurrentUser() usuario: Usuario, @Param('id') id: string) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'task_delete', { id });
     await this.crmService.deleteTask(id);
     return { success: true };
   }
@@ -229,6 +323,7 @@ export class CrmController {
   @Get('leads/:leadId/interactions')
   async listInteractions(@CurrentUser() usuario: Usuario, @Param('leadId') leadId: string) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'interactions_list', { leadId });
     return this.crmService.listInteractions(leadId);
   }
 
@@ -242,6 +337,13 @@ export class CrmController {
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'interactions_paged', {
+      leadId,
+      tipo,
+      q,
+      page,
+      limit,
+    });
     return this.crmService.listInteractionsPaged({
       leadId,
       tipo,
@@ -257,6 +359,7 @@ export class CrmController {
     @Body() dto: CreateCrmInteractionDto,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'interaction_create');
     return this.crmService.createInteraction(dto, usuario);
   }
 
@@ -267,12 +370,14 @@ export class CrmController {
     @Body() dto: UpdateCrmInteractionDto,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'interaction_update', { id });
     return this.crmService.updateInteraction(id, dto);
   }
 
   @Delete('interactions/:id')
   async deleteInteraction(@CurrentUser() usuario: Usuario, @Param('id') id: string) {
     this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'interaction_delete', { id });
     await this.crmService.deleteInteraction(id);
     return { success: true };
   }

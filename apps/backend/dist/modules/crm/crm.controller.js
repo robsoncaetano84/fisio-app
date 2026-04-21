@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var CrmController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CrmController = void 0;
 const common_1 = require("@nestjs/common");
@@ -25,61 +26,121 @@ const create_crm_task_dto_1 = require("./dto/create-crm-task.dto");
 const update_crm_task_dto_1 = require("./dto/update-crm-task.dto");
 const create_crm_interaction_dto_1 = require("./dto/create-crm-interaction.dto");
 const update_crm_interaction_dto_1 = require("./dto/update-crm-interaction.dto");
-let CrmController = class CrmController {
+let CrmController = CrmController_1 = class CrmController {
     crmService;
+    logger = new common_1.Logger(CrmController_1.name);
     constructor(crmService) {
         this.crmService = crmService;
     }
+    auditAdminAccess(usuario, action, metadata) {
+        this.logger.log(JSON.stringify({
+            event: 'crm_admin_access',
+            actorId: usuario.id,
+            actorEmail: usuario.email,
+            action,
+            ...(metadata || {}),
+        }));
+    }
     async getPipelineSummary(usuario) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'pipeline_summary');
         return this.crmService.getPipelineSummary();
     }
-    async listAdminProfissionais(usuario, q, ativo, especialidade) {
+    async getClinicalDashboardSummary(usuario, windowDays, semEvolucaoDias) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'clinical_dashboard_summary', {
+            windowDays,
+            semEvolucaoDias,
+        });
+        return this.crmService.getClinicalDashboardSummary({
+            windowDays: windowDays ? Number(windowDays) : 7,
+            semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
+        });
+    }
+    async listAdminProfissionais(usuario, q, ativo, especialidade, includeSensitive) {
+        this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'admin_profissionais_list', {
+            q,
+            ativo,
+            especialidade,
+            includeSensitive,
+        });
         return this.crmService.listAdminProfissionais({
             q,
             ativo: parseBoolQuery(ativo),
             especialidade,
+            includeSensitive: parseBoolQuery(includeSensitive),
         });
     }
-    async listAdminProfissionaisPaged(usuario, q, ativo, especialidade, page, limit) {
+    async listAdminProfissionaisPaged(usuario, q, ativo, especialidade, includeSensitive, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'admin_profissionais_paged', {
+            q,
+            ativo,
+            especialidade,
+            includeSensitive,
+            page,
+            limit,
+        });
         return this.crmService.listAdminProfissionaisPaged({
             q,
             ativo: parseBoolQuery(ativo),
             especialidade,
+            includeSensitive: parseBoolQuery(includeSensitive),
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
     }
-    async listAdminPacientes(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf) {
+    async listAdminPacientes(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'admin_pacientes_list', {
+            q,
+            ativo,
+            vinculadoUsuarioPaciente,
+            cidade,
+            uf,
+            includeSensitive,
+        });
         return this.crmService.listAdminPacientes({
             q,
             ativo: parseBoolQuery(ativo),
             vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
             cidade,
             uf,
+            includeSensitive: parseBoolQuery(includeSensitive),
         });
     }
-    async listAdminPacientesPaged(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, page, limit) {
+    async listAdminPacientesPaged(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'admin_pacientes_paged', {
+            q,
+            ativo,
+            vinculadoUsuarioPaciente,
+            cidade,
+            uf,
+            includeSensitive,
+            page,
+            limit,
+        });
         return this.crmService.listAdminPacientesPaged({
             q,
             ativo: parseBoolQuery(ativo),
             vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
             cidade,
             uf,
+            includeSensitive: parseBoolQuery(includeSensitive),
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
     }
     async listLeads(usuario, q, stage) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'leads_list', { q, stage });
         return this.crmService.listLeads({ q, stage });
     }
     async listLeadsPaged(usuario, q, stage, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'leads_paged', { q, stage, page, limit });
         return this.crmService.listLeadsPaged({
             q,
             stage,
@@ -89,23 +150,28 @@ let CrmController = class CrmController {
     }
     async getLeadById(usuario, id) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'lead_detail', { id });
         return this.crmService.getLeadById(id);
     }
     async createLead(usuario, dto) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'lead_create');
         return this.crmService.createLead(dto, usuario);
     }
     async updateLead(usuario, id, dto) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'lead_update', { id });
         return this.crmService.updateLead(id, dto);
     }
     async deleteLead(usuario, id) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'lead_delete', { id });
         await this.crmService.deleteLead(id);
         return { success: true };
     }
     async listTasks(usuario, status, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'tasks_list', { status, limit });
         return this.crmService.listTasks({
             status,
             limit: limit ? Number(limit) : undefined,
@@ -113,6 +179,13 @@ let CrmController = class CrmController {
     }
     async listTasksPaged(usuario, status, leadId, q, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'tasks_paged', {
+            status,
+            leadId,
+            q,
+            page,
+            limit,
+        });
         return this.crmService.listTasksPaged({
             status,
             leadId,
@@ -123,23 +196,34 @@ let CrmController = class CrmController {
     }
     async createTask(usuario, dto) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'task_create');
         return this.crmService.createTask(dto, usuario);
     }
     async updateTask(usuario, id, dto) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'task_update', { id });
         return this.crmService.updateTask(id, dto);
     }
     async deleteTask(usuario, id) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'task_delete', { id });
         await this.crmService.deleteTask(id);
         return { success: true };
     }
     async listInteractions(usuario, leadId) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'interactions_list', { leadId });
         return this.crmService.listInteractions(leadId);
     }
     async listInteractionsPaged(usuario, leadId, tipo, q, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'interactions_paged', {
+            leadId,
+            tipo,
+            q,
+            page,
+            limit,
+        });
         return this.crmService.listInteractionsPaged({
             leadId,
             tipo,
@@ -150,14 +234,17 @@ let CrmController = class CrmController {
     }
     async createInteraction(usuario, dto) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'interaction_create');
         return this.crmService.createInteraction(dto, usuario);
     }
     async updateInteraction(usuario, id, dto) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'interaction_update', { id });
         return this.crmService.updateInteraction(id, dto);
     }
     async deleteInteraction(usuario, id) {
         this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'interaction_delete', { id });
         await this.crmService.deleteInteraction(id);
         return { success: true };
     }
@@ -171,13 +258,23 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "getPipelineSummary", null);
 __decorate([
+    (0, common_1.Get)('clinical/dashboard-summary'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('windowDays')),
+    __param(2, (0, common_1.Query)('semEvolucaoDias')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String]),
+    __metadata("design:returntype", Promise)
+], CrmController.prototype, "getClinicalDashboardSummary", null);
+__decorate([
     (0, common_1.Get)('admin/profissionais'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('q')),
     __param(2, (0, common_1.Query)('ativo')),
     __param(3, (0, common_1.Query)('especialidade')),
+    __param(4, (0, common_1.Query)('includeSensitive')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminProfissionais", null);
 __decorate([
@@ -186,10 +283,11 @@ __decorate([
     __param(1, (0, common_1.Query)('q')),
     __param(2, (0, common_1.Query)('ativo')),
     __param(3, (0, common_1.Query)('especialidade')),
-    __param(4, (0, common_1.Query)('page')),
-    __param(5, (0, common_1.Query)('limit')),
+    __param(4, (0, common_1.Query)('includeSensitive')),
+    __param(5, (0, common_1.Query)('page')),
+    __param(6, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminProfissionaisPaged", null);
 __decorate([
@@ -200,8 +298,9 @@ __decorate([
     __param(3, (0, common_1.Query)('vinculadoUsuarioPaciente')),
     __param(4, (0, common_1.Query)('cidade')),
     __param(5, (0, common_1.Query)('uf')),
+    __param(6, (0, common_1.Query)('includeSensitive')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminPacientes", null);
 __decorate([
@@ -212,10 +311,11 @@ __decorate([
     __param(3, (0, common_1.Query)('vinculadoUsuarioPaciente')),
     __param(4, (0, common_1.Query)('cidade')),
     __param(5, (0, common_1.Query)('uf')),
-    __param(6, (0, common_1.Query)('page')),
-    __param(7, (0, common_1.Query)('limit')),
+    __param(6, (0, common_1.Query)('includeSensitive')),
+    __param(7, (0, common_1.Query)('page')),
+    __param(8, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminPacientesPaged", null);
 __decorate([
@@ -363,7 +463,7 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "deleteInteraction", null);
-exports.CrmController = CrmController = __decorate([
+exports.CrmController = CrmController = CrmController_1 = __decorate([
     (0, common_1.Controller)('crm'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN),

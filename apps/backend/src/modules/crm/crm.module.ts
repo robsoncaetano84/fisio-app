@@ -12,9 +12,28 @@ import { CrmTask } from './entities/crm-task.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Evolucao } from '../evolucoes/entities/evolucao.entity';
+import { Atividade } from '../atividades/entities/atividade.entity';
+import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
+import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CrmLead, CrmTask, CrmInteraction, Paciente, Usuario, Anamnese])],
+  imports: [
+    TypeOrmModule.forFeature([
+      CrmLead,
+      CrmTask,
+      CrmInteraction,
+      Paciente,
+      Usuario,
+      Anamnese,
+      Evolucao,
+      Atividade,
+      AtividadeCheckin,
+      Laudo,
+      ClinicalFlowEvent,
+    ]),
+  ],
   controllers: [CrmController],
   providers: [CrmService],
   exports: [CrmService],

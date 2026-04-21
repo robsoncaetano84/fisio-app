@@ -10,7 +10,9 @@ import { CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTaskStatus } from './entities/crm-task.entity';
 export declare class CrmController {
     private readonly crmService;
+    private readonly logger;
     constructor(crmService: CrmService);
+    private auditAdminAccess;
     getPipelineSummary(usuario: Usuario): Promise<{
         totalLeads: number;
         totalPipelineValue: number;
@@ -19,10 +21,61 @@ export declare class CrmController {
             value: number;
         }>;
     }>;
-    listAdminProfissionais(usuario: Usuario, q?: string, ativo?: string, especialidade?: string): Promise<{
+    getClinicalDashboardSummary(usuario: Usuario, windowDays?: string, semEvolucaoDias?: string): Promise<{
+        pipeline: {
+            novoPaciente: number;
+            aguardandoVinculo: number;
+            anamnesePendente: number;
+            emTratamento: number;
+            alta: number;
+        };
+        alertas: {
+            semCheckin: number;
+            semEvolucao: number;
+            conviteNaoAceito: number;
+            anamnesePendente: number;
+        };
+        metricas: {
+            abandonoRate: number;
+            conclusaoPlanoRate: number;
+            pacientesEmAtencao: number;
+            tempoMedioPorEtapaMs: {
+                ANAMNESE: number;
+                EXAME_FISICO: number;
+                EVOLUCAO: number;
+            };
+            completedTotal?: undefined;
+        };
+    } | {
+        pipeline: {
+            novoPaciente: number;
+            aguardandoVinculo: number;
+            anamnesePendente: number;
+            emTratamento: number;
+            alta: number;
+        };
+        alertas: {
+            semCheckin: number;
+            semEvolucao: number;
+            conviteNaoAceito: number;
+            anamnesePendente: number;
+        };
+        metricas: {
+            abandonoRate: number;
+            conclusaoPlanoRate: number;
+            pacientesEmAtencao: number;
+            tempoMedioPorEtapaMs: {
+                ANAMNESE: number;
+                EXAME_FISICO: number;
+                EVOLUCAO: number;
+            };
+            completedTotal: number;
+        };
+    }>;
+    listAdminProfissionais(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string): Promise<{
         id: string;
         nome: string;
-        email: string;
+        email: string | null;
         registroProf: string | null;
         especialidade: string | null;
         ativo: boolean;
@@ -33,11 +86,11 @@ export declare class CrmController {
         pacientesAtivos: number;
         lastPacienteUpdate: Date | null;
     }[]>;
-    listAdminProfissionaisPaged(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, page?: string, limit?: string): Promise<{
+    listAdminProfissionaisPaged(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             nome: string;
-            email: string;
+            email: string | null;
             registroProf: string | null;
             especialidade: string | null;
             ativo: boolean;
@@ -53,7 +106,7 @@ export declare class CrmController {
         limit: number;
         totalPages: number;
     }>;
-    listAdminPacientes(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string): Promise<{
+    listAdminPacientes(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, includeSensitive?: string): Promise<{
         id: string;
         nomeCompleto: string;
         contatoEmail: string | null;
@@ -79,7 +132,7 @@ export declare class CrmController {
             updatedAt: Date;
         } | null;
     }[]>;
-    listAdminPacientesPaged(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, page?: string, limit?: string): Promise<{
+    listAdminPacientesPaged(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, includeSensitive?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             nomeCompleto: string;
