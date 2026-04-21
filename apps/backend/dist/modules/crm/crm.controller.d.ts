@@ -72,7 +72,7 @@ export declare class CrmController {
             completedTotal: number;
         };
     }>;
-    listAdminProfissionais(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string): Promise<{
+    listAdminProfissionais(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string, sensitiveReason?: string): Promise<{
         id: string;
         nome: string;
         email: string | null;
@@ -86,7 +86,7 @@ export declare class CrmController {
         pacientesAtivos: number;
         lastPacienteUpdate: Date | null;
     }[]>;
-    listAdminProfissionaisPaged(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string, page?: string, limit?: string): Promise<{
+    listAdminProfissionaisPaged(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string, sensitiveReason?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             nome: string;
@@ -106,7 +106,7 @@ export declare class CrmController {
         limit: number;
         totalPages: number;
     }>;
-    listAdminPacientes(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, includeSensitive?: string): Promise<{
+    listAdminPacientes(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, includeSensitive?: string, sensitiveReason?: string): Promise<{
         id: string;
         nomeCompleto: string;
         contatoEmail: string | null;
@@ -132,7 +132,7 @@ export declare class CrmController {
             updatedAt: Date;
         } | null;
     }[]>;
-    listAdminPacientesPaged(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, includeSensitive?: string, page?: string, limit?: string): Promise<{
+    listAdminPacientesPaged(usuario: Usuario, q?: string, ativo?: string, vinculadoUsuarioPaciente?: string, cidade?: string, uf?: string, includeSensitive?: string, sensitiveReason?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             nomeCompleto: string;
@@ -365,4 +365,5 @@ export declare class CrmController {
     deleteInteraction(usuario: Usuario, id: string): Promise<{
         success: boolean;
     }>;
+    private validateSensitiveReason;
 }

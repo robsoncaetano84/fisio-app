@@ -57,28 +57,34 @@ let CrmController = CrmController_1 = class CrmController {
             semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
         });
     }
-    async listAdminProfissionais(usuario, q, ativo, especialidade, includeSensitive) {
+    async listAdminProfissionais(usuario, q, ativo, especialidade, includeSensitive, sensitiveReason) {
         this.crmService.assertMasterAdmin(usuario);
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_profissionais_list', {
             q,
             ativo,
             especialidade,
             includeSensitive,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
         });
         return this.crmService.listAdminProfissionais({
             q,
             ativo: parseBoolQuery(ativo),
             especialidade,
-            includeSensitive: parseBoolQuery(includeSensitive),
+            includeSensitive: includeSensitiveBool,
         });
     }
-    async listAdminProfissionaisPaged(usuario, q, ativo, especialidade, includeSensitive, page, limit) {
+    async listAdminProfissionaisPaged(usuario, q, ativo, especialidade, includeSensitive, sensitiveReason, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_profissionais_paged', {
             q,
             ativo,
             especialidade,
             includeSensitive,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
             page,
             limit,
         });
@@ -86,13 +92,15 @@ let CrmController = CrmController_1 = class CrmController {
             q,
             ativo: parseBoolQuery(ativo),
             especialidade,
-            includeSensitive: parseBoolQuery(includeSensitive),
+            includeSensitive: includeSensitiveBool,
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
     }
-    async listAdminPacientes(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive) {
+    async listAdminPacientes(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive, sensitiveReason) {
         this.crmService.assertMasterAdmin(usuario);
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_pacientes_list', {
             q,
             ativo,
@@ -100,6 +108,7 @@ let CrmController = CrmController_1 = class CrmController {
             cidade,
             uf,
             includeSensitive,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
         });
         return this.crmService.listAdminPacientes({
             q,
@@ -107,11 +116,13 @@ let CrmController = CrmController_1 = class CrmController {
             vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
             cidade,
             uf,
-            includeSensitive: parseBoolQuery(includeSensitive),
+            includeSensitive: includeSensitiveBool,
         });
     }
-    async listAdminPacientesPaged(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive, page, limit) {
+    async listAdminPacientesPaged(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive, sensitiveReason, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_pacientes_paged', {
             q,
             ativo,
@@ -119,6 +130,7 @@ let CrmController = CrmController_1 = class CrmController {
             cidade,
             uf,
             includeSensitive,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
             page,
             limit,
         });
@@ -128,7 +140,7 @@ let CrmController = CrmController_1 = class CrmController {
             vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
             cidade,
             uf,
-            includeSensitive: parseBoolQuery(includeSensitive),
+            includeSensitive: includeSensitiveBool,
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
@@ -248,6 +260,14 @@ let CrmController = CrmController_1 = class CrmController {
         await this.crmService.deleteInteraction(id);
         return { success: true };
     }
+    validateSensitiveReason(includeSensitive, sensitiveReason) {
+        if (!includeSensitive)
+            return;
+        const reason = (sensitiveReason || '').trim();
+        if (reason.length < 8) {
+            throw new common_1.BadRequestException('Informe o motivo da consulta de dados sensíveis (mínimo 8 caracteres).');
+        }
+    }
 };
 exports.CrmController = CrmController;
 __decorate([
@@ -273,8 +293,9 @@ __decorate([
     __param(2, (0, common_1.Query)('ativo')),
     __param(3, (0, common_1.Query)('especialidade')),
     __param(4, (0, common_1.Query)('includeSensitive')),
+    __param(5, (0, common_1.Query)('sensitiveReason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminProfissionais", null);
 __decorate([
@@ -284,10 +305,11 @@ __decorate([
     __param(2, (0, common_1.Query)('ativo')),
     __param(3, (0, common_1.Query)('especialidade')),
     __param(4, (0, common_1.Query)('includeSensitive')),
-    __param(5, (0, common_1.Query)('page')),
-    __param(6, (0, common_1.Query)('limit')),
+    __param(5, (0, common_1.Query)('sensitiveReason')),
+    __param(6, (0, common_1.Query)('page')),
+    __param(7, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminProfissionaisPaged", null);
 __decorate([
@@ -299,8 +321,9 @@ __decorate([
     __param(4, (0, common_1.Query)('cidade')),
     __param(5, (0, common_1.Query)('uf')),
     __param(6, (0, common_1.Query)('includeSensitive')),
+    __param(7, (0, common_1.Query)('sensitiveReason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminPacientes", null);
 __decorate([
@@ -312,10 +335,11 @@ __decorate([
     __param(4, (0, common_1.Query)('cidade')),
     __param(5, (0, common_1.Query)('uf')),
     __param(6, (0, common_1.Query)('includeSensitive')),
-    __param(7, (0, common_1.Query)('page')),
-    __param(8, (0, common_1.Query)('limit')),
+    __param(7, (0, common_1.Query)('sensitiveReason')),
+    __param(8, (0, common_1.Query)('page')),
+    __param(9, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminPacientesPaged", null);
 __decorate([

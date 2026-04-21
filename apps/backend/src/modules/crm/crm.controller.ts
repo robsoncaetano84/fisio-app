@@ -3,6 +3,7 @@
 // C RM.C ON TR OL LE R
 // ==========================================
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -83,19 +84,23 @@ export class CrmController {
     @Query('ativo') ativo?: string,
     @Query('especialidade') especialidade?: string,
     @Query('includeSensitive') includeSensitive?: string,
+    @Query('sensitiveReason') sensitiveReason?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    const includeSensitiveBool = parseBoolQuery(includeSensitive);
+    this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
     this.auditAdminAccess(usuario, 'admin_profissionais_list', {
       q,
       ativo,
       especialidade,
       includeSensitive,
+      sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
     });
     return this.crmService.listAdminProfissionais({
       q,
       ativo: parseBoolQuery(ativo),
       especialidade,
-      includeSensitive: parseBoolQuery(includeSensitive),
+      includeSensitive: includeSensitiveBool,
     });
   }
 
@@ -106,15 +111,19 @@ export class CrmController {
     @Query('ativo') ativo?: string,
     @Query('especialidade') especialidade?: string,
     @Query('includeSensitive') includeSensitive?: string,
+    @Query('sensitiveReason') sensitiveReason?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    const includeSensitiveBool = parseBoolQuery(includeSensitive);
+    this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
     this.auditAdminAccess(usuario, 'admin_profissionais_paged', {
       q,
       ativo,
       especialidade,
       includeSensitive,
+      sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
       page,
       limit,
     });
@@ -122,7 +131,7 @@ export class CrmController {
       q,
       ativo: parseBoolQuery(ativo),
       especialidade,
-      includeSensitive: parseBoolQuery(includeSensitive),
+      includeSensitive: includeSensitiveBool,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     });
@@ -137,8 +146,11 @@ export class CrmController {
     @Query('cidade') cidade?: string,
     @Query('uf') uf?: string,
     @Query('includeSensitive') includeSensitive?: string,
+    @Query('sensitiveReason') sensitiveReason?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    const includeSensitiveBool = parseBoolQuery(includeSensitive);
+    this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
     this.auditAdminAccess(usuario, 'admin_pacientes_list', {
       q,
       ativo,
@@ -146,6 +158,7 @@ export class CrmController {
       cidade,
       uf,
       includeSensitive,
+      sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
     });
     return this.crmService.listAdminPacientes({
       q,
@@ -153,7 +166,7 @@ export class CrmController {
       vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
       cidade,
       uf,
-      includeSensitive: parseBoolQuery(includeSensitive),
+      includeSensitive: includeSensitiveBool,
     });
   }
 
@@ -166,10 +179,13 @@ export class CrmController {
     @Query('cidade') cidade?: string,
     @Query('uf') uf?: string,
     @Query('includeSensitive') includeSensitive?: string,
+    @Query('sensitiveReason') sensitiveReason?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     this.crmService.assertMasterAdmin(usuario);
+    const includeSensitiveBool = parseBoolQuery(includeSensitive);
+    this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
     this.auditAdminAccess(usuario, 'admin_pacientes_paged', {
       q,
       ativo,
@@ -177,6 +193,7 @@ export class CrmController {
       cidade,
       uf,
       includeSensitive,
+      sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
       page,
       limit,
     });
@@ -186,7 +203,7 @@ export class CrmController {
       vinculadoUsuarioPaciente: parseBoolQuery(vinculadoUsuarioPaciente),
       cidade,
       uf,
-      includeSensitive: parseBoolQuery(includeSensitive),
+      includeSensitive: includeSensitiveBool,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     });
@@ -380,6 +397,19 @@ export class CrmController {
     this.auditAdminAccess(usuario, 'interaction_delete', { id });
     await this.crmService.deleteInteraction(id);
     return { success: true };
+  }
+
+  private validateSensitiveReason(
+    includeSensitive?: boolean,
+    sensitiveReason?: string,
+  ) {
+    if (!includeSensitive) return;
+    const reason = (sensitiveReason || '').trim();
+    if (reason.length < 8) {
+      throw new BadRequestException(
+        'Informe o motivo da consulta de dados sensíveis (mínimo 8 caracteres).',
+      );
+    }
   }
 }
 
