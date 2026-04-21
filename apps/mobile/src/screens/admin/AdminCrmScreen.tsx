@@ -540,6 +540,51 @@ export function AdminCrmScreen() {
     if (taskBucketFilter === "CONCLUIDAS") return taskBuckets.concluidas;
     return tasks;
   }, [taskBucketFilter, taskBuckets, tasks]);
+  const clinicalPipelineChartData = useMemo(
+    () => [
+      { label: "Novo", value: clinicalSummary?.pipeline.novoPaciente || 0, color: "#6B7280" },
+      { label: "Vínculo", value: clinicalSummary?.pipeline.aguardandoVinculo || 0, color: "#0EA5E9" },
+      { label: "Anamnese", value: clinicalSummary?.pipeline.anamnesePendente || 0, color: "#F59E0B" },
+      { label: "Tratamento", value: clinicalSummary?.pipeline.emTratamento || 0, color: "#10B981" },
+      { label: "Alta", value: clinicalSummary?.pipeline.alta || 0, color: "#22C55E" },
+    ],
+    [clinicalSummary],
+  );
+  const clinicalAlertsChartData = useMemo(
+    () => [
+      { label: "Sem check-in", value: clinicalSummary?.alertas.semCheckin || 0, color: "#F97316" },
+      { label: "Sem evolução", value: clinicalSummary?.alertas.semEvolucao || 0, color: "#EF4444" },
+      { label: "Anamnese pendente", value: clinicalSummary?.alertas.anamnesePendente || 0, color: "#F59E0B" },
+      { label: "Convite pendente", value: clinicalSummary?.alertas.conviteNaoAceito || 0, color: "#EAB308" },
+    ],
+    [clinicalSummary],
+  );
+  const clinicalDurationChartData = useMemo(
+    () => [
+      { label: "Anamnese", value: Math.round((clinicalSummary?.metricas.tempoMedioPorEtapaMs.ANAMNESE || 0) / 60000), color: "#14B8A6" },
+      { label: "Exame físico", value: Math.round((clinicalSummary?.metricas.tempoMedioPorEtapaMs.EXAME_FISICO || 0) / 60000), color: "#0EA5E9" },
+      { label: "Evolução", value: Math.round((clinicalSummary?.metricas.tempoMedioPorEtapaMs.EVOLUCAO || 0) / 60000), color: "#8B5CF6" },
+    ],
+    [clinicalSummary],
+  );
+  const funnelStageChartData = useMemo(
+    () => [
+      { label: "Novo", value: pipeline?.byStage.NOVO.count || 0, color: "#6B7280" },
+      { label: "Contato", value: pipeline?.byStage.CONTATO.count || 0, color: "#0EA5E9" },
+      { label: "Proposta", value: pipeline?.byStage.PROPOSTA.count || 0, color: "#F59E0B" },
+      { label: "Fechado", value: pipeline?.byStage.FECHADO.count || 0, color: "#22C55E" },
+    ],
+    [pipeline],
+  );
+  const taskStatusChartData = useMemo(
+    () => [
+      { label: "Atrasadas", value: taskBuckets.atrasadas.length, color: "#EF4444" },
+      { label: "Hoje", value: taskBuckets.hoje.length, color: "#F59E0B" },
+      { label: "Próximas 7d", value: taskBuckets.proximas.length, color: "#0EA5E9" },
+      { label: "Concluídas", value: taskBuckets.concluidas.length, color: "#22C55E" },
+    ],
+    [taskBuckets],
+  );
   const profAccountScores = useMemo(() => {
     const map = new Map<string, AccountHealthScore>();
     profs.forEach((prof) => {
@@ -1470,6 +1515,30 @@ export function AdminCrmScreen() {
               />
             </View>
           </View>
+          <View style={styles.healthKpiBlock}>
+            <View style={styles.topRow}>
+              <Text style={styles.section}>Gráficos clínicos e CRM</Text>
+              <Text style={styles.muted}>Visualização executiva dos dados</Text>
+            </View>
+            <View style={styles.split}>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>Pipeline clínico</Text>
+                <BarChart items={clinicalPipelineChartData} />
+              </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>Alertas clínicos</Text>
+                <BarChart items={clinicalAlertsChartData} />
+              </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>Tempo médio por etapa (min)</Text>
+                <BarChart items={clinicalDurationChartData} />
+              </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>Funil comercial (leads)</Text>
+                <BarChart items={funnelStageChartData} />
+              </View>
+            </View>
+          </View>
 
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
@@ -2051,6 +2120,10 @@ export function AdminCrmScreen() {
                 <MetricMini label="Próximas 7d" value={String(taskBuckets.proximas.length)} />
                 <MetricMini label="Concluídas" value={String(taskBuckets.concluidas.length)} />
               </View>
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.chartTitle}>Demonstrativo de tarefas</Text>
+                <BarChart items={taskStatusChartData} />
+              </View>
               <View style={styles.wrapRow}>
                 <Chip label="Todas" active={taskBucketFilter === "TODAS"} onPress={() => setTaskBucketFilter("TODAS")} />
                 <Chip label="Atrasadas" active={taskBucketFilter === "ATRASADAS"} onPress={() => setTaskBucketFilter("ATRASADAS")} />
@@ -2212,6 +2285,39 @@ function Pagination({
     </View>
   );
 }
+function BarChart({
+  items,
+}: {
+  items: Array<{ label: string; value: number; color?: string }>;
+}) {
+  const max = Math.max(1, ...items.map((i) => i.value || 0));
+  return (
+    <View style={styles.chartWrap}>
+      {items.map((item) => {
+        const pct = Math.max(0, Math.min(100, Math.round(((item.value || 0) / max) * 100)));
+        return (
+          <View key={item.label} style={styles.chartRow}>
+            <View style={styles.chartHeaderRow}>
+              <Text style={styles.chartLabel}>{item.label}</Text>
+              <Text style={styles.chartValue}>{item.value}</Text>
+            </View>
+            <View style={styles.chartTrack}>
+              <View
+                style={[
+                  styles.chartFill,
+                  {
+                    width: `${pct}%`,
+                    backgroundColor: item.color || COLORS.primary,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 const money = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n || 0);
 const dt = (v: string) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString("pt-BR"); };
@@ -2349,6 +2455,15 @@ const styles = StyleSheet.create({
   wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
   split: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.base, alignItems: "flex-start" },
   pane: { flex: 1, minWidth: 360, backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.gray100, padding: SPACING.base },
+  chartPane: { flex: 1, minWidth: 320, backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.gray100, padding: SPACING.sm },
+  chartTitle: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 12, marginBottom: 8 },
+  chartWrap: { gap: 8 },
+  chartRow: { gap: 4 },
+  chartHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  chartLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
+  chartValue: { color: COLORS.textPrimary, fontSize: 11, fontWeight: "800" },
+  chartTrack: { height: 8, borderRadius: 999, backgroundColor: COLORS.gray100, overflow: "hidden" },
+  chartFill: { height: 8, borderRadius: 999 },
   detailPane: { flexGrow: 0, flexBasis: Platform.OS === "web" ? 420 : 360 },
   title: { fontSize: FONTS.sizes.lg, fontWeight: "800", color: COLORS.textPrimary },
   big: { fontSize: FONTS.sizes.base, fontWeight: "800", color: COLORS.textPrimary },
