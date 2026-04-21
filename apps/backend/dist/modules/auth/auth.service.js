@@ -295,6 +295,13 @@ let AuthService = AuthService_1 = class AuthService {
         }
         return { profissional, pacienteParaVinculo };
     }
+    async obterDadosConvitePaciente(conviteToken) {
+        const { pacienteParaVinculo } = await this.resolveInviteContext(conviteToken);
+        return {
+            nome: (pacienteParaVinculo.nomeCompleto || '').trim(),
+            email: (pacienteParaVinculo.contatoEmail || '').trim().toLowerCase(),
+        };
+    }
     async vincularPacienteUsuarioAoCadastro(pacienteParaVinculo, pacienteUsuario) {
         return this.pacienteRepository.manager.transaction(async (manager) => {
             const pacienteRepo = manager.getRepository(paciente_entity_1.Paciente);

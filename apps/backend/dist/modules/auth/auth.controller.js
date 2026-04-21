@@ -72,6 +72,12 @@ let AuthController = class AuthController {
     async registroPacientePorConvite(dto) {
         return this.authService.registrarPacientePorConvite(dto);
     }
+    async obterDadosConvitePaciente(conviteToken) {
+        if (!conviteToken?.trim()) {
+            throw new common_1.BadRequestException('Convite invalido');
+        }
+        return this.authService.obterDadosConvitePaciente(conviteToken.trim());
+    }
     async aceitarConvitePaciente(usuario, dto) {
         return this.authService.aceitarConvitePaciente(usuario, dto.conviteToken);
     }
@@ -184,6 +190,14 @@ __decorate([
     __metadata("design:paramtypes", [registro_paciente_por_convite_dto_1.RegistroPacientePorConviteDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "registroPacientePorConvite", null);
+__decorate([
+    (0, common_1.Get)('paciente-convite-dados'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    __param(0, (0, common_1.Query)('conviteToken')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "obterDadosConvitePaciente", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)('aceitar-paciente-convite'),

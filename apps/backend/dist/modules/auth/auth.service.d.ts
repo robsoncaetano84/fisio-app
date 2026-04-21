@@ -61,6 +61,10 @@ export declare class AuthService {
     private getInviteSecret;
     private mapPacienteOrigemToVinculoOrigem;
     private resolveInviteContext;
+    obterDadosConvitePaciente(conviteToken: string): Promise<{
+        nome: string;
+        email: string;
+    }>;
     private vincularPacienteUsuarioAoCadastro;
     private sanitizeDigits;
     private shouldReplaceQuickInviteName;

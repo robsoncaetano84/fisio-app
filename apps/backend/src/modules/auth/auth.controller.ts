@@ -4,6 +4,7 @@ import {
   Body,
   UseGuards,
   Get,
+  Query,
   Patch,
   HttpCode,
   HttpStatus,
@@ -111,6 +112,15 @@ export class AuthController {
     @Body() dto: RegistroPacientePorConviteDto,
   ) {
     return this.authService.registrarPacientePorConvite(dto);
+  }
+
+  @Get('paciente-convite-dados')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  async obterDadosConvitePaciente(@Query('conviteToken') conviteToken?: string) {
+    if (!conviteToken?.trim()) {
+      throw new BadRequestException('Convite invalido');
+    }
+    return this.authService.obterDadosConvitePaciente(conviteToken.trim());
   }
 
   @UseGuards(JwtAuthGuard)

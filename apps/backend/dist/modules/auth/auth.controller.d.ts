@@ -44,6 +44,10 @@ export declare class AuthController {
         pacienteId: string | null;
         profissionalId: string;
     }>;
+    obterDadosConvitePaciente(conviteToken?: string): Promise<{
+        nome: string;
+        email: string;
+    }>;
     aceitarConvitePaciente(usuario: Usuario, dto: AceitarPacienteInviteDto): Promise<{
         vinculadoAutomaticamente: boolean;
         pacienteId: string;

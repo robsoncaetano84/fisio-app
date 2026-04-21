@@ -408,6 +408,16 @@ export class AuthService {
     return { profissional, pacienteParaVinculo };
   }
 
+  async obterDadosConvitePaciente(
+    conviteToken: string,
+  ): Promise<{ nome: string; email: string }> {
+    const { pacienteParaVinculo } = await this.resolveInviteContext(conviteToken);
+    return {
+      nome: (pacienteParaVinculo.nomeCompleto || '').trim(),
+      email: (pacienteParaVinculo.contatoEmail || '').trim().toLowerCase(),
+    };
+  }
+
   private async vincularPacienteUsuarioAoCadastro(
     pacienteParaVinculo: Paciente,
     pacienteUsuario: Usuario,
