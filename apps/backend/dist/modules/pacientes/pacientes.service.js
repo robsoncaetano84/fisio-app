@@ -448,9 +448,19 @@ let PacientesService = class PacientesService {
             },
             order: { createdAt: 'DESC' },
         });
-        if (vinculoAtivo) {
+        const vinculoAtivoLegado = vinculoAtivo ||
+            (await this.vinculoRepository
+                .createQueryBuilder('v')
+                .innerJoin(paciente_entity_1.Paciente, 'p', 'p.id = v.paciente_id')
+                .where('v.status = :status', {
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            })
+                .andWhere('p.paciente_usuario_id = :usuarioId', { usuarioId })
+                .orderBy('v.created_at', 'DESC')
+                .getOne());
+        if (vinculoAtivoLegado) {
             const pacienteByVinculo = await this.pacienteRepository.findOne({
-                where: { id: vinculoAtivo.pacienteId, ativo: true },
+                where: { id: vinculoAtivoLegado.pacienteId, ativo: true },
             });
             if (pacienteByVinculo) {
                 return pacienteByVinculo;
@@ -472,9 +482,19 @@ let PacientesService = class PacientesService {
             },
             order: { createdAt: 'DESC' },
         });
-        if (vinculoAtivo) {
+        const vinculoAtivoLegado = vinculoAtivo ||
+            (await this.vinculoRepository
+                .createQueryBuilder('v')
+                .innerJoin(paciente_entity_1.Paciente, 'p', 'p.id = v.paciente_id')
+                .where('v.status = :status', {
+                status: profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculoStatus.ATIVO,
+            })
+                .andWhere('p.paciente_usuario_id = :usuarioId', { usuarioId })
+                .orderBy('v.created_at', 'DESC')
+                .getOne());
+        if (vinculoAtivoLegado) {
             const pacienteByVinculo = await this.pacienteRepository.findOne({
-                where: { id: vinculoAtivo.pacienteId, ativo: true },
+                where: { id: vinculoAtivoLegado.pacienteId, ativo: true },
             });
             if (pacienteByVinculo) {
                 return pacienteByVinculo;
@@ -601,6 +621,52 @@ let PacientesService = class PacientesService {
                 statusLaudo: latestLaudo?.status || null,
             },
         };
+    }
+    async updateMyPacienteProfile(usuario, updatePacienteDto) {
+        if (usuario.role !== usuario_entity_1.UserRole.PACIENTE) {
+            throw new common_1.ForbiddenException('Acesso permitido somente para pacientes');
+        }
+        const pacienteExistente = await this.findPacienteByUsuarioId(usuario.id);
+        const paciente = pacienteExistente || (await this.findOrCreateSelfPacienteForUsuario(usuario.id));
+        if (updatePacienteDto.cpf && updatePacienteDto.cpf !== paciente.cpf) {
+            const existingPaciente = await this.pacienteRepository.findOne({
+                where: {
+                    cpf: updatePacienteDto.cpf,
+                    usuarioId: paciente.usuarioId,
+                },
+            });
+            if (existingPaciente && existingPaciente.id !== paciente.id) {
+                throw new common_1.ConflictException('CPF ja cadastrado');
+            }
+        }
+        const allowedFields = [
+            'nomeCompleto',
+            'cpf',
+            'rg',
+            'dataNascimento',
+            'sexo',
+            'estadoCivil',
+            'profissao',
+            'enderecoRua',
+            'enderecoNumero',
+            'enderecoComplemento',
+            'enderecoBairro',
+            'enderecoCep',
+            'enderecoCidade',
+            'enderecoUf',
+            'contatoWhatsapp',
+            'contatoTelefone',
+            'contatoEmail',
+        ];
+        const safePatch = {};
+        for (const field of allowedFields) {
+            if (Object.prototype.hasOwnProperty.call(updatePacienteDto, field)) {
+                safePatch[field] = updatePacienteDto[field];
+            }
+        }
+        Object.assign(paciente, safePatch);
+        const saved = await this.pacienteRepository.save(paciente);
+        return this.applyDisplayNameFallback(saved);
     }
     async resolveExameScope(pacienteId, actor) {
         if (actor.role === usuario_entity_1.UserRole.PACIENTE) {

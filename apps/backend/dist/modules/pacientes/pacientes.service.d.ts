@@ -48,6 +48,7 @@ export declare class PacientesService {
         atendidosMes: number;
     }>;
     getMyPacienteProfile(usuario: Usuario): Promise<PacienteProfileResponseDto>;
+    updateMyPacienteProfile(usuario: Usuario, updatePacienteDto: UpdatePacienteDto): Promise<Paciente>;
     private resolveExameScope;
     resolveExameOwnerUsuarioId(pacienteId: string, actor: Usuario): Promise<string>;
     listExames(pacienteId: string, actor: Usuario): Promise<PacienteExame[]>;

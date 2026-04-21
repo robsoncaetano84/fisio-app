@@ -123,6 +123,9 @@ let PacientesController = class PacientesController {
     getMyPacienteProfile(usuario) {
         return this.pacientesService.getMyPacienteProfile(usuario);
     }
+    updateMyPacienteProfile(usuario, updatePacienteDto) {
+        return this.pacientesService.updateMyPacienteProfile(usuario, updatePacienteDto);
+    }
     unlinkMyProfessional(usuario) {
         return this.pacientesService.unlinkMyProfessional(usuario);
     }
@@ -256,6 +259,17 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_2.Usuario]),
     __metadata("design:returntype", Promise)
 ], PacientesController.prototype, "getMyPacienteProfile", null);
+__decorate([
+    (0, common_1.Patch)('me'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 30 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_2.Usuario,
+        update_paciente_dto_1.UpdatePacienteDto]),
+    __metadata("design:returntype", void 0)
+], PacientesController.prototype, "updateMyPacienteProfile", null);
 __decorate([
     (0, common_1.Post)('me/desvincular-profissional'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 10 } }),

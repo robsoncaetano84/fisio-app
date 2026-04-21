@@ -586,9 +586,21 @@ export class PacientesService {
       order: { createdAt: 'DESC' },
     });
 
-    if (vinculoAtivo) {
+    const vinculoAtivoLegado =
+      vinculoAtivo ||
+      (await this.vinculoRepository
+        .createQueryBuilder('v')
+        .innerJoin(Paciente, 'p', 'p.id = v.paciente_id')
+        .where('v.status = :status', {
+          status: ProfissionalPacienteVinculoStatus.ATIVO,
+        })
+        .andWhere('p.paciente_usuario_id = :usuarioId', { usuarioId })
+        .orderBy('v.created_at', 'DESC')
+        .getOne());
+
+    if (vinculoAtivoLegado) {
       const pacienteByVinculo = await this.pacienteRepository.findOne({
-        where: { id: vinculoAtivo.pacienteId, ativo: true },
+        where: { id: vinculoAtivoLegado.pacienteId, ativo: true },
       });
 
       if (pacienteByVinculo) {
@@ -616,9 +628,21 @@ export class PacientesService {
       order: { createdAt: 'DESC' },
     });
 
-    if (vinculoAtivo) {
+    const vinculoAtivoLegado =
+      vinculoAtivo ||
+      (await this.vinculoRepository
+        .createQueryBuilder('v')
+        .innerJoin(Paciente, 'p', 'p.id = v.paciente_id')
+        .where('v.status = :status', {
+          status: ProfissionalPacienteVinculoStatus.ATIVO,
+        })
+        .andWhere('p.paciente_usuario_id = :usuarioId', { usuarioId })
+        .orderBy('v.created_at', 'DESC')
+        .getOne());
+
+    if (vinculoAtivoLegado) {
       const pacienteByVinculo = await this.pacienteRepository.findOne({
-        where: { id: vinculoAtivo.pacienteId, ativo: true },
+        where: { id: vinculoAtivoLegado.pacienteId, ativo: true },
       });
 
       if (pacienteByVinculo) {
@@ -938,6 +962,5 @@ export class PacientesService {
     return exame;
   }
 }
-
 
 
