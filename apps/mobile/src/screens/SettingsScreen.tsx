@@ -698,7 +698,7 @@ export function SettingsScreen() {
                 styles.adminLink,
                 pressed && styles.adminLinkPressed,
               ]}
-              onPress={() => openLegalLink("/admin/crm")}
+              onPress={() => openLegalLink("/admin")}
             >
               <View style={styles.adminLinkIcon}>
                 <Ionicons
@@ -708,7 +708,7 @@ export function SettingsScreen() {
                 />
               </View>
               <View style={styles.adminLinkTextWrap}>
-                <Text style={styles.adminLinkTitle}>CRM (Web)</Text>
+                <Text style={styles.adminLinkTitle}>Console ADM (Web)</Text>
                 <Text style={styles.adminLinkSubtitle}>
                   {"Área exclusiva para administração master"}
                 </Text>

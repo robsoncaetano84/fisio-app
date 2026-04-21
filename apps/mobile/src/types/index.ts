@@ -439,7 +439,7 @@ export type RootStackParamList = {
   Home: undefined;
   Settings: undefined;
   AdminHome: undefined;
-  AdminCrm: undefined;
+  AdminCrm: { initialTab?: "PROFISSIONAIS" | "PACIENTES" | "LEADS" | "TAREFAS" | "INTERACOES" } | undefined;
   PacienteHome: undefined;
   PacienteAtividadeCheckin: { atividadeId: string; titulo: string };
 

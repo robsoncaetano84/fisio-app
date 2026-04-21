@@ -47,6 +47,13 @@ import {
 import { UserRole } from "../../types";
 
 type TabKey = "PROFISSIONAIS" | "PACIENTES" | "LEADS" | "TAREFAS" | "INTERACOES";
+type AdminCrmScreenProps = {
+  route?: {
+    params?: {
+      initialTab?: TabKey;
+    };
+  };
+};
 type TaskBucket = "TODAS" | "ATRASADAS" | "HOJE" | "PROXIMAS" | "CONCLUIDAS";
 type SortDir = "asc" | "desc";
 type ProfSortKey = "nome" | "score" | "vulnEmocional" | "pacientes" | "ativos" | "ultimoAcesso";
@@ -117,7 +124,7 @@ const CRM_AUTOMATIONS_DISMISSED_KEY_PREFIX = "crm:web:automations:dismissed:v1";
 const CRM_AUTOMATIONS_HISTORY_KEY_PREFIX = "crm:web:automations:history:v1";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function AdminCrmScreen() {
+export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const { usuario } = useAuthStore();
   const { showToast } = useToast();
   const { t } = useLanguage();
@@ -125,6 +132,11 @@ export function AdminCrmScreen() {
   const isMaster = usuario?.role === UserRole.ADMIN;
 
   const [tab, setTab] = useState<TabKey>("PROFISSIONAIS");
+  useEffect(() => {
+    const initialTab = route?.params?.initialTab;
+    if (!initialTab) return;
+    setTab(initialTab);
+  }, [route?.params?.initialTab]);
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<CrmLeadStage | "TODOS">("TODOS");
   const [pipeline, setPipeline] = useState<CrmPipelineSummary | null>(null);
@@ -2509,8 +2521,3 @@ const styles = StyleSheet.create({
   kanbanWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 }, kanbanCol: { flex: 1, minWidth: 240, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#F8FAFD", padding: 10 }, kanbanCard: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: COLORS.white, padding: 10 },
   blocked: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 8 },
 });
-
-
-
-
-

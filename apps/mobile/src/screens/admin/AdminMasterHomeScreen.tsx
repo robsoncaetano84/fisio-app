@@ -21,7 +21,7 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
 
         <Pressable
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-          onPress={() => navigation.navigate("AdminCrm")}
+          onPress={() => navigation.navigate("AdminCrm", { initialTab: "PROFISSIONAIS" })}
           accessibilityRole="button"
           accessibilityLabel="Abrir Dashboard e CRM"
         >
@@ -36,6 +36,37 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
           </View>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
         </Pressable>
+
+        <View style={styles.grid}>
+          <Pressable
+            style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
+            onPress={() => navigation.navigate("AdminCrm", { initialTab: "PACIENTES" })}
+          >
+            <Ionicons name="people-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Pacientes</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
+            onPress={() => navigation.navigate("AdminCrm", { initialTab: "LEADS" })}
+          >
+            <Ionicons name="funnel-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Funil</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
+            onPress={() => navigation.navigate("AdminCrm", { initialTab: "TAREFAS" })}
+          >
+            <Ionicons name="checkmark-done-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Tarefas</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
+            onPress={() => navigation.navigate("AdminCrm", { initialTab: "INTERACOES" })}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Interações</Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -96,5 +127,27 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
+  },
+  smallCard: {
+    width: "48%",
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+  },
+  smallCardTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
   },
 });
