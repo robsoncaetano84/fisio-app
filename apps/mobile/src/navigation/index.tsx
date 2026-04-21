@@ -28,6 +28,7 @@ import { PacienteInviteSignupScreen } from "../screens/auth/PacienteInviteSignup
 import { HomeScreen } from "../screens/HomeScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { AdminCrmScreen } from "../screens/admin/AdminCrmScreen";
+import { AdminMasterHomeScreen } from "../screens/admin/AdminMasterHomeScreen";
 import {
   PacienteFormScreen,
   PacientesListScreen,
@@ -59,6 +60,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       PacienteInviteSignup: "cadastro-paciente",
       Home: "home",
       Settings: "settings",
+      AdminHome: "admin",
+      AdminCrm: "admin/crm",
       PacienteHome: "paciente",
       PacientesList: "pacientes",
       PacienteForm: "pacientes/form",
@@ -290,7 +293,7 @@ const PatientStack = ({ t }: { t: (key: string) => string }) => (
   </Stack.Navigator>
 );
 
-const MasterAdminCrmStack = () => (
+const MasterAdminStack = () => (
   <Stack.Navigator
     screenOptions={{
       headerStyle: { backgroundColor: COLORS.primary },
@@ -298,6 +301,11 @@ const MasterAdminCrmStack = () => (
       headerTitleStyle: { fontWeight: "600" },
     }}
   >
+    <Stack.Screen
+      name="AdminHome"
+      component={AdminMasterHomeScreen}
+      options={{ title: "ADM Master" }}
+    />
     <Stack.Screen
       name="AdminCrm"
       component={AdminCrmScreen}
@@ -338,14 +346,14 @@ export function Navigation() {
     Platform.OS === "web" && typeof window !== "undefined"
       ? window.location.pathname
       : "";
-  const intendedCrmPath =
-    initialWebPathRef.current.startsWith("/admin/crm") ||
-    webPath.startsWith("/admin/crm");
-  const shouldOpenCrmWeb =
+  const intendedAdminPath =
+    initialWebPathRef.current.startsWith("/admin") ||
+    webPath.startsWith("/admin");
+  const shouldOpenAdminWeb =
     Platform.OS === "web" &&
     isAuthenticated &&
     usuario?.role === UserRole.ADMIN &&
-    intendedCrmPath;
+    intendedAdminPath;
 
   useEffect(() => {
     loadStoredAuth();
@@ -424,8 +432,8 @@ export function Navigation() {
           linking={linking}
           onStateChange={resetIdleTimer}
         >
-          {shouldOpenCrmWeb ? (
-            <MasterAdminCrmStack />
+          {shouldOpenAdminWeb ? (
+            <MasterAdminStack />
           ) : isAuthenticated ? (
             usuario?.role === UserRole.PACIENTE ? (
               <PatientStack t={t} />

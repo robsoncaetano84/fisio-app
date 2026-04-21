@@ -438,6 +438,7 @@ export type RootStackParamList = {
   // Main
   Home: undefined;
   Settings: undefined;
+  AdminHome: undefined;
   AdminCrm: undefined;
   PacienteHome: undefined;
   PacienteAtividadeCheckin: { atividadeId: string; titulo: string };
