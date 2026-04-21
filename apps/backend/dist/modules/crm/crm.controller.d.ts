@@ -44,6 +44,7 @@ export declare class CrmController {
                 EXAME_FISICO: number;
                 EVOLUCAO: number;
             };
+            blockedTotal: number;
             completedTotal?: undefined;
         };
     } | {
@@ -70,6 +71,7 @@ export declare class CrmController {
                 EVOLUCAO: number;
             };
             completedTotal: number;
+            blockedTotal: number;
         };
     }>;
     listAdminProfissionais(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string, sensitiveReason?: string): Promise<{

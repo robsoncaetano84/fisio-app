@@ -311,6 +311,7 @@ let CrmService = class CrmService {
                         EXAME_FISICO: 0,
                         EVOLUCAO: 0,
                     },
+                    blockedTotal: 0,
                 },
             };
         }
@@ -425,6 +426,7 @@ let CrmService = class CrmService {
             .addSelect(`SUM(CASE WHEN e.eventType = 'STAGE_OPENED' THEN 1 ELSE 0 END)`, 'opened')
             .addSelect(`SUM(CASE WHEN e.eventType = 'STAGE_ABANDONED' THEN 1 ELSE 0 END)`, 'abandoned')
             .addSelect(`SUM(CASE WHEN e.eventType = 'STAGE_COMPLETED' THEN 1 ELSE 0 END)`, 'completed')
+            .addSelect(`SUM(CASE WHEN e.eventType = 'STAGE_BLOCKED' THEN 1 ELSE 0 END)`, 'blocked')
             .where('e.occurredAt >= :since', {
             since: new Date(now - activityWindowMs),
         })
@@ -438,11 +440,13 @@ let CrmService = class CrmService {
         let openedTotal = 0;
         let abandonedTotal = 0;
         let completedTotal = 0;
+        let blockedTotal = 0;
         flowRows.forEach((row) => {
             tempoMedioPorEtapaMs[row.stage] = Number(row.avgDuration || 0);
             openedTotal += Number(row.opened || 0);
             abandonedTotal += Number(row.abandoned || 0);
             completedTotal += Number(row.completed || 0);
+            blockedTotal += Number(row.blocked || 0);
         });
         const abandonoRate = openedTotal > 0 ? Number(((abandonedTotal / openedTotal) * 100).toFixed(1)) : 0;
         const conclusaoPlanoRate = pacienteIds.length > 0 ? Number(((alta / pacienteIds.length) * 100).toFixed(1)) : 0;
@@ -466,6 +470,7 @@ let CrmService = class CrmService {
                 pacientesEmAtencao,
                 tempoMedioPorEtapaMs,
                 completedTotal,
+                blockedTotal,
             },
         };
     }

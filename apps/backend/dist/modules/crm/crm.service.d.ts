@@ -188,6 +188,7 @@ export declare class CrmService {
                 EXAME_FISICO: number;
                 EVOLUCAO: number;
             };
+            blockedTotal: number;
             completedTotal?: undefined;
         };
     } | {
@@ -214,6 +215,7 @@ export declare class CrmService {
                 EVOLUCAO: number;
             };
             completedTotal: number;
+            blockedTotal: number;
         };
     }>;
     listLeads(params?: {
