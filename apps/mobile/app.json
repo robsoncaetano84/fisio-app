@@ -1,0 +1,56 @@
+{
+    "expo":  {
+                 "name":  "Synap",
+                 "slug":  "synap",
+                 "scheme":  "synap",
+                 "version":  "1.0.0",
+                 "orientation":  "portrait",
+                 "icon":  "./assets/synap-logo.png",
+                 "userInterfaceStyle":  "light",
+                 "newArchEnabled":  false,
+                 "splash":  {
+                                "image":  "./assets/synap-logo.png",
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#ffffff"
+                            },
+                 "ios":  {
+                             "supportsTablet":  true,
+                             "infoPlist":  {
+                                               "NSMicrophoneUsageDescription":  "Permita acesso ao microfone para transcrever sua fala.",
+                                               "NSSpeechRecognitionUsageDescription":  "Permita o reconhecimento de voz para transcricao."
+                                           }
+                         },
+                 "android":  {
+                                 "adaptiveIcon":  {
+                                                      "foregroundImage":  "./assets/synap-logo.png",
+                                                      "backgroundColor":  "#ffffff"
+                                                  },
+                                 "edgeToEdgeEnabled":  true,
+                                 "predictiveBackGestureEnabled":  false,
+                                 "permissions":  [
+                                                     "RECORD_AUDIO"
+                                                 ],
+                                 "package":  "com.anonymous.mobile"
+                             },
+                 "plugins":  [
+                                 "expo-dev-client",
+                                 [
+                                     "expo-notifications",
+                                     {
+                                         "icon":  "./assets/synap-logo.png",
+                                         "color":  "#2D8C6F"
+                                     }
+                                 ],
+                                 [
+                                     "@react-native-voice/voice",
+                                     {
+                                         "microphone":  "Permita acesso ao microfone para transcrever sua fala.",
+                                         "speechRecognition":  "Permita o reconhecimento de voz para transcricao."
+                                     }
+                                 ]
+                             ],
+                 "web":  {
+                             "favicon":  "./assets/synap-logo.png"
+                         }
+             }
+}

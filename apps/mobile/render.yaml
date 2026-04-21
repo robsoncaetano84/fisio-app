@@ -1,0 +1,20 @@
+services:
+  - type: static_site
+    name: fisio-frontend
+    buildCommand: npm ci && npm run build:web
+    staticPublishPath: dist
+    envVars:
+      - key: EXPO_PUBLIC_API_URL
+        sync: false
+      - key: EXPO_PUBLIC_MASTER_ADMIN_EMAILS
+        sync: false
+      - key: EXPO_PUBLIC_ENABLE_SPEECH_TO_TEXT
+        value: "true"
+      - key: EXPO_PUBLIC_SENTRY_DSN
+        sync: false
+      - key: EXPO_PUBLIC_APP_ENV
+        value: hml
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
