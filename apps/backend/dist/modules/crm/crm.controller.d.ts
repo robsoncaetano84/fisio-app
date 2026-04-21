@@ -180,6 +180,13 @@ export declare class CrmController {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
+    listAdminAuditLogs(usuario: Usuario, q?: string, action?: string, includeSensitive?: string, page?: string, limit?: string): Promise<{
+        items: import("./entities/crm-admin-audit-log.entity").CrmAdminAuditLog[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
     listLeadsPaged(usuario: Usuario, q?: string, stage?: CrmLeadStage | 'TODOS', page?: string, limit?: string): Promise<{
         items: {
             id: string;

@@ -17,6 +17,7 @@ import { Atividade } from '../atividades/entities/atividade.entity';
 import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
+import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entit
       AtividadeCheckin,
       Laudo,
       ClinicalFlowEvent,
+      CrmAdminAuditLog,
     ]),
   ],
   controllers: [CrmController],

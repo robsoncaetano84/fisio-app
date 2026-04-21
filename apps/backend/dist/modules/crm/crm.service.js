@@ -29,6 +29,7 @@ const crm_lead_entity_1 = require("./entities/crm-lead.entity");
 const crm_task_entity_1 = require("./entities/crm-task.entity");
 const crm_interaction_entity_1 = require("./entities/crm-interaction.entity");
 const clinical_flow_event_entity_1 = require("../metrics/entities/clinical-flow-event.entity");
+const crm_admin_audit_log_entity_1 = require("./entities/crm-admin-audit-log.entity");
 let CrmService = class CrmService {
     configService;
     crmLeadRepository;
@@ -42,7 +43,8 @@ let CrmService = class CrmService {
     atividadeCheckinRepository;
     laudoRepository;
     clinicalFlowEventRepository;
-    constructor(configService, crmLeadRepository, crmTaskRepository, crmInteractionRepository, pacienteRepository, usuarioRepository, anamneseRepository, evolucaoRepository, atividadeRepository, atividadeCheckinRepository, laudoRepository, clinicalFlowEventRepository) {
+    crmAdminAuditLogRepository;
+    constructor(configService, crmLeadRepository, crmTaskRepository, crmInteractionRepository, pacienteRepository, usuarioRepository, anamneseRepository, evolucaoRepository, atividadeRepository, atividadeCheckinRepository, laudoRepository, clinicalFlowEventRepository, crmAdminAuditLogRepository) {
         this.configService = configService;
         this.crmLeadRepository = crmLeadRepository;
         this.crmTaskRepository = crmTaskRepository;
@@ -55,6 +57,7 @@ let CrmService = class CrmService {
         this.atividadeCheckinRepository = atividadeCheckinRepository;
         this.laudoRepository = laudoRepository;
         this.clinicalFlowEventRepository = clinicalFlowEventRepository;
+        this.crmAdminAuditLogRepository = crmAdminAuditLogRepository;
     }
     maskEmail(email) {
         if (!email)
@@ -87,6 +90,47 @@ let CrmService = class CrmService {
         if (!allowedEmails.includes((usuario.email || '').trim().toLowerCase())) {
             throw new common_1.ForbiddenException('Acesso restrito ao administrador master');
         }
+    }
+    async createAdminAuditLog(params) {
+        const row = this.crmAdminAuditLogRepository.create({
+            actorId: params.actorId,
+            actorEmail: params.actorEmail,
+            action: params.action,
+            includeSensitive: Boolean(params.includeSensitive),
+            sensitiveReason: params.sensitiveReason?.trim() || null,
+            metadata: params.metadata || null,
+        });
+        await this.crmAdminAuditLogRepository.save(row);
+    }
+    async listAdminAuditLogs(params) {
+        const page = Math.max(1, Math.floor(params?.page || 1));
+        const limit = Math.max(1, Math.min(Math.floor(params?.limit || 20), 100));
+        const qb = this.crmAdminAuditLogRepository
+            .createQueryBuilder('l')
+            .orderBy('l.createdAt', 'DESC');
+        const q = (params?.q || '').trim().toLowerCase();
+        if (q) {
+            qb.andWhere('(LOWER(l.actorEmail) LIKE :q OR LOWER(l.action) LIKE :q OR LOWER(COALESCE(l.sensitiveReason, \'\')) LIKE :q)', { q: `%${q}%` });
+        }
+        if (params?.action) {
+            qb.andWhere('l.action = :action', { action: params.action });
+        }
+        if (typeof params?.includeSensitive === 'boolean') {
+            qb.andWhere('l.includeSensitive = :includeSensitive', {
+                includeSensitive: params.includeSensitive,
+            });
+        }
+        const [items, total] = await qb
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getManyAndCount();
+        return {
+            items,
+            total,
+            page,
+            limit,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+        };
     }
     async getPipelineSummary() {
         const leads = await this.crmLeadRepository.find({ where: { ativo: true } });
@@ -773,7 +817,9 @@ exports.CrmService = CrmService = __decorate([
     __param(9, (0, typeorm_1.InjectRepository)(atividade_checkin_entity_1.AtividadeCheckin)),
     __param(10, (0, typeorm_1.InjectRepository)(laudo_entity_1.Laudo)),
     __param(11, (0, typeorm_1.InjectRepository)(clinical_flow_event_entity_1.ClinicalFlowEvent)),
+    __param(12, (0, typeorm_1.InjectRepository)(crm_admin_audit_log_entity_1.CrmAdminAuditLog)),
     __metadata("design:paramtypes", [config_1.ConfigService,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

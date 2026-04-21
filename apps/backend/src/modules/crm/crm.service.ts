@@ -24,6 +24,7 @@ import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
+import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
 
 @Injectable()
 export class CrmService {
@@ -51,6 +52,8 @@ export class CrmService {
     private readonly laudoRepository: Repository<Laudo>,
     @InjectRepository(ClinicalFlowEvent)
     private readonly clinicalFlowEventRepository: Repository<ClinicalFlowEvent>,
+    @InjectRepository(CrmAdminAuditLog)
+    private readonly crmAdminAuditLogRepository: Repository<CrmAdminAuditLog>,
   ) {}
 
   private maskEmail(email?: string | null): string | null {
@@ -84,6 +87,69 @@ export class CrmService {
     if (!allowedEmails.includes((usuario.email || '').trim().toLowerCase())) {
       throw new ForbiddenException('Acesso restrito ao administrador master');
     }
+  }
+
+  async createAdminAuditLog(params: {
+    actorId: string;
+    actorEmail: string;
+    action: string;
+    includeSensitive?: boolean;
+    sensitiveReason?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    const row = this.crmAdminAuditLogRepository.create({
+      actorId: params.actorId,
+      actorEmail: params.actorEmail,
+      action: params.action,
+      includeSensitive: Boolean(params.includeSensitive),
+      sensitiveReason: params.sensitiveReason?.trim() || null,
+      metadata: params.metadata || null,
+    });
+    await this.crmAdminAuditLogRepository.save(row);
+  }
+
+  async listAdminAuditLogs(params?: {
+    q?: string;
+    action?: string;
+    includeSensitive?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, Math.floor(params?.page || 1));
+    const limit = Math.max(1, Math.min(Math.floor(params?.limit || 20), 100));
+    const qb = this.crmAdminAuditLogRepository
+      .createQueryBuilder('l')
+      .orderBy('l.createdAt', 'DESC');
+
+    const q = (params?.q || '').trim().toLowerCase();
+    if (q) {
+      qb.andWhere(
+        '(LOWER(l.actorEmail) LIKE :q OR LOWER(l.action) LIKE :q OR LOWER(COALESCE(l.sensitiveReason, \'\')) LIKE :q)',
+        { q: `%${q}%` },
+      );
+    }
+
+    if (params?.action) {
+      qb.andWhere('l.action = :action', { action: params.action });
+    }
+    if (typeof params?.includeSensitive === 'boolean') {
+      qb.andWhere('l.includeSensitive = :includeSensitive', {
+        includeSensitive: params.includeSensitive,
+      });
+    }
+
+    const [items, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   async getPipelineSummary() {

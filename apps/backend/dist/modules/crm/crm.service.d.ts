@@ -17,6 +17,7 @@ import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
+import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
 export declare class CrmService {
     private readonly configService;
     private readonly crmLeadRepository;
@@ -30,10 +31,32 @@ export declare class CrmService {
     private readonly atividadeCheckinRepository;
     private readonly laudoRepository;
     private readonly clinicalFlowEventRepository;
-    constructor(configService: ConfigService, crmLeadRepository: Repository<CrmLead>, crmTaskRepository: Repository<CrmTask>, crmInteractionRepository: Repository<CrmInteraction>, pacienteRepository: Repository<Paciente>, usuarioRepository: Repository<Usuario>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, atividadeRepository: Repository<Atividade>, atividadeCheckinRepository: Repository<AtividadeCheckin>, laudoRepository: Repository<Laudo>, clinicalFlowEventRepository: Repository<ClinicalFlowEvent>);
+    private readonly crmAdminAuditLogRepository;
+    constructor(configService: ConfigService, crmLeadRepository: Repository<CrmLead>, crmTaskRepository: Repository<CrmTask>, crmInteractionRepository: Repository<CrmInteraction>, pacienteRepository: Repository<Paciente>, usuarioRepository: Repository<Usuario>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, atividadeRepository: Repository<Atividade>, atividadeCheckinRepository: Repository<AtividadeCheckin>, laudoRepository: Repository<Laudo>, clinicalFlowEventRepository: Repository<ClinicalFlowEvent>, crmAdminAuditLogRepository: Repository<CrmAdminAuditLog>);
     private maskEmail;
     private maskPhone;
     assertMasterAdmin(usuario: Usuario): void;
+    createAdminAuditLog(params: {
+        actorId: string;
+        actorEmail: string;
+        action: string;
+        includeSensitive?: boolean;
+        sensitiveReason?: string;
+        metadata?: Record<string, unknown>;
+    }): Promise<void>;
+    listAdminAuditLogs(params?: {
+        q?: string;
+        action?: string;
+        includeSensitive?: boolean;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        items: CrmAdminAuditLog[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
     getPipelineSummary(): Promise<{
         totalLeads: number;
         totalPipelineValue: number;

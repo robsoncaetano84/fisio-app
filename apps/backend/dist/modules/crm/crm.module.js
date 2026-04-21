@@ -22,6 +22,7 @@ const atividade_entity_1 = require("../atividades/entities/atividade.entity");
 const atividade_checkin_entity_1 = require("../atividades/entities/atividade-checkin.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
 const clinical_flow_event_entity_1 = require("../metrics/entities/clinical-flow-event.entity");
+const crm_admin_audit_log_entity_1 = require("./entities/crm-admin-audit-log.entity");
 let CrmModule = class CrmModule {
 };
 exports.CrmModule = CrmModule;
@@ -40,6 +41,7 @@ exports.CrmModule = CrmModule = __decorate([
                 atividade_checkin_entity_1.AtividadeCheckin,
                 laudo_entity_1.Laudo,
                 clinical_flow_event_entity_1.ClinicalFlowEvent,
+                crm_admin_audit_log_entity_1.CrmAdminAuditLog,
             ]),
         ],
         controllers: [crm_controller_1.CrmController],

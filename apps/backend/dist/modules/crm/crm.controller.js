@@ -33,13 +33,33 @@ let CrmController = CrmController_1 = class CrmController {
         this.crmService = crmService;
     }
     auditAdminAccess(usuario, action, metadata) {
+        const includeSensitive = typeof metadata?.includeSensitive === 'boolean'
+            ? Boolean(metadata.includeSensitive)
+            : false;
+        const sensitiveReason = typeof metadata?.sensitiveReason === 'string'
+            ? metadata.sensitiveReason
+            : undefined;
         this.logger.log(JSON.stringify({
             event: 'crm_admin_access',
             actorId: usuario.id,
             actorEmail: usuario.email,
             action,
+            includeSensitive,
+            sensitiveReason: includeSensitive ? sensitiveReason : undefined,
             ...(metadata || {}),
         }));
+        this.crmService
+            .createAdminAuditLog({
+            actorId: usuario.id,
+            actorEmail: usuario.email,
+            action,
+            includeSensitive,
+            sensitiveReason,
+            metadata: metadata || {},
+        })
+            .catch((error) => {
+            this.logger.warn(`failed_persist_crm_admin_audit action=${action} actor=${usuario.id} error=${error?.message || 'unknown'}`);
+        });
     }
     async getPipelineSummary(usuario) {
         this.crmService.assertMasterAdmin(usuario);
@@ -65,7 +85,7 @@ let CrmController = CrmController_1 = class CrmController {
             q,
             ativo,
             especialidade,
-            includeSensitive,
+            includeSensitive: includeSensitiveBool,
             sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
         });
         return this.crmService.listAdminProfissionais({
@@ -83,7 +103,7 @@ let CrmController = CrmController_1 = class CrmController {
             q,
             ativo,
             especialidade,
-            includeSensitive,
+            includeSensitive: includeSensitiveBool,
             sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
             page,
             limit,
@@ -107,7 +127,7 @@ let CrmController = CrmController_1 = class CrmController {
             vinculadoUsuarioPaciente,
             cidade,
             uf,
-            includeSensitive,
+            includeSensitive: includeSensitiveBool,
             sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
         });
         return this.crmService.listAdminPacientes({
@@ -129,7 +149,7 @@ let CrmController = CrmController_1 = class CrmController {
             vinculadoUsuarioPaciente,
             cidade,
             uf,
-            includeSensitive,
+            includeSensitive: includeSensitiveBool,
             sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
             page,
             limit,
@@ -149,6 +169,23 @@ let CrmController = CrmController_1 = class CrmController {
         this.crmService.assertMasterAdmin(usuario);
         this.auditAdminAccess(usuario, 'leads_list', { q, stage });
         return this.crmService.listLeads({ q, stage });
+    }
+    async listAdminAuditLogs(usuario, q, action, includeSensitive, page, limit) {
+        this.crmService.assertMasterAdmin(usuario);
+        this.auditAdminAccess(usuario, 'admin_audit_logs_list', {
+            q,
+            action,
+            includeSensitive,
+            page,
+            limit,
+        });
+        return this.crmService.listAdminAuditLogs({
+            q,
+            action,
+            includeSensitive: parseBoolQuery(includeSensitive),
+            page: page ? Number(page) : 1,
+            limit: limit ? Number(limit) : 20,
+        });
     }
     async listLeadsPaged(usuario, q, stage, page, limit) {
         this.crmService.assertMasterAdmin(usuario);
@@ -351,6 +388,18 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listLeads", null);
+__decorate([
+    (0, common_1.Get)('admin/audit-logs'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('q')),
+    __param(2, (0, common_1.Query)('action')),
+    __param(3, (0, common_1.Query)('includeSensitive')),
+    __param(4, (0, common_1.Query)('page')),
+    __param(5, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], CrmController.prototype, "listAdminAuditLogs", null);
 __decorate([
     (0, common_1.Get)('leads-paged'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

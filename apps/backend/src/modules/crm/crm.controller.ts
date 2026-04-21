@@ -42,15 +42,39 @@ export class CrmController {
     action: string,
     metadata?: Record<string, unknown>,
   ) {
+    const includeSensitive =
+      typeof metadata?.includeSensitive === 'boolean'
+        ? Boolean(metadata.includeSensitive)
+        : false;
+    const sensitiveReason =
+      typeof metadata?.sensitiveReason === 'string'
+        ? metadata.sensitiveReason
+        : undefined;
     this.logger.log(
       JSON.stringify({
         event: 'crm_admin_access',
         actorId: usuario.id,
         actorEmail: usuario.email,
         action,
+        includeSensitive,
+        sensitiveReason: includeSensitive ? sensitiveReason : undefined,
         ...(metadata || {}),
       }),
     );
+    this.crmService
+      .createAdminAuditLog({
+        actorId: usuario.id,
+        actorEmail: usuario.email,
+        action,
+        includeSensitive,
+        sensitiveReason,
+        metadata: metadata || {},
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `failed_persist_crm_admin_audit action=${action} actor=${usuario.id} error=${error?.message || 'unknown'}`,
+        );
+      });
   }
 
   @Get('pipeline/summary')
@@ -93,7 +117,7 @@ export class CrmController {
       q,
       ativo,
       especialidade,
-      includeSensitive,
+      includeSensitive: includeSensitiveBool,
       sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
     });
     return this.crmService.listAdminProfissionais({
@@ -122,7 +146,7 @@ export class CrmController {
       q,
       ativo,
       especialidade,
-      includeSensitive,
+      includeSensitive: includeSensitiveBool,
       sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
       page,
       limit,
@@ -157,7 +181,7 @@ export class CrmController {
       vinculadoUsuarioPaciente,
       cidade,
       uf,
-      includeSensitive,
+      includeSensitive: includeSensitiveBool,
       sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
     });
     return this.crmService.listAdminPacientes({
@@ -192,7 +216,7 @@ export class CrmController {
       vinculadoUsuarioPaciente,
       cidade,
       uf,
-      includeSensitive,
+      includeSensitive: includeSensitiveBool,
       sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
       page,
       limit,
@@ -218,6 +242,32 @@ export class CrmController {
     this.crmService.assertMasterAdmin(usuario);
     this.auditAdminAccess(usuario, 'leads_list', { q, stage });
     return this.crmService.listLeads({ q, stage });
+  }
+
+  @Get('admin/audit-logs')
+  async listAdminAuditLogs(
+    @CurrentUser() usuario: Usuario,
+    @Query('q') q?: string,
+    @Query('action') action?: string,
+    @Query('includeSensitive') includeSensitive?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    this.crmService.assertMasterAdmin(usuario);
+    this.auditAdminAccess(usuario, 'admin_audit_logs_list', {
+      q,
+      action,
+      includeSensitive,
+      page,
+      limit,
+    });
+    return this.crmService.listAdminAuditLogs({
+      q,
+      action,
+      includeSensitive: parseBoolQuery(includeSensitive),
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+    });
   }
 
   @Get('leads-paged')

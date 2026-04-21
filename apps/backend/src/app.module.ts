@@ -23,6 +23,7 @@ import { PushToken } from './modules/notificacoes/entities/push-token.entity';
 import { CrmLead } from './modules/crm/entities/crm-lead.entity';
 import { CrmTask } from './modules/crm/entities/crm-task.entity';
 import { CrmInteraction } from './modules/crm/entities/crm-interaction.entity';
+import { CrmAdminAuditLog } from './modules/crm/entities/crm-admin-audit-log.entity';
 import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entity';
 import { ProfissionalPacienteVinculo } from './modules/pacientes/entities/profissional-paciente-vinculo.entity';
 import { ClinicalFlowEvent } from './modules/metrics/entities/clinical-flow-event.entity';
@@ -111,11 +112,13 @@ import { MetricsModule } from './modules/metrics/metrics.module';
             PushToken,
             CrmLead,
             CrmTask,
-            CrmInteraction,          PacienteExame,
-          ProfissionalPacienteVinculo,
-          ClinicalFlowEvent,
-          PatientCheckClickEvent,
-        ],
+            CrmInteraction,
+            CrmAdminAuditLog,
+            PacienteExame,
+            ProfissionalPacienteVinculo,
+            ClinicalFlowEvent,
+            PatientCheckClickEvent,
+          ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',
           logging: configService.get('NODE_ENV') === 'development',
@@ -163,4 +166,3 @@ import { MetricsModule } from './modules/metrics/metrics.module';
   ],
 })
 export class AppModule {}
-
