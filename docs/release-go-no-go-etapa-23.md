@@ -13,11 +13,11 @@
 - [ ] Cenario B aprovado
 - [ ] Cenario C aprovado
 - [ ] Sem bloqueadores criticos abertos na matriz QA
-- [ ] Validacoes tecnicas locais ok:
-  - [ ] `apps/mobile`: `npm run validate:critical`
-  - [ ] `apps/backend`: `npm run -s build`
-  - [ ] `apps/backend`: `npm run test -- modules/laudos/laudos.service.spec.ts`
-- [ ] Sem regressao de encoding/i18n detectada
+- [x] Validacoes tecnicas locais ok:
+  - [x] `apps/mobile`: `npm run validate:critical`
+  - [x] `apps/backend`: `npm run -s build`
+  - [x] `apps/backend`: `npm run test -- modules/laudos/laudos.service.spec.ts`
+- [x] Sem regressao de encoding/i18n detectada
 - [ ] Sem erro 5xx recorrente nos endpoints clinicos
 
 ## Criterios de NO-GO (qualquer item abaixo)
@@ -40,3 +40,9 @@
 - Responsavel:
 - Data:
 - Commit candidato:
+
+## Atualizacao tecnica (2026-04-22)
+- Validacoes tecnicas executadas com sucesso em ambiente local.
+- Pendencias para virar `GO`:
+  - aprovacao manual dos cenarios A/B/C na matriz QA;
+  - confirmacao de ausencia de 5xx recorrente em uso real.
