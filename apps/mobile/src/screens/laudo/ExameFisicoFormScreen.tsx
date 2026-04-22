@@ -918,9 +918,33 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Avaliação por regiões (positivo/negativo)</Text>
-          {exam.avaliacaoRegioes.map((grupo) => (
-            <View key={grupo.regiao} style={styles.regionCard}>
-              <Text style={styles.regionTitle}>{grupo.titulo}</Text>
+          {exam.avaliacaoRegioes.map((grupo) => {
+            const testedCount = grupo.testes.filter(
+              (teste) => teste.resultado !== "NAO_TESTADO",
+            ).length;
+            const pendingCount = Math.max(grupo.testes.length - testedCount, 0);
+            const hasPending = pendingCount > 0;
+            return (
+            <View
+              key={grupo.regiao}
+              style={[
+                styles.regionCard,
+                testedCount === 0 && styles.regionCardPending,
+              ]}
+            >
+              <View style={styles.regionTitleRow}>
+                <Text style={styles.regionTitle}>{grupo.titulo}</Text>
+                <Text
+                  style={[
+                    styles.regionStatusChip,
+                    hasPending ? styles.regionStatusChipPending : styles.regionStatusChipDone,
+                  ]}
+                >
+                  {hasPending
+                    ? `${pendingCount} não testado(s)`
+                    : "Região testada"}
+                </Text>
+              </View>
               {grupo.testes.map((teste) => (
                 <View
                   key={`${grupo.regiao}-${teste.nome}`}
@@ -977,7 +1001,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 </View>
               ))}
             </View>
-          ))}
+          )})}
           {errors.avaliacaoRegioes ? (
             <Text style={styles.validationErrorText}>{errors.avaliacaoRegioes}</Text>
           ) : null}
@@ -1625,6 +1649,35 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.textPrimary,
     marginBottom: SPACING.sm,
+  },
+  regionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  regionStatusChip: {
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  regionStatusChipPending: {
+    color: COLORS.warning,
+    borderColor: COLORS.warning,
+    backgroundColor: `${COLORS.warning}14`,
+  },
+  regionStatusChipDone: {
+    color: COLORS.primary,
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}14`,
+  },
+  regionCardPending: {
+    borderColor: `${COLORS.warning}80`,
+    backgroundColor: `${COLORS.warning}08`,
   },
   regionTestRow: {
     marginBottom: SPACING.sm,

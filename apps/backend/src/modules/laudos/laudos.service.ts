@@ -897,6 +897,8 @@ Regras clinicas:
 - Se houver informacao insuficiente dos exames, explicite a limitacao e mantenha conduta prudente.
 - Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
 - Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
+- Em condutas, para cada intervencao proposta, descreva em texto curto a evidencia clinica correspondente (achado, teste positivo/negativo relevante, deficit funcional ou fator de risco).
+- Em planoTratamentoIA, estruture por fases com: objetivo da fase, condutas, criterio de progressao e evidencia que sustenta a fase.
 - Evite termos vagos; relacione cada bloco a achados (dor, funcao, testes positivos/deficits funcionais).
 - Em diagnosticoFuncional, identifique (quando possivel) origem provavel da dor, estrutura envolvida, tipo de lesao (mecanica/inflamatoria/neural) e fator biomecanico associado.
 
@@ -1449,7 +1451,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
 
 
 
