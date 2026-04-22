@@ -88,7 +88,7 @@ const RED_FLAG_LABELS: Record<RedFlagKey, string> = {
 };
 
 const TEST_RESULT_OPTIONS: Array<{ label: string; value: TestResult }> = [
-  { label: "N/T", value: "NAO_TESTADO" },
+  { label: "Nao testado", value: "NAO_TESTADO" },
   { label: "Negativo", value: "NEGATIVO" },
   { label: "Positivo", value: "POSITIVO" },
 ];
@@ -211,6 +211,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
   const draftKey = `draft:exame-fisico-structured:${pacienteId}`;
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
+  const regionalProgress = useMemo(() => {
+    if (!exam) return { tested: 0, total: 0, pending: 0 };
+    const total = exam.avaliacaoRegioes.reduce((acc, group) => acc + group.testes.length, 0);
+    const tested = exam.avaliacaoRegioes.reduce(
+      (acc, group) =>
+        acc + group.testes.filter((test) => test.resultado !== "NAO_TESTADO").length,
+      0,
+    );
+    return { tested, total, pending: Math.max(total - tested, 0) };
+  }, [exam]);
 
   const getLatestAnamnese = useMemo(
     () => () => {
@@ -969,9 +979,13 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Avaliação por regiões (positivo/negativo)</Text>
+          <Text style={styles.blockTitle}>Avaliacao por regioes (marque o resultado de cada teste)</Text>
+          <Text style={styles.regionProgressText}>
+            Progresso: {regionalProgress.tested}/{regionalProgress.total} testados •{" "}
+            {regionalProgress.pending} pendente(s)
+          </Text>
           <Text style={styles.sectionHint}>
-            Atalhos rápidos: selecione uma bateria sugerida e depois marque os resultados.
+            Atalhos: aplique uma bateria sugerida e depois marque positivo/negativo.
           </Text>
           <View style={styles.presetRow}>
             {EXAM_PRESETS.map((preset) => (
@@ -1015,7 +1029,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                     style={styles.regionApplyChip}
                     onPress={() => applyRegionBasicPreset(grupo.regiao)}
                   >
-                    <Text style={styles.regionApplyChipText}>Bateria básica</Text>
+                    <Text style={styles.regionApplyChipText}>Aplicar bateria basica</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1044,7 +1058,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                           teste.selecionado && styles.regionSuggestToggleTextSelected,
                         ]}
                       >
-                        {teste.selecionado ? "Selecionado" : "Sugerir"}
+                        {teste.selecionado ? "No protocolo" : "Adicionar"}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1752,6 +1766,12 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
+  },
+  regionProgressText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    fontWeight: "600",
   },
   presetRow: {
     flexDirection: "row",
