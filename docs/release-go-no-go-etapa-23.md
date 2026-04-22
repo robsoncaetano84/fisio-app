@@ -47,6 +47,8 @@
 
 ## Atualizacao tecnica (2026-04-22)
 - Validacoes tecnicas executadas com sucesso em ambiente local.
+- Microcopias criticas de Exame Fisico/Laudo padronizadas em i18n (pt/en/es).
+- Validacoes do Exame Fisico tambem migradas para i18n (sem hardcode local).
 - Pendencias para virar `GO`:
   - aprovacao manual dos cenarios A/B/C na matriz QA;
   - confirmacao de ausencia de 5xx recorrente em uso real.
