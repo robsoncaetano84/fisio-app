@@ -2098,14 +2098,16 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                           onPress={() => setProfEditForm((p) => ({ ...p, ativo: false }))}
                         />
                       </View>
-                      <View style={styles.wrapRow}>
+                      <View style={[styles.wrapRow, styles.panelActionsRow]}>
                         <Action
                           title={savingAdminEntity ? "Salvando..." : "Salvar alterações"}
                           onPress={saveAdminProfessional}
+                          style={styles.panelActionBtn}
                         />
                         <Action
                           title="Cancelar"
                           secondary
+                          style={styles.panelActionBtn}
                           onPress={() => {
                             resetProfEditForm();
                             setEditProfOpen(false);
@@ -2348,14 +2350,16 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                           onPress={() => setPacEditForm((p) => ({ ...p, ativo: false }))}
                         />
                       </View>
-                      <View style={styles.wrapRow}>
+                      <View style={[styles.wrapRow, styles.panelActionsRow]}>
                         <Action
                           title={savingAdminEntity ? "Salvando..." : "Salvar alterações"}
                           onPress={saveAdminPatient}
+                          style={styles.panelActionBtn}
                         />
                         <Action
                           title="Cancelar"
                           secondary
+                          style={styles.panelActionBtn}
                           onPress={() => {
                             resetPacEditForm();
                             setEditPacOpen(false);
@@ -2571,7 +2575,23 @@ function MetricMini({ label, value }: { label: string; value: string }) { return
 function Tab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.tab, active && styles.tabActive]}><Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text></Pressable>; }
 function MiniTab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.miniTab, active && styles.miniTabActive]}><Text style={[styles.miniTabText, active && styles.miniTabTextActive]}>{label}</Text></Pressable>; }
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>; }
-function Action({ title, onPress, secondary }: { title: string; onPress: () => void; secondary?: boolean }) { return <Pressable onPress={onPress} style={[styles.action, secondary && styles.actionSecondary]}><Text style={[styles.actionText, secondary && styles.actionTextSecondary]}>{title}</Text></Pressable>; }
+function Action({
+  title,
+  onPress,
+  secondary,
+  style,
+}: {
+  title: string;
+  onPress: () => void;
+  secondary?: boolean;
+  style?: any;
+}) {
+  return (
+    <Pressable onPress={onPress} style={[styles.action, secondary && styles.actionSecondary, style]}>
+      <Text style={[styles.actionText, secondary && styles.actionTextSecondary]}>{title}</Text>
+    </Pressable>
+  );
+}
 function SmallBtn({ title, onPress, danger }: { title: string; onPress: () => void; danger?: boolean }) { return <Pressable onPress={onPress} style={[styles.small, danger && styles.smallDanger]}><Text style={[styles.smallText, danger && styles.smallTextDanger]}>{title}</Text></Pressable>; }
 function StatusBadge({
   status,
@@ -2848,6 +2868,15 @@ const styles = StyleSheet.create({
   section: { fontSize: FONTS.sizes.base, fontWeight: "800", color: COLORS.textPrimary, marginBottom: 8 },
   search: { minWidth: 280, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", paddingHorizontal: 10, paddingVertical: 8, color: COLORS.textPrimary },
   filterInput: { minWidth: 120, borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, backgroundColor: COLORS.white, paddingHorizontal: 10, paddingVertical: 5, color: COLORS.textPrimary, fontSize: 12 },
+  panelActionsRow: {
+    marginTop: SPACING.sm,
+  },
+  panelActionBtn: {
+    minWidth: 150,
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   metric: { minWidth: 120, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10 },
   metricInteractive: { borderColor: COLORS.primary + "33" },
   metricValue: { fontWeight: "800", color: COLORS.textPrimary }, metricLabel: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
