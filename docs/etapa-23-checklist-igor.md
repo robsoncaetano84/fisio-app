@@ -78,4 +78,7 @@
 ## Pendências recomendadas (próximo lote)
 - [ ] Teste QA guiado ponta a ponta com 3 cenários esportivos reais (joelho, lombar, ombro)
 - [ ] Ajustar microcópias clínicas finais em todos os blocos para linguagem 100% padronizada
-- [ ] Cobertura automatizada mínima para serialização/parsing do exame estruturado
+- [x] Cobertura automatizada mínima para serialização/parsing do exame estruturado
+
+## Atualização deste lote
+- [x] i18n do fluxo clínico no detalhe do paciente (Resumo de prontidão + status por etapa)

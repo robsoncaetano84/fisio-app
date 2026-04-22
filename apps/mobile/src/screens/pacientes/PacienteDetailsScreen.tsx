@@ -1379,7 +1379,7 @@ export function PacienteDetailsScreen({
           navigation.navigate("PacienteAdesao", { pacienteId: paciente.id }),
       },
       RECORD_EVOLUTION: {
-        title: "Registrar evolução",
+        title: t("patientDetails.recordEvolution"),
         description:
           "Paciente está em acompanhamento adequado. Mantenha a cadência registrando evolução clínica." +
           contextualNextActionHint,
@@ -1985,7 +1985,7 @@ export function PacienteDetailsScreen({
           <View style={styles.readinessCard}>
             <View style={styles.readinessHeaderRow}>
               <Ionicons name="pulse-outline" size={18} color={COLORS.primary} />
-              <Text style={styles.readinessTitle}>Resumo de prontidão</Text>
+              <Text style={styles.readinessTitle}>{t("patientDetails.readinessSummary")}</Text>
             </View>
             <Text style={styles.readinessMain}>{readiness.title}</Text>
             <Text style={styles.readinessDescription}>{readiness.description}</Text>
@@ -2010,7 +2010,7 @@ export function PacienteDetailsScreen({
             />
           </View>
 
-          <Text style={styles.flowTitle}>Fluxo clínico em etapas</Text>
+          <Text style={styles.flowTitle}>{t("patientDetails.clinicalFlowSteps")}</Text>
           <View style={styles.flowProgressTrack}>
             <View
               style={[
@@ -2061,12 +2061,12 @@ export function PacienteDetailsScreen({
                 >
                   {item.label}{" "}
                   {item.status === "DONE"
-                    ? "· Concluído"
+                    ? `· ${t("patientDetails.flowStatusDone")}`
                     : item.status === "IN_PROGRESS"
-                      ? "· Em andamento"
+                      ? `· ${t("patientDetails.flowStatusInProgress")}`
                       : item.status === "BLOCKED"
-                        ? "· Pendente"
-                        : "· Não iniciado"}
+                        ? `· ${t("patientDetails.flowStatusPending")}`
+                        : `· ${t("patientDetails.flowStatusNotStarted")}`}
                 </Text>
               </View>
             ))}
@@ -2088,7 +2088,7 @@ export function PacienteDetailsScreen({
             style={{ marginTop: SPACING.sm }}
           />
           <Button
-            title="Registrar evolução"
+            title={t("patientDetails.recordEvolution")}
             onPress={handleOpenEvolucao}
             fullWidth
             icon={
