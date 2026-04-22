@@ -29,6 +29,8 @@ import { HomeScreen } from "../screens/HomeScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { AdminCrmScreen } from "../screens/admin/AdminCrmScreen";
 import { AdminMasterHomeScreen } from "../screens/admin/AdminMasterHomeScreen";
+import { AdminMasterProfessionalsScreen } from "../screens/admin/AdminMasterProfessionalsScreen";
+import { AdminMasterPatientsScreen } from "../screens/admin/AdminMasterPatientsScreen";
 import {
   PacienteFormScreen,
   PacientesListScreen,
@@ -62,6 +64,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       Settings: "settings",
       AdminHome: "admin",
       AdminCrm: "admin/crm",
+      AdminProfessionals: "admin/profissionais",
+      AdminPatients: "admin/pacientes",
       PacienteHome: "paciente",
       PacientesList: "pacientes",
       PacienteForm: "pacientes/form",
@@ -310,6 +314,16 @@ const MasterAdminStack = () => (
       name="AdminCrm"
       component={AdminCrmScreen}
       options={{ title: "CRM (ADM Master)" }}
+    />
+    <Stack.Screen
+      name="AdminProfessionals"
+      component={AdminMasterProfessionalsScreen}
+      options={{ title: "Profissionais (ADM Master)" }}
+    />
+    <Stack.Screen
+      name="AdminPatients"
+      component={AdminMasterPatientsScreen}
+      options={{ title: "Pacientes (ADM Master)" }}
     />
   </Stack.Navigator>
 );

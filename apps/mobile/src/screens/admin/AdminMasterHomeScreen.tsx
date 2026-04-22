@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,7 +15,7 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
         <View style={styles.header}>
           <Text style={styles.title}>Console ADM Master</Text>
           <Text style={styles.subtitle}>
-            Área administrativa com visão global de profissionais e pacientes.
+            Area administrativa com visao global de profissionais e pacientes.
           </Text>
         </View>
 
@@ -31,7 +31,7 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
           <View style={styles.cardTextWrap}>
             <Text style={styles.cardTitle}>Dashboard e CRM</Text>
             <Text style={styles.cardDescription}>
-              Funil clínico, indicadores operacionais, auditoria e gestão de dados.
+              Funil clinico, indicadores operacionais, auditoria e gestao de dados.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
@@ -40,17 +40,17 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
         <View style={styles.grid}>
           <Pressable
             style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
-            onPress={() => navigation.navigate("AdminCrm", { initialTab: "PACIENTES" })}
+            onPress={() => navigation.navigate("AdminProfessionals")}
           >
-            <Ionicons name="people-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.smallCardTitle}>Pacientes</Text>
+            <Ionicons name="medkit-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Profissionais</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
-            onPress={() => navigation.navigate("AdminCrm", { initialTab: "LEADS" })}
+            onPress={() => navigation.navigate("AdminPatients")}
           >
-            <Ionicons name="funnel-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.smallCardTitle}>Funil</Text>
+            <Ionicons name="people-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Pacientes</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
@@ -64,7 +64,7 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
             onPress={() => navigation.navigate("AdminCrm", { initialTab: "INTERACOES" })}
           >
             <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.smallCardTitle}>Interações</Text>
+            <Text style={styles.smallCardTitle}>Interacoes</Text>
           </Pressable>
         </View>
       </View>
