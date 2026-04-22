@@ -65,6 +65,18 @@ export class Laudo extends BaseEntity {
 
   @Column({ name: 'criterios_alta', type: 'text', nullable: true })
   criteriosAlta: string | null;
+
+  @Column({ name: 'sugestao_source', type: 'varchar', length: 20, nullable: true })
+  sugestaoSource: 'ai' | 'rules' | null;
+
+  @Column({ name: 'exames_considerados', type: 'int', nullable: true })
+  examesConsiderados: number | null;
+
+  @Column({ name: 'exames_com_leitura_ia', type: 'int', nullable: true })
+  examesComLeituraIa: number | null;
+
+  @Column({ name: 'sugestao_gerada_em', type: 'timestamp', nullable: true })
+  sugestaoGeradaEm: Date | null;
 }
 
 

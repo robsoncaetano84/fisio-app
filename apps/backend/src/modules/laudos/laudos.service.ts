@@ -420,7 +420,7 @@ export class LaudosService {
     pacienteId: string,
     usuarioId: string,
   ): Promise<Laudo> {
-    const { paciente, anamneses, evolucoes, exames } =
+    const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } =
       await this.buildAiInput(pacienteId, usuarioId);
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId },
@@ -447,6 +447,11 @@ export class LaudosService {
                 tempoProblema: anamneses[0].tempoProblema ?? '',
                 inicioProblema: anamneses[0].inicioProblema ?? '',
                 fatorAlivio: anamneses[0].fatorAlivio ?? '',
+                fatoresPiora: anamneses[0].fatoresPiora ?? '',
+                mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
+                historicoEsportivo: anamneses[0].historicoEsportivo ?? '',
+                lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
+                usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
               }
             : null,
           evolucoes: evolucoes.map((e) => ({
@@ -455,6 +460,7 @@ export class LaudosService {
             planoSessao: e.plano ?? '',
             observacoes: e.observacoes ?? '',
           })),
+          exameFisicoResumo,
           exames: exames.map((exame) => ({
             nomeOriginal: exame.nomeOriginal,
             tipoExame: exame.tipoExame ?? '',
@@ -462,25 +468,33 @@ export class LaudosService {
             mimeType: exame.mimeType,
             observacao: exame.observacao ?? '',
             uploadedAt: exame.uploadedAt,
+            aiInterpretacao: exame.aiInterpretacao,
           })),
         })
       : {};
 
+    const examesConsiderados = exames.length;
+    const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
+    const suggestionSource: 'ai' | 'rules' = Object.keys(aiSuggestion).length
+      ? 'ai'
+      : 'rules';
+
+    const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
     const payload: CreateLaudoDto = {
       pacienteId,
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ??
-        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}`,
+        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
       objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo,
       objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo,
       frequenciaSemanal: aiSuggestion.frequenciaSemanal,
       duracaoSemanas: aiSuggestion.duracaoSemanas,
       condutas:
         aiSuggestion.condutas ??
-        `Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.${this.buildExamCorrelationSuffix(exames.length)}`,
+        `Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
       planoTratamentoIA:
         aiSuggestion.planoTratamentoIA ??
-        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.${this.buildExamCorrelationSuffix(exames.length)}`,
+        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
       criteriosAlta: aiSuggestion.criteriosAlta,
     };
 
@@ -489,6 +503,10 @@ export class LaudosService {
       status: LaudoStatus.RASCUNHO_IA,
       validadoPorUsuarioId: null,
       validadoEm: null,
+      sugestaoSource: suggestionSource,
+      examesConsiderados,
+      examesComLeituraIa,
+      sugestaoGeradaEm: new Date(),
     });
     return this.laudoRepository.save(created);
   }
@@ -503,7 +521,7 @@ export class LaudosService {
       examesComLeituraIa: number;
     } & Partial<CreateLaudoDto>
   > {
-    const { paciente, anamneses, evolucoes, exames } = await this.buildAiInput(
+    const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } = await this.buildAiInput(
       pacienteId,
       usuarioId,
     );
@@ -523,6 +541,11 @@ export class LaudosService {
             tempoProblema: anamneses[0].tempoProblema ?? "",
             inicioProblema: anamneses[0].inicioProblema ?? "",
             fatorAlivio: anamneses[0].fatorAlivio ?? "",
+            fatoresPiora: anamneses[0].fatoresPiora ?? "",
+            mecanismoLesao: anamneses[0].mecanismoLesao ?? "",
+            historicoEsportivo: anamneses[0].historicoEsportivo ?? "",
+            lesoesPrevias: anamneses[0].lesoesPrevias ?? "",
+            usoMedicamentos: anamneses[0].usoMedicamentos ?? "",
           }
         : null,
       evolucoes: evolucoes.map((e) => ({
@@ -531,6 +554,7 @@ export class LaudosService {
         planoSessao: e.plano ?? "",
         observacoes: e.observacoes ?? "",
       })),
+      exameFisicoResumo,
       exames: exames.map((exame) => ({
         nomeOriginal: exame.nomeOriginal,
         tipoExame: exame.tipoExame ?? "",
@@ -538,6 +562,7 @@ export class LaudosService {
         mimeType: exame.mimeType,
         observacao: exame.observacao ?? "",
         uploadedAt: exame.uploadedAt,
+        aiInterpretacao: exame.aiInterpretacao,
       })),
     });
 
@@ -545,13 +570,14 @@ export class LaudosService {
     const examesConsiderados = exames.length;
     const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
 
+    const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
     return {
       source,
       examesConsiderados,
       examesComLeituraIa,
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ??
-        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}`,
+        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
       objetivosCurtoPrazo:
         aiSuggestion.objetivosCurtoPrazo ??
         "Reduzir dor percebida e melhorar controle motor inicial.",
@@ -562,10 +588,10 @@ export class LaudosService {
       duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
       condutas:
         aiSuggestion.condutas ??
-        `Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.${this.buildExamCorrelationSuffix(exames.length)}`,
+        `Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
       planoTratamentoIA:
         aiSuggestion.planoTratamentoIA ??
-        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}`,
+        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
       criteriosAlta:
         aiSuggestion.criteriosAlta ??
         "Dor controlada, funcao satisfatoria e independencia para autocuidado.",
@@ -803,6 +829,11 @@ ${input.observacao || 'Sem observacao adicional.'}
       tempoProblema: string;
       inicioProblema: string;
       fatorAlivio: string;
+      fatoresPiora: string;
+      mecanismoLesao: string;
+      historicoEsportivo: string;
+      lesoesPrevias: string;
+      usoMedicamentos: string;
     } | null;
     evolucoes: Array<{
       data: Date;
@@ -810,6 +841,7 @@ ${input.observacao || 'Sem observacao adicional.'}
       planoSessao: string;
       observacoes: string;
     }>;
+    exameFisicoResumo?: string | null;
     exames: Array<{
       nomeOriginal: string;
       tipoExame: string;
@@ -827,7 +859,7 @@ ${input.observacao || 'Sem observacao adicional.'}
 
     const model = (process.env.OPENAI_LAUDO_MODEL || process.env.OPENAI_MODEL || 'gpt-5-mini').trim();
     const systemPrompt =
-      'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes.';
+      'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes. Priorize seguranca clinica e rastreabilidade da decisao.';
     const userPrompt = `
 Retorne SOMENTE JSON valido com as chaves:
 diagnosticoFuncional (string),
@@ -840,10 +872,16 @@ planoTratamentoIA (string com plano por fases/semanas),
 criteriosAlta (string).
 
 Regras clinicas:
+- Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
 - Considere os exames anexados (tipoExame, observacao, dataExame, mimeType e aiInterpretacao quando houver) para orientar diagnostico funcional, condutas e plano.
 - Nao invente achados de imagem nao descritos no contexto.
 - Se houver informacao insuficiente dos exames, explicite a limitacao e mantenha conduta prudente.
 - Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
+- Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
+- Evite termos vagos; relacione cada bloco a achados (dor, funcao, testes positivos/deficits funcionais).
+
+Resumo do exame fisico estruturado:
+${input.exameFisicoResumo || 'Nao informado'}
 
 Contexto do paciente:
 ${JSON.stringify(input, null, 2)}
@@ -971,13 +1009,34 @@ ${JSON.stringify(input, null, 2)}
       order: { createdAt: 'DESC' },
       take: 12,
     });
+    const latestLaudo = await this.laudoRepository.findOne({
+      where: { pacienteId },
+      order: { updatedAt: 'DESC' },
+    });
     const examesInterpretados = await this.buildExamInsights(exames);
-    return { paciente, anamneses, evolucoes, exames: examesInterpretados };
+    const exameFisicoResumo = latestLaudo?.exameFisico
+      ? this.formatExameFisicoForDisplay(latestLaudo.exameFisico)
+      : null;
+    return {
+      paciente,
+      anamneses,
+      evolucoes,
+      exames: examesInterpretados,
+      exameFisicoResumo,
+    };
   }
 
   private buildExamCorrelationSuffix(examesCount: number): string {
     if (examesCount <= 0) return '';
     return ` Correlacionar com ${examesCount} exame(s) anexado(s).`;
+  }
+
+  private buildExameFisicoHint(exameFisicoResumo?: string | null): string {
+    const raw = String(exameFisicoResumo || '').trim();
+    if (!raw) return '';
+    const normalized = raw.replace(/\s+/g, ' ');
+    const short = normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
+    return ` Baseado no exame fisico: ${short}`;
   }
   private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
 
@@ -1000,12 +1059,28 @@ ${JSON.stringify(input, null, 2)}
       'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
       'Resistido: ' + String(parsed.movimento?.resistido || 'Nao informado'),
       'Reproduz dor: ' + String(parsed.movimento?.reproduzDor || 'Nao informado'),
+      'Qualidade do movimento: ' + String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
+      'Compensacoes: ' + String(parsed.movimento?.compensacoes || 'Nao informado'),
+      'Dor no movimento: ' + String(parsed.movimento?.dorNoMovimento || 'Nao informado'),
       '',
       'Palpacao',
       'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
       'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),
       'Pontos gatilho: ' + String(parsed.palpacao?.pontosGatilho || 'Nao informado'),
       'Palpacao dinamica vertebral: ' + String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
+      'Pontos dolorosos: ' + String(parsed.palpacao?.pontosDolorosos || 'Nao informado'),
+      'Temperatura: ' + String(parsed.palpacao?.temperatura || 'Nao informado'),
+      'Tonus muscular: ' + String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
+      'Estruturas especificas: ' + String(parsed.palpacao?.estruturasEspecificas || 'Nao informado'),
+      'Hipomobilidade articular: ' + String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
+      '',
+      'Testes funcionais',
+      'Agachamento: ' + String(parsed.testesFuncionais?.agachamento || 'Nao informado'),
+      'Agachamento unilateral: ' + String(parsed.testesFuncionais?.agachamentoUnilateral || 'Nao informado'),
+      'Salto: ' + String(parsed.testesFuncionais?.salto || 'Nao informado'),
+      'Corrida: ' + String(parsed.testesFuncionais?.corrida || 'Nao informado'),
+      'Estabilidade: ' + String(parsed.testesFuncionais?.estabilidade || 'Nao informado'),
+      'Controle motor: ' + String(parsed.testesFuncionais?.controleMotor || 'Nao informado'),
       '',
       'Testes',
       'Biomecanicos: ' + String(parsed.testes?.biomecanicos || 'Nao informado'),
@@ -1019,6 +1094,28 @@ ${JSON.stringify(input, null, 2)}
       'Inconsistencias: ' + String(parsed.cruzamentoFinal?.inconsistencias || 'Nao informado'),
       'Direcao de conduta: ' + String(parsed.cruzamentoFinal?.condutaDirecionada || 'Nao informado'),
       'Prioridade: ' + String(parsed.cruzamentoFinal?.prioridade || 'Nao informado'),
+      'Confianca da hipotese: ' + String(parsed.cruzamentoFinal?.confiancaHipotese || 'Nao informado'),
+      'Score de evidencia: ' + String(parsed.cruzamentoFinal?.scoreEvidencia ?? 'Nao informado'),
+      'Perfil de scoring: ' + String(parsed.cruzamentoFinal?.perfilScoring || 'Nao informado'),
+      '',
+      'Raciocinio clinico',
+      'Origem provavel da dor: ' + String(parsed.raciocinioClinico?.origemProvavelDor || 'Nao informado'),
+      'Estrutura envolvida: ' + String(parsed.raciocinioClinico?.estruturaEnvolvida || 'Nao informado'),
+      'Tipo de lesao: ' + String(parsed.raciocinioClinico?.tipoLesao || 'Nao informado'),
+      'Fator biomecanico associado: ' + String(parsed.raciocinioClinico?.fatorBiomecanicoAssociado || 'Nao informado'),
+      'Relacao com esporte: ' + String(parsed.raciocinioClinico?.relacaoComEsporte || 'Nao informado'),
+      '',
+      'Diagnostico funcional',
+      'Disfuncao principal: ' + String(parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal || 'Nao informado'),
+      'Cadeia envolvida: ' + String(parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || 'Nao informado'),
+      'Compensacoes: ' + String(parsed.diagnosticoFuncionalIa?.compensacoes || 'Nao informado'),
+      '',
+      'Conduta direcionada',
+      'Tecnica manual indicada: ' + String(parsed.condutaIa?.tecnicaManualIndicada || 'Nao informado'),
+      'Ajuste articular: ' + String(parsed.condutaIa?.ajusteArticular || 'Nao informado'),
+      'Exercicio corretivo: ' + String(parsed.condutaIa?.exercicioCorretivo || 'Nao informado'),
+      'Liberacao miofascial: ' + String(parsed.condutaIa?.liberacaoMiofascial || 'Nao informado'),
+      'Progressao esportiva: ' + String(parsed.condutaIa?.progressaoEsportiva || 'Nao informado'),
       '',
       'Red flags positivas',
       rfPositivas || 'Nenhuma red flag positiva',
@@ -1064,6 +1161,10 @@ ${JSON.stringify(input, null, 2)}
       anamnese.descricaoSintomas,
       anamnese.tempoProblema,
       anamnese.fatorAlivio,
+      anamnese.fatoresPiora,
+      anamnese.mecanismoLesao,
+      anamnese.historicoEsportivo,
+      anamnese.lesoesPrevias,
       anamnese.eventoEspecifico,
     ]
       .filter(Boolean)
@@ -1237,19 +1338,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
