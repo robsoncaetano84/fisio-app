@@ -838,6 +838,13 @@ export function AnamneseFormScreen({
     return fields;
   };
 
+  const getFirstInvalidStep = (): number | null => {
+    for (let step = 0; step < steps.length; step += 1) {
+      if (!validateStep(step)) return step;
+    }
+    return null;
+  };
+
   const nextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(currentStep + 1);
@@ -914,12 +921,23 @@ export function AnamneseFormScreen({
 
   const handleSave = async () => {
     setHasAttemptedSave(true);
-    if (!validateStep(currentStep)) {
-      const failedFields = getValidationFieldsForStep(currentStep);
+    const firstInvalidStep = getFirstInvalidStep();
+    if (firstInvalidStep !== null) {
+      const failedFields = getValidationFieldsForStep(firstInvalidStep);
+      if (currentStep !== firstInvalidStep) {
+        setCurrentStep(firstInvalidStep);
+        showToast({
+          message:
+            firstInvalidStep === 0
+              ? "Preencha os campos obrigatórios da Queixa principal."
+              : "Preencha os campos obrigatórios da etapa Descrição.",
+          type: "error",
+        });
+      }
       trackEvent("clinical_form_validation_error", {
         stage: "ANAMNESE",
         pacienteId,
-        step: currentStep,
+        step: firstInvalidStep,
         fields: failedFields,
       }).catch(() => undefined);
       return;
@@ -997,11 +1015,52 @@ export function AnamneseFormScreen({
       didSaveRef.current = true;
       navigateAfterSave();
     } catch (error: unknown) {
-      const { message, fieldErrors } = parseApiError(error);
+      const { message, fieldErrors: rawFieldErrors } = parseApiError(error);
+      const fieldErrors = { ...rawFieldErrors } as Record<string, string>;
+
+      const backendMissingFieldsMatch = String(message || "").match(
+        /Campos obrigatorios ausentes para motivo SINTOMA_EXISTENTE:\s*(.+)$/i,
+      );
+      if (backendMissingFieldsMatch?.[1]) {
+        const missing = backendMissingFieldsMatch[1]
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+        if (missing.includes("mecanismoLesao")) {
+          fieldErrors.mecanismoLesao =
+            "Selecione o mecanismo provável da lesão.";
+        }
+        if (missing.includes("fatorAlivio")) {
+          fieldErrors.fatorAlivio =
+            "Informe pelo menos um fator de melhora/alívio.";
+        }
+        if (missing.includes("fatoresPiora")) {
+          fieldErrors.fatoresPiora =
+            "Informe pelo menos um fator de piora/agravo.";
+        }
+        if (missing.includes("inicioProblema")) {
+          fieldErrors.inicioProblema = "Informe como começou o problema.";
+        }
+      }
+
       if (Object.keys(fieldErrors).length) {
         setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        const shouldGoToStep1 =
+          !!fieldErrors.inicioProblema ||
+          !!fieldErrors.mecanismoLesao ||
+          !!fieldErrors.fatorAlivio ||
+          !!fieldErrors.fatoresPiora;
+        if (shouldGoToStep1 && currentStep !== 1) {
+          setCurrentStep(1);
+        }
+        showToast({
+          message:
+            "Faltam campos obrigatórios na etapa Descrição. Revise para continuar.",
+          type: "error",
+        });
+      } else {
+        showToast({ message, type: "error" });
       }
-      showToast({ message, type: "error" });
     } finally {
       setLoading(false);
     }
