@@ -43,7 +43,12 @@ import {
   BORDER_RADIUS,
   SHADOWS,
 } from "../../constants/theme";
-import { MotivoBusca, RootStackParamList, UserRole } from "../../types";
+import {
+  MotivoBusca,
+  PacienteCicloStatus,
+  RootStackParamList,
+  UserRole,
+} from "../../types";
 
 type PacienteDetailsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteDetails">;
@@ -202,6 +207,32 @@ export function PacienteDetailsScreen({
     condutas?: string;
   } | null>(null);
   const paciente = getPacienteById(pacienteId);
+
+  const cicloStatusUi = useMemo(() => {
+    const status = paciente?.statusCiclo;
+    if (status === PacienteCicloStatus.ALTA_CONCLUIDA) {
+      return {
+        label: t("patients.cycleCompleted"),
+        icon: "checkmark-circle-outline" as const,
+        containerStyle: styles.cycleBadgeCompleted,
+        textStyle: styles.cycleBadgeTextCompleted,
+      };
+    }
+    if (status === PacienteCicloStatus.EM_TRATAMENTO) {
+      return {
+        label: t("patients.cycleInTreatment"),
+        icon: "pulse-outline" as const,
+        containerStyle: styles.cycleBadgeInTreatment,
+        textStyle: styles.cycleBadgeTextInTreatment,
+      };
+    }
+    return {
+      label: t("patients.cycleAwaitingAnamnesis"),
+      icon: "time-outline" as const,
+      containerStyle: styles.cycleBadgeAwaiting,
+      textStyle: styles.cycleBadgeTextAwaiting,
+    };
+  }, [paciente?.statusCiclo, t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -1385,6 +1416,16 @@ export function PacienteDetailsScreen({
             {(paciente.idade ?? "-")} {t("patients.years")} -{" "}
             {paciente.profissao || t("home.noProfessionInformed")}
           </Text>
+          <View style={[styles.cycleBadge, cicloStatusUi.containerStyle]}>
+            <Ionicons
+              name={cicloStatusUi.icon}
+              size={14}
+              color={COLORS.textSecondary}
+            />
+            <Text style={[styles.cycleBadgeText, cicloStatusUi.textStyle]}>
+              {cicloStatusUi.label}
+            </Text>
+          </View>
 
           {!!paciente.pacienteUsuarioId && (
             <View style={styles.appAccessBadge}>
@@ -2166,6 +2207,41 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
+  },
+  cycleBadge: {
+    marginTop: SPACING.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  cycleBadgeText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  cycleBadgeAwaiting: {
+    borderColor: COLORS.warning + "66",
+    backgroundColor: COLORS.warning + "15",
+  },
+  cycleBadgeTextAwaiting: {
+    color: COLORS.warning,
+  },
+  cycleBadgeInTreatment: {
+    borderColor: COLORS.primary + "66",
+    backgroundColor: COLORS.primary + "15",
+  },
+  cycleBadgeTextInTreatment: {
+    color: COLORS.primary,
+  },
+  cycleBadgeCompleted: {
+    borderColor: COLORS.success + "66",
+    backgroundColor: COLORS.success + "15",
+  },
+  cycleBadgeTextCompleted: {
+    color: COLORS.success,
   },
   appAccessBadge: {
     marginTop: SPACING.sm,
