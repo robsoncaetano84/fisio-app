@@ -2049,7 +2049,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   <Text style={styles.sub}>{selectedProf.cidade}</Text>
                   <View style={styles.wrapRow}>
                     <Action
-                      title={editProfOpen ? "Fechar edição" : "Editar profissional"}
+                      title={editProfOpen ? "Fechar edição" : "Editar dados"}
                       secondary
                       onPress={() => {
                         if (!editProfOpen) resetProfEditForm();
@@ -2100,7 +2100,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       </View>
                       <View style={styles.wrapRow}>
                         <Action
-                          title={savingAdminEntity ? "Salvando..." : "Salvar profissional"}
+                          title={savingAdminEntity ? "Salvando..." : "Salvar alterações"}
                           onPress={saveAdminProfessional}
                         />
                         <Action
@@ -2118,48 +2118,29 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                     <MiniTab label={t("crm.labels.summary")} active={profDetailTab === "RESUMO"} onPress={() => setProfDetailTab("RESUMO")} />
                     <MiniTab label={t("crm.sections.patients")} active={profDetailTab === "PACIENTES"} onPress={() => setProfDetailTab("PACIENTES")} />
                   </View>
-                  <View style={styles.wrapRow}>
-                    <MetricMini label={t("crm.sections.patients")} value={String(selectedProf.pacientes)} />
-                    <MetricMini label={t("crm.labels.active")} value={String(selectedProf.ativos)} />
-                    <MetricMini label={t("crm.labels.adherence")} value={`${selectedProf.adesao}%`} />
-                    <MetricMini
-                      label={t("crm.labels.accountScore")}
-                      value={selectedProfAccountScore ? String(selectedProfAccountScore.score) : "-"}
-                    />
-                    <MetricMini
-                      label={t("crm.labels.emotionalVulnerabilityShort")}
-                      value={
-                        selectedProfEmotionalConcentration && selectedProfEmotionalConcentration.total > 0
-                          ? `${selectedProfEmotionalConcentration.vulneraveis}/${selectedProfEmotionalConcentration.total} (${selectedProfEmotionalConcentration.percentual}%)`
-                          : "-"
-                      }
-                    />
+                  <View style={styles.kpiGrid}>
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiValue}>{selectedProf.pacientes}</Text>
+                      <Text style={styles.kpiLabel}>{t("crm.sections.patients")}</Text>
+                    </View>
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiValue}>{selectedProf.ativos}</Text>
+                      <Text style={styles.kpiLabel}>{t("crm.labels.active")}</Text>
+                    </View>
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiValue}>{selectedProf.adesao}%</Text>
+                      <Text style={styles.kpiLabel}>{t("crm.labels.adherence")}</Text>
+                    </View>
+                    <View style={styles.kpiCard}>
+                      <Text style={styles.kpiValue}>
+                        {selectedProfAccountScore ? selectedProfAccountScore.score : "-"}
+                      </Text>
+                      <Text style={styles.kpiLabel}>{t("crm.labels.accountScore")}</Text>
+                    </View>
                   </View>
-                  {selectedProfEmotionalConcentration && selectedProfEmotionalConcentration.total > 0 ? (
-                    <View style={styles.line}>
-                      <Text style={styles.lineTitle}>{t("crm.labels.emotionalVulnerabilityConcentration")}</Text>
-                      <Text style={styles.lineSub}>
-                        {selectedProfEmotionalConcentration.vulneraveis} de {selectedProfEmotionalConcentration.total} pacientes • {selectedProfEmotionalConcentration.percentual}%
-                        {selectedProfEmotionalConcentration.total < 5
-                          ? ` • ${t("crm.messages.smallBaseMinimumFive")}`
-                          : selectedProfEmotionalConcentration.status === "RISK"
-                            ? ` • ${t("crm.messages.caseloadSensitiveRisk")}`
-                            : selectedProfEmotionalConcentration.status === "ATTENTION"
-                              ? ` • ${t("crm.messages.caseloadAttention")}`
-                              : ` • ${t("crm.messages.caseloadStable")}`}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {selectedProfEmotionalConcentration && selectedProfEmotionalConcentration.total >= 5 && selectedProfEmotionalConcentration.percentual >= 25 ? (
-                    <View style={styles.wrapRow}>
-                      <Text style={styles.subtleActionText}>
-                        {t("crm.messages.professionalSummaryNextAction")}
-                      </Text>
-                    </View>
-                  ) : null}
                   {selectedProfAccountScore ? (
-                    <>
-                      <View style={styles.wrapRow}>
+                    <View style={styles.line}>
+                      <View style={[styles.wrapRow, { justifyContent: "space-between" }]}>
                         <StatusBadge
                           status={selectedProfAccountScore.status}
                           labels={{
@@ -2168,18 +2149,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                             risk: t("crm.status.risk"),
                           }}
                         />
-                        <Text style={styles.subtleActionText}>
-                          {t("crm.labels.nextAction")}: {selectedProfAccountScore.nextAction}
-                        </Text>
-                      </View>
-                      <View style={styles.wrapRow}>
-                        {selectedProfAccountScore.reasons.map((reason) => (
-                          <ReasonTag key={reason} label={reason} />
-                        ))}
-                      </View>
-                      {(selectedProfAccountScore.status === "RISK" ||
-                        selectedProfAccountScore.status === "ATTENTION") ? (
-                        <View style={styles.wrapRow}>
+                        {(selectedProfAccountScore.status === "RISK" ||
+                          selectedProfAccountScore.status === "ATTENTION") ? (
                           <Action
                             title={t("crm.actions.createReactivationTask")}
                             secondary
@@ -2204,9 +2175,16 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                               setTab("TAREFAS");
                             }}
                           />
-                        </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.lineTitle}>Prioridade agora</Text>
+                      <Text style={styles.lineSub}>{selectedProfAccountScore.nextAction}</Text>
+                      {selectedProfEmotionalConcentration && selectedProfEmotionalConcentration.total > 0 ? (
+                        <Text style={styles.lineSub}>
+                          Vulnerabilidade emocional: {selectedProfEmotionalConcentration.vulneraveis}/{selectedProfEmotionalConcentration.total} ({selectedProfEmotionalConcentration.percentual}%).
+                        </Text>
                       ) : null}
-                    </>
+                    </View>
                   ) : null}
                   {profDetailTab === "RESUMO" ? (
                     <>
@@ -2276,7 +2254,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   <Text style={styles.sub}>{t("crm.labels.professional")}: {selectedPac.profissionalNome}</Text>
                   <View style={styles.wrapRow}>
                     <Action
-                      title={editPacOpen ? "Fechar edição" : "Editar paciente"}
+                      title={editPacOpen ? "Fechar edição" : "Editar dados"}
                       secondary
                       onPress={() => {
                         if (!editPacOpen) resetPacEditForm();
@@ -2372,7 +2350,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       </View>
                       <View style={styles.wrapRow}>
                         <Action
-                          title={savingAdminEntity ? "Salvando..." : "Salvar paciente"}
+                          title={savingAdminEntity ? "Salvando..." : "Salvar alterações"}
                           onPress={saveAdminPatient}
                         />
                         <Action
@@ -2875,6 +2853,33 @@ const styles = StyleSheet.create({
   metricValue: { fontWeight: "800", color: COLORS.textPrimary }, metricLabel: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   metricMini: { minWidth: 100, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 8 },
   metricMiniValue: { fontWeight: "800", color: COLORS.textPrimary, fontSize: 12 }, metricMiniLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  kpiGrid: {
+    marginTop: SPACING.xs,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  kpiCard: {
+    minWidth: 110,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: 10,
+    backgroundColor: "#FBFCFE",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  kpiValue: {
+    color: COLORS.textPrimary,
+    fontWeight: "800",
+    fontSize: 18,
+  },
+  kpiLabel: {
+    marginTop: 2,
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
   auditLogItem: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10, flexDirection: "row", gap: 10, alignItems: "center" },
   automationItem: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10, flexDirection: "row", gap: 10, alignItems: "center" },
   automationHistoryItem: { marginTop: 6, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: COLORS.white, padding: 10 },
