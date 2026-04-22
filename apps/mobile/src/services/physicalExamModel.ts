@@ -851,6 +851,47 @@ const REGION_CONDUTA_HINTS: Record<
   },
 };
 
+const LESION_TYPE_CONDUTA_HINTS: Record<
+  "Mecanica" | "Inflamatoria" | "Neural",
+  {
+    tecnicaManual: string;
+    ajuste: string;
+    exercicio: string;
+    progressao: string;
+  }
+> = {
+  Mecanica: {
+    tecnicaManual:
+      "Priorizar tecnicas de mobilidade segmentar e controle de sobrecarga mecanica.",
+    ajuste:
+      "Ajuste articular somente quando houver restricao objetiva e boa tolerancia clinica.",
+    exercicio:
+      "Exercicio corretivo com foco em alinhamento, estabilidade e tolerancia de carga.",
+    progressao:
+      "Progressao por funcao, dor e qualidade de movimento em tarefas especificas.",
+  },
+  Inflamatoria: {
+    tecnicaManual:
+      "Tecnicas de baixa irritabilidade para modulacao de dor e edema local.",
+    ajuste:
+      "Evitar manipulos de alta alavanca na fase irritativa; reavaliar apos controle inflamatorio.",
+    exercicio:
+      "Exercicio terapeutico com carga gradual, respeitando janela de irritabilidade.",
+    progressao:
+      "Progressao por queda sustentada da dor e melhora funcional objetiva.",
+  },
+  Neural: {
+    tecnicaManual:
+      "Associar liberacao de interfaces neurais e tecidos peri-neurais com cautela clinica.",
+    ajuste:
+      "Ajuste segmentar apenas quando nao houver sinais de piora neurologica progressiva.",
+    exercicio:
+      "Incluir mobilizacao neural e controle motor para reduzir mecanossensibilidade.",
+    progressao:
+      "Progressao por reducao de sintomas irradiados e recuperacao neuromuscular.",
+  },
+};
+
 const TEST_STRUCTURE_HINTS: Array<{
   token: string;
   estrutura: string;
@@ -1062,7 +1103,13 @@ export function enrichStructuredExameWithClinicalLogic(
     regiao: RegionalTestGroup["regiao"];
   }>;
 
-  const structureSuggestion = structureHints[0]?.estrutura || estruturaBase;
+  const structureSuggestion = (() => {
+    if (structureHints.length === 0) return estruturaBase;
+    const uniqueStructures = Array.from(
+      new Set(structureHints.map((item) => item.estrutura)),
+    );
+    return uniqueStructures.slice(0, 2).join(" + ");
+  })();
   const neuralEvidence =
     structureHints.some((h) => h.tipoLesao === "Neural") ||
     anamnese?.tipoDor === "NEUROPATICA";
@@ -1086,6 +1133,27 @@ export function enrichStructuredExameWithClinicalLogic(
       : traumaEvidence
         ? "Mecanica pos-traumatica"
         : "Mecanica";
+  const predominantHintType: "Mecanica" | "Inflamatoria" | "Neural" = (() => {
+    if (structureHints.length === 0) {
+      if (tipoLesaoSuggestion.toLowerCase().includes("neural")) return "Neural";
+      if (tipoLesaoSuggestion.toLowerCase().includes("inflam")) {
+        return "Inflamatoria";
+      }
+      return "Mecanica";
+    }
+    const score = structureHints.reduce(
+      (acc, item) => {
+        acc[item.tipoLesao] += 1;
+        return acc;
+      },
+      { Mecanica: 0, Inflamatoria: 0, Neural: 0 },
+    );
+    if (score.Neural >= score.Inflamatoria && score.Neural >= score.Mecanica) {
+      return "Neural";
+    }
+    if (score.Inflamatoria >= score.Mecanica) return "Inflamatoria";
+    return "Mecanica";
+  })();
 
   const originBase = traumaEvidence
     ? `Origem provavel pos-traumatica em ${primaryRegionLabel.toLowerCase()}`
@@ -1096,13 +1164,31 @@ export function enrichStructuredExameWithClinicalLogic(
     ? `${originBase}, com ${onsetHint}.`
     : `${originBase}.`;
 
-  const condutaHint = primaryRegion
+  const condutaHintByRegion = primaryRegion
     ? REGION_CONDUTA_HINTS[primaryRegion]
     : {
         tecnicaManual: "Tecnica manual conforme irritabilidade e disfuncao principal.",
         ajuste: "Ajuste articular apenas se houver hipomobilidade relevante.",
         exercicio: "Exercicio corretivo orientado por deficits funcionais.",
         progressao: "Progressao por funcao, dor e tolerancia a carga.",
+      };
+  const condutaHintByLesion = LESION_TYPE_CONDUTA_HINTS[predominantHintType];
+  const condutaHint = preparedExam.redFlags.criticalTriggered
+    ? {
+        tecnicaManual:
+          "Nao iniciar tecnica manual antes de avaliacao medica urgente.",
+        ajuste:
+          "Nao realizar ajuste articular ate exclusao de red flag critica.",
+        exercicio:
+          "Suspender exercicios terapeuticos ate conduta medica definitiva.",
+        progressao:
+          "Encaminhamento imediato e reavaliacao apos liberacao clinica.",
+      }
+    : {
+        tecnicaManual: `${condutaHintByRegion.tecnicaManual} ${condutaHintByLesion.tecnicaManual}`,
+        ajuste: `${condutaHintByRegion.ajuste} ${condutaHintByLesion.ajuste}`,
+        exercicio: `${condutaHintByRegion.exercicio} ${condutaHintByLesion.exercicio}`,
+        progressao: `${condutaHintByRegion.progressao} ${condutaHintByLesion.progressao}`,
       };
 
   const baseExam: ExameFisicoStructured = {
@@ -1184,7 +1270,7 @@ export function enrichStructuredExameWithClinicalLogic(
     diagnosticoFuncionalIa: {
       disfuncaoPrincipal: pickText(
         preparedExam.diagnosticoFuncionalIa.disfuncaoPrincipal,
-        `Disfuncao funcional predominante em ${primaryRegionLabel}.`,
+        `Disfuncao funcional predominante em ${primaryRegionLabel}, com foco em ${structureSuggestion.toLowerCase()}.`,
         overwrite,
       ),
       cadeiaEnvolvida: pickText(
