@@ -41,6 +41,10 @@
 - Data:
 - Commit candidato:
 
+## Status intermediario atual
+- Estado: `PRONTO PARA VALIDACAO CLINICA`
+- Motivo: todos os checks tecnicos e testes automatizados minimos passaram; faltam apenas evidencias dos cenarios A/B/C e monitoramento de 5xx.
+
 ## Atualizacao tecnica (2026-04-22)
 - Validacoes tecnicas executadas com sucesso em ambiente local.
 - Pendencias para virar `GO`:
@@ -64,3 +68,15 @@
   - qualquer cenario = `Reprovado`;
   - houver bloqueador critico aberto;
   - houver 5xx recorrente sem mitigacao.
+
+## Comandos rapidos de rechecagem (antes do deploy)
+```bash
+# mobile
+cd apps/mobile
+npm run validate:critical
+
+# backend
+cd ../backend
+npm run -s build
+npm run test -- modules/laudos/laudos.service.spec.ts
+```
