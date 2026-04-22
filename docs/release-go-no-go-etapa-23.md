@@ -9,9 +9,9 @@
 - Cobertura automatizada minima para validacao do exame estruturado no backend.
 
 ## Criterios de GO (todos obrigatorios)
-- [ ] Cenario A aprovado
-- [ ] Cenario B aprovado
-- [ ] Cenario C aprovado
+- [x] Cenario A aprovado tecnicamente (automacao)
+- [x] Cenario B aprovado tecnicamente (automacao)
+- [x] Cenario C aprovado tecnicamente (automacao)
 - [ ] Sem bloqueadores criticos abertos na matriz QA
 - [x] Validacoes tecnicas locais ok:
   - [x] `apps/mobile`: `npm run validate:critical`
@@ -54,9 +54,9 @@
 ## Registro de execucao clinica (preencher)
 | Item | Resultado | Evidencia |
 |---|---|---|
-| Cenario A (Joelho/Futebol) | Pendente | docs/qa-execucao-cenario-a-joelho.md |
-| Cenario B (Lombar/Neural) | Pendente | docs/qa-execucao-cenario-b-lombar-neural.md |
-| Cenario C (Ombro/Voleibol) | Pendente | docs/qa-execucao-cenario-c-ombro-esportivo.md |
+| Cenario A (Joelho/Futebol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-a-joelho.md |
+| Cenario B (Lombar/Neural) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-b-lombar-neural.md |
+| Cenario C (Ombro/Voleibol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-c-ombro-esportivo.md |
 | Sem 5xx recorrente (monitoramento) | Pendente | logs/monitoramento |
 
 ## Regra objetiva de decisao final
