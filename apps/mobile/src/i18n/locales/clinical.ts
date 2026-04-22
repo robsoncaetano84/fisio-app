@@ -183,6 +183,20 @@ export const ptClinical: TranslationMap = {
     "Frequência semanal deve ser entre 1 e 7",
   "clinical.validation.durationWeeksRange":
     "Duração em semanas deve ser entre 1 e 52",
+  "clinical.validation.movementPainReproductionRequired":
+    "Informe qual movimento reproduz a dor.",
+  "clinical.validation.primaryHypothesisRequired":
+    "Hipótese principal é obrigatória.",
+  "clinical.validation.condutaDirectionRequired":
+    "Direção de conduta é obrigatória.",
+  "clinical.validation.neuralDetailedRequired":
+    "Para lesão neural, preencha pelo menos um item do bloco neurológico detalhado.",
+  "clinical.validation.atLeastOneRegionalTestRequired":
+    "Marque pelo menos um teste regional como positivo ou negativo.",
+  "clinical.validation.referralDestinationRequired":
+    "Informe o destino de encaminhamento.",
+  "clinical.validation.referralReasonRequired":
+    "Descreva o motivo clínico do encaminhamento.",
 };
 
 export const enClinical: TranslationMap = {
@@ -366,6 +380,20 @@ export const enClinical: TranslationMap = {
     "Weekly frequency must be between 1 and 7",
   "clinical.validation.durationWeeksRange":
     "Duration in weeks must be between 1 and 52",
+  "clinical.validation.movementPainReproductionRequired":
+    "Inform which movement reproduces the pain.",
+  "clinical.validation.primaryHypothesisRequired":
+    "Primary hypothesis is required.",
+  "clinical.validation.condutaDirectionRequired":
+    "Treatment direction is required.",
+  "clinical.validation.neuralDetailedRequired":
+    "For neural lesion, fill at least one field in the detailed neurological block.",
+  "clinical.validation.atLeastOneRegionalTestRequired":
+    "Mark at least one regional test as positive or negative.",
+  "clinical.validation.referralDestinationRequired":
+    "Inform the referral destination.",
+  "clinical.validation.referralReasonRequired":
+    "Describe the clinical reason for referral.",
 };
 
 export const esClinical: TranslationMap = {
@@ -551,4 +579,18 @@ export const esClinical: TranslationMap = {
     "La frecuencia semanal debe estar entre 1 y 7",
   "clinical.validation.durationWeeksRange":
     "La duración en semanas debe estar entre 1 y 52",
+  "clinical.validation.movementPainReproductionRequired":
+    "Informe qué movimiento reproduce el dolor.",
+  "clinical.validation.primaryHypothesisRequired":
+    "La hipótesis principal es obligatoria.",
+  "clinical.validation.condutaDirectionRequired":
+    "La dirección de conducta es obligatoria.",
+  "clinical.validation.neuralDetailedRequired":
+    "Para lesión neural, complete al menos un ítem del bloque neurológico detallado.",
+  "clinical.validation.atLeastOneRegionalTestRequired":
+    "Marque al menos una prueba regional como positiva o negativa.",
+  "clinical.validation.referralDestinationRequired":
+    "Informe el destino de derivación.",
+  "clinical.validation.referralReasonRequired":
+    "Describa el motivo clínico de la derivación.",
 };

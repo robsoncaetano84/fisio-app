@@ -535,13 +535,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     const nextErrors: Record<string, string> = {};
 
     if (!exam.movimento.reproduzDor.trim()) {
-      nextErrors.movimentoReproduzDor = "Informe qual movimento reproduz a dor.";
+      nextErrors.movimentoReproduzDor = t(
+        "clinical.validation.movementPainReproductionRequired",
+      );
     }
     if (!exam.cruzamentoFinal.hipotesePrincipal.trim()) {
-      nextErrors.hipotesePrincipal = "Hipótese principal é obrigatória.";
+      nextErrors.hipotesePrincipal = t("clinical.validation.primaryHypothesisRequired");
     }
     if (!exam.cruzamentoFinal.condutaDirecionada.trim()) {
-      nextErrors.conduta = "Direção de conduta é obrigatória.";
+      nextErrors.conduta = t("clinical.validation.condutaDirectionRequired");
     }
     const neuralMode = String(exam.raciocinioClinico.tipoLesao || "")
       .toLowerCase()
@@ -554,24 +556,30 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         String(exam.neurologico.dermatomos || "").trim() ||
         String(exam.neurologico.miotomos || "").trim();
       if (!hasDetailedNeuro) {
-        nextErrors.neurologicoDetalhado =
-          "Para lesão neural, preencha pelo menos um item do bloco neurológico detalhado.";
+        nextErrors.neurologicoDetalhado = t(
+          "clinical.validation.neuralDetailedRequired",
+        );
       }
     }
     const hasAtLeastOneRegionalResult = exam.avaliacaoRegioes.some((grupo) =>
       grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
     );
     if (!hasAtLeastOneRegionalResult) {
-      nextErrors.avaliacaoRegioes =
-        "Marque pelo menos um teste regional como positivo ou negativo.";
+      nextErrors.avaliacaoRegioes = t(
+        "clinical.validation.atLeastOneRegionalTestRequired",
+      );
     }
 
     if (exam.redFlags.criticalTriggered) {
       if (!String(exam.redFlags.referralDestination || "").trim()) {
-        nextErrors.referralDestination = "Informe o destino de encaminhamento.";
+        nextErrors.referralDestination = t(
+          "clinical.validation.referralDestinationRequired",
+        );
       }
       if (!String(exam.redFlags.referralReason || "").trim()) {
-        nextErrors.referralReason = "Descreva o motivo clínico do encaminhamento.";
+        nextErrors.referralReason = t(
+          "clinical.validation.referralReasonRequired",
+        );
       }
     }
 
