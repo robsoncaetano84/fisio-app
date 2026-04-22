@@ -23,6 +23,7 @@ import {
 import { parseApiError } from "../../utils/apiErrors";
 import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING } from "../../constants/theme";
 import { RootStackParamList } from "../../types";
+import { useLanguage } from "../../i18n/LanguageProvider";
 import {
   DorClassificacaoPrincipal,
   DorSubtipoClinico,
@@ -88,7 +89,7 @@ const RED_FLAG_LABELS: Record<RedFlagKey, string> = {
 };
 
 const TEST_RESULT_OPTIONS: Array<{ label: string; value: TestResult }> = [
-  { label: "Nao testado", value: "NAO_TESTADO" },
+  { label: "NAO_TESTADO", value: "NAO_TESTADO" },
   { label: "Negativo", value: "NEGATIVO" },
   { label: "Positivo", value: "POSITIVO" },
 ];
@@ -191,6 +192,7 @@ const buildHipomobilidadeSummary = (segmentar: {
 };
 
 export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScreenProps) {
+  const { t } = useLanguage();
   const { pacienteId } = route.params;
   const { showToast } = useToast();
   const { getPacienteById, fetchPacientes } = usePacienteStore();
@@ -1081,10 +1083,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                               styles.regionOptionTextSelected,
                           ]}
                         >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    {option.label === "NAO_TESTADO"
+                      ? t("clinical.status.notTested")
+                      : option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
                   </View>
                 </View>
               ))}
@@ -1260,7 +1264,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Conduta terapeutica direcionada</Text>
+          <Text style={styles.blockTitle}>{t("clinical.sections.targetedTherapeuticConduct")}</Text>
           <Input
             label="Técnica manual indicada"
             value={exam.condutaIa.tecnicaManualIndicada}
@@ -1489,7 +1493,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Previa clinica</Text>
+          <Text style={styles.blockTitle}>{t("clinical.sections.clinicalPreview")}</Text>
           <Input value={renderStructuredExameToText(exam)} multiline numberOfLines={12} editable={false} style={{ height: 300, textAlignVertical: "top" }} />
           <View style={styles.actionsRow}>
             <TouchableOpacity
@@ -1498,7 +1502,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               disabled={generating}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionChipText}>{generating ? "Gerando..." : "Regerar por anamnese"}</Text>
+              <Text style={styles.actionChipText}>
+                {generating
+                  ? t("clinical.status.generating")
+                  : t("clinical.actions.regenerateFromAnamnesis")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionChip}
@@ -1515,7 +1523,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionChipText}>Recalcular raciocínio</Text>
+              <Text style={styles.actionChipText}>
+                {t("clinical.actions.recalculateReasoning")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionChip}
@@ -1528,7 +1538,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionChipText}>Limpar rascunho</Text>
+              <Text style={styles.actionChipText}>{t("clinical.actions.clearDraft")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1536,7 +1546,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
       <View style={styles.footer}>
         <Button
-          title={exam.redFlags.criticalTriggered ? "Salvar triagem e encaminhar" : "Salvar Exame físico"}
+          title={
+            exam.redFlags.criticalTriggered
+              ? t("clinical.actions.saveTriageAndRefer")
+              : t("clinical.actions.savePhysicalExam")
+          }
           onPress={handleSave}
           loading={loading}
           icon={<Ionicons name="save-outline" size={18} color={COLORS.white} />}

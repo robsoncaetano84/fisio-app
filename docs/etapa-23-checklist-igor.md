@@ -82,3 +82,6 @@
 
 ## Atualização deste lote
 - [x] i18n do fluxo clínico no detalhe do paciente (Resumo de prontidão + status por etapa)
+- [x] i18n de microcópias críticas no Exame Físico (ações e títulos de bloco)
+- [x] i18n de alerta de geração de PDF no Laudo
+- [x] Datas do Laudo agora respeitam locale ativo (pt/en/es)

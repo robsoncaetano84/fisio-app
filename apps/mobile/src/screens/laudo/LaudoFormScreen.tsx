@@ -152,7 +152,8 @@ const TEMPLATE_CONTENT: Record<
 
 export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const { pacienteId } = route.params;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateLocale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
   const token = useAuthStore((state) => state.token);
@@ -1173,7 +1174,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         {validadoEm ? (
           <Text style={styles.statusDate}>
             {t("clinical.messages.validatedAt")}{" "}
-            {new Date(validadoEm).toLocaleString("pt-BR")}
+                  {new Date(validadoEm).toLocaleString(dateLocale)}
           </Text>
         ) : null}
       </View>
@@ -1208,7 +1209,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               {aiSuggestionMeta.generatedAt ? (
                 <Text style={styles.aiMetaChip}>
                   Gerada em:{" "}
-                  {new Date(aiSuggestionMeta.generatedAt).toLocaleString("pt-BR")}
+                  {new Date(aiSuggestionMeta.generatedAt).toLocaleString(dateLocale)}
                 </Text>
               ) : null}
               {aiConfidence ? (
@@ -1618,7 +1619,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                     ? t("clinical.status.validated")
                     : t("clinical.status.revalidationPending")}{" "}
                   {t("common.by")} {item.by} {t("common.in")}{" "}
-                  {new Date(item.at).toLocaleString("pt-BR")}
+                  {new Date(item.at).toLocaleString(dateLocale)}
                   {item.action === "VALIDADO" &&
                   typeof item.totalSuggestedReferences === "number" &&
                   item.totalSuggestedReferences > 0
@@ -1716,7 +1717,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 color={COLORS.warning}
               />
               <Text style={styles.referencesValidateHintText}>
-                Edite e salve o laudo antes de gerar o PDF.
+                {t("clinical.messages.saveBeforeGeneratePdf")}
               </Text>
             </View>
           ) : null}

@@ -17,6 +17,8 @@ export const ptClinical: TranslationMap = {
   "clinical.sections.scientificReferencesSuggested":
     "Referências científicas sugeridas",
   "clinical.sections.scientificValidation": "Validação científica",
+  "clinical.sections.targetedTherapeuticConduct": "Conduta terapêutica direcionada",
+  "clinical.sections.clinicalPreview": "Prévia clínica",
   "clinical.actions.newAnamnesis": "Nova anamnese",
   "clinical.actions.newEvolution": "Nova evolução",
   "clinical.actions.recordEvolution": "Registrar evolução",
@@ -36,6 +38,10 @@ export const ptClinical: TranslationMap = {
   "clinical.actions.fillWithAi": "Preencher com IA",
   "clinical.actions.clearLocalDraft": "Limpar rascunho local",
   "clinical.actions.savePlan": "Salvar Plano",
+  "clinical.actions.regenerateFromAnamnesis": "Regenerar por anamnese",
+  "clinical.actions.recalculateReasoning": "Recalcular raciocínio",
+  "clinical.actions.saveTriageAndRefer": "Salvar triagem e encaminhar",
+  "clinical.actions.savePhysicalExam": "Salvar Exame Físico",
   "clinical.messages.clearDraftConfirm":
     "Tem certeza que deseja apagar o rascunho?",
   "clinical.messages.newReportAndPlan": "Novo laudo e plano",
@@ -148,6 +154,8 @@ export const ptClinical: TranslationMap = {
   "clinical.status.partial": "Parcial",
   "clinical.status.completed": "Concluída",
   "clinical.status.revalidationPending": "Revalidação pendente",
+  "clinical.status.notTested": "Não testado",
+  "clinical.status.generating": "Gerando...",
   "clinical.placeholders.functionalDiagnosis":
     "Descreva o diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":
@@ -190,6 +198,8 @@ export const enClinical: TranslationMap = {
   "clinical.sections.scientificReferencesSuggested":
     "Suggested scientific references",
   "clinical.sections.scientificValidation": "Scientific validation",
+  "clinical.sections.targetedTherapeuticConduct": "Targeted therapeutic conduct",
+  "clinical.sections.clinicalPreview": "Clinical preview",
   "clinical.actions.newAnamnesis": "New anamnesis",
   "clinical.actions.newEvolution": "New evolution",
   "clinical.actions.recordEvolution": "Record evolution",
@@ -209,6 +219,10 @@ export const enClinical: TranslationMap = {
   "clinical.actions.fillWithAi": "Fill with AI",
   "clinical.actions.clearLocalDraft": "Clear local draft",
   "clinical.actions.savePlan": "Save Plan",
+  "clinical.actions.regenerateFromAnamnesis": "Regenerate from anamnesis",
+  "clinical.actions.recalculateReasoning": "Recalculate reasoning",
+  "clinical.actions.saveTriageAndRefer": "Save triage and refer",
+  "clinical.actions.savePhysicalExam": "Save Physical Exam",
   "clinical.messages.clearDraftConfirm":
     "Are you sure you want to delete the draft?",
   "clinical.messages.newReportAndPlan": "New report and plan",
@@ -323,6 +337,8 @@ export const enClinical: TranslationMap = {
   "clinical.status.partial": "Partial",
   "clinical.status.completed": "Completed",
   "clinical.status.revalidationPending": "Revalidation pending",
+  "clinical.status.notTested": "Not tested",
+  "clinical.status.generating": "Generating...",
   "clinical.placeholders.functionalDiagnosis":
     "Describe the functional diagnosis",
   "clinical.placeholders.shortTermGoals":
@@ -365,6 +381,8 @@ export const esClinical: TranslationMap = {
   "clinical.sections.scientificReferencesSuggested":
     "Referencias científicas sugeridas",
   "clinical.sections.scientificValidation": "Validación científica",
+  "clinical.sections.targetedTherapeuticConduct": "Conducta terapéutica dirigida",
+  "clinical.sections.clinicalPreview": "Vista previa clínica",
   "clinical.actions.newAnamnesis": "Nueva anamnesis",
   "clinical.actions.newEvolution": "Nueva evolución",
   "clinical.actions.recordEvolution": "Registrar evolución",
@@ -384,6 +402,10 @@ export const esClinical: TranslationMap = {
   "clinical.actions.fillWithAi": "Completar con IA",
   "clinical.actions.clearLocalDraft": "Limpiar borrador local",
   "clinical.actions.savePlan": "Guardar plan",
+  "clinical.actions.regenerateFromAnamnesis": "Regenerar por anamnesis",
+  "clinical.actions.recalculateReasoning": "Recalcular razonamiento",
+  "clinical.actions.saveTriageAndRefer": "Guardar triaje y derivar",
+  "clinical.actions.savePhysicalExam": "Guardar Examen Físico",
   "clinical.messages.clearDraftConfirm":
     "¿Seguro que deseas borrar el borrador?",
   "clinical.messages.newReportAndPlan": "Nuevo informe y plan",
@@ -499,6 +521,8 @@ export const esClinical: TranslationMap = {
   "clinical.status.partial": "Parcial",
   "clinical.status.completed": "Completada",
   "clinical.status.revalidationPending": "Revalidación pendiente",
+  "clinical.status.notTested": "No probado",
+  "clinical.status.generating": "Generando...",
   "clinical.placeholders.functionalDiagnosis":
     "Describa el diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":
