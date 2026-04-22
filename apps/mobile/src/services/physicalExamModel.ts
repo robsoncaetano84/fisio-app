@@ -113,6 +113,14 @@ export interface ExameFisicoStructured {
     tonusMuscular: string;
     estruturasEspecificas: string;
     hipomobilidadeArticular: string;
+    hipomobilidadeSegmentar: {
+      cervical: string;
+      toracica: string;
+      lombar: string;
+      sacro: string;
+      iliacoDireito: string;
+      iliacoEsquerdo: string;
+    };
   };
   testesFuncionais: {
     agachamento: string;
@@ -127,6 +135,13 @@ export interface ExameFisicoStructured {
     ortopedicos: string;
     neurologicos: string;
     imagem: string;
+  };
+  neurologico: {
+    forca: string;
+    sensibilidade: string;
+    reflexos: string;
+    dermatomos: string;
+    miotomos: string;
   };
   avaliacaoRegioes: RegionalTestGroup[];
   cadeiaCinetica: {
@@ -167,6 +182,23 @@ export interface ExameFisicoStructured {
   redFlags: RedFlagBlock;
 }
 
+const buildHipomobilidadeSummary = (segmentar: {
+  cervical?: string;
+  toracica?: string;
+  lombar?: string;
+  sacro?: string;
+  iliacoDireito?: string;
+  iliacoEsquerdo?: string;
+}): string =>
+  [
+    `Cervical: ${safeText(segmentar.cervical)}`,
+    `Toracica: ${safeText(segmentar.toracica)}`,
+    `Lombar: ${safeText(segmentar.lombar)}`,
+    `Sacro: ${safeText(segmentar.sacro)}`,
+    `Iliaco D: ${safeText(segmentar.iliacoDireito)}`,
+    `Iliaco E: ${safeText(segmentar.iliacoEsquerdo)}`,
+  ].join(" | ");
+
 export const STRUCTURED_EXAME_PREFIX = "__EXAME_FISICO_STRUCTURED_V1__";
 
 const boolLabel = (value?: boolean | null) => {
@@ -178,6 +210,15 @@ const boolLabel = (value?: boolean | null) => {
 const safeText = (value?: string | null, fallback = "Nao informado") => {
   const parsed = String(value || "").trim();
   return parsed || fallback;
+};
+
+const buildBiomechanicalFactorsSummary = (anamnese?: Anamnese): string => {
+  const piora = String(anamnese?.fatoresPiora || "").trim();
+  const alivio = String(anamnese?.fatorAlivio || "").trim();
+  if (piora && alivio) return `Piora: ${piora}. Melhora/alivio: ${alivio}.`;
+  if (piora) return piora;
+  if (alivio) return `Melhora/alivio: ${alivio}.`;
+  return "Nao informado";
 };
 
 const initialRedFlagAnswers = (): RedFlagAnswer[] => [
@@ -222,6 +263,24 @@ const mapAnamneseTipo = (
 const makeTests = (names: string[]): RegionalTest[] =>
   names.map((nome) => ({ nome, resultado: "NAO_TESTADO", selecionado: false }));
 
+const normalizeTestKey = (value?: string | null): string =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const LEGACY_TEST_NAME_ALIASES: Record<string, string[]> = {
+  [normalizeTestKey("Teste de Roos (desfiladeiro toracico)")]: ["Teste de Roos"],
+  [normalizeTestKey("Teste de extensao lombar (Kemp)")]: ["Kemp (extensao lombar)"],
+  [normalizeTestKey("Teste de fluido sacral")]: ["Fluido sacral"],
+  [normalizeTestKey("Teste sacro extensao de perna")]: ["Sacro extensao perna"],
+  [normalizeTestKey("Teste de flexao em pe (D/E)")]: ["Flexao em pe D/E"],
+  [normalizeTestKey("Teste de flexao de joelho (Gillet)")]: ["Gillet (flexao de joelho)"],
+  [normalizeTestKey("Golfer's elbow test")]: ["Golfer's elbow"],
+};
+
 const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "CERVICAL",
@@ -233,7 +292,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
       "Distração cervical",
       "Compressão cervical",
       "Teste de Jackson",
-      "Teste de Roos",
+      "Teste de Roos (desfiladeiro toracico)",
       "Teste de Adson",
     ]),
   },
@@ -255,7 +314,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
       "Lasègue (SLR)",
       "Slump test",
       "Schober",
-      "Kemp (extensão lombar)",
+      "Teste de extensao lombar (Kemp)",
       "Instabilidade lombar",
       "Elevação bilateral das pernas",
     ]),
@@ -270,10 +329,10 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
       "Distração pélvica",
       "Thigh thrust",
       "Sacral thrust",
-      "Fluido sacral",
-      "Sacro extensão perna",
-      "Flexão em pé D/E",
-      "Gillet (flexão de joelho)",
+      "Teste de fluido sacral",
+      "Teste sacro extensao de perna",
+      "Teste de flexao em pe (D/E)",
+      "Teste de flexao de joelho (Gillet)",
       "Funning test",
     ]),
   },
@@ -340,7 +399,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
     testes: makeTests([
       "Cozen",
       "Mill",
-      "Golfer's elbow",
+      "Golfer's elbow test",
       "Tinel (ulnar)",
       "Estresse em valgo (LCM)",
     ]),
@@ -368,10 +427,21 @@ const normalizeRegionalTests = (
     const foundGroup = incoming.find((g) => g?.regiao === baseGroup.regiao);
     if (!foundGroup) return baseGroup;
     const foundTests = Array.isArray(foundGroup.testes) ? foundGroup.testes : [];
+    const foundByKey = new Map(
+      foundTests
+        .filter((test) => test?.nome)
+        .map((test) => [normalizeTestKey(test.nome), test] as const),
+    );
     return {
       ...baseGroup,
       testes: baseGroup.testes.map((baseTest) => {
-        const found = foundTests.find((t) => t?.nome === baseTest.nome);
+        const baseKey = normalizeTestKey(baseTest.nome);
+        const aliasKeys = (LEGACY_TEST_NAME_ALIASES[baseKey] || []).map((alias) =>
+          normalizeTestKey(alias),
+        );
+        const found =
+          foundByKey.get(baseKey) ||
+          aliasKeys.map((key) => foundByKey.get(key)).find(Boolean);
         if (!found) return baseTest;
         const resultado: TestResult =
           found.resultado === "POSITIVO" || found.resultado === "NEGATIVO"
@@ -463,6 +533,14 @@ export function buildStructuredExameFromAnamnese(
       estruturasEspecificas: "Nao informado",
       hipomobilidadeArticular:
         "Cervical (C1-C7), toracica (T1-T12), lombar (L1-L5), sacro, iliacos D/E.",
+      hipomobilidadeSegmentar: {
+        cervical: "Nao informado",
+        toracica: "Nao informado",
+        lombar: "Nao informado",
+        sacro: "Nao informado",
+        iliacoDireito: "Nao informado",
+        iliacoEsquerdo: "Nao informado",
+      },
     },
     testesFuncionais: {
       agachamento: "Nao testado",
@@ -477,6 +555,13 @@ export function buildStructuredExameFromAnamnese(
       ortopedicos: "Selecionar conforme hipotese principal e diferencial.",
       neurologicos: "Dermatomo, miotomo e reflexos profundos.",
       imagem: "Correlacionar exames de imagem com quadro clinico (se disponiveis).",
+    },
+    neurologico: {
+      forca: "Nao informado",
+      sensibilidade: "Nao informado",
+      reflexos: "Nao informado",
+      dermatomos: "Nao informado",
+      miotomos: "Nao informado",
     },
     avaliacaoRegioes: getDefaultRegionalTests(),
     cadeiaCinetica: {
@@ -505,7 +590,7 @@ export function buildStructuredExameFromAnamnese(
             ? "Neural"
             : "Mecanica",
       fatorBiomecanicoAssociado: safeText(
-        anamnese?.fatoresPiora,
+        buildBiomechanicalFactorsSummary(anamnese),
         "Nao informado",
       ),
       relacaoComEsporte: safeText(
@@ -775,21 +860,32 @@ const TEST_STRUCTURE_HINTS: Array<{
   { token: "Dekleyn", estrutura: "Componente vertebrobasilar cervical", tipoLesao: "Neural" },
   { token: "Spurling", estrutura: "Raiz neural cervical/disco cervical", tipoLesao: "Neural" },
   { token: "Distra", estrutura: "Componente compressivo cervical", tipoLesao: "Neural" },
+  { token: "Compressao cervical", estrutura: "Compressao foraminal/facetaria cervical", tipoLesao: "Neural" },
   { token: "Jackson", estrutura: "Forame intervertebral cervical", tipoLesao: "Neural" },
   { token: "Roos", estrutura: "Desfiladeiro toracico neurovascular", tipoLesao: "Neural" },
   { token: "Adson", estrutura: "Desfiladeiro toracico vascular/neural", tipoLesao: "Neural" },
+  { token: "Expansao toracica", estrutura: "Mecanica costal e mobilidade toracica global", tipoLesao: "Mecanica" },
+  { token: "Mobilidade segmentar", estrutura: "Hipomobilidade segmentar toracica", tipoLesao: "Mecanica" },
+  { token: "Rotacao toracica", estrutura: "Controle rotacional toracico", tipoLesao: "Mecanica" },
+  { token: "Inclinacao lateral", estrutura: "Controle lateral toracico", tipoLesao: "Mecanica" },
   { token: "Schepelmann", estrutura: "Componente costovertebral toracico", tipoLesao: "Mecanica" },
   { token: "Las", estrutura: "Componente neural lombossacro", tipoLesao: "Neural" },
   { token: "Slump", estrutura: "Tecido neural mecanossensivel", tipoLesao: "Neural" },
   { token: "Schober", estrutura: "Mobilidade lombar segmentar", tipoLesao: "Mecanica" },
   { token: "Kemp", estrutura: "Complexo facetario lombar", tipoLesao: "Mecanica" },
+  { token: "Instabilidade lombar", estrutura: "Estabilidade segmentar lombar", tipoLesao: "Mecanica" },
+  { token: "Elevacao bilateral", estrutura: "Controle lombopelvico em cadeia posterior", tipoLesao: "Mecanica" },
   { token: "FABER", estrutura: "Quadril/SI em cadeia lombo-pelvica", tipoLesao: "Mecanica" },
   { token: "Compressao pelvica", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Distracao pelvica", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Gaenslen", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Thigh thrust", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Sacral thrust", estrutura: "Complexo sacroiliaco posterior", tipoLesao: "Mecanica" },
+  { token: "fluido sacral", estrutura: "Mobilidade do fluido sacral e mecanica sacroiliaca", tipoLesao: "Mecanica" },
+  { token: "sacro extensao", estrutura: "Componente sacroiliaco em extensao de membro inferior", tipoLesao: "Mecanica" },
+  { token: "flexao em pe", estrutura: "Dinamica lombo-pelvica em flexao ortostatica", tipoLesao: "Mecanica" },
   { token: "Gillet", estrutura: "Dinamica sacroiliaca funcional", tipoLesao: "Mecanica" },
+  { token: "Funning", estrutura: "Integracao funcional sacroiliaca", tipoLesao: "Mecanica" },
   { token: "FADIR", estrutura: "Conflito femoroacetabular/labrum", tipoLesao: "Mecanica" },
   { token: "Thomas", estrutura: "Flexores de quadril e cadeia anterior", tipoLesao: "Mecanica" },
   { token: "Ober", estrutura: "Banda iliotibial/cadeia lateral", tipoLesao: "Mecanica" },
@@ -806,7 +902,10 @@ const TEST_STRUCTURE_HINTS: Array<{
   { token: "valgo", estrutura: "Ligamento colateral medial", tipoLesao: "Mecanica" },
   { token: "varo", estrutura: "Ligamento colateral lateral", tipoLesao: "Mecanica" },
   { token: "Thompson", estrutura: "Tendao de Aquiles", tipoLesao: "Mecanica" },
+  { token: "Gaveta anterior do tornozelo", estrutura: "Ligamento talofibular anterior", tipoLesao: "Mecanica" },
   { token: "Kleiger", estrutura: "Complexo sindesmotico/medial do tornozelo", tipoLesao: "Mecanica" },
+  { token: "Inclinacao talar", estrutura: "Complexo ligamentar lateral do tornozelo", tipoLesao: "Mecanica" },
+  { token: "Compressao da fibula", estrutura: "Sindesmose tibiofibular distal", tipoLesao: "Mecanica" },
   { token: "Windlass", estrutura: "Fascia plantar/arco longitudinal medial", tipoLesao: "Mecanica" },
   { token: "Navicular drop", estrutura: "Controle do arco plantar", tipoLesao: "Mecanica" },
   { token: "Neer", estrutura: "Espaco subacromial", tipoLesao: "Inflamatoria" },
@@ -822,6 +921,7 @@ const TEST_STRUCTURE_HINTS: Array<{
   { token: "Cozen", estrutura: "Extensores do punho (epicondilo lateral)", tipoLesao: "Inflamatoria" },
   { token: "Mill", estrutura: "Complexo extensor lateral do cotovelo", tipoLesao: "Inflamatoria" },
   { token: "Golfer", estrutura: "Flexores-pronadores mediais do cotovelo", tipoLesao: "Inflamatoria" },
+  { token: "Estresse em valgo (LCM)", estrutura: "Ligamento colateral medial do cotovelo", tipoLesao: "Mecanica" },
   { token: "Phalen", estrutura: "Tunel do carpo", tipoLesao: "Neural" },
   { token: "Tinel", estrutura: "Estrutura neural periferica", tipoLesao: "Neural" },
   { token: "Finkelstein", estrutura: "Tendao abdutor/extensor do polegar", tipoLesao: "Inflamatoria" },
@@ -1067,8 +1167,9 @@ export function enrichStructuredExameWithClinicalLogic(
       ),
       fatorBiomecanicoAssociado: pickText(
         preparedExam.raciocinioClinico.fatorBiomecanicoAssociado,
-        isMeaningfulText(anamnese?.fatoresPiora)
-          ? String(anamnese?.fatoresPiora || "").trim()
+        isMeaningfulText(anamnese?.fatoresPiora) ||
+        isMeaningfulText(anamnese?.fatorAlivio)
+          ? buildBiomechanicalFactorsSummary(anamnese)
           : testsPositiveCount
             ? `Padrao alterado em ${primaryRegionLabel.toLowerCase()} com compensacoes associadas.`
             : "Sem fator biomecanico principal definido.",
@@ -1158,6 +1259,22 @@ export function parseStructuredExame(raw?: string | null): ExameFisicoStructured
       },
       palpacao: {
         ...parsed.palpacao,
+        hipomobilidadeSegmentar: {
+          cervical:
+            parsed.palpacao?.hipomobilidadeSegmentar?.cervical || "Nao informado",
+          toracica:
+            parsed.palpacao?.hipomobilidadeSegmentar?.toracica || "Nao informado",
+          lombar:
+            parsed.palpacao?.hipomobilidadeSegmentar?.lombar || "Nao informado",
+          sacro:
+            parsed.palpacao?.hipomobilidadeSegmentar?.sacro || "Nao informado",
+          iliacoDireito:
+            parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito ||
+            "Nao informado",
+          iliacoEsquerdo:
+            parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo ||
+            "Nao informado",
+        },
         pontosDolorosos:
           parsed.palpacao?.pontosDolorosos || "Nao informado",
         temperatura: parsed.palpacao?.temperatura || "Nao informado",
@@ -1165,7 +1282,7 @@ export function parseStructuredExame(raw?: string | null): ExameFisicoStructured
         estruturasEspecificas: parsed.palpacao?.estruturasEspecificas || "Nao informado",
         hipomobilidadeArticular:
           parsed.palpacao?.hipomobilidadeArticular ||
-          "Cervical (C1-C7), toracica (T1-T12), lombar (L1-L5), sacro, iliacos D/E.",
+          buildHipomobilidadeSummary(parsed.palpacao?.hipomobilidadeSegmentar || {}),
       },
       testesFuncionais: {
         agachamento: parsed.testesFuncionais?.agachamento || "Nao testado",
@@ -1175,6 +1292,13 @@ export function parseStructuredExame(raw?: string | null): ExameFisicoStructured
         corrida: parsed.testesFuncionais?.corrida || "Nao testado",
         estabilidade: parsed.testesFuncionais?.estabilidade || "Nao testado",
         controleMotor: parsed.testesFuncionais?.controleMotor || "Nao testado",
+      },
+      neurologico: {
+        forca: parsed.neurologico?.forca || "Nao informado",
+        sensibilidade: parsed.neurologico?.sensibilidade || "Nao informado",
+        reflexos: parsed.neurologico?.reflexos || "Nao informado",
+        dermatomos: parsed.neurologico?.dermatomos || "Nao informado",
+        miotomos: parsed.neurologico?.miotomos || "Nao informado",
       },
       avaliacaoRegioes: normalizeRegionalTests(parsed.avaliacaoRegioes),
       cruzamentoFinal: {
@@ -1276,6 +1400,12 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Tonus muscular: ${exam.palpacao.tonusMuscular}`,
     `Estruturas especificas: ${exam.palpacao.estruturasEspecificas}`,
     `Hipomobilidade articular: ${exam.palpacao.hipomobilidadeArticular}`,
+    `Hipomobilidade segmentar - Cervical: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.cervical)}`,
+    `Hipomobilidade segmentar - Toracica: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.toracica)}`,
+    `Hipomobilidade segmentar - Lombar: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.lombar)}`,
+    `Hipomobilidade segmentar - Sacro: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.sacro)}`,
+    `Hipomobilidade segmentar - Iliaco D: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.iliacoDireito)}`,
+    `Hipomobilidade segmentar - Iliaco E: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.iliacoEsquerdo)}`,
     "",
     "Testes funcionais",
     `Agachamento: ${exam.testesFuncionais.agachamento}`,
@@ -1290,6 +1420,13 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Ortopedicos: ${exam.testes.ortopedicos}`,
     `Neurologicos: ${exam.testes.neurologicos}`,
     `Imagem: ${exam.testes.imagem}`,
+    "",
+    "Neurologico",
+    `Forca: ${exam.neurologico.forca}`,
+    `Sensibilidade: ${exam.neurologico.sensibilidade}`,
+    `Reflexos: ${exam.neurologico.reflexos}`,
+    `Dermatomos: ${exam.neurologico.dermatomos}`,
+    `Miotomos: ${exam.neurologico.miotomos}`,
     "",
     "Avaliacao por regioes",
     ...exam.avaliacaoRegioes.flatMap((group) => {

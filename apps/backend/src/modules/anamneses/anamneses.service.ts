@@ -2,10 +2,10 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A NA MN ES ES.S ER VI CE
 // ==========================================
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Anamnese } from './entities/anamnese.entity';
+import { Anamnese, MotivoBusca } from './entities/anamnese.entity';
 import { CreateAnamneseDto } from './dto/create-anamnese.dto';
 import { UpdateAnamneseDto } from './dto/update-anamnese.dto';
 import { PacientesService } from '../pacientes/pacientes.service';
@@ -22,6 +22,7 @@ export class AnamnesesService {  constructor(
     usuarioId: string,
   ): Promise<Anamnese> {
     await this.pacientesService.findOne(createAnamneseDto.pacienteId, usuarioId);
+    this.validateClinicalMinimum(createAnamneseDto);
     const anamnese = this.anamneseRepository.create(createAnamneseDto);
     return this.anamneseRepository.save(anamnese);
   }
@@ -34,6 +35,7 @@ export class AnamnesesService {  constructor(
       usuarioId,
     );
 
+    this.validateClinicalMinimum(createAnamneseDto);
     const anamnese = this.anamneseRepository.create({
       ...createAnamneseDto,
       pacienteId: paciente.id,
@@ -106,6 +108,8 @@ export class AnamnesesService {  constructor(
     usuarioId: string,
   ): Promise<Anamnese> {
     const anamnese = await this.findOne(id, usuarioId);
+    const nextPayload = { ...anamnese, ...updateAnamneseDto };
+    this.validateClinicalMinimum(nextPayload);
     Object.assign(anamnese, updateAnamneseDto);
     return this.anamneseRepository.save(anamnese);
   }
@@ -116,6 +120,8 @@ export class AnamnesesService {  constructor(
     usuarioId: string,
   ): Promise<Anamnese> {
     const anamnese = await this.findOneByPacienteUsuario(id, usuarioId);
+    const nextPayload = { ...anamnese, ...updateAnamneseDto };
+    this.validateClinicalMinimum(nextPayload);
     Object.assign(anamnese, updateAnamneseDto);
     return this.anamneseRepository.save(anamnese);
   }
@@ -123,6 +129,24 @@ export class AnamnesesService {  constructor(
   async remove(id: string, usuarioId: string): Promise<void> {
     const anamnese = await this.findOne(id, usuarioId);
     await this.anamneseRepository.remove(anamnese);
+  }
+
+  private validateClinicalMinimum(
+    payload: Partial<CreateAnamneseDto> | Partial<UpdateAnamneseDto> | Partial<Anamnese>,
+  ): void {
+    if (payload.motivoBusca !== MotivoBusca.SINTOMA_EXISTENTE) return;
+
+    const missing: string[] = [];
+    if (!payload.inicioProblema) missing.push('inicioProblema');
+    if (!payload.mecanismoLesao) missing.push('mecanismoLesao');
+    if (!String(payload.fatorAlivio || '').trim()) missing.push('fatorAlivio');
+    if (!String(payload.fatoresPiora || '').trim()) missing.push('fatoresPiora');
+
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Campos obrigatorios ausentes para motivo SINTOMA_EXISTENTE: ${missing.join(', ')}`,
+      );
+    }
   }
 }
 

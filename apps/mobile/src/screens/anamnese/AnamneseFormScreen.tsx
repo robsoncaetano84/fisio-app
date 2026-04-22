@@ -754,6 +754,25 @@ export function AnamneseFormScreen({
         if (!inicioProblema) {
           nextErrors.inicioProblema = "Informe como começou o problema";
         }
+        if (
+          motivoBusca === MotivoBusca.SINTOMA_EXISTENTE &&
+          !mecanismoLesao
+        ) {
+          nextErrors.mecanismoLesao =
+            "Selecione o mecanismo provável da lesão";
+        }
+        if (
+          motivoBusca === MotivoBusca.SINTOMA_EXISTENTE &&
+          !String(fatorAlivio || "").trim()
+        ) {
+          nextErrors.fatorAlivio = "Informe pelo menos um fator de melhora/alívio";
+        }
+        if (
+          motivoBusca === MotivoBusca.SINTOMA_EXISTENTE &&
+          !String(fatoresPiora || "").trim()
+        ) {
+          nextErrors.fatoresPiora = "Informe pelo menos um fator de piora/agravo";
+        }
         break;
       default:
         break;
@@ -765,6 +784,9 @@ export function AnamneseFormScreen({
       areasAfetadas: nextErrors.areasAfetadas || "",
       intensidadeDor: nextErrors.intensidadeDor || "",
       inicioProblema: nextErrors.inicioProblema || "",
+      mecanismoLesao: nextErrors.mecanismoLesao || "",
+      fatorAlivio: nextErrors.fatorAlivio || "",
+      fatoresPiora: nextErrors.fatoresPiora || "",
     }));
     return Object.keys(nextErrors).length === 0;
   };
@@ -791,6 +813,27 @@ export function AnamneseFormScreen({
     }
     if (step === 1 && !inicioProblema) {
       fields.push("inicioProblema");
+    }
+    if (
+      step === 1 &&
+      motivoBusca === MotivoBusca.SINTOMA_EXISTENTE &&
+      !mecanismoLesao
+    ) {
+      fields.push("mecanismoLesao");
+    }
+    if (
+      step === 1 &&
+      motivoBusca === MotivoBusca.SINTOMA_EXISTENTE &&
+      !String(fatorAlivio || "").trim()
+    ) {
+      fields.push("fatorAlivio");
+    }
+    if (
+      step === 1 &&
+      motivoBusca === MotivoBusca.SINTOMA_EXISTENTE &&
+      !String(fatoresPiora || "").trim()
+    ) {
+      fields.push("fatoresPiora");
     }
     return fields;
   };
@@ -1343,26 +1386,47 @@ export function AnamneseFormScreen({
                 <SelectOption
                   label="Trauma"
                   selected={mecanismoLesao === MecanismoLesao.TRAUMA}
-                  onPress={() => setMecanismoLesao(MecanismoLesao.TRAUMA)}
+                  onPress={() => {
+                    setMecanismoLesao(MecanismoLesao.TRAUMA);
+                    if (errors.mecanismoLesao) {
+                      setErrors((prev) => ({ ...prev, mecanismoLesao: "" }));
+                    }
+                  }}
                 />
                 <SelectOption
                   label="Sobrecarga"
                   selected={mecanismoLesao === MecanismoLesao.SOBRECARGA}
-                  onPress={() => setMecanismoLesao(MecanismoLesao.SOBRECARGA)}
+                  onPress={() => {
+                    setMecanismoLesao(MecanismoLesao.SOBRECARGA);
+                    if (errors.mecanismoLesao) {
+                      setErrors((prev) => ({ ...prev, mecanismoLesao: "" }));
+                    }
+                  }}
                 />
                 <SelectOption
                   label="Misto"
                   selected={mecanismoLesao === MecanismoLesao.MISTO}
-                  onPress={() => setMecanismoLesao(MecanismoLesao.MISTO)}
+                  onPress={() => {
+                    setMecanismoLesao(MecanismoLesao.MISTO);
+                    if (errors.mecanismoLesao) {
+                      setErrors((prev) => ({ ...prev, mecanismoLesao: "" }));
+                    }
+                  }}
                 />
                 <SelectOption
                   label="Não definido"
                   selected={mecanismoLesao === MecanismoLesao.NAO_DEFINIDO}
-                  onPress={() =>
-                    setMecanismoLesao(MecanismoLesao.NAO_DEFINIDO)
-                  }
+                  onPress={() => {
+                    setMecanismoLesao(MecanismoLesao.NAO_DEFINIDO);
+                    if (errors.mecanismoLesao) {
+                      setErrors((prev) => ({ ...prev, mecanismoLesao: "" }));
+                    }
+                  }}
                 />
               </View>
+              {errors.mecanismoLesao ? (
+                <Text style={styles.errorText}>{errors.mecanismoLesao}</Text>
+              ) : null}
             </FormSection>
 
             <FormSection title="Fatores de piora / agravo">
@@ -1382,7 +1446,13 @@ export function AnamneseFormScreen({
               <Input
                 placeholder="Quais fatores pioram? (ex.: carga repetitiva, postura mantida, impacto)"
                 value={fatoresPiora}
-                onChangeText={setFatoresPiora}
+                onChangeText={(text) => {
+                  setFatoresPiora(text);
+                  if (errors.fatoresPiora) {
+                    setErrors((prev) => ({ ...prev, fatoresPiora: "" }));
+                  }
+                }}
+                error={errors.fatoresPiora}
                 showCount
                 showClear
                 maxLength={1000}

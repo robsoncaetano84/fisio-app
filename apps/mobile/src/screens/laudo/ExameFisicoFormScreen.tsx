@@ -147,6 +147,36 @@ const prettyEnum = (value: string) =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (l) => l.toUpperCase());
 
+type HipomobilidadeSegmentarField =
+  | "cervical"
+  | "toracica"
+  | "lombar"
+  | "sacro"
+  | "iliacoDireito"
+  | "iliacoEsquerdo";
+
+const buildHipomobilidadeSummary = (segmentar: {
+  cervical?: string;
+  toracica?: string;
+  lombar?: string;
+  sacro?: string;
+  iliacoDireito?: string;
+  iliacoEsquerdo?: string;
+}) => {
+  const safe = (value?: string) => {
+    const text = String(value || "").trim();
+    return text || "Nao informado";
+  };
+  return [
+    `Cervical: ${safe(segmentar.cervical)}`,
+    `Toracica: ${safe(segmentar.toracica)}`,
+    `Lombar: ${safe(segmentar.lombar)}`,
+    `Sacro: ${safe(segmentar.sacro)}`,
+    `Iliaco D: ${safe(segmentar.iliacoDireito)}`,
+    `Iliaco E: ${safe(segmentar.iliacoEsquerdo)}`,
+  ].join(" | ");
+};
+
 export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScreenProps) {
   const { pacienteId } = route.params;
   const { showToast } = useToast();
@@ -332,6 +362,33 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     if (path === "redFlags.referralReason" && errors.referralReason) {
       setErrors((prev) => ({ ...prev, referralReason: "" }));
     }
+    if (
+      path.startsWith("neurologico.") &&
+      errors.neurologicoDetalhado
+    ) {
+      setErrors((prev) => ({ ...prev, neurologicoDetalhado: "" }));
+    }
+  };
+
+  const setHipomobilidadeSegmentarField = (
+    field: HipomobilidadeSegmentarField,
+    value: string,
+  ) => {
+    if (!exam) return;
+    const hipomobilidadeSegmentar = {
+      ...exam.palpacao.hipomobilidadeSegmentar,
+      [field]: value,
+    };
+    setExam({
+      ...exam,
+      palpacao: {
+        ...exam.palpacao,
+        hipomobilidadeSegmentar,
+        hipomobilidadeArticular: buildHipomobilidadeSummary(
+          hipomobilidadeSegmentar,
+        ),
+      },
+    });
   };
 
   const toggleRedFlag = (key: RedFlagKey, positive: boolean) => {
@@ -369,6 +426,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     });
     const latest = getLatestAnamnese();
     const nextExam = { ...exam, avaliacaoRegioes };
+    if (resultado !== "NAO_TESTADO" && errors.avaliacaoRegioes) {
+      setErrors((prev) => ({ ...prev, avaliacaoRegioes: "" }));
+    }
     setExam(
       enrichStructuredExameWithClinicalLogic(nextExam, latest, {
         overwrite: false,
@@ -419,6 +479,28 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     if (!exam.cruzamentoFinal.condutaDirecionada.trim()) {
       nextErrors.conduta = "Direção de conduta é obrigatória.";
     }
+    const neuralMode = String(exam.raciocinioClinico.tipoLesao || "")
+      .toLowerCase()
+      .includes("neural");
+    if (neuralMode) {
+      const hasDetailedNeuro =
+        String(exam.neurologico.forca || "").trim() ||
+        String(exam.neurologico.sensibilidade || "").trim() ||
+        String(exam.neurologico.reflexos || "").trim() ||
+        String(exam.neurologico.dermatomos || "").trim() ||
+        String(exam.neurologico.miotomos || "").trim();
+      if (!hasDetailedNeuro) {
+        nextErrors.neurologicoDetalhado =
+          "Para lesão neural, preencha pelo menos um item do bloco neurológico detalhado.";
+      }
+    }
+    const hasAtLeastOneRegionalResult = exam.avaliacaoRegioes.some((grupo) =>
+      grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
+    );
+    if (!hasAtLeastOneRegionalResult) {
+      nextErrors.avaliacaoRegioes =
+        "Marque pelo menos um teste regional como positivo ou negativo.";
+    }
 
     if (exam.redFlags.criticalTriggered) {
       if (!String(exam.redFlags.referralDestination || "").trim()) {
@@ -439,6 +521,22 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     if (!source.movimento.reproduzDor.trim()) fields.push("movimentoReproduzDor");
     if (!source.cruzamentoFinal.hipotesePrincipal.trim()) fields.push("hipotesePrincipal");
     if (!source.cruzamentoFinal.condutaDirecionada.trim()) fields.push("conduta");
+    const neuralMode = String(source.raciocinioClinico.tipoLesao || "")
+      .toLowerCase()
+      .includes("neural");
+    if (neuralMode) {
+      const hasDetailedNeuro =
+        String(source.neurologico.forca || "").trim() ||
+        String(source.neurologico.sensibilidade || "").trim() ||
+        String(source.neurologico.reflexos || "").trim() ||
+        String(source.neurologico.dermatomos || "").trim() ||
+        String(source.neurologico.miotomos || "").trim();
+      if (!hasDetailedNeuro) fields.push("neurologicoDetalhado");
+    }
+    const hasAtLeastOneRegionalResult = source.avaliacaoRegioes.some((grupo) =>
+      grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
+    );
+    if (!hasAtLeastOneRegionalResult) fields.push("avaliacaoRegioes");
     if (source.redFlags.criticalTriggered) {
       if (!String(source.redFlags.referralDestination || "").trim()) {
         fields.push("referralDestination");
@@ -736,7 +834,53 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input label="Temperatura local" value={exam.palpacao.temperatura} onChangeText={(v) => setField("palpacao.temperatura", v)} />
           <Input label="Tônus muscular" value={exam.palpacao.tonusMuscular} onChangeText={(v) => setField("palpacao.tonusMuscular", v)} />
           <Input label="Estruturas específicas" value={exam.palpacao.estruturasEspecificas} onChangeText={(v) => setField("palpacao.estruturasEspecificas", v)} />
-          <Input label="Hipomobilidade articular" value={exam.palpacao.hipomobilidadeArticular} onChangeText={(v) => setField("palpacao.hipomobilidadeArticular", v)} multiline numberOfLines={3} />
+          <Input
+            label="Hipomobilidade cervical (C1-C7)"
+            value={exam.palpacao.hipomobilidadeSegmentar.cervical}
+            onChangeText={(v) => setHipomobilidadeSegmentarField("cervical", v)}
+            placeholder="Ex.: C3-C4 e C5-C6 hipomóveis"
+          />
+          <Input
+            label="Hipomobilidade torácica (T1-T12)"
+            value={exam.palpacao.hipomobilidadeSegmentar.toracica}
+            onChangeText={(v) => setHipomobilidadeSegmentarField("toracica", v)}
+            placeholder="Ex.: T4-T6 hipomóveis"
+          />
+          <Input
+            label="Hipomobilidade lombar (L1-L5)"
+            value={exam.palpacao.hipomobilidadeSegmentar.lombar}
+            onChangeText={(v) => setHipomobilidadeSegmentarField("lombar", v)}
+            placeholder="Ex.: L4-L5 com rigidez segmentar"
+          />
+          <Input
+            label="Sacro (base posterior D/E)"
+            value={exam.palpacao.hipomobilidadeSegmentar.sacro}
+            onChangeText={(v) => setHipomobilidadeSegmentarField("sacro", v)}
+            placeholder="Ex.: Base sacral posterior direita"
+          />
+          <Input
+            label="Ilíaco direito (posterior/anterior)"
+            value={exam.palpacao.hipomobilidadeSegmentar.iliacoDireito}
+            onChangeText={(v) =>
+              setHipomobilidadeSegmentarField("iliacoDireito", v)
+            }
+            placeholder="Ex.: Ilíaco D em posterioridade"
+          />
+          <Input
+            label="Ilíaco esquerdo (posterior/anterior)"
+            value={exam.palpacao.hipomobilidadeSegmentar.iliacoEsquerdo}
+            onChangeText={(v) =>
+              setHipomobilidadeSegmentarField("iliacoEsquerdo", v)
+            }
+            placeholder="Ex.: Ilíaco E em anterioridade"
+          />
+          <Input
+            label="Resumo da hipomobilidade articular"
+            value={exam.palpacao.hipomobilidadeArticular}
+            editable={false}
+            multiline
+            numberOfLines={3}
+          />
         </View>
 
         <View style={styles.section}>
@@ -745,6 +889,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input label="Testes ortopédicos" value={exam.testes.ortopedicos} onChangeText={(v) => setField("testes.ortopedicos", v)} />
           <Input label="Neurológico (dermátomo, miótomo, reflexos)" value={exam.testes.neurologicos} onChangeText={(v) => setField("testes.neurologicos", v)} />
           <Input label="Exame de imagem" value={exam.testes.imagem} onChangeText={(v) => setField("testes.imagem", v)} />
+
+          <Text style={styles.label}>Bloco neurológico detalhado</Text>
+          <Input label="Força" value={exam.neurologico.forca} onChangeText={(v) => setField("neurologico.forca", v)} />
+          <Input label="Sensibilidade" value={exam.neurologico.sensibilidade} onChangeText={(v) => setField("neurologico.sensibilidade", v)} />
+          <Input label="Reflexos" value={exam.neurologico.reflexos} onChangeText={(v) => setField("neurologico.reflexos", v)} />
+          <Input label="Dermátomos" value={exam.neurologico.dermatomos} onChangeText={(v) => setField("neurologico.dermatomos", v)} />
+          <Input label="Miótomos" value={exam.neurologico.miotomos} onChangeText={(v) => setField("neurologico.miotomos", v)} />
+          {errors.neurologicoDetalhado ? (
+            <Text style={styles.validationErrorText}>{errors.neurologicoDetalhado}</Text>
+          ) : null}
 
           <Input label="Quadril" value={exam.cadeiaCinetica.quadril} onChangeText={(v) => setField("cadeiaCinetica.quadril", v)} />
           <Input label="Pelve" value={exam.cadeiaCinetica.pelve} onChangeText={(v) => setField("cadeiaCinetica.pelve", v)} />
@@ -824,6 +978,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               ))}
             </View>
           ))}
+          {errors.avaliacaoRegioes ? (
+            <Text style={styles.validationErrorText}>{errors.avaliacaoRegioes}</Text>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -1537,6 +1694,12 @@ const styles = StyleSheet.create({
   },
   regionOptionTextSelected: {
     color: COLORS.white,
+  },
+  validationErrorText: {
+    color: COLORS.error,
+    fontSize: FONTS.sizes.xs,
+    marginTop: SPACING.xs,
+    fontWeight: "600",
   },
 });
 

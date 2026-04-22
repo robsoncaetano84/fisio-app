@@ -98,6 +98,7 @@ export class LaudosService {
 
   async create(createLaudoDto: CreateLaudoDto, usuarioId: string): Promise<Laudo> {
     await this.pacientesService.findOne(createLaudoDto.pacienteId, usuarioId);
+    this.validateStructuredExameInput(createLaudoDto.exameFisico);
 
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId: createLaudoDto.pacienteId },
@@ -174,6 +175,7 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<Laudo> {
     const laudo = await this.findOne(id, usuarioId);
+    this.validateStructuredExameInput(updateLaudoDto.exameFisico);
     const hasSuggestionMetaUpdate =
       updateLaudoDto.sugestaoSource ||
       typeof updateLaudoDto.examesConsiderados === 'number' ||
@@ -1067,10 +1069,40 @@ ${JSON.stringify(input, null, 2)}
       .map((item: any) => '- ' + String(item.question || item.key || 'Red flag'))
       .join('\n');
 
+    const regionalGroups = ((parsed.avaliacaoRegioes || []) as Array<{
+      titulo?: string;
+      testes?: Array<{ nome?: string; resultado?: string; selecionado?: boolean }>;
+    }>);
+    const allRegionalTests = regionalGroups.flatMap((group) =>
+      Array.isArray(group?.testes) ? group.testes : [],
+    );
+    const regionalPositiveCount = allRegionalTests.filter(
+      (test) => String(test?.resultado || '') === 'POSITIVO',
+    ).length;
+    const regionalNegativeCount = allRegionalTests.filter(
+      (test) => String(test?.resultado || '') === 'NEGATIVO',
+    ).length;
+    const regionalNotTestedCount = allRegionalTests.filter(
+      (test) => String(test?.resultado || 'NAO_TESTADO') === 'NAO_TESTADO',
+    ).length;
+
     const lines = [
       'Classificacao de dor',
       'Principal: ' + String(parsed.dorPrincipal || 'Nao informado'),
       'Subtipo clinico: ' + String(parsed.dorSubtipo || 'Nao informado'),
+      '',
+      'Inspecao/observacao',
+      'Postura global: ' + String(parsed.observacao?.postura || 'Nao informado'),
+      'Assimetrias: ' + String(parsed.observacao?.assimetria || 'Nao informado'),
+      'Edema: ' + String(parsed.observacao?.edema || 'Nao informado'),
+      'Atrofia muscular: ' + String(parsed.observacao?.atrofiaMuscular || 'Nao informado'),
+      'Alteracoes de marcha: ' + String(parsed.observacao?.marcha || 'Nao informado'),
+      'Padrao de movimento observado: ' + String(parsed.observacao?.padraoMovimento || 'Nao informado'),
+      '',
+      'Padrao de dor',
+      'Dor local: ' + String(parsed.padraoDor?.local || 'Nao informado'),
+      'Dor irradiada: ' + String(parsed.padraoDor?.irradiada || 'Nao informado'),
+      'Comportamento da dor: ' + String(parsed.padraoDor?.comportamento || 'Nao informado'),
       '',
       'Movimento (chave)',
       'Ativo: ' + String(parsed.movimento?.ativo || 'Nao informado'),
@@ -1091,6 +1123,12 @@ ${JSON.stringify(input, null, 2)}
       'Tonus muscular: ' + String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
       'Estruturas especificas: ' + String(parsed.palpacao?.estruturasEspecificas || 'Nao informado'),
       'Hipomobilidade articular: ' + String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
+      'Hipomobilidade segmentar - Cervical: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.cervical || 'Nao informado'),
+      'Hipomobilidade segmentar - Toracica: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.toracica || 'Nao informado'),
+      'Hipomobilidade segmentar - Lombar: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.lombar || 'Nao informado'),
+      'Hipomobilidade segmentar - Sacro: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.sacro || 'Nao informado'),
+      'Hipomobilidade segmentar - Iliaco D: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito || 'Nao informado'),
+      'Hipomobilidade segmentar - Iliaco E: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo || 'Nao informado'),
       '',
       'Testes funcionais',
       'Agachamento: ' + String(parsed.testesFuncionais?.agachamento || 'Nao informado'),
@@ -1105,6 +1143,37 @@ ${JSON.stringify(input, null, 2)}
       'Ortopedicos: ' + String(parsed.testes?.ortopedicos || 'Nao informado'),
       'Neurologicos: ' + String(parsed.testes?.neurologicos || 'Nao informado'),
       'Imagem: ' + String(parsed.testes?.imagem || 'Nao informado'),
+      '',
+      'Neurologico detalhado',
+      'Forca: ' + String(parsed.neurologico?.forca || 'Nao informado'),
+      'Sensibilidade: ' + String(parsed.neurologico?.sensibilidade || 'Nao informado'),
+      'Reflexos: ' + String(parsed.neurologico?.reflexos || 'Nao informado'),
+      'Dermatomos: ' + String(parsed.neurologico?.dermatomos || 'Nao informado'),
+      'Miotomos: ' + String(parsed.neurologico?.miotomos || 'Nao informado'),
+      '',
+      'Avaliacao por regioes',
+      `Resumo: ${regionalPositiveCount} positivo(s), ${regionalNegativeCount} negativo(s), ${regionalNotTestedCount} nao testado(s).`,
+      ...regionalGroups.flatMap((group) => {
+        const groupTitle = String(group?.titulo || 'Regiao');
+        const tests = Array.isArray(group?.testes) ? group.testes : [];
+        const selectedOrTested = tests.filter(
+          (test) =>
+            String(test?.resultado || '') !== 'NAO_TESTADO' ||
+            test?.selecionado === true,
+        );
+        if (!selectedOrTested.length) {
+          return [groupTitle, '- Sem testes marcados'];
+        }
+        const entries = selectedOrTested.map((test) => {
+          const name = String(test?.nome || 'Teste');
+          const result = String(test?.resultado || 'NAO_TESTADO');
+          if (result === 'NAO_TESTADO') {
+            return `- ${name}: Selecionado`;
+          }
+          return `- ${name}: ${result === 'POSITIVO' ? 'Positivo' : 'Negativo'}`;
+        });
+        return [groupTitle, ...entries];
+      }),
       '',
       'Cruzamento final',
       'Hipotese principal: ' + String(parsed.cruzamentoFinal?.hipotesePrincipal || 'Nao informado'),
@@ -1163,6 +1232,29 @@ ${JSON.stringify(input, null, 2)}
     }
   }
 
+  private validateStructuredExameInput(value?: string | null): void {
+    const parsed = this.parseStructuredExame(value);
+    if (!parsed) return;
+
+    const groups = Array.isArray(parsed.avaliacaoRegioes)
+      ? parsed.avaliacaoRegioes
+      : [];
+    const hasRegionalResult = groups.some((group: any) =>
+      Array.isArray(group?.testes) &&
+      group.testes.some(
+        (test: any) =>
+          String(test?.resultado || '') === 'POSITIVO' ||
+          String(test?.resultado || '') === 'NEGATIVO',
+      ),
+    );
+
+    if (!hasRegionalResult) {
+      throw new BadRequestException(
+        'Marque ao menos um teste regional como positivo ou negativo antes de salvar o exame fisico.',
+      );
+    }
+  }
+
   private addSection(doc: PDFKit.PDFDocument, title: string, value?: string | null) {
     doc.fontSize(12).fillColor('#1b5e40').text(title);
     doc.moveDown(0.2);
@@ -1183,6 +1275,7 @@ ${JSON.stringify(input, null, 2)}
       anamnese.mecanismoLesao,
       anamnese.historicoEsportivo,
       anamnese.lesoesPrevias,
+      anamnese.usoMedicamentos,
       anamnese.eventoEspecifico,
     ]
       .filter(Boolean)
@@ -1356,13 +1449,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
-
-
-
-
-
-
 
 
 
