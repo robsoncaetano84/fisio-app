@@ -113,6 +113,12 @@ export enum PacienteVinculoStatus {
   VINCULADO_PENDENTE_COMPLEMENTO = "VINCULADO_PENDENTE_COMPLEMENTO",
   BLOQUEADO_CONFLITO = "BLOQUEADO_CONFLITO",
 }
+
+export enum PacienteCicloStatus {
+  AGUARDANDO_ANAMNESE = "AGUARDANDO_ANAMNESE",
+  EM_TRATAMENTO = "EM_TRATAMENTO",
+  ALTA_CONCLUIDA = "ALTA_CONCLUIDA",
+}
 // ------------------------------------------
 // INTERFACES BASE
 // ------------------------------------------
@@ -157,6 +163,7 @@ export interface Paciente {
   anamneseSolicitacaoUltimaEm?: string | null;
   cadastroOrigem?: PacienteCadastroOrigem;
   vinculoStatus?: PacienteVinculoStatus;
+  statusCiclo?: PacienteCicloStatus;
   conviteEnviadoEm?: string;
   conviteAceitoEm?: string;
   ativo: boolean;

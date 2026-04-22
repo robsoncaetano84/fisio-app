@@ -1,6 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PacientePagedResponseDto = exports.PacienteListItemDto = void 0;
+exports.PacientePagedResponseDto = exports.PacienteListItemDto = exports.PacienteCicloStatus = void 0;
+var PacienteCicloStatus;
+(function (PacienteCicloStatus) {
+    PacienteCicloStatus["AGUARDANDO_ANAMNESE"] = "AGUARDANDO_ANAMNESE";
+    PacienteCicloStatus["EM_TRATAMENTO"] = "EM_TRATAMENTO";
+    PacienteCicloStatus["ALTA_CONCLUIDA"] = "ALTA_CONCLUIDA";
+})(PacienteCicloStatus || (exports.PacienteCicloStatus = PacienteCicloStatus = {}));
 class PacienteListItemDto {
     id;
     nomeCompleto;
@@ -29,6 +35,7 @@ class PacienteListItemDto {
     anamneseSolicitacaoUltimaEm;
     cadastroOrigem;
     vinculoStatus;
+    statusCiclo;
     conviteEnviadoEm;
     conviteAceitoEm;
     createdAt;

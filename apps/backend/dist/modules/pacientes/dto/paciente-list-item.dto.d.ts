@@ -1,4 +1,9 @@
 import { PacienteCadastroOrigem, PacienteVinculoStatus, Sexo, EstadoCivil } from '../entities/paciente.entity';
+export declare enum PacienteCicloStatus {
+    AGUARDANDO_ANAMNESE = "AGUARDANDO_ANAMNESE",
+    EM_TRATAMENTO = "EM_TRATAMENTO",
+    ALTA_CONCLUIDA = "ALTA_CONCLUIDA"
+}
 export declare class PacienteListItemDto {
     id: string;
     nomeCompleto: string;
@@ -27,6 +32,7 @@ export declare class PacienteListItemDto {
     anamneseSolicitacaoUltimaEm: Date | null;
     cadastroOrigem: PacienteCadastroOrigem;
     vinculoStatus: PacienteVinculoStatus;
+    statusCiclo: PacienteCicloStatus;
     conviteEnviadoEm: Date | null;
     conviteAceitoEm: Date | null;
     createdAt: Date;

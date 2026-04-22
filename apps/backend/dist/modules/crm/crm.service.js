@@ -505,6 +505,7 @@ let CrmService = class CrmService {
         const now = Date.now();
         const activityWindowMs = windowDays * 24 * 60 * 60 * 1000;
         const semEvolucaoWindowMs = semEvolucaoDias * 24 * 60 * 60 * 1000;
+        const inactiveClosedWindowMs = 30 * 24 * 60 * 60 * 1000;
         const pacientes = await this.pacienteRepository.find({ where: { ativo: true } });
         const pacienteIds = pacientes.map((p) => p.id);
         if (!pacienteIds.length) {
@@ -602,6 +603,13 @@ let CrmService = class CrmService {
             const lastEvolucaoMs = lastEvolucao?.data
                 ? new Date(lastEvolucao.data).getTime()
                 : NaN;
+            const lastLaudoUpdatedMs = lastLaudo?.updatedAt
+                ? new Date(lastLaudo.updatedAt).getTime()
+                : NaN;
+            const hasActiveActivity = atividadePacienteIds.has(paciente.id);
+            const hasAltaDocumento = lastLaudo?.status === laudo_entity_1.LaudoStatus.VALIDADO_PROFISSIONAL &&
+                !!lastLaudo.criteriosAlta;
+            const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;
             if (!hasAnamnese && now - createdAtMs <= activityWindowMs) {
                 novoPaciente += 1;
             }
@@ -613,19 +621,22 @@ let CrmService = class CrmService {
             if (!hasAnamnese) {
                 anamnesePendente += 1;
             }
-            if (hasAnamnese &&
-                (!lastLaudo ||
-                    lastLaudo.status !== laudo_entity_1.LaudoStatus.VALIDADO_PROFISSIONAL ||
-                    !lastLaudo.criteriosAlta)) {
+            if (hasAnamnese && !tratamentoConcluido) {
                 emTratamento += 1;
             }
-            if (lastLaudo?.status === laudo_entity_1.LaudoStatus.VALIDADO_PROFISSIONAL &&
-                !!lastLaudo.criteriosAlta) {
+            if (tratamentoConcluido) {
                 alta += 1;
             }
             const lastCheckinRaw = checkinByPaciente.get(paciente.id);
             const lastCheckinMs = lastCheckinRaw ? new Date(lastCheckinRaw).getTime() : NaN;
-            if (atividadePacienteIds.has(paciente.id)) {
+            const lastClinicalEventMs = Math.max(Number.isNaN(lastCheckinMs) ? -1 : lastCheckinMs, Number.isNaN(lastEvolucaoMs) ? -1 : lastEvolucaoMs, Number.isNaN(lastLaudoUpdatedMs) ? -1 : lastLaudoUpdatedMs);
+            const inativoEncerrado = tratamentoConcluido &&
+                lastClinicalEventMs > 0 &&
+                now - lastClinicalEventMs > inactiveClosedWindowMs;
+            if (tratamentoConcluido || inativoEncerrado) {
+                continue;
+            }
+            if (hasActiveActivity) {
                 if (Number.isNaN(lastCheckinMs) ||
                     now - lastCheckinMs > activityWindowMs) {
                     semCheckin += 1;

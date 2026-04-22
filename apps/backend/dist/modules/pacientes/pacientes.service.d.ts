@@ -9,6 +9,8 @@ import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
 import { PacienteListItemDto, PacientePagedResponseDto } from './dto/paciente-list-item.dto';
+import { Atividade } from '../atividades/entities/atividade.entity';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
 export declare class PacientesService {
     private readonly pacienteRepository;
     private readonly evolucaoRepository;
@@ -16,7 +18,9 @@ export declare class PacientesService {
     private readonly usuarioRepository;
     private readonly pacienteExameRepository;
     private readonly vinculoRepository;
-    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>);
+    private readonly atividadeRepository;
+    private readonly anamneseRepository;
+    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>, atividadeRepository: Repository<Atividade>, anamneseRepository: Repository<Anamnese>);
     private buildScopedPacientesQuery;
     private resolveInitialVinculoStatus;
     private mapOrigemToVinculo;
@@ -24,6 +28,7 @@ export declare class PacientesService {
     private applyDisplayNameFallback;
     private addPacienteListSelects;
     private toPacienteListItem;
+    private buildCicloStatusByPacienteIds;
     private upsertVinculoAtivo;
     private closeVinculoAtivoByPaciente;
     private validatePacienteUsuarioId;

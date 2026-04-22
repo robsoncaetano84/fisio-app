@@ -14,6 +14,7 @@ import {
   Sexo,
   EstadoCivil,
   PacienteCadastroOrigem,
+  PacienteCicloStatus,
   PacienteVinculoStatus,
 } from "../types";
 import { APP_CONFIG } from "../constants/theme";
@@ -59,6 +60,7 @@ type ApiPaciente = {
   anamneseSolicitacaoUltimaEm?: string | null;
   cadastroOrigem?: PacienteCadastroOrigem | null;
   vinculoStatus?: PacienteVinculoStatus | null;
+  statusCiclo?: PacienteCicloStatus | null;
   conviteEnviadoEm?: string | null;
   conviteAceitoEm?: string | null;
   ativo: boolean;
@@ -172,6 +174,7 @@ const mapApiToPaciente = (p: ApiPaciente): Paciente => ({
   anamneseSolicitacaoUltimaEm: p.anamneseSolicitacaoUltimaEm || null,
   cadastroOrigem: p.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
   vinculoStatus: p.vinculoStatus || PacienteVinculoStatus.SEM_VINCULO,
+  statusCiclo: p.statusCiclo || PacienteCicloStatus.AGUARDANDO_ANAMNESE,
   conviteEnviadoEm: p.conviteEnviadoEm || undefined,
   conviteAceitoEm: p.conviteAceitoEm || undefined,
   createdAt: p.createdAt,

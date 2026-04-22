@@ -40,6 +40,7 @@ import {
 import {
   RootStackParamList,
   Paciente,
+  PacienteCicloStatus,
   PacientesAttentionFocus,
   PacientesListQuickAction,
 } from "../../types";
@@ -660,6 +661,14 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
       const hasNoEvolution = days === null;
 
       const clinicalStateChips: string[] = [];
+      if (item.statusCiclo === PacienteCicloStatus.AGUARDANDO_ANAMNESE) {
+        clinicalStateChips.push(t("patients.cycleAwaitingAnamnesis"));
+      } else if (item.statusCiclo === PacienteCicloStatus.EM_TRATAMENTO) {
+        clinicalStateChips.push(t("patients.cycleInTreatment"));
+      } else if (item.statusCiclo === PacienteCicloStatus.ALTA_CONCLUIDA) {
+        clinicalStateChips.push(t("patients.cycleCompleted"));
+      }
+
       if (!hasAnamnese) {
         clinicalStateChips.push(t("patients.stateNoAnamnesis"));
       } else {

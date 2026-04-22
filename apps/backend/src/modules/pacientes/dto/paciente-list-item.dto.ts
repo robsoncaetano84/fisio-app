@@ -5,6 +5,12 @@ import {
   EstadoCivil,
 } from '../entities/paciente.entity';
 
+export enum PacienteCicloStatus {
+  AGUARDANDO_ANAMNESE = 'AGUARDANDO_ANAMNESE',
+  EM_TRATAMENTO = 'EM_TRATAMENTO',
+  ALTA_CONCLUIDA = 'ALTA_CONCLUIDA',
+}
+
 export class PacienteListItemDto {
   id: string;
   nomeCompleto: string;
@@ -33,6 +39,7 @@ export class PacienteListItemDto {
   anamneseSolicitacaoUltimaEm: Date | null;
   cadastroOrigem: PacienteCadastroOrigem;
   vinculoStatus: PacienteVinculoStatus;
+  statusCiclo: PacienteCicloStatus;
   conviteEnviadoEm: Date | null;
   conviteAceitoEm: Date | null;
   createdAt: Date;

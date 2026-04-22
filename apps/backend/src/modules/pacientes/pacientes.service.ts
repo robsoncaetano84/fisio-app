@@ -27,8 +27,12 @@ import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
 import {
   PacienteListItemDto,
+  PacienteCicloStatus,
   PacientePagedResponseDto,
 } from './dto/paciente-list-item.dto';
+import { Atividade } from '../atividades/entities/atividade.entity';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { LaudoStatus } from '../laudos/entities/laudo.entity';
 
 @Injectable()
 export class PacientesService {
@@ -45,6 +49,10 @@ export class PacientesService {
     private readonly pacienteExameRepository: Repository<PacienteExame>,
     @InjectRepository(ProfissionalPacienteVinculo)
     private readonly vinculoRepository: Repository<ProfissionalPacienteVinculo>,
+    @InjectRepository(Atividade)
+    private readonly atividadeRepository: Repository<Atividade>,
+    @InjectRepository(Anamnese)
+    private readonly anamneseRepository: Repository<Anamnese>,
   ) {}
 
   private buildScopedPacientesQuery(usuarioId: string) {
@@ -144,7 +152,10 @@ export class PacientesService {
       .addSelect(['pacienteUsuario.id', 'pacienteUsuario.nome']);
   }
 
-  private toPacienteListItem(paciente: Paciente): PacienteListItemDto {
+  private toPacienteListItem(
+    paciente: Paciente,
+    statusCiclo: PacienteCicloStatus = PacienteCicloStatus.AGUARDANDO_ANAMNESE,
+  ): PacienteListItemDto {
     return {
       id: paciente.id,
       nomeCompleto: paciente.nomeCompleto,
@@ -174,11 +185,69 @@ export class PacientesService {
         paciente.anamneseSolicitacaoUltimaEm || null,
       cadastroOrigem: paciente.cadastroOrigem,
       vinculoStatus: paciente.vinculoStatus,
+      statusCiclo,
       conviteEnviadoEm: paciente.conviteEnviadoEm || null,
       conviteAceitoEm: paciente.conviteAceitoEm || null,
       createdAt: paciente.createdAt,
       updatedAt: paciente.updatedAt,
     };
+  }
+
+  private async buildCicloStatusByPacienteIds(
+    pacienteIds: string[],
+  ): Promise<Map<string, PacienteCicloStatus>> {
+    const statusByPaciente = new Map<string, PacienteCicloStatus>();
+    if (!pacienteIds.length) return statusByPaciente;
+
+    const anamneseRows = await this.anamneseRepository
+      .createQueryBuilder('a')
+      .select('a.pacienteId', 'pacienteId')
+      .where('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .groupBy('a.pacienteId')
+      .getRawMany<{ pacienteId: string }>();
+    const anamnesePacienteIds = new Set(anamneseRows.map((row) => row.pacienteId));
+
+    const latestLaudos = await this.laudoRepository
+      .createQueryBuilder('l')
+      .where('l.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .orderBy('l.pacienteId', 'ASC')
+      .addOrderBy('l.updatedAt', 'DESC')
+      .getMany();
+    const laudoByPaciente = new Map<string, Laudo>();
+    latestLaudos.forEach((item) => {
+      if (!laudoByPaciente.has(item.pacienteId)) laudoByPaciente.set(item.pacienteId, item);
+    });
+
+    const pacientesComAtividadeAtiva = await this.atividadeRepository
+      .createQueryBuilder('a')
+      .select('a.pacienteId', 'pacienteId')
+      .where('a.ativo = :ativo', { ativo: true })
+      .andWhere('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
+      .groupBy('a.pacienteId')
+      .getRawMany<{ pacienteId: string }>();
+    const atividadePacienteIds = new Set(
+      pacientesComAtividadeAtiva.map((row) => row.pacienteId),
+    );
+
+    for (const pacienteId of pacienteIds) {
+      const hasAnamnese = anamnesePacienteIds.has(pacienteId);
+      const lastLaudo = laudoByPaciente.get(pacienteId);
+      const hasAltaDocumento =
+        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        !!lastLaudo.criteriosAlta;
+      const hasActiveActivity = atividadePacienteIds.has(pacienteId);
+      const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;
+
+      if (tratamentoConcluido) {
+        statusByPaciente.set(pacienteId, PacienteCicloStatus.ALTA_CONCLUIDA);
+      } else if (hasAnamnese) {
+        statusByPaciente.set(pacienteId, PacienteCicloStatus.EM_TRATAMENTO);
+      } else {
+        statusByPaciente.set(pacienteId, PacienteCicloStatus.AGUARDANDO_ANAMNESE);
+      }
+    }
+
+    return statusByPaciente;
   }
 
   private async upsertVinculoAtivo(
@@ -424,8 +493,16 @@ export class PacientesService {
     )
       .orderBy('p.nome_completo', 'ASC')
       .getMany();
+
+    const statusByPaciente = await this.buildCicloStatusByPacienteIds(
+      pacientes.map((paciente) => paciente.id),
+    );
+
     return pacientes.map((paciente) =>
-      this.toPacienteListItem(this.applyDisplayNameFallback(paciente)),
+      this.toPacienteListItem(
+        this.applyDisplayNameFallback(paciente),
+        statusByPaciente.get(paciente.id),
+      ),
     );
   }
 
@@ -448,9 +525,16 @@ export class PacientesService {
       .skip(skip)
       .getMany();
 
+    const statusByPaciente = await this.buildCicloStatusByPacienteIds(
+      data.map((paciente) => paciente.id),
+    );
+
     return {
       data: data.map((paciente) =>
-        this.toPacienteListItem(this.applyDisplayNameFallback(paciente)),
+        this.toPacienteListItem(
+          this.applyDisplayNameFallback(paciente),
+          statusByPaciente.get(paciente.id),
+        ),
       ),
       total,
       page: safePage,
@@ -718,10 +802,49 @@ export class PacientesService {
         lastEvolucaoAt: string | null;
       }>();
 
+    const pacienteIds = rows.map((row) => row.pacienteId);
+    const latestLaudos = pacienteIds.length
+      ? await this.laudoRepository
+          .createQueryBuilder('l')
+          .where('l.pacienteId IN (:...pacienteIds)', { pacienteIds })
+          .orderBy('l.pacienteId', 'ASC')
+          .addOrderBy('l.updatedAt', 'DESC')
+          .getMany()
+      : [];
+    const laudoByPaciente = new Map<string, Laudo>();
+    latestLaudos.forEach((item) => {
+      if (!laudoByPaciente.has(item.pacienteId)) laudoByPaciente.set(item.pacienteId, item);
+    });
+
+    const pacientesComAtividadeAtiva = pacienteIds.length
+      ? await this.atividadeRepository
+          .createQueryBuilder('a')
+          .select('a.pacienteId', 'pacienteId')
+          .where('a.ativo = :ativo', { ativo: true })
+          .andWhere('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
+          .groupBy('a.pacienteId')
+          .getRawMany<{ pacienteId: string }>()
+      : [];
+    const atividadePacienteIds = new Set(
+      pacientesComAtividadeAtiva.map((row) => row.pacienteId),
+    );
+
     const now = Date.now();
     const result: Record<string, number | null> = {};
 
     for (const row of rows) {
+      const lastLaudo = laudoByPaciente.get(row.pacienteId);
+      const hasAltaDocumento =
+        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        !!lastLaudo.criteriosAlta;
+      const hasActiveActivity = atividadePacienteIds.has(row.pacienteId);
+      const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;
+
+      if (tratamentoConcluido) {
+        result[row.pacienteId] = 0;
+        continue;
+      }
+
       if (!row.lastEvolucaoAt) {
         const createdAt = row.createdAt ? new Date(row.createdAt).getTime() : NaN;
         if (Number.isNaN(createdAt)) {
@@ -962,5 +1085,3 @@ export class PacientesService {
     return exame;
   }
 }
-
-
