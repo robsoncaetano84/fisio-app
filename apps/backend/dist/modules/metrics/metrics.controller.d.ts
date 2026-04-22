@@ -31,4 +31,27 @@ export declare class MetricsController {
         checkinsSubmitted: number;
         conversionRate: number;
     }>;
+    getPhysicalExamTestsSummary(usuario: Usuario, windowDays: number): Promise<{
+        windowDays: number;
+        laudosAnalisados: number;
+        laudosComExameEstruturado: number;
+        totalAvaliados: number;
+        totalPositivos: number;
+        taxaPositividadeGeral: number;
+        porRegiao: {
+            taxaPositividade: number;
+            regiao: string;
+            titulo: string;
+            positivos: number;
+            avaliados: number;
+        }[];
+        topTestesPositivos: {
+            teste: string;
+            count: number;
+        }[];
+        perfisScoring: {
+            perfil: string;
+            count: number;
+        }[];
+    }>;
 }

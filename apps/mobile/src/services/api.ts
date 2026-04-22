@@ -6,6 +6,7 @@ import axios, { AxiosHeaders, AxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { APP_CONFIG } from "../constants/theme";
+import { APP_VERSION_LABEL } from "../constants/version";
 import { recordApiMetric } from "./opsMetrics";
 
 const defaultBaseUrl = Platform.select({
@@ -212,9 +213,11 @@ api.interceptors.request.use((config) => {
   nextConfig._correlationId = nextConfig._correlationId || currentCorrelationId;
   if (nextConfig.headers instanceof AxiosHeaders) {
     nextConfig.headers.set("X-Correlation-Id", nextConfig._correlationId);
+    nextConfig.headers.set("X-App-Version", APP_VERSION_LABEL);
   } else {
     const headers = AxiosHeaders.from(nextConfig.headers || {});
     headers.set("X-Correlation-Id", nextConfig._correlationId);
+    headers.set("X-App-Version", APP_VERSION_LABEL);
     nextConfig.headers = headers;
   }
   return nextConfig;

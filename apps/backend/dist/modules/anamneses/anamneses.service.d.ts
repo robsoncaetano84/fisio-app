@@ -16,4 +16,5 @@ export declare class AnamnesesService {
     update(id: string, updateAnamneseDto: UpdateAnamneseDto, usuarioId: string): Promise<Anamnese>;
     updateByPacienteUsuario(id: string, updateAnamneseDto: UpdateAnamneseDto, usuarioId: string): Promise<Anamnese>;
     remove(id: string, usuarioId: string): Promise<void>;
+    private validateClinicalMinimum;
 }

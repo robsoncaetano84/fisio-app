@@ -15,6 +15,7 @@
                             },
                  "ios":  {
                              "supportsTablet":  true,
+                             "buildNumber":  "10000",
                              "infoPlist":  {
                                                "NSMicrophoneUsageDescription":  "Permita acesso ao microfone para transcrever sua fala.",
                                                "NSSpeechRecognitionUsageDescription":  "Permita o reconhecimento de voz para transcricao."
@@ -27,6 +28,7 @@
                                                   },
                                  "edgeToEdgeEnabled":  true,
                                  "predictiveBackGestureEnabled":  false,
+                                 "versionCode":  10000,
                                  "permissions":  [
                                                      "RECORD_AUDIO"
                                                  ],

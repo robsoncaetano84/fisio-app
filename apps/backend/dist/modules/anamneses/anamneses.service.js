@@ -27,11 +27,13 @@ let AnamnesesService = class AnamnesesService {
     }
     async create(createAnamneseDto, usuarioId) {
         await this.pacientesService.findOne(createAnamneseDto.pacienteId, usuarioId);
+        this.validateClinicalMinimum(createAnamneseDto);
         const anamnese = this.anamneseRepository.create(createAnamneseDto);
         return this.anamneseRepository.save(anamnese);
     }
     async createForPacienteUsuario(createAnamneseDto, usuarioId) {
         const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
+        this.validateClinicalMinimum(createAnamneseDto);
         const anamnese = this.anamneseRepository.create({
             ...createAnamneseDto,
             pacienteId: paciente.id,
@@ -77,17 +79,37 @@ let AnamnesesService = class AnamnesesService {
     }
     async update(id, updateAnamneseDto, usuarioId) {
         const anamnese = await this.findOne(id, usuarioId);
+        const nextPayload = { ...anamnese, ...updateAnamneseDto };
+        this.validateClinicalMinimum(nextPayload);
         Object.assign(anamnese, updateAnamneseDto);
         return this.anamneseRepository.save(anamnese);
     }
     async updateByPacienteUsuario(id, updateAnamneseDto, usuarioId) {
         const anamnese = await this.findOneByPacienteUsuario(id, usuarioId);
+        const nextPayload = { ...anamnese, ...updateAnamneseDto };
+        this.validateClinicalMinimum(nextPayload);
         Object.assign(anamnese, updateAnamneseDto);
         return this.anamneseRepository.save(anamnese);
     }
     async remove(id, usuarioId) {
         const anamnese = await this.findOne(id, usuarioId);
         await this.anamneseRepository.remove(anamnese);
+    }
+    validateClinicalMinimum(payload) {
+        if (payload.motivoBusca !== anamnese_entity_1.MotivoBusca.SINTOMA_EXISTENTE)
+            return;
+        const missing = [];
+        if (!payload.inicioProblema)
+            missing.push('inicioProblema');
+        if (!payload.mecanismoLesao)
+            missing.push('mecanismoLesao');
+        if (!String(payload.fatorAlivio || '').trim())
+            missing.push('fatorAlivio');
+        if (!String(payload.fatoresPiora || '').trim())
+            missing.push('fatoresPiora');
+        if (missing.length > 0) {
+            throw new common_1.BadRequestException(`Campos obrigatorios ausentes para motivo SINTOMA_EXISTENTE: ${missing.join(', ')}`);
+        }
     }
 };
 exports.AnamnesesService = AnamnesesService;

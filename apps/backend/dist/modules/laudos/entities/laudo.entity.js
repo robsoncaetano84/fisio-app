@@ -35,6 +35,10 @@ let Laudo = class Laudo extends base_entity_1.BaseEntity {
     validadoPorUsuarioId;
     validadoEm;
     criteriosAlta;
+    sugestaoSource;
+    examesConsiderados;
+    examesComLeituraIa;
+    sugestaoGeradaEm;
 };
 exports.Laudo = Laudo;
 __decorate([
@@ -106,6 +110,22 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'criterios_alta', type: 'text', nullable: true }),
     __metadata("design:type", Object)
 ], Laudo.prototype, "criteriosAlta", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'sugestao_source', type: 'varchar', length: 20, nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "sugestaoSource", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'exames_considerados', type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "examesConsiderados", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'exames_com_leitura_ia', type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "examesComLeituraIa", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'sugestao_gerada_em', type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], Laudo.prototype, "sugestaoGeradaEm", void 0);
 exports.Laudo = Laudo = __decorate([
     (0, typeorm_1.Entity)('laudos')
 ], Laudo);

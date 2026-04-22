@@ -11,4 +11,7 @@ export declare class CreateLaudoDto {
     rascunhoProfissional?: string;
     observacoes?: string;
     criteriosAlta?: string;
+    sugestaoSource?: 'ai' | 'rules';
+    examesConsiderados?: number;
+    examesComLeituraIa?: number;
 }

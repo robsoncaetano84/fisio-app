@@ -75,17 +75,22 @@ let LaudosService = class LaudosService {
     }
     async create(createLaudoDto, usuarioId) {
         await this.pacientesService.findOne(createLaudoDto.pacienteId, usuarioId);
+        this.validateStructuredExameInput(createLaudoDto.exameFisico);
         const existing = await this.laudoRepository.findOne({
             where: { pacienteId: createLaudoDto.pacienteId },
         });
         if (existing) {
             throw new common_1.BadRequestException('Ja existe laudo para este paciente');
         }
+        const hasSuggestionMeta = createLaudoDto.sugestaoSource ||
+            typeof createLaudoDto.examesConsiderados === 'number' ||
+            typeof createLaudoDto.examesComLeituraIa === 'number';
         const laudo = this.laudoRepository.create({
             ...createLaudoDto,
             status: laudo_entity_2.LaudoStatus.RASCUNHO_IA,
             validadoPorUsuarioId: null,
             validadoEm: null,
+            sugestaoGeradaEm: hasSuggestionMeta ? new Date() : null,
         });
         return this.laudoRepository.save(laudo);
     }
@@ -128,7 +133,14 @@ let LaudosService = class LaudosService {
     }
     async update(id, updateLaudoDto, usuarioId) {
         const laudo = await this.findOne(id, usuarioId);
+        this.validateStructuredExameInput(updateLaudoDto.exameFisico);
+        const hasSuggestionMetaUpdate = updateLaudoDto.sugestaoSource ||
+            typeof updateLaudoDto.examesConsiderados === 'number' ||
+            typeof updateLaudoDto.examesComLeituraIa === 'number';
         Object.assign(laudo, (0, laudo_patch_util_1.sanitizePartialUpdate)(updateLaudoDto));
+        if (hasSuggestionMetaUpdate) {
+            laudo.sugestaoGeradaEm = new Date();
+        }
         laudo.status = laudo_entity_2.LaudoStatus.RASCUNHO_IA;
         laudo.validadoPorUsuarioId = null;
         laudo.validadoEm = null;
@@ -293,7 +305,7 @@ let LaudosService = class LaudosService {
         return done;
     }
     async generateAndSaveByPaciente(pacienteId, usuarioId) {
-        const { paciente, anamneses, evolucoes, exames } = await this.buildAiInput(pacienteId, usuarioId);
+        const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } = await this.buildAiInput(pacienteId, usuarioId);
         const existing = await this.laudoRepository.findOne({
             where: { pacienteId },
             order: { createdAt: 'DESC' },
@@ -319,6 +331,11 @@ let LaudosService = class LaudosService {
                         tempoProblema: anamneses[0].tempoProblema ?? '',
                         inicioProblema: anamneses[0].inicioProblema ?? '',
                         fatorAlivio: anamneses[0].fatorAlivio ?? '',
+                        fatoresPiora: anamneses[0].fatoresPiora ?? '',
+                        mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
+                        historicoEsportivo: anamneses[0].historicoEsportivo ?? '',
+                        lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
+                        usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
                     }
                     : null,
                 evolucoes: evolucoes.map((e) => ({
@@ -327,6 +344,7 @@ let LaudosService = class LaudosService {
                     planoSessao: e.plano ?? '',
                     observacoes: e.observacoes ?? '',
                 })),
+                exameFisicoResumo,
                 exames: exames.map((exame) => ({
                     nomeOriginal: exame.nomeOriginal,
                     tipoExame: exame.tipoExame ?? '',
@@ -334,21 +352,28 @@ let LaudosService = class LaudosService {
                     mimeType: exame.mimeType,
                     observacao: exame.observacao ?? '',
                     uploadedAt: exame.uploadedAt,
+                    aiInterpretacao: exame.aiInterpretacao,
                 })),
             })
             : {};
+        const examesConsiderados = exames.length;
+        const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
+        const suggestionSource = Object.keys(aiSuggestion).length
+            ? 'ai'
+            : 'rules';
+        const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
         const payload = {
             pacienteId,
             diagnosticoFuncional: aiSuggestion.diagnosticoFuncional ??
-                `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}`,
+                `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo,
             objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo,
             frequenciaSemanal: aiSuggestion.frequenciaSemanal,
             duracaoSemanas: aiSuggestion.duracaoSemanas,
             condutas: aiSuggestion.condutas ??
-                `Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.${this.buildExamCorrelationSuffix(exames.length)}`,
+                `Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             planoTratamentoIA: aiSuggestion.planoTratamentoIA ??
-                `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.${this.buildExamCorrelationSuffix(exames.length)}`,
+                `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             criteriosAlta: aiSuggestion.criteriosAlta,
         };
         const created = this.laudoRepository.create({
@@ -356,11 +381,15 @@ let LaudosService = class LaudosService {
             status: laudo_entity_2.LaudoStatus.RASCUNHO_IA,
             validadoPorUsuarioId: null,
             validadoEm: null,
+            sugestaoSource: suggestionSource,
+            examesConsiderados,
+            examesComLeituraIa,
+            sugestaoGeradaEm: new Date(),
         });
         return this.laudoRepository.save(created);
     }
     async generateSuggestionPreview(pacienteId, usuarioId) {
-        const { paciente, anamneses, evolucoes, exames } = await this.buildAiInput(pacienteId, usuarioId);
+        const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } = await this.buildAiInput(pacienteId, usuarioId);
         const aiSuggestion = await this.generateSuggestionWithAI({
             paciente: {
                 nomeCompleto: paciente.nomeCompleto,
@@ -377,6 +406,11 @@ let LaudosService = class LaudosService {
                     tempoProblema: anamneses[0].tempoProblema ?? "",
                     inicioProblema: anamneses[0].inicioProblema ?? "",
                     fatorAlivio: anamneses[0].fatorAlivio ?? "",
+                    fatoresPiora: anamneses[0].fatoresPiora ?? "",
+                    mecanismoLesao: anamneses[0].mecanismoLesao ?? "",
+                    historicoEsportivo: anamneses[0].historicoEsportivo ?? "",
+                    lesoesPrevias: anamneses[0].lesoesPrevias ?? "",
+                    usoMedicamentos: anamneses[0].usoMedicamentos ?? "",
                 }
                 : null,
             evolucoes: evolucoes.map((e) => ({
@@ -385,6 +419,7 @@ let LaudosService = class LaudosService {
                 planoSessao: e.plano ?? "",
                 observacoes: e.observacoes ?? "",
             })),
+            exameFisicoResumo,
             exames: exames.map((exame) => ({
                 nomeOriginal: exame.nomeOriginal,
                 tipoExame: exame.tipoExame ?? "",
@@ -392,17 +427,20 @@ let LaudosService = class LaudosService {
                 mimeType: exame.mimeType,
                 observacao: exame.observacao ?? "",
                 uploadedAt: exame.uploadedAt,
+                aiInterpretacao: exame.aiInterpretacao,
             })),
         });
         const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
         const examesConsiderados = exames.length;
         const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
+        const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
         return {
             source,
             examesConsiderados,
             examesComLeituraIa,
+            sugestaoGeradaEm: new Date().toISOString(),
             diagnosticoFuncional: aiSuggestion.diagnosticoFuncional ??
-                `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}`,
+                `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo ??
                 "Reduzir dor percebida e melhorar controle motor inicial.",
             objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo ??
@@ -410,9 +448,9 @@ let LaudosService = class LaudosService {
             frequenciaSemanal: aiSuggestion.frequenciaSemanal ?? 2,
             duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
             condutas: aiSuggestion.condutas ??
-                `Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.${this.buildExamCorrelationSuffix(exames.length)}`,
+                `Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             planoTratamentoIA: aiSuggestion.planoTratamentoIA ??
-                `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}`,
+                `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             criteriosAlta: aiSuggestion.criteriosAlta ??
                 "Dor controlada, funcao satisfatoria e independencia para autocuidado.",
         };
@@ -595,7 +633,7 @@ ${input.observacao || 'Sem observacao adicional.'}
             return {};
         }
         const model = (process.env.OPENAI_LAUDO_MODEL || process.env.OPENAI_MODEL || 'gpt-5-mini').trim();
-        const systemPrompt = 'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes.';
+        const systemPrompt = 'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes. Priorize seguranca clinica e rastreabilidade da decisao.';
         const userPrompt = `
 Retorne SOMENTE JSON valido com as chaves:
 diagnosticoFuncional (string),
@@ -608,10 +646,21 @@ planoTratamentoIA (string com plano por fases/semanas),
 criteriosAlta (string).
 
 Regras clinicas:
+- Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
+- Use explicitamente os campos da anamnese: inicioProblema, mecanismoLesao, fatorAlivio, fatoresPiora, historicoEsportivo, lesoesPrevias e usoMedicamentos.
+- Se algum desses campos estiver vazio, declare a lacuna clinica em vez de supor informacao.
 - Considere os exames anexados (tipoExame, observacao, dataExame, mimeType e aiInterpretacao quando houver) para orientar diagnostico funcional, condutas e plano.
 - Nao invente achados de imagem nao descritos no contexto.
 - Se houver informacao insuficiente dos exames, explicite a limitacao e mantenha conduta prudente.
 - Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
+- Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
+- Em condutas, para cada intervencao proposta, descreva em texto curto a evidencia clinica correspondente (achado, teste positivo/negativo relevante, deficit funcional ou fator de risco).
+- Em planoTratamentoIA, estruture por fases com: objetivo da fase, condutas, criterio de progressao e evidencia que sustenta a fase.
+- Evite termos vagos; relacione cada bloco a achados (dor, funcao, testes positivos/deficits funcionais).
+- Em diagnosticoFuncional, identifique (quando possivel) origem provavel da dor, estrutura envolvida, tipo de lesao (mecanica/inflamatoria/neural) e fator biomecanico associado.
+
+Resumo do exame fisico estruturado:
+${input.exameFisicoResumo || 'Nao informado'}
 
 Contexto do paciente:
 ${JSON.stringify(input, null, 2)}
@@ -718,13 +767,34 @@ ${JSON.stringify(input, null, 2)}
             order: { createdAt: 'DESC' },
             take: 12,
         });
+        const latestLaudo = await this.laudoRepository.findOne({
+            where: { pacienteId },
+            order: { updatedAt: 'DESC' },
+        });
         const examesInterpretados = await this.buildExamInsights(exames);
-        return { paciente, anamneses, evolucoes, exames: examesInterpretados };
+        const exameFisicoResumo = latestLaudo?.exameFisico
+            ? this.formatExameFisicoForDisplay(latestLaudo.exameFisico)
+            : null;
+        return {
+            paciente,
+            anamneses,
+            evolucoes,
+            exames: examesInterpretados,
+            exameFisicoResumo,
+        };
     }
     buildExamCorrelationSuffix(examesCount) {
         if (examesCount <= 0)
             return '';
         return ` Correlacionar com ${examesCount} exame(s) anexado(s).`;
+    }
+    buildExameFisicoHint(exameFisicoResumo) {
+        const raw = String(exameFisicoResumo || '').trim();
+        if (!raw)
+            return '';
+        const normalized = raw.replace(/\s+/g, ' ');
+        const short = normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
+        return ` Baseado no exame fisico: ${short}`;
     }
     structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
     formatExameFisicoForDisplay(value) {
@@ -735,22 +805,62 @@ ${JSON.stringify(input, null, 2)}
             .filter((item) => item?.positive)
             .map((item) => '- ' + String(item.question || item.key || 'Red flag'))
             .join('\n');
+        const regionalGroups = (parsed.avaliacaoRegioes || []);
+        const allRegionalTests = regionalGroups.flatMap((group) => Array.isArray(group?.testes) ? group.testes : []);
+        const regionalPositiveCount = allRegionalTests.filter((test) => String(test?.resultado || '') === 'POSITIVO').length;
+        const regionalNegativeCount = allRegionalTests.filter((test) => String(test?.resultado || '') === 'NEGATIVO').length;
+        const regionalNotTestedCount = allRegionalTests.filter((test) => String(test?.resultado || 'NAO_TESTADO') === 'NAO_TESTADO').length;
         const lines = [
             'Classificacao de dor',
             'Principal: ' + String(parsed.dorPrincipal || 'Nao informado'),
             'Subtipo clinico: ' + String(parsed.dorSubtipo || 'Nao informado'),
+            '',
+            'Inspecao/observacao',
+            'Postura global: ' + String(parsed.observacao?.postura || 'Nao informado'),
+            'Assimetrias: ' + String(parsed.observacao?.assimetria || 'Nao informado'),
+            'Edema: ' + String(parsed.observacao?.edema || 'Nao informado'),
+            'Atrofia muscular: ' + String(parsed.observacao?.atrofiaMuscular || 'Nao informado'),
+            'Alteracoes de marcha: ' + String(parsed.observacao?.marcha || 'Nao informado'),
+            'Padrao de movimento observado: ' + String(parsed.observacao?.padraoMovimento || 'Nao informado'),
+            '',
+            'Padrao de dor',
+            'Dor local: ' + String(parsed.padraoDor?.local || 'Nao informado'),
+            'Dor irradiada: ' + String(parsed.padraoDor?.irradiada || 'Nao informado'),
+            'Comportamento da dor: ' + String(parsed.padraoDor?.comportamento || 'Nao informado'),
             '',
             'Movimento (chave)',
             'Ativo: ' + String(parsed.movimento?.ativo || 'Nao informado'),
             'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
             'Resistido: ' + String(parsed.movimento?.resistido || 'Nao informado'),
             'Reproduz dor: ' + String(parsed.movimento?.reproduzDor || 'Nao informado'),
+            'Qualidade do movimento: ' + String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
+            'Compensacoes: ' + String(parsed.movimento?.compensacoes || 'Nao informado'),
+            'Dor no movimento: ' + String(parsed.movimento?.dorNoMovimento || 'Nao informado'),
             '',
             'Palpacao',
             'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
             'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),
             'Pontos gatilho: ' + String(parsed.palpacao?.pontosGatilho || 'Nao informado'),
             'Palpacao dinamica vertebral: ' + String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
+            'Pontos dolorosos: ' + String(parsed.palpacao?.pontosDolorosos || 'Nao informado'),
+            'Temperatura: ' + String(parsed.palpacao?.temperatura || 'Nao informado'),
+            'Tonus muscular: ' + String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
+            'Estruturas especificas: ' + String(parsed.palpacao?.estruturasEspecificas || 'Nao informado'),
+            'Hipomobilidade articular: ' + String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
+            'Hipomobilidade segmentar - Cervical: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.cervical || 'Nao informado'),
+            'Hipomobilidade segmentar - Toracica: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.toracica || 'Nao informado'),
+            'Hipomobilidade segmentar - Lombar: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.lombar || 'Nao informado'),
+            'Hipomobilidade segmentar - Sacro: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.sacro || 'Nao informado'),
+            'Hipomobilidade segmentar - Iliaco D: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito || 'Nao informado'),
+            'Hipomobilidade segmentar - Iliaco E: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo || 'Nao informado'),
+            '',
+            'Testes funcionais',
+            'Agachamento: ' + String(parsed.testesFuncionais?.agachamento || 'Nao informado'),
+            'Agachamento unilateral: ' + String(parsed.testesFuncionais?.agachamentoUnilateral || 'Nao informado'),
+            'Salto: ' + String(parsed.testesFuncionais?.salto || 'Nao informado'),
+            'Corrida: ' + String(parsed.testesFuncionais?.corrida || 'Nao informado'),
+            'Estabilidade: ' + String(parsed.testesFuncionais?.estabilidade || 'Nao informado'),
+            'Controle motor: ' + String(parsed.testesFuncionais?.controleMotor || 'Nao informado'),
             '',
             'Testes',
             'Biomecanicos: ' + String(parsed.testes?.biomecanicos || 'Nao informado'),
@@ -758,12 +868,62 @@ ${JSON.stringify(input, null, 2)}
             'Neurologicos: ' + String(parsed.testes?.neurologicos || 'Nao informado'),
             'Imagem: ' + String(parsed.testes?.imagem || 'Nao informado'),
             '',
+            'Neurologico detalhado',
+            'Forca: ' + String(parsed.neurologico?.forca || 'Nao informado'),
+            'Sensibilidade: ' + String(parsed.neurologico?.sensibilidade || 'Nao informado'),
+            'Reflexos: ' + String(parsed.neurologico?.reflexos || 'Nao informado'),
+            'Dermatomos: ' + String(parsed.neurologico?.dermatomos || 'Nao informado'),
+            'Miotomos: ' + String(parsed.neurologico?.miotomos || 'Nao informado'),
+            '',
+            'Avaliacao por regioes',
+            `Resumo: ${regionalPositiveCount} positivo(s), ${regionalNegativeCount} negativo(s), ${regionalNotTestedCount} nao testado(s).`,
+            ...regionalGroups.flatMap((group) => {
+                const groupTitle = String(group?.titulo || 'Regiao');
+                const tests = Array.isArray(group?.testes) ? group.testes : [];
+                const selectedOrTested = tests.filter((test) => String(test?.resultado || '') !== 'NAO_TESTADO' ||
+                    test?.selecionado === true);
+                if (!selectedOrTested.length) {
+                    return [groupTitle, '- Sem testes marcados'];
+                }
+                const entries = selectedOrTested.map((test) => {
+                    const name = String(test?.nome || 'Teste');
+                    const result = String(test?.resultado || 'NAO_TESTADO');
+                    if (result === 'NAO_TESTADO') {
+                        return `- ${name}: Selecionado`;
+                    }
+                    return `- ${name}: ${result === 'POSITIVO' ? 'Positivo' : 'Negativo'}`;
+                });
+                return [groupTitle, ...entries];
+            }),
+            '',
             'Cruzamento final',
             'Hipotese principal: ' + String(parsed.cruzamentoFinal?.hipotesePrincipal || 'Nao informado'),
             'Hipoteses secundarias: ' + String(parsed.cruzamentoFinal?.hipotesesSecundarias || 'Nao informado'),
             'Inconsistencias: ' + String(parsed.cruzamentoFinal?.inconsistencias || 'Nao informado'),
             'Direcao de conduta: ' + String(parsed.cruzamentoFinal?.condutaDirecionada || 'Nao informado'),
             'Prioridade: ' + String(parsed.cruzamentoFinal?.prioridade || 'Nao informado'),
+            'Confianca da hipotese: ' + String(parsed.cruzamentoFinal?.confiancaHipotese || 'Nao informado'),
+            'Score de evidencia: ' + String(parsed.cruzamentoFinal?.scoreEvidencia ?? 'Nao informado'),
+            'Perfil de scoring: ' + String(parsed.cruzamentoFinal?.perfilScoring || 'Nao informado'),
+            '',
+            'Raciocinio clinico',
+            'Origem provavel da dor: ' + String(parsed.raciocinioClinico?.origemProvavelDor || 'Nao informado'),
+            'Estrutura envolvida: ' + String(parsed.raciocinioClinico?.estruturaEnvolvida || 'Nao informado'),
+            'Tipo de lesao: ' + String(parsed.raciocinioClinico?.tipoLesao || 'Nao informado'),
+            'Fator biomecanico associado: ' + String(parsed.raciocinioClinico?.fatorBiomecanicoAssociado || 'Nao informado'),
+            'Relacao com esporte: ' + String(parsed.raciocinioClinico?.relacaoComEsporte || 'Nao informado'),
+            '',
+            'Diagnostico funcional',
+            'Disfuncao principal: ' + String(parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal || 'Nao informado'),
+            'Cadeia envolvida: ' + String(parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || 'Nao informado'),
+            'Compensacoes: ' + String(parsed.diagnosticoFuncionalIa?.compensacoes || 'Nao informado'),
+            '',
+            'Conduta direcionada',
+            'Tecnica manual indicada: ' + String(parsed.condutaIa?.tecnicaManualIndicada || 'Nao informado'),
+            'Ajuste articular: ' + String(parsed.condutaIa?.ajusteArticular || 'Nao informado'),
+            'Exercicio corretivo: ' + String(parsed.condutaIa?.exercicioCorretivo || 'Nao informado'),
+            'Liberacao miofascial: ' + String(parsed.condutaIa?.liberacaoMiofascial || 'Nao informado'),
+            'Progressao esportiva: ' + String(parsed.condutaIa?.progressaoEsportiva || 'Nao informado'),
             '',
             'Red flags positivas',
             rfPositivas || 'Nenhuma red flag positiva',
@@ -793,6 +953,20 @@ ${JSON.stringify(input, null, 2)}
             return null;
         }
     }
+    validateStructuredExameInput(value) {
+        const parsed = this.parseStructuredExame(value);
+        if (!parsed)
+            return;
+        const groups = Array.isArray(parsed.avaliacaoRegioes)
+            ? parsed.avaliacaoRegioes
+            : [];
+        const hasRegionalResult = groups.some((group) => Array.isArray(group?.testes) &&
+            group.testes.some((test) => String(test?.resultado || '') === 'POSITIVO' ||
+                String(test?.resultado || '') === 'NEGATIVO'));
+        if (!hasRegionalResult) {
+            throw new common_1.BadRequestException('Marque ao menos um teste regional como positivo ou negativo antes de salvar o exame fisico.');
+        }
+    }
     addSection(doc, title, value) {
         doc.fontSize(12).fillColor('#1b5e40').text(title);
         doc.moveDown(0.2);
@@ -808,6 +982,11 @@ ${JSON.stringify(input, null, 2)}
             anamnese.descricaoSintomas,
             anamnese.tempoProblema,
             anamnese.fatorAlivio,
+            anamnese.fatoresPiora,
+            anamnese.mecanismoLesao,
+            anamnese.historicoEsportivo,
+            anamnese.lesoesPrevias,
+            anamnese.usoMedicamentos,
             anamnese.eventoEspecifico,
         ]
             .filter(Boolean)

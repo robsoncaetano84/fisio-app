@@ -24,6 +24,9 @@ class CreateLaudoDto {
     rascunhoProfissional;
     observacoes;
     criteriosAlta;
+    sugestaoSource;
+    examesConsiderados;
+    examesComLeituraIa;
 }
 exports.CreateLaudoDto = CreateLaudoDto;
 __decorate([
@@ -90,4 +93,22 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateLaudoDto.prototype, "criteriosAlta", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(['ai', 'rules']),
+    __metadata("design:type", String)
+], CreateLaudoDto.prototype, "sugestaoSource", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateLaudoDto.prototype, "examesConsiderados", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateLaudoDto.prototype, "examesComLeituraIa", void 0);
 //# sourceMappingURL=create-laudo.dto.js.map

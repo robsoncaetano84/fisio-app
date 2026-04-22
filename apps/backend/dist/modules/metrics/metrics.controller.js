@@ -39,6 +39,9 @@ let MetricsController = class MetricsController {
     getPatientCheckEngagementSummary(usuario, windowDays) {
         return this.metricsService.getPatientCheckEngagementSummary(usuario.id, windowDays);
     }
+    getPhysicalExamTestsSummary(usuario, windowDays) {
+        return this.metricsService.getPhysicalExamTestsSummary(usuario.id, windowDays);
+    }
 };
 exports.MetricsController = MetricsController;
 __decorate([
@@ -79,6 +82,15 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number]),
     __metadata("design:returntype", void 0)
 ], MetricsController.prototype, "getPatientCheckEngagementSummary", null);
+__decorate([
+    (0, common_1.Get)('physical-exam-tests-summary'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('windowDays', new common_1.DefaultValuePipe(30), common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number]),
+    __metadata("design:returntype", void 0)
+], MetricsController.prototype, "getPhysicalExamTestsSummary", null);
 exports.MetricsController = MetricsController = __decorate([
     (0, common_1.Controller)('metrics/clinical-flow'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

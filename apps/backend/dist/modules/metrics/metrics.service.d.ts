@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { CreateClinicalFlowEventDto } from './dto/create-clinical-flow-event.dto';
 import { CreatePatientCheckClickDto } from './dto/create-patient-check-click.dto';
 import { ClinicalFlowEvent, ClinicalFlowStage } from './entities/clinical-flow-event.entity';
@@ -8,7 +9,8 @@ export declare class MetricsService {
     private readonly clinicalFlowRepo;
     private readonly patientCheckClickRepo;
     private readonly atividadeCheckinRepo;
-    constructor(clinicalFlowRepo: Repository<ClinicalFlowEvent>, patientCheckClickRepo: Repository<PatientCheckClickEvent>, atividadeCheckinRepo: Repository<AtividadeCheckin>);
+    private readonly laudoRepo;
+    constructor(clinicalFlowRepo: Repository<ClinicalFlowEvent>, patientCheckClickRepo: Repository<PatientCheckClickEvent>, atividadeCheckinRepo: Repository<AtividadeCheckin>, laudoRepo: Repository<Laudo>);
     trackClinicalFlowEvent(professionalId: string, dto: CreateClinicalFlowEventDto): Promise<{
         ok: true;
     }>;
@@ -35,4 +37,28 @@ export declare class MetricsService {
         checkinsSubmitted: number;
         conversionRate: number;
     }>;
+    getPhysicalExamTestsSummary(professionalId: string, windowDays?: number): Promise<{
+        windowDays: number;
+        laudosAnalisados: number;
+        laudosComExameEstruturado: number;
+        totalAvaliados: number;
+        totalPositivos: number;
+        taxaPositividadeGeral: number;
+        porRegiao: {
+            taxaPositividade: number;
+            regiao: string;
+            titulo: string;
+            positivos: number;
+            avaliados: number;
+        }[];
+        topTestesPositivos: {
+            teste: string;
+            count: number;
+        }[];
+        perfisScoring: {
+            perfil: string;
+            count: number;
+        }[];
+    }>;
+    private parseStructuredExame;
 }

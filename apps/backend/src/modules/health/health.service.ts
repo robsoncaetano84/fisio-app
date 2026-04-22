@@ -13,6 +13,11 @@ export class HealthService {
     const startedAt = Date.now();
     let db: 'up' | 'down' = 'up';
     let dbError: string | null = null;
+    const appVersion = (
+      process.env.APP_VERSION ||
+      process.env.npm_package_version ||
+      ''
+    ).trim();
 
     try {
       await this.dataSource.query('SELECT 1');
@@ -25,7 +30,7 @@ export class HealthService {
     return {
       status: db === 'up' ? 'ok' : 'degraded',
       service: 'fisio-backend',
-      version: (process.env.APP_VERSION || '').trim() || null,
+      version: appVersion || null,
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.round(process.uptime()),

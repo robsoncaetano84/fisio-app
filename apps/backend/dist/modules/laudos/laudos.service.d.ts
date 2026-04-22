@@ -54,6 +54,7 @@ export declare class LaudosService {
         source: "ai" | "rules";
         examesConsiderados: number;
         examesComLeituraIa: number;
+        sugestaoGeradaEm: string;
     } & Partial<CreateLaudoDto>>;
     private calculateAge;
     private extractJsonObject;
@@ -65,9 +66,11 @@ export declare class LaudosService {
     private acquireDailyAiGenerationSlot;
     private buildAiInput;
     private buildExamCorrelationSuffix;
+    private buildExameFisicoHint;
     private readonly structuredExamePrefix;
     private formatExameFisicoForDisplay;
     private parseStructuredExame;
+    private validateStructuredExameInput;
     private addSection;
     private inferReferenceProfile;
     private getReferenceCatalog;

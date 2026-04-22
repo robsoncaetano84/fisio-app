@@ -22,10 +22,15 @@ class UpdateAnamneseDto {
     inicioProblema;
     eventoEspecifico;
     fatorAlivio;
+    mecanismoLesao;
+    fatoresPiora;
     problemaAnterior;
     quandoProblemaAnterior;
     tratamentosAnteriores;
     historicoFamiliar;
+    historicoEsportivo;
+    lesoesPrevias;
+    usoMedicamentos;
     limitacoesFuncionais;
     atividadesQuePioram;
     metaPrincipalPaciente;
@@ -89,6 +94,16 @@ __decorate([
 ], UpdateAnamneseDto.prototype, "fatorAlivio", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(anamnese_entity_1.MecanismoLesao),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "mecanismoLesao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "fatoresPiora", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], UpdateAnamneseDto.prototype, "problemaAnterior", void 0);
@@ -107,6 +122,21 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateAnamneseDto.prototype, "historicoFamiliar", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "historicoEsportivo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "lesoesPrevias", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "usoMedicamentos", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

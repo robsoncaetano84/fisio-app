@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Anamnese = exports.TipoDor = exports.InicioProblema = exports.MotivoBusca = void 0;
+exports.Anamnese = exports.MecanismoLesao = exports.TipoDor = exports.InicioProblema = exports.MotivoBusca = void 0;
 const typeorm_1 = require("typeorm");
 const base_entity_1 = require("../../../common/entities/base.entity");
 const paciente_entity_1 = require("../../pacientes/entities/paciente.entity");
@@ -32,6 +32,13 @@ var TipoDor;
     TipoDor["NEUROPATICA"] = "NEUROPATICA";
     TipoDor["MISTA"] = "MISTA";
 })(TipoDor || (exports.TipoDor = TipoDor = {}));
+var MecanismoLesao;
+(function (MecanismoLesao) {
+    MecanismoLesao["TRAUMA"] = "TRAUMA";
+    MecanismoLesao["SOBRECARGA"] = "SOBRECARGA";
+    MecanismoLesao["MISTO"] = "MISTO";
+    MecanismoLesao["NAO_DEFINIDO"] = "NAO_DEFINIDO";
+})(MecanismoLesao || (exports.MecanismoLesao = MecanismoLesao = {}));
 let Anamnese = class Anamnese extends base_entity_1.BaseEntity {
     paciente;
     pacienteId;
@@ -44,6 +51,8 @@ let Anamnese = class Anamnese extends base_entity_1.BaseEntity {
     inicioProblema;
     eventoEspecifico;
     fatorAlivio;
+    mecanismoLesao;
+    fatoresPiora;
     dorRepouso;
     dorNoturna;
     irradiacao;
@@ -56,6 +65,9 @@ let Anamnese = class Anamnese extends base_entity_1.BaseEntity {
     quandoProblemaAnterior;
     tratamentosAnteriores;
     historicoFamiliar;
+    historicoEsportivo;
+    lesoesPrevias;
+    usoMedicamentos;
     limitacoesFuncionais;
     atividadesQuePioram;
     metaPrincipalPaciente;
@@ -121,6 +133,19 @@ __decorate([
     __metadata("design:type", String)
 ], Anamnese.prototype, "fatorAlivio", void 0);
 __decorate([
+    (0, typeorm_1.Column)({
+        name: 'mecanismo_lesao',
+        type: 'enum',
+        enum: MecanismoLesao,
+        nullable: true,
+    }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "mecanismoLesao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'fatores_piora', type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "fatoresPiora", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'dor_repouso', type: 'boolean', nullable: true }),
     __metadata("design:type", Boolean)
 ], Anamnese.prototype, "dorRepouso", void 0);
@@ -172,6 +197,18 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'historico_familiar', type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], Anamnese.prototype, "historicoFamiliar", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'historico_esportivo', type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "historicoEsportivo", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'lesoes_previas', type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "lesoesPrevias", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'uso_medicamentos', type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], Anamnese.prototype, "usoMedicamentos", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'limitacoes_funcionais', type: 'text', nullable: true }),
     __metadata("design:type", String)

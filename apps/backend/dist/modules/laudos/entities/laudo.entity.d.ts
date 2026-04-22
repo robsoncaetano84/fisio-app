@@ -21,4 +21,8 @@ export declare class Laudo extends BaseEntity {
     validadoPorUsuarioId: string | null;
     validadoEm: Date | null;
     criteriosAlta: string | null;
+    sugestaoSource: 'ai' | 'rules' | null;
+    examesConsiderados: number | null;
+    examesComLeituraIa: number | null;
+    sugestaoGeradaEm: Date | null;
 }

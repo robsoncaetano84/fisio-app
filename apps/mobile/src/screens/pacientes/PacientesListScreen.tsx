@@ -226,6 +226,7 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
   }, [anamneses]);
   const { selectPatient } = useQuickActions(navigation);
   const isCompactLayout = width < 920;
+  const AUTO_REFRESH_INTERVAL_MS = 30_000;
 
   const attentionFocusLabel = useMemo(() => {
     if (attentionFocus === "HIGH_RISK") return t("patients.focusHighRisk");
@@ -299,6 +300,17 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
       // Recalcula o estado de atencao ao voltar para esta tela.
       setAttentionRefreshTick((prev) => prev + 1);
       fetchPacientes(true).catch(() => undefined);
+    }, [fetchPacientes]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const interval = setInterval(() => {
+        fetchPacientes(true).catch(() => undefined);
+        setAttentionRefreshTick((prev) => prev + 1);
+      }, AUTO_REFRESH_INTERVAL_MS);
+
+      return () => clearInterval(interval);
     }, [fetchPacientes]),
   );
 

@@ -16,6 +16,12 @@ export declare enum TipoDor {
     NEUROPATICA = "NEUROPATICA",
     MISTA = "MISTA"
 }
+export declare enum MecanismoLesao {
+    TRAUMA = "TRAUMA",
+    SOBRECARGA = "SOBRECARGA",
+    MISTO = "MISTO",
+    NAO_DEFINIDO = "NAO_DEFINIDO"
+}
 export interface AreaAfetada {
     regiao: string;
     lado?: 'esquerdo' | 'direito' | 'ambos';
@@ -32,6 +38,8 @@ export declare class Anamnese extends BaseEntity {
     inicioProblema: InicioProblema;
     eventoEspecifico: string;
     fatorAlivio: string;
+    mecanismoLesao: MecanismoLesao;
+    fatoresPiora: string;
     dorRepouso: boolean;
     dorNoturna: boolean;
     irradiacao: boolean;
@@ -44,6 +52,9 @@ export declare class Anamnese extends BaseEntity {
     quandoProblemaAnterior: string;
     tratamentosAnteriores: string[];
     historicoFamiliar: string;
+    historicoEsportivo: string;
+    lesoesPrevias: string;
+    usoMedicamentos: string;
     limitacoesFuncionais: string;
     atividadesQuePioram: string;
     metaPrincipalPaciente: string;

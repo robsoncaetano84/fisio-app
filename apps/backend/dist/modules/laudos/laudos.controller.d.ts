@@ -18,6 +18,7 @@ export declare class LaudosController {
         source: "ai" | "rules";
         examesConsiderados: number;
         examesComLeituraIa: number;
+        sugestaoGeradaEm: string;
     } & Partial<CreateLaudoDto>>;
     getSuggestedReferences(pacienteId: string, usuario: Usuario): Promise<{
         profile: "GERAL" | "LOMBAR" | "CERVICAL" | "JOELHO";

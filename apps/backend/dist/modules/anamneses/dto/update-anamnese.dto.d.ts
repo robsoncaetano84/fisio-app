@@ -1,4 +1,4 @@
-import { MotivoBusca, InicioProblema, AreaAfetada } from '../entities/anamnese.entity';
+import { MotivoBusca, InicioProblema, AreaAfetada, MecanismoLesao } from '../entities/anamnese.entity';
 export declare class UpdateAnamneseDto {
     motivoBusca?: MotivoBusca;
     areasAfetadas?: AreaAfetada[];
@@ -9,10 +9,15 @@ export declare class UpdateAnamneseDto {
     inicioProblema?: InicioProblema;
     eventoEspecifico?: string;
     fatorAlivio?: string;
+    mecanismoLesao?: MecanismoLesao;
+    fatoresPiora?: string;
     problemaAnterior?: boolean;
     quandoProblemaAnterior?: string;
     tratamentosAnteriores?: string[];
     historicoFamiliar?: string;
+    historicoEsportivo?: string;
+    lesoesPrevias?: string;
+    usoMedicamentos?: string;
     limitacoesFuncionais?: string;
     atividadesQuePioram?: string;
     metaPrincipalPaciente?: string;

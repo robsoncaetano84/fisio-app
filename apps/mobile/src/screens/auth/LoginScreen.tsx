@@ -17,6 +17,7 @@ import { Button, Input, useToast } from "../../components/ui";
 import { useAuthStore } from "../../stores/authStore";
 import { api } from "../../services";
 import { COLORS, FONTS, SPACING } from "../../constants/theme";
+import { APP_VERSION_LABEL } from "../../constants/version";
 import { RootStackParamList, UserRole } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -233,6 +234,7 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
           >
             <Text style={styles.inviteLinkText}>{t("login.inviteSignup")}</Text>
           </TouchableOpacity>
+          <Text style={styles.versionText}>{APP_VERSION_LABEL}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -323,6 +325,13 @@ const styles = StyleSheet.create({
   inviteLinkText: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.primary,
+    fontWeight: "600",
+  },
+  versionText: {
+    marginTop: SPACING.md,
+    textAlign: "center",
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.gray500,
     fontWeight: "600",
   },
 });
