@@ -93,6 +93,19 @@ const TEST_RESULT_OPTIONS: Array<{ label: string; value: TestResult }> = [
   { label: "Positivo", value: "POSITIVO" },
 ];
 
+type ExamPreset = {
+  id: string;
+  label: string;
+  regions: RegionalTestGroup["regiao"][];
+};
+
+const EXAM_PRESETS: ExamPreset[] = [
+  { id: "COLUNA", label: "Coluna", regions: ["CERVICAL", "TORACICA", "LOMBAR", "SACROILIACA"] },
+  { id: "MMII", label: "Membro inferior", regions: ["QUADRIL", "JOELHO", "TORNOZELO_PE"] },
+  { id: "MMSS", label: "Membro superior", regions: ["OMBRO", "COTOVELO", "PUNHO_MAO"] },
+  { id: "ESPORTIVO", label: "Esportivo", regions: ["LOMBAR", "QUADRIL", "JOELHO", "TORNOZELO_PE"] },
+];
+
 const TIPO_LESAO_OPTIONS = [
   "Mecanica",
   "Inflamatoria",
@@ -454,6 +467,45 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           }
           return { ...teste, selecionado: selected };
         }),
+      };
+    });
+    const latest = getLatestAnamnese();
+    setExam(
+      enrichStructuredExameWithClinicalLogic(
+        { ...exam, avaliacaoRegioes },
+        latest,
+        { overwrite: false, recalculateDecision: true },
+      ),
+    );
+  };
+
+  const applyRegionBasicPreset = (regiao: RegionalTestGroup["regiao"]) => {
+    if (!exam) return;
+    const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) => {
+      if (grupo.regiao !== regiao) return grupo;
+      return {
+        ...grupo,
+        testes: grupo.testes.map((teste) => ({ ...teste, selecionado: true })),
+      };
+    });
+    const latest = getLatestAnamnese();
+    setExam(
+      enrichStructuredExameWithClinicalLogic(
+        { ...exam, avaliacaoRegioes },
+        latest,
+        { overwrite: false, recalculateDecision: true },
+      ),
+    );
+  };
+
+  const applyExamPreset = (preset: ExamPreset) => {
+    if (!exam) return;
+    const regions = new Set(preset.regions);
+    const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) => {
+      if (!regions.has(grupo.regiao)) return grupo;
+      return {
+        ...grupo,
+        testes: grupo.testes.map((teste) => ({ ...teste, selecionado: true })),
       };
     });
     const latest = getLatestAnamnese();
@@ -918,6 +970,20 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Avaliação por regiões (positivo/negativo)</Text>
+          <Text style={styles.sectionHint}>
+            Atalhos rápidos: selecione uma bateria sugerida e depois marque os resultados.
+          </Text>
+          <View style={styles.presetRow}>
+            {EXAM_PRESETS.map((preset) => (
+              <TouchableOpacity
+                key={preset.id}
+                style={styles.presetChip}
+                onPress={() => applyExamPreset(preset)}
+              >
+                <Text style={styles.presetChipText}>{preset.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           {exam.avaliacaoRegioes.map((grupo) => {
             const testedCount = grupo.testes.filter(
               (teste) => teste.resultado !== "NAO_TESTADO",
@@ -934,16 +1000,24 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             >
               <View style={styles.regionTitleRow}>
                 <Text style={styles.regionTitle}>{grupo.titulo}</Text>
-                <Text
-                  style={[
-                    styles.regionStatusChip,
-                    hasPending ? styles.regionStatusChipPending : styles.regionStatusChipDone,
-                  ]}
-                >
-                  {hasPending
-                    ? `${pendingCount} não testado(s)`
-                    : "Região testada"}
-                </Text>
+                <View style={styles.regionHeaderActions}>
+                  <Text
+                    style={[
+                      styles.regionStatusChip,
+                      hasPending ? styles.regionStatusChipPending : styles.regionStatusChipDone,
+                    ]}
+                  >
+                    {hasPending
+                      ? `${pendingCount} não testado(s)`
+                      : "Região testada"}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.regionApplyChip}
+                    onPress={() => applyRegionBasicPreset(grupo.regiao)}
+                  >
+                    <Text style={styles.regionApplyChipText}>Bateria básica</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               {grupo.testes.map((teste) => (
                 <View
@@ -1652,10 +1726,51 @@ const styles = StyleSheet.create({
   },
   regionTitleRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: SPACING.xs,
     marginBottom: SPACING.xs,
+  },
+  regionHeaderActions: {
+    alignItems: "flex-end",
+    gap: SPACING.xs,
+  },
+  regionApplyChip: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  regionApplyChipText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
+  sectionHint: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  presetRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  presetChip: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    backgroundColor: `${COLORS.primary}12`,
+  },
+  presetChipText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: "700",
   },
   regionStatusChip: {
     borderRadius: BORDER_RADIUS.full,
