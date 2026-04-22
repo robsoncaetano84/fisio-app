@@ -1592,7 +1592,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 icon="people-outline"
                 title={t("home.patients")}
                 subtitle={t("home.viewAll")}
-                color="#5C6BC0"
+                color={COLORS.primary}
                 containerStyle={[styles.quickActionSecondary, isCompactLayout && styles.quickActionSecondaryCompact]}
                 onPress={() => {
                   handleNavigation("PacientesList").catch(() => undefined);
@@ -1602,7 +1602,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 icon="clipboard-outline"
                 title={t("home.anamnesis")}
                 subtitle={t("home.newAnamnesis")}
-                color={COLORS.accent}
+                color={COLORS.primary}
                 containerStyle={[styles.quickActionSecondary, isCompactLayout && styles.quickActionSecondaryCompact]}
                 onPress={() => {
                   handleNavigation("AnamneseForm", {
@@ -1617,7 +1617,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 icon="fitness-outline"
                 title={t("home.physicalExam")}
                 subtitle={t("home.newPhysicalExam")}
-                color="#00897B"
+                color={COLORS.primary}
                 containerStyle={[styles.quickActionSecondary, isCompactLayout && styles.quickActionSecondaryCompact]}
                 onPress={() => {
                   handleNavigation("ExameFisicoForm", {
@@ -1629,7 +1629,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   icon="trending-up-outline"
                   title={t("home.evolution")}
                   subtitle={t("home.newEvolution")}
-                  color="#9C27B0"
+                  color={COLORS.primary}
                   containerStyle={[styles.quickActionSecondary, isCompactLayout && styles.quickActionSecondaryCompact]}
                   onPress={() => {
                     handleNavigation("EvolucaoForm", {
@@ -2593,19 +2593,23 @@ const styles = StyleSheet.create({
   },
   quickAction: {
     width: "48%",
-    backgroundColor: COLORS.gray50,
+    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.base,
-    marginBottom: SPACING.md,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.base,
+    marginBottom: SPACING.sm,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.gray100,
+    borderColor: COLORS.gray200,
+    ...SHADOWS.sm,
   },
   quickActionPrimary: {
     width: "100%",
+    borderColor: COLORS.primary + "33",
+    backgroundColor: COLORS.primary + "08",
   },
   quickActionSecondary: {
-    width: "31.5%",
+    width: "48%",
   },
   quickActionSecondaryCompact: {
     width: "48%",
@@ -2632,21 +2636,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   quickActionTitle: {
     fontSize: FONTS.sizes.md,
-    fontWeight: "600",
+    fontWeight: "700",
     color: COLORS.textPrimary,
+    textAlign: "center",
   },
   quickActionSubtitle: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
+    fontWeight: "600",
+    marginTop: 2,
+    textAlign: "center",
   },
   recentSection: {
     backgroundColor: COLORS.white,
