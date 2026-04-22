@@ -237,7 +237,7 @@ let CrmService = class CrmService {
         const q = (params?.q || '').trim().toLowerCase();
         const especialidade = (params?.especialidade || '').trim().toLowerCase();
         const profissionais = await this.usuarioRepository.find({
-            where: { role: usuario_entity_1.UserRole.USER, ativo: true },
+            where: { role: usuario_entity_1.UserRole.USER },
             order: { nome: 'ASC' },
         });
         const patientCounts = await this.pacienteRepository
@@ -309,7 +309,6 @@ let CrmService = class CrmService {
             .createQueryBuilder('paciente')
             .leftJoinAndSelect('paciente.usuario', 'profissional')
             .leftJoinAndSelect('paciente.pacienteUsuario', 'pacienteUsuario')
-            .where('paciente.ativo = :ativo', { ativo: true })
             .orderBy('paciente.nomeCompleto', 'ASC');
         if (typeof params?.ativo === 'boolean') {
             qb.andWhere('paciente.ativo = :ativoFilter', { ativoFilter: params.ativo });
@@ -368,6 +367,10 @@ let CrmService = class CrmService {
             return {
                 id: p.id,
                 nomeCompleto: p.nomeCompleto,
+                cpf: params?.includeSensitive ? p.cpf : this.maskPhone(p.cpf),
+                dataNascimento: p.dataNascimento,
+                sexo: p.sexo,
+                estadoCivil: p.estadoCivil || null,
                 contatoEmail: params?.includeSensitive
                     ? p.contatoEmail || null
                     : this.maskEmail(p.contatoEmail),
@@ -392,6 +395,95 @@ let CrmService = class CrmService {
                 emocional,
             };
         });
+    }
+    async updateAdminProfessional(id, dto, params) {
+        const profissional = await this.usuarioRepository.findOne({
+            where: { id, role: usuario_entity_1.UserRole.USER },
+        });
+        if (!profissional) {
+            throw new common_1.NotFoundException('Profissional nao encontrado');
+        }
+        if (dto.nome !== undefined) {
+            profissional.nome = dto.nome.trim();
+        }
+        if (dto.email !== undefined) {
+            const normalizedEmail = dto.email.trim().toLowerCase();
+            const existing = await this.usuarioRepository.findOne({
+                where: { email: normalizedEmail },
+            });
+            if (existing && existing.id !== profissional.id) {
+                throw new common_1.BadRequestException('E-mail ja cadastrado');
+            }
+            profissional.email = normalizedEmail;
+        }
+        if (dto.especialidade !== undefined) {
+            profissional.especialidade = dto.especialidade.trim() || '';
+        }
+        if (dto.registroProf !== undefined) {
+            profissional.registroProf = dto.registroProf.trim() || '';
+        }
+        if (dto.ativo !== undefined) {
+            profissional.ativo = dto.ativo;
+        }
+        await this.usuarioRepository.save(profissional);
+        const mappedList = await this.listAdminProfissionais({
+            includeSensitive: params?.includeSensitive,
+            q: profissional.nome,
+        });
+        return mappedList.find((item) => item.id === profissional.id) ?? null;
+    }
+    async updateAdminPatient(id, dto, params) {
+        const paciente = await this.pacienteRepository.findOne({ where: { id } });
+        if (!paciente) {
+            throw new common_1.NotFoundException('Paciente nao encontrado');
+        }
+        if (dto.nomeCompleto !== undefined) {
+            paciente.nomeCompleto = dto.nomeCompleto.trim();
+        }
+        if (dto.cpf !== undefined) {
+            const cpfDigits = dto.cpf.replace(/\D/g, '');
+            const exists = await this.pacienteRepository.findOne({
+                where: { usuarioId: paciente.usuarioId, cpf: cpfDigits },
+            });
+            if (exists && exists.id !== paciente.id) {
+                throw new common_1.BadRequestException('CPF ja cadastrado para este profissional');
+            }
+            paciente.cpf = cpfDigits;
+        }
+        if (dto.dataNascimento !== undefined) {
+            paciente.dataNascimento = new Date(dto.dataNascimento);
+        }
+        if (dto.sexo !== undefined)
+            paciente.sexo = dto.sexo;
+        if (dto.estadoCivil !== undefined)
+            paciente.estadoCivil = dto.estadoCivil;
+        if (dto.profissao !== undefined)
+            paciente.profissao = dto.profissao.trim() || '';
+        if (dto.contatoWhatsapp !== undefined) {
+            paciente.contatoWhatsapp = dto.contatoWhatsapp.replace(/\D/g, '');
+        }
+        if (dto.contatoTelefone !== undefined) {
+            paciente.contatoTelefone = dto.contatoTelefone
+                ? dto.contatoTelefone.replace(/\D/g, '')
+                : '';
+        }
+        if (dto.contatoEmail !== undefined) {
+            paciente.contatoEmail = dto.contatoEmail ? dto.contatoEmail.trim().toLowerCase() : '';
+        }
+        if (dto.enderecoCidade !== undefined) {
+            paciente.enderecoCidade = dto.enderecoCidade.trim() || '';
+        }
+        if (dto.enderecoUf !== undefined) {
+            paciente.enderecoUf = dto.enderecoUf.trim().toUpperCase();
+        }
+        if (dto.ativo !== undefined)
+            paciente.ativo = dto.ativo;
+        await this.pacienteRepository.save(paciente);
+        const mappedList = await this.listAdminPacientes({
+            includeSensitive: params?.includeSensitive,
+            q: paciente.nomeCompleto,
+        });
+        return mappedList.find((item) => item.id === paciente.id) ?? null;
     }
     async listAdminPacientesPaged(params) {
         const page = Math.max(1, Math.floor(params?.page || 1));

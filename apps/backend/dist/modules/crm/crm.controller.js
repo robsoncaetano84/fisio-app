@@ -26,6 +26,8 @@ const create_crm_task_dto_1 = require("./dto/create-crm-task.dto");
 const update_crm_task_dto_1 = require("./dto/update-crm-task.dto");
 const create_crm_interaction_dto_1 = require("./dto/create-crm-interaction.dto");
 const update_crm_interaction_dto_1 = require("./dto/update-crm-interaction.dto");
+const update_crm_admin_professional_dto_1 = require("./dto/update-crm-admin-professional.dto");
+const update_crm_admin_patient_dto_1 = require("./dto/update-crm-admin-patient.dto");
 let CrmController = CrmController_1 = class CrmController {
     crmService;
     logger = new common_1.Logger(CrmController_1.name);
@@ -183,6 +185,40 @@ let CrmController = CrmController_1 = class CrmController {
             includeSensitive: includeSensitiveBool,
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
+        });
+    }
+    async updateAdminProfissional(usuario, id, dto, includeSensitive, sensitiveReason) {
+        this.requirePermission(usuario, 'crm.write');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        return this.runAudited({
+            usuario,
+            action: 'admin_profissional_update',
+            metadata: {
+                id,
+                includeSensitive: includeSensitiveBool,
+                sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+            },
+            execute: () => this.crmService.updateAdminProfessional(id, dto, {
+                includeSensitive: includeSensitiveBool,
+            }),
+        });
+    }
+    async updateAdminPaciente(usuario, id, dto, includeSensitive, sensitiveReason) {
+        this.requirePermission(usuario, 'crm.write');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        return this.runAudited({
+            usuario,
+            action: 'admin_paciente_update',
+            metadata: {
+                id,
+                includeSensitive: includeSensitiveBool,
+                sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+            },
+            execute: () => this.crmService.updateAdminPatient(id, dto, {
+                includeSensitive: includeSensitiveBool,
+            }),
         });
     }
     async listLeads(usuario, q, stage, includeSensitive, sensitiveReason) {
@@ -494,6 +530,28 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listAdminPacientesPaged", null);
+__decorate([
+    (0, common_1.Patch)('admin/profissionais/:id'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Query)('includeSensitive')),
+    __param(4, (0, common_1.Query)('sensitiveReason')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, update_crm_admin_professional_dto_1.UpdateCrmAdminProfessionalDto, String, String]),
+    __metadata("design:returntype", Promise)
+], CrmController.prototype, "updateAdminProfissional", null);
+__decorate([
+    (0, common_1.Patch)('admin/pacientes/:id'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Query)('includeSensitive')),
+    __param(4, (0, common_1.Query)('sensitiveReason')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, update_crm_admin_patient_dto_1.UpdateCrmAdminPatientDto, String, String]),
+    __metadata("design:returntype", Promise)
+], CrmController.prototype, "updateAdminPaciente", null);
 __decorate([
     (0, common_1.Get)('leads'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

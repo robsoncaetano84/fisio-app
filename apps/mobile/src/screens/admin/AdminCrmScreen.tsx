@@ -29,6 +29,8 @@ import {
   getCrmLeads,
   getCrmPipelineSummary,
   getCrmTasks,
+  updateCrmAdminPatient,
+  updateCrmAdminProfessional,
   updateCrmInteraction,
   updateCrmLead,
   updateCrmTask,
@@ -355,6 +357,30 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [leadForm, setLeadForm] = useState({ id: "", nome: "", empresa: "", canal: "SITE" as CrmLeadChannel, stage: "NOVO" as CrmLeadStage, valor: "" });
   const [taskForm, setTaskForm] = useState({ id: "", titulo: "", dueAt: "", leadId: "" });
   const [interactionForm, setInteractionForm] = useState({ id: "", tipo: "LIGACAO" as CrmInteractionType, resumo: "" });
+  const [editProfOpen, setEditProfOpen] = useState(false);
+  const [editPacOpen, setEditPacOpen] = useState(false);
+  const [savingAdminEntity, setSavingAdminEntity] = useState(false);
+  const [profEditForm, setProfEditForm] = useState({
+    nome: "",
+    email: "",
+    especialidade: "",
+    registroProf: "",
+    ativo: true,
+  });
+  const [pacEditForm, setPacEditForm] = useState({
+    nomeCompleto: "",
+    cpf: "",
+    dataNascimento: "",
+    sexo: "OUTRO",
+    estadoCivil: "SOLTEIRO",
+    profissao: "",
+    contatoWhatsapp: "",
+    contatoTelefone: "",
+    contatoEmail: "",
+    enderecoCidade: "",
+    enderecoUf: "",
+    ativo: true,
+  });
 
   const loadMain = useCallback(async () => {
     if (!isWeb || !isMaster) return;
@@ -861,6 +887,49 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   useEffect(() => { if (!selectedLeadId && leads[0]) setSelectedLeadId(leads[0].id); }, [leads, selectedLeadId]);
   useEffect(() => { if (!selectedProfId && profs[0]) setSelectedProfId(profs[0].id); }, [profs, selectedProfId]);
   useEffect(() => { if (!selectedPacId && pacs[0]) setSelectedPacId(pacs[0].id); }, [pacs, selectedPacId]);
+  useEffect(() => {
+    const profRaw = crmProfessionals.find((p) => p.id === selectedProfId);
+    if (!profRaw) return;
+    setProfEditForm({
+      nome: profRaw.nome || "",
+      email: profRaw.email || "",
+      especialidade: profRaw.especialidade || "",
+      registroProf: profRaw.registroProf || "",
+      ativo: !!profRaw.ativo,
+    });
+  }, [crmProfessionals, selectedProfId]);
+  useEffect(() => {
+    const pacRaw = crmPatients.find((p) => p.id === selectedPacId);
+    if (!pacRaw) return;
+    const cpfRaw = String(pacRaw.cpf || "").replace(/\D/g, "");
+    const nascimentoRaw = pacRaw.dataNascimento
+      ? String(pacRaw.dataNascimento).slice(0, 10)
+      : "";
+    setPacEditForm({
+      nomeCompleto: pacRaw.nomeCompleto || "",
+      cpf: cpfRaw,
+      dataNascimento: nascimentoRaw,
+      sexo: ["MASCULINO", "FEMININO", "OUTRO"].includes(String(pacRaw.sexo))
+        ? String(pacRaw.sexo)
+        : "OUTRO",
+      estadoCivil: [
+        "SOLTEIRO",
+        "CASADO",
+        "VIUVO",
+        "DIVORCIADO",
+        "UNIAO_ESTAVEL",
+      ].includes(String(pacRaw.estadoCivil))
+        ? String(pacRaw.estadoCivil)
+        : "SOLTEIRO",
+      profissao: pacRaw.profissao || "",
+      contatoWhatsapp: String(pacRaw.contatoWhatsapp || "").replace(/\D/g, ""),
+      contatoTelefone: "",
+      contatoEmail: pacRaw.contatoEmail || "",
+      enderecoCidade: pacRaw.enderecoCidade || "",
+      enderecoUf: (pacRaw.enderecoUf || "").toUpperCase(),
+      ativo: !!pacRaw.ativo,
+    });
+  }, [crmPatients, selectedPacId]);
 
   const q = query.trim().toLowerCase();
   const filteredProfs = (q
@@ -924,6 +993,45 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const resetLeadForm = () => setLeadForm({ id: "", nome: "", empresa: "", canal: "SITE", stage: "NOVO", valor: "" });
   const resetTaskForm = () => setTaskForm({ id: "", titulo: "", dueAt: "", leadId: selectedLeadId || "" });
   const resetInteractionForm = () => setInteractionForm({ id: "", tipo: "LIGACAO", resumo: "" });
+  const resetProfEditForm = () => {
+    const profRaw = crmProfessionals.find((p) => p.id === selectedProfId);
+    if (!profRaw) return;
+    setProfEditForm({
+      nome: profRaw.nome || "",
+      email: profRaw.email || "",
+      especialidade: profRaw.especialidade || "",
+      registroProf: profRaw.registroProf || "",
+      ativo: !!profRaw.ativo,
+    });
+  };
+  const resetPacEditForm = () => {
+    const pacRaw = crmPatients.find((p) => p.id === selectedPacId);
+    if (!pacRaw) return;
+    setPacEditForm({
+      nomeCompleto: pacRaw.nomeCompleto || "",
+      cpf: String(pacRaw.cpf || "").replace(/\D/g, ""),
+      dataNascimento: pacRaw.dataNascimento ? String(pacRaw.dataNascimento).slice(0, 10) : "",
+      sexo: ["MASCULINO", "FEMININO", "OUTRO"].includes(String(pacRaw.sexo))
+        ? String(pacRaw.sexo)
+        : "OUTRO",
+      estadoCivil: [
+        "SOLTEIRO",
+        "CASADO",
+        "VIUVO",
+        "DIVORCIADO",
+        "UNIAO_ESTAVEL",
+      ].includes(String(pacRaw.estadoCivil))
+        ? String(pacRaw.estadoCivil)
+        : "SOLTEIRO",
+      profissao: pacRaw.profissao || "",
+      contatoWhatsapp: String(pacRaw.contatoWhatsapp || "").replace(/\D/g, ""),
+      contatoTelefone: "",
+      contatoEmail: pacRaw.contatoEmail || "",
+      enderecoCidade: pacRaw.enderecoCidade || "",
+      enderecoUf: (pacRaw.enderecoUf || "").toUpperCase(),
+      ativo: !!pacRaw.ativo,
+    });
+  };
 
   const saveLead = async () => {
     if (!leadForm.nome.trim()) return showToast({ type: "error", message: "Informe o nome do lead." });
@@ -1297,6 +1405,88 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         { text: "Exibir", onPress: () => setIncludeSensitiveData(true) },
       ],
     );
+  };
+
+  const saveAdminProfessional = async () => {
+    if (!selectedProfId) return;
+    if (!profEditForm.nome.trim()) {
+      showToast({ type: "error", message: "Informe o nome do profissional." });
+      return;
+    }
+    if (!profEditForm.email.trim()) {
+      showToast({ type: "error", message: "Informe o e-mail do profissional." });
+      return;
+    }
+    setSavingAdminEntity(true);
+    try {
+      await updateCrmAdminProfessional(
+        selectedProfId,
+        {
+          nome: profEditForm.nome.trim(),
+          email: profEditForm.email.trim().toLowerCase(),
+          especialidade: profEditForm.especialidade.trim(),
+          registroProf: profEditForm.registroProf.trim(),
+          ativo: profEditForm.ativo,
+        },
+        {
+          includeSensitive: includeSensitiveData,
+          sensitiveReason: includeSensitiveData ? sensitiveReason : undefined,
+        },
+      );
+      setEditProfOpen(false);
+      await loadMain();
+      showToast({ type: "success", message: "Profissional atualizado com sucesso." });
+    } catch (error) {
+      const parsed = parseApiError(error);
+      showToast({ type: "error", message: parsed.message || "Falha ao atualizar profissional." });
+    } finally {
+      setSavingAdminEntity(false);
+    }
+  };
+
+  const saveAdminPatient = async () => {
+    if (!selectedPacId) return;
+    if (!pacEditForm.nomeCompleto.trim()) {
+      showToast({ type: "error", message: "Informe o nome do paciente." });
+      return;
+    }
+    setSavingAdminEntity(true);
+    try {
+      await updateCrmAdminPatient(
+        selectedPacId,
+        {
+          nomeCompleto: pacEditForm.nomeCompleto.trim(),
+          cpf: pacEditForm.cpf.replace(/\D/g, "") || undefined,
+          dataNascimento: pacEditForm.dataNascimento || undefined,
+          sexo: pacEditForm.sexo as "MASCULINO" | "FEMININO" | "OUTRO",
+          estadoCivil: pacEditForm.estadoCivil as
+            | "SOLTEIRO"
+            | "CASADO"
+            | "VIUVO"
+            | "DIVORCIADO"
+            | "UNIAO_ESTAVEL",
+          profissao: pacEditForm.profissao.trim(),
+          contatoWhatsapp: pacEditForm.contatoWhatsapp.replace(/\D/g, "") || undefined,
+          contatoTelefone: pacEditForm.contatoTelefone.replace(/\D/g, "") || undefined,
+          contatoEmail: pacEditForm.contatoEmail.trim() || undefined,
+          enderecoCidade: pacEditForm.enderecoCidade.trim() || undefined,
+          enderecoUf: pacEditForm.enderecoUf.trim().toUpperCase() || undefined,
+          ativo: pacEditForm.ativo,
+        },
+        {
+          includeSensitive: includeSensitiveData,
+          sensitiveReason: includeSensitiveData ? sensitiveReason : undefined,
+        },
+      );
+      setEditPacOpen(false);
+      await loadMain();
+      showToast({ type: "success", message: "Paciente atualizado com sucesso." });
+    } catch (error) {
+      const parsed = parseApiError(error);
+      showToast({ type: "error", message: parsed.message || "Falha ao atualizar paciente." });
+    } finally {
+      setSavingAdminEntity(false);
+    }
   };
 
   return (
@@ -1858,6 +2048,73 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   <Text style={styles.big}>{selectedProf.nome}</Text>
                   <Text style={styles.sub}>{selectedProf.cidade}</Text>
                   <View style={styles.wrapRow}>
+                    <Action
+                      title={editProfOpen ? "Fechar edição" : "Editar profissional"}
+                      secondary
+                      onPress={() => {
+                        if (!editProfOpen) resetProfEditForm();
+                        setEditProfOpen((prev) => !prev);
+                      }}
+                    />
+                  </View>
+                  {editProfOpen ? (
+                    <View style={styles.line}>
+                      <Text style={styles.lineTitle}>Editar dados do profissional</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Nome"
+                        value={profEditForm.nome}
+                        onChangeText={(v) => setProfEditForm((p) => ({ ...p, nome: v }))}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="E-mail"
+                        value={profEditForm.email}
+                        onChangeText={(v) => setProfEditForm((p) => ({ ...p, email: v }))}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Especialidade"
+                        value={profEditForm.especialidade}
+                        onChangeText={(v) => setProfEditForm((p) => ({ ...p, especialidade: v }))}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Registro profissional"
+                        value={profEditForm.registroProf}
+                        onChangeText={(v) => setProfEditForm((p) => ({ ...p, registroProf: v }))}
+                      />
+                      <View style={styles.wrapRow}>
+                        <Chip
+                          label="Ativo"
+                          active={profEditForm.ativo}
+                          onPress={() => setProfEditForm((p) => ({ ...p, ativo: true }))}
+                        />
+                        <Chip
+                          label="Inativo"
+                          active={!profEditForm.ativo}
+                          onPress={() => setProfEditForm((p) => ({ ...p, ativo: false }))}
+                        />
+                      </View>
+                      <View style={styles.wrapRow}>
+                        <Action
+                          title={savingAdminEntity ? "Salvando..." : "Salvar profissional"}
+                          onPress={saveAdminProfessional}
+                        />
+                        <Action
+                          title="Cancelar"
+                          secondary
+                          onPress={() => {
+                            resetProfEditForm();
+                            setEditProfOpen(false);
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
+                  <View style={styles.wrapRow}>
                     <MiniTab label={t("crm.labels.summary")} active={profDetailTab === "RESUMO"} onPress={() => setProfDetailTab("RESUMO")} />
                     <MiniTab label={t("crm.sections.patients")} active={profDetailTab === "PACIENTES"} onPress={() => setProfDetailTab("PACIENTES")} />
                   </View>
@@ -2017,6 +2274,118 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 <>
                   <Text style={styles.big}>{selectedPac.nome}</Text>
                   <Text style={styles.sub}>{t("crm.labels.professional")}: {selectedPac.profissionalNome}</Text>
+                  <View style={styles.wrapRow}>
+                    <Action
+                      title={editPacOpen ? "Fechar edição" : "Editar paciente"}
+                      secondary
+                      onPress={() => {
+                        if (!editPacOpen) resetPacEditForm();
+                        setEditPacOpen((prev) => !prev);
+                      }}
+                    />
+                  </View>
+                  {editPacOpen ? (
+                    <View style={styles.line}>
+                      <Text style={styles.lineTitle}>Editar dados do paciente</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Nome completo"
+                        value={pacEditForm.nomeCompleto}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, nomeCompleto: v }))}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="CPF (11 dígitos)"
+                        value={pacEditForm.cpf}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, cpf: v.replace(/\D/g, "").slice(0, 11) }))}
+                        keyboardType="numeric"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Data de nascimento (YYYY-MM-DD)"
+                        value={pacEditForm.dataNascimento}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, dataNascimento: v }))}
+                      />
+                      <View style={styles.wrapRow}>
+                        {["MASCULINO", "FEMININO", "OUTRO"].map((sexo) => (
+                          <Chip
+                            key={sexo}
+                            label={sexo}
+                            active={pacEditForm.sexo === sexo}
+                            onPress={() => setPacEditForm((p) => ({ ...p, sexo }))}
+                          />
+                        ))}
+                      </View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Profissão"
+                        value={pacEditForm.profissao}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, profissao: v }))}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="WhatsApp"
+                        value={pacEditForm.contatoWhatsapp}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, contatoWhatsapp: v.replace(/\D/g, "").slice(0, 11) }))}
+                        keyboardType="phone-pad"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Telefone"
+                        value={pacEditForm.contatoTelefone}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, contatoTelefone: v.replace(/\D/g, "").slice(0, 11) }))}
+                        keyboardType="phone-pad"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="E-mail"
+                        value={pacEditForm.contatoEmail}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, contatoEmail: v }))}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Cidade"
+                        value={pacEditForm.enderecoCidade}
+                        onChangeText={(v) => setPacEditForm((p) => ({ ...p, enderecoCidade: v }))}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="UF"
+                        value={pacEditForm.enderecoUf}
+                        onChangeText={(v) =>
+                          setPacEditForm((p) => ({ ...p, enderecoUf: v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2) }))
+                        }
+                      />
+                      <View style={styles.wrapRow}>
+                        <Chip
+                          label="Ativo"
+                          active={pacEditForm.ativo}
+                          onPress={() => setPacEditForm((p) => ({ ...p, ativo: true }))}
+                        />
+                        <Chip
+                          label="Inativo"
+                          active={!pacEditForm.ativo}
+                          onPress={() => setPacEditForm((p) => ({ ...p, ativo: false }))}
+                        />
+                      </View>
+                      <View style={styles.wrapRow}>
+                        <Action
+                          title={savingAdminEntity ? "Salvando..." : "Salvar paciente"}
+                          onPress={saveAdminPatient}
+                        />
+                        <Action
+                          title="Cancelar"
+                          secondary
+                          onPress={() => {
+                            resetPacEditForm();
+                            setEditPacOpen(false);
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
                   <View style={styles.wrapRow}>
                     <MiniTab label={t("crm.labels.summary")} active={pacDetailTab === "RESUMO"} onPress={() => setPacDetailTab("RESUMO")} />
                     <MiniTab label={t("crm.labels.contact")} active={pacDetailTab === "CONTATO"} onPress={() => setPacDetailTab("CONTATO")} />

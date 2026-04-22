@@ -111,6 +111,10 @@ export type CrmAdminProfessional = {
 export type CrmAdminPatient = {
   id: string;
   nomeCompleto: string;
+  cpf?: string | null;
+  dataNascimento?: string | null;
+  sexo?: string | null;
+  estadoCivil?: string | null;
   contatoEmail: string | null;
   contatoWhatsapp: string | null;
   enderecoCidade: string | null;
@@ -244,6 +248,57 @@ export async function getCrmLeads(params?: {
   sensitiveReason?: string;
 }): Promise<CrmLead[]> {
   const response = await api.get<CrmLead[]>("/crm/leads", { params });
+  return response.data;
+}
+
+export async function updateCrmAdminProfessional(
+  id: string,
+  payload: Partial<{
+    nome: string;
+    email: string;
+    especialidade: string;
+    registroProf: string;
+    ativo: boolean;
+  }>,
+  params?: {
+    includeSensitive?: boolean;
+    sensitiveReason?: string;
+  },
+): Promise<CrmAdminProfessional> {
+  const response = await api.patch<CrmAdminProfessional>(
+    `/crm/admin/profissionais/${id}`,
+    payload,
+    { params },
+  );
+  return response.data;
+}
+
+export async function updateCrmAdminPatient(
+  id: string,
+  payload: Partial<{
+    nomeCompleto: string;
+    cpf: string;
+    dataNascimento: string;
+    sexo: "MASCULINO" | "FEMININO" | "OUTRO";
+    estadoCivil: "SOLTEIRO" | "CASADO" | "VIUVO" | "DIVORCIADO" | "UNIAO_ESTAVEL";
+    profissao: string;
+    contatoWhatsapp: string;
+    contatoTelefone: string;
+    contatoEmail: string;
+    enderecoCidade: string;
+    enderecoUf: string;
+    ativo: boolean;
+  }>,
+  params?: {
+    includeSensitive?: boolean;
+    sensitiveReason?: string;
+  },
+): Promise<CrmAdminPatient> {
+  const response = await api.patch<CrmAdminPatient>(
+    `/crm/admin/pacientes/${id}`,
+    payload,
+    { params },
+  );
   return response.data;
 }
 

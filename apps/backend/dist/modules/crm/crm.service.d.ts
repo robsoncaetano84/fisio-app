@@ -13,6 +13,8 @@ import { CreateCrmTaskDto } from './dto/create-crm-task.dto';
 import { UpdateCrmTaskDto } from './dto/update-crm-task.dto';
 import { CreateCrmInteractionDto } from './dto/create-crm-interaction.dto';
 import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
+import { UpdateCrmAdminProfessionalDto } from './dto/update-crm-admin-professional.dto';
+import { UpdateCrmAdminPatientDto } from './dto/update-crm-admin-patient.dto';
 import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
@@ -127,6 +129,10 @@ export declare class CrmService {
     }): Promise<{
         id: string;
         nomeCompleto: string;
+        cpf: string | null;
+        dataNascimento: Date;
+        sexo: import("../pacientes/entities/paciente.entity").Sexo;
+        estadoCivil: import("../pacientes/entities/paciente.entity").EstadoCivil;
         contatoEmail: string | null;
         contatoWhatsapp: string | null;
         enderecoCidade: string | null;
@@ -150,6 +156,54 @@ export declare class CrmService {
             updatedAt: Date;
         } | null;
     }[]>;
+    updateAdminProfessional(id: string, dto: UpdateCrmAdminProfessionalDto, params?: {
+        includeSensitive?: boolean;
+    }): Promise<{
+        id: string;
+        nome: string;
+        email: string | null;
+        registroProf: string | null;
+        especialidade: string | null;
+        ativo: boolean;
+        role: UserRole;
+        createdAt: Date;
+        updatedAt: Date;
+        pacientesTotal: number;
+        pacientesAtivos: number;
+        lastPacienteUpdate: Date | null;
+    } | null>;
+    updateAdminPatient(id: string, dto: UpdateCrmAdminPatientDto, params?: {
+        includeSensitive?: boolean;
+    }): Promise<{
+        id: string;
+        nomeCompleto: string;
+        cpf: string | null;
+        dataNascimento: Date;
+        sexo: import("../pacientes/entities/paciente.entity").Sexo;
+        estadoCivil: import("../pacientes/entities/paciente.entity").EstadoCivil;
+        contatoEmail: string | null;
+        contatoWhatsapp: string | null;
+        enderecoCidade: string | null;
+        enderecoUf: string | null;
+        profissao: string | null;
+        ativo: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        usuarioId: string;
+        profissionalNome: string | null;
+        profissionalEmail: string | null;
+        pacienteUsuarioId: string | null;
+        pacienteUsuarioEmail: string | null;
+        emocional: {
+            nivelEstresse: number;
+            energiaDiaria: number;
+            apoioEmocional: number;
+            qualidadeSono: number;
+            humorPredominante: string | null;
+            vulnerabilidade: boolean;
+            updatedAt: Date;
+        } | null;
+    } | null>;
     listAdminPacientesPaged(params?: {
         q?: string;
         ativo?: boolean;
@@ -163,6 +217,10 @@ export declare class CrmService {
         items: {
             id: string;
             nomeCompleto: string;
+            cpf: string | null;
+            dataNascimento: Date;
+            sexo: import("../pacientes/entities/paciente.entity").Sexo;
+            estadoCivil: import("../pacientes/entities/paciente.entity").EstadoCivil;
             contatoEmail: string | null;
             contatoWhatsapp: string | null;
             enderecoCidade: string | null;

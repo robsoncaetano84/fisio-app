@@ -26,6 +26,8 @@ import { CreateCrmTaskDto } from './dto/create-crm-task.dto';
 import { UpdateCrmTaskDto } from './dto/update-crm-task.dto';
 import { CreateCrmInteractionDto } from './dto/create-crm-interaction.dto';
 import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
+import { UpdateCrmAdminProfessionalDto } from './dto/update-crm-admin-professional.dto';
+import { UpdateCrmAdminPatientDto } from './dto/update-crm-admin-patient.dto';
 import { CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTaskStatus } from './entities/crm-task.entity';
 
@@ -256,6 +258,58 @@ export class CrmController {
       includeSensitive: includeSensitiveBool,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
+    });
+  }
+
+  @Patch('admin/profissionais/:id')
+  async updateAdminProfissional(
+    @CurrentUser() usuario: Usuario,
+    @Param('id') id: string,
+    @Body() dto: UpdateCrmAdminProfessionalDto,
+    @Query('includeSensitive') includeSensitive?: string,
+    @Query('sensitiveReason') sensitiveReason?: string,
+  ) {
+    this.requirePermission(usuario, 'crm.write');
+    const includeSensitiveBool = parseBoolQuery(includeSensitive);
+    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    return this.runAudited({
+      usuario,
+      action: 'admin_profissional_update',
+      metadata: {
+        id,
+        includeSensitive: includeSensitiveBool,
+        sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+      },
+      execute: () =>
+        this.crmService.updateAdminProfessional(id, dto, {
+          includeSensitive: includeSensitiveBool,
+        }),
+    });
+  }
+
+  @Patch('admin/pacientes/:id')
+  async updateAdminPaciente(
+    @CurrentUser() usuario: Usuario,
+    @Param('id') id: string,
+    @Body() dto: UpdateCrmAdminPatientDto,
+    @Query('includeSensitive') includeSensitive?: string,
+    @Query('sensitiveReason') sensitiveReason?: string,
+  ) {
+    this.requirePermission(usuario, 'crm.write');
+    const includeSensitiveBool = parseBoolQuery(includeSensitive);
+    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    return this.runAudited({
+      usuario,
+      action: 'admin_paciente_update',
+      metadata: {
+        id,
+        includeSensitive: includeSensitiveBool,
+        sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+      },
+      execute: () =>
+        this.crmService.updateAdminPatient(id, dto, {
+          includeSensitive: includeSensitiveBool,
+        }),
     });
   }
 
