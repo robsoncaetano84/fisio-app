@@ -756,7 +756,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Classificação de dor</Text>
+          <Text style={styles.blockTitle}>Classificacao de dor</Text>
           <View style={styles.optionsRow}>
             {DOR_PRINCIPAL_OPTIONS.map((item) => (
               <TouchableOpacity
@@ -786,7 +786,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Triagem de red flags</Text>
+          <Text style={styles.blockTitle}>Triagem de sinais de alerta</Text>
           <Text style={styles.subtitle}>Bloco obrigatório. Se crítico, o fluxo clínico deve ser interrompido para encaminhamento.</Text>
           {exam.redFlags.answers.map((item) => (
             <View key={item.key} style={styles.flagRow}>
@@ -847,7 +847,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Observação e movimento</Text>
+          <Text style={styles.blockTitle}>Observacao e movimento</Text>
           <Input label="Postura" value={exam.observacao.postura} onChangeText={(v) => setField("observacao.postura", v)} />
           <Input label="Assimetria" value={exam.observacao.assimetria} onChangeText={(v) => setField("observacao.assimetria", v)} />
           <Input label="Proteção" value={exam.observacao.protecao} onChangeText={(v) => setField("observacao.protecao", v)} />
@@ -883,7 +883,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Padrão de dor e palpação</Text>
+          <Text style={styles.blockTitle}>Padrao de dor e palpacao</Text>
           <Input label="Local" value={exam.padraoDor.local} onChangeText={(v) => setField("padraoDor.local", v)} />
           <Input label="Irradiada" value={exam.padraoDor.irradiada} onChangeText={(v) => setField("padraoDor.irradiada", v)} />
           <Input label="Comportamento" value={exam.padraoDor.comportamento} onChangeText={(v) => setField("padraoDor.comportamento", v)} />
@@ -946,7 +946,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Testes e cadeia cinética</Text>
+          <Text style={styles.blockTitle}>Testes e cadeia cinetica</Text>
           <Input label="Testes biomecânicos" value={exam.testes.biomecanicos} onChangeText={(v) => setField("testes.biomecanicos", v)} />
           <Input label="Testes ortopédicos" value={exam.testes.ortopedicos} onChangeText={(v) => setField("testes.ortopedicos", v)} />
           <Input label="Neurológico (dermátomo, miótomo, reflexos)" value={exam.testes.neurologicos} onChangeText={(v) => setField("testes.neurologicos", v)} />
@@ -1096,7 +1096,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Cruzamento final</Text>
+          <Text style={styles.blockTitle}>Integracao clinica final</Text>
           <Input
             label="Hipótese principal"
             value={exam.cruzamentoFinal.hipotesePrincipal}
@@ -1153,7 +1153,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Raciocínio clínico (IA + profissional)</Text>
+          <Text style={styles.blockTitle}>Raciocinio clinico (IA + profissional)</Text>
           <Input
             label="Origem provável da dor"
             value={exam.raciocinioClinico.origemProvavelDor}
@@ -1212,7 +1212,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Diagnóstico funcional</Text>
+          <Text style={styles.blockTitle}>Diagnostico funcional</Text>
           <Input
             label="Disfunção principal"
             value={exam.diagnosticoFuncionalIa.disfuncaoPrincipal}
@@ -1260,7 +1260,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Conduta direcionada</Text>
+          <Text style={styles.blockTitle}>Conduta terapeutica direcionada</Text>
           <Input
             label="Técnica manual indicada"
             value={exam.condutaIa.tecnicaManualIndicada}
@@ -1489,7 +1489,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Prévia clínica</Text>
+          <Text style={styles.blockTitle}>Previa clinica</Text>
           <Input value={renderStructuredExameToText(exam)} multiline numberOfLines={12} editable={false} style={{ height: 300, textAlignVertical: "top" }} />
           <View style={styles.actionsRow}>
             <TouchableOpacity
