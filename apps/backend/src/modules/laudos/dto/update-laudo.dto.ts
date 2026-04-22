@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // U PD AT E L AU DO.D TO
 // ==========================================
-import { IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsIn, Min, Max } from 'class-validator';
 
 export class UpdateLaudoDto {
   @IsOptional()
@@ -52,6 +52,21 @@ export class UpdateLaudoDto {
   @IsOptional()
   @IsString()
   criteriosAlta?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['ai', 'rules'])
+  sugestaoSource?: 'ai' | 'rules';
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  examesConsiderados?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  examesComLeituraIa?: number;
 }
 
 

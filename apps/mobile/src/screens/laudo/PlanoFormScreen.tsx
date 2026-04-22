@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // PLANO FORM SCREEN
 // ==========================================
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
@@ -50,6 +50,28 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiExamContextMessage, setAiExamContextMessage] = useState("");
+  const [aiSuggestionMeta, setAiSuggestionMeta] = useState<{
+    source?: "ai" | "rules";
+    examesConsiderados: number;
+    examesComLeituraIa: number;
+    generatedAt?: string | null;
+  } | null>(null);
+  const aiConfidence = useMemo<"ALTA" | "MODERADA" | "BAIXA" | null>(() => {
+    if (!aiSuggestionMeta) return null;
+    if (
+      aiSuggestionMeta.source === "ai" &&
+      (aiSuggestionMeta.examesComLeituraIa || 0) > 0
+    ) {
+      return "ALTA";
+    }
+    if (
+      aiSuggestionMeta.source === "ai" ||
+      (aiSuggestionMeta.examesConsiderados || 0) > 0
+    ) {
+      return "MODERADA";
+    }
+    return "BAIXA";
+  }, [aiSuggestionMeta]);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const autoFillRef = useRef(false);
@@ -77,6 +99,26 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     !criteriosAlta.trim() &&
     !observacoes.trim();
 
+  const buildSuggestionMetaPayload = () => {
+    if (!aiSuggestionMeta) return {};
+    const payload: {
+      sugestaoSource?: "ai" | "rules";
+      examesConsiderados?: number;
+      examesComLeituraIa?: number;
+    } = {};
+    if (aiSuggestionMeta.source) payload.sugestaoSource = aiSuggestionMeta.source;
+    if (Number.isFinite(aiSuggestionMeta.examesConsiderados)) {
+      payload.examesConsiderados = Math.max(0, aiSuggestionMeta.examesConsiderados || 0);
+    }
+    if (Number.isFinite(aiSuggestionMeta.examesComLeituraIa)) {
+      payload.examesComLeituraIa = Math.max(
+        0,
+        aiSuggestionMeta.examesComLeituraIa || 0,
+      );
+    }
+    return payload;
+  };
+
   const applySuggestion = async (force = false) => {
     if (generating) return;
     if (!force && !shouldAutoFill()) return;
@@ -84,6 +126,12 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     setGenerating(true);
     try {
       const data = await getLaudoAiSuggestion(pacienteId);
+      setAiSuggestionMeta({
+        source: data.source,
+        examesConsiderados: data.examesConsiderados || 0,
+        examesComLeituraIa: data.examesComLeituraIa || 0,
+        generatedAt: data.sugestaoGeradaEm || new Date().toISOString(),
+      });
       if ((data.examesComLeituraIa || 0) > 0) {
         const message = t("clinical.messages.aiUsedExamReadings", {
           total: data.examesComLeituraIa || 0,
@@ -164,6 +212,35 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         setPlanoTratamentoIA(laudo.planoTratamentoIA || "");
         setCriteriosAlta(laudo.criteriosAlta || "");
         setObservacoes(laudo.observacoes || "");
+        const examesConsiderados = Number(laudo.examesConsiderados || 0);
+        const examesComLeituraIa = Number(laudo.examesComLeituraIa || 0);
+        const source =
+          laudo.sugestaoSource === "ai" || laudo.sugestaoSource === "rules"
+            ? (laudo.sugestaoSource as "ai" | "rules")
+            : undefined;
+        if (source || examesConsiderados > 0 || examesComLeituraIa > 0) {
+          setAiSuggestionMeta({
+            source,
+            examesConsiderados,
+            examesComLeituraIa,
+            generatedAt: laudo.sugestaoGeradaEm || null,
+          });
+          if (examesComLeituraIa > 0) {
+            setAiExamContextMessage(
+              t("clinical.messages.aiUsedExamReadings", {
+                total: examesComLeituraIa,
+              }),
+            );
+          } else if (examesConsiderados > 0) {
+            setAiExamContextMessage(
+              t("clinical.messages.aiUsedExamMetadata", {
+                total: examesConsiderados,
+              }),
+            );
+          } else {
+            setAiExamContextMessage("");
+          }
+        }
       }
 
       try {
@@ -292,6 +369,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           planoTratamentoIA: planoTratamentoIA.trim() || undefined,
           criteriosAlta: criteriosAlta.trim() || undefined,
           observacoes: observacoes.trim() || undefined,
+          ...buildSuggestionMetaPayload(),
         });
       } else {
         const created = await createLaudo({
@@ -306,6 +384,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           planoTratamentoIA: planoTratamentoIA.trim() || undefined,
           criteriosAlta: criteriosAlta.trim() || undefined,
           observacoes: observacoes.trim() || undefined,
+          ...buildSuggestionMetaPayload(),
         });
         setLaudoId(created.id);
       }
@@ -364,6 +443,39 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           </Text>
           {aiExamContextMessage ? (
             <Text style={styles.draftInfo}>{aiExamContextMessage}</Text>
+          ) : null}
+          {aiSuggestionMeta ? (
+            <View style={styles.aiMetaRow}>
+              <Text style={styles.aiMetaChip}>
+                Fonte: {aiSuggestionMeta.source === "ai" ? "IA" : "Regras"}
+              </Text>
+              <Text style={styles.aiMetaChip}>
+                Exames: {aiSuggestionMeta.examesConsiderados}
+              </Text>
+              <Text style={styles.aiMetaChip}>
+                Leitura IA: {aiSuggestionMeta.examesComLeituraIa}
+              </Text>
+              {aiSuggestionMeta.generatedAt ? (
+                <Text style={styles.aiMetaChip}>
+                  Gerada em:{" "}
+                  {new Date(aiSuggestionMeta.generatedAt).toLocaleString("pt-BR")}
+                </Text>
+              ) : null}
+              {aiConfidence ? (
+                <Text
+                  style={[
+                    styles.aiMetaChip,
+                    aiConfidence === "ALTA"
+                      ? styles.aiMetaChipHigh
+                      : aiConfidence === "MODERADA"
+                        ? styles.aiMetaChipMedium
+                        : styles.aiMetaChipLow,
+                  ]}
+                >
+                  Confiança: {aiConfidence}
+                </Text>
+              ) : null}
+            </View>
           ) : null}
           {lastDraftSavedAt ? (
             <Text style={styles.draftInfo}>
@@ -529,6 +641,39 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
     marginBottom: SPACING.sm,
+  },
+  aiMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  aiMetaChip: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    backgroundColor: COLORS.gray100,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "600",
+    overflow: "hidden",
+  },
+  aiMetaChipHigh: {
+    backgroundColor: COLORS.success + "12",
+    borderColor: COLORS.success + "44",
+    color: COLORS.success,
+  },
+  aiMetaChipMedium: {
+    backgroundColor: COLORS.warning + "12",
+    borderColor: COLORS.warning + "44",
+    color: COLORS.warning,
+  },
+  aiMetaChipLow: {
+    backgroundColor: COLORS.error + "12",
+    borderColor: COLORS.error + "44",
+    color: COLORS.error,
   },
   aiButton: {
     alignSelf: "flex-start",

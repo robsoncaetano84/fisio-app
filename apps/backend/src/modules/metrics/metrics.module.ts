@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
 import { ClinicalFlowEvent } from './entities/clinical-flow-event.entity';
@@ -12,6 +13,7 @@ import { PatientCheckClickEvent } from './entities/patient-check-click-event.ent
       ClinicalFlowEvent,
       PatientCheckClickEvent,
       AtividadeCheckin,
+      Laudo,
     ]),
   ],
   controllers: [MetricsController],

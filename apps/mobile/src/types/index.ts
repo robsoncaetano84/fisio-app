@@ -45,6 +45,13 @@ export enum TipoDor {
   MISTA = "MISTA",
 }
 
+export enum MecanismoLesao {
+  TRAUMA = "TRAUMA",
+  SOBRECARGA = "SOBRECARGA",
+  MISTO = "MISTO",
+  NAO_DEFINIDO = "NAO_DEFINIDO",
+}
+
 export enum DorClassificacaoPrincipal {
   NOCICEPTIVA = "NOCICEPTIVA",
   NEUROPATICA = "NEUROPATICA",
@@ -192,6 +199,8 @@ export interface Anamnese {
   inicioProblema: InicioProblema;
   eventoEspecifico?: string;
   fatorAlivio?: string;
+  mecanismoLesao?: MecanismoLesao | null;
+  fatoresPiora?: string;
   dorRepouso?: boolean | null;
   dorNoturna?: boolean | null;
   irradiacao?: boolean | null;
@@ -205,6 +214,9 @@ export interface Anamnese {
   tratamentosAnteriores: string[];
   statusTratamento?: StatusTratamento;
   historicoFamiliar?: string;
+  historicoEsportivo?: string;
+  lesoesPrevias?: string;
+  usoMedicamentos?: string;
   limitacoesFuncionais?: string;
   atividadesQuePioram?: string;
   metaPrincipalPaciente?: string;
@@ -271,6 +283,10 @@ export interface Laudo {
   validadoPorUsuarioId?: string;
   validadoEm?: string;
   criteriosAlta?: string;
+  sugestaoSource?: "ai" | "rules" | null;
+  examesConsiderados?: number | null;
+  examesComLeituraIa?: number | null;
+  sugestaoGeradaEm?: string | null;
   createdAt: string;
   updatedAt: string;
 }

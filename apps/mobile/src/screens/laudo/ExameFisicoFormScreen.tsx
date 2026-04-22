@@ -13,6 +13,7 @@ import { useLaudoStore } from "../../stores/laudoStore";
 import {
   api,
   buildStructuredExameFromAnamnese,
+  enrichStructuredExameWithClinicalLogic,
   parseStructuredExame,
   renderStructuredExameToText,
   serializeStructuredExame,
@@ -27,6 +28,8 @@ import {
   DorSubtipoClinico,
   ExameFisicoStructured,
   RedFlagKey,
+  RegionalTestGroup,
+  TestResult,
 } from "../../services/physicalExamModel";
 
 type ExameFisicoFormScreenProps = {
@@ -60,6 +63,20 @@ const PRIORIDADE_OPTIONS: ExameFisicoStructured["cruzamentoFinal"]["prioridade"]
   "ENCAMINHAMENTO_IMEDIATO",
 ];
 
+const CONFIANCA_OPTIONS: ExameFisicoStructured["cruzamentoFinal"]["confiancaHipotese"][] = [
+  "BAIXA",
+  "MODERADA",
+  "ALTA",
+];
+
+const SCORING_PROFILE_OPTIONS: ExameFisicoStructured["cruzamentoFinal"]["perfilScoring"][] = [
+  "GERAL",
+  "COLUNA",
+  "MEMBRO_INFERIOR",
+  "MEMBRO_SUPERIOR",
+  "ESPORTIVO",
+];
+
 const RED_FLAG_LABELS: Record<RedFlagKey, string> = {
   CAUDA_EQUINA: "Cauda equina",
   FRATURA: "Fratura",
@@ -68,6 +85,60 @@ const RED_FLAG_LABELS: Record<RedFlagKey, string> = {
   NAO_MECANICA: "Dor não mecânica",
   DEFICIT_NEURO_PROGRESSIVO: "Déficit neuro progressivo",
   VASCULAR: "Vascular",
+};
+
+const TEST_RESULT_OPTIONS: Array<{ label: string; value: TestResult }> = [
+  { label: "N/T", value: "NAO_TESTADO" },
+  { label: "Negativo", value: "NEGATIVO" },
+  { label: "Positivo", value: "POSITIVO" },
+];
+
+const TIPO_LESAO_OPTIONS = [
+  "Mecanica",
+  "Inflamatoria",
+  "Neural",
+  "Mista",
+];
+
+const CADEIA_OPTIONS = [
+  "Cadeia axial superior",
+  "Cadeia lombo-pelvica",
+  "Cadeia de membro inferior",
+  "Cadeia de membro superior",
+  "Cadeia funcional global",
+];
+
+const CONDUTA_PRESETS = {
+  tecnicaManual: [
+    "Mobilizacao articular",
+    "Tecnicas de tecido mole",
+    "Manipulacao de baixa amplitude",
+    "Sem tecnica manual no momento",
+  ],
+  ajusteArticular: [
+    "Ajuste segmentar cervical",
+    "Ajuste segmentar toracico",
+    "Ajuste segmentar lombo-pelvico",
+    "Nao indicado no momento",
+  ],
+  exercicio: [
+    "Controle motor",
+    "Estabilidade lombo-pelvica",
+    "Fortalecimento progressivo",
+    "Mobilidade funcional",
+  ],
+  miofascial: [
+    "Liberacao de pontos gatilho",
+    "Liberacao de cadeia posterior",
+    "Liberacao de cadeia anterior",
+    "Nao indicado no momento",
+  ],
+  progressao: [
+    "Progressao por dor e funcao",
+    "Progressao por tolerancia a carga",
+    "Progressao por controle motor",
+    "Manter fase atual",
+  ],
 };
 
 const prettyEnum = (value: string) =>
@@ -117,7 +188,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     try {
       await fetchAnamnesesByPaciente(pacienteId);
       const latest = getLatestAnamnese();
-      const next = buildStructuredExameFromAnamnese(latest);
+      const next = enrichStructuredExameWithClinicalLogic(
+        buildStructuredExameFromAnamnese(latest),
+        latest,
+        { overwrite: true },
+      );
       setExam((prev) => (force || !prev ? next : prev));
       setErrors({});
     } finally {
@@ -132,6 +207,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       if (!paciente) {
         await fetchPacientes(true).catch(() => undefined);
       }
+      await fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
+      const latestAnamnese = getLatestAnamnese();
 
       const laudo = await fetchLaudoByPaciente(pacienteId, false).catch(() => null);
       if (!active) return;
@@ -140,7 +217,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         setLaudoId(laudo.id);
         const structured = parseStructuredExame(laudo.exameFisico);
         if (structured) {
-          setExam(structured);
+          setExam(
+            enrichStructuredExameWithClinicalLogic(structured, latestAnamnese, {
+              overwrite: false,
+            }),
+          );
         }
       }
 
@@ -171,7 +252,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     return () => {
       active = false;
     };
-  }, [draftKey, fetchLaudoByPaciente, fetchPacientes, paciente, pacienteId]);
+  }, [
+    draftKey,
+    fetchLaudoByPaciente,
+    fetchPacientes,
+    fetchAnamnesesByPaciente,
+    getLatestAnamnese,
+    paciente,
+    pacienteId,
+  ]);
 
   useEffect(() => {
     if (!draftLoaded || !exam) return;
@@ -257,6 +346,66 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     }
   };
 
+  const setRegionalTestResult = (
+    regiao: RegionalTestGroup["regiao"],
+    testeNome: string,
+    resultado: TestResult,
+  ) => {
+    if (!exam) return;
+    const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) => {
+      if (grupo.regiao !== regiao) return grupo;
+      return {
+        ...grupo,
+        testes: grupo.testes.map((teste) =>
+          teste.nome === testeNome
+            ? {
+                ...teste,
+                resultado,
+                selecionado: teste.selecionado || resultado !== "NAO_TESTADO",
+              }
+            : teste,
+        ),
+      };
+    });
+    const latest = getLatestAnamnese();
+    const nextExam = { ...exam, avaliacaoRegioes };
+    setExam(
+      enrichStructuredExameWithClinicalLogic(nextExam, latest, {
+        overwrite: false,
+        recalculateDecision: true,
+      }),
+    );
+  };
+
+  const setRegionalTestSelected = (
+    regiao: RegionalTestGroup["regiao"],
+    testeNome: string,
+    selected: boolean,
+  ) => {
+    if (!exam) return;
+    const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) => {
+      if (grupo.regiao !== regiao) return grupo;
+      return {
+        ...grupo,
+        testes: grupo.testes.map((teste) => {
+          if (teste.nome !== testeNome) return teste;
+          if (!selected && teste.resultado !== "NAO_TESTADO") {
+            return { ...teste, selecionado: true };
+          }
+          return { ...teste, selecionado: selected };
+        }),
+      };
+    });
+    const latest = getLatestAnamnese();
+    setExam(
+      enrichStructuredExameWithClinicalLogic(
+        { ...exam, avaliacaoRegioes },
+        latest,
+        { overwrite: false, recalculateDecision: true },
+      ),
+    );
+  };
+
   const validateForm = () => {
     if (!exam) return false;
     const nextErrors: Record<string, string> = {};
@@ -334,8 +483,23 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         : exam;
 
       const exameSerialized = serializeStructuredExame(effectiveExam);
-      const diagnostico = effectiveExam.cruzamentoFinal.hipotesePrincipal.trim() || "Diagnóstico funcional em elaboração.";
-      const condutas = effectiveExam.cruzamentoFinal.condutaDirecionada.trim() || "Conduta terapêuutica em elaboração.";
+      const diagnostico =
+        effectiveExam.diagnosticoFuncionalIa.disfuncaoPrincipal.trim() ||
+        effectiveExam.cruzamentoFinal.hipotesePrincipal.trim() ||
+        "Diagnóstico funcional em elaboração.";
+
+      const condutaParts = [
+        effectiveExam.cruzamentoFinal.condutaDirecionada,
+        `Técnica manual: ${effectiveExam.condutaIa.tecnicaManualIndicada}`,
+        `Ajuste articular: ${effectiveExam.condutaIa.ajusteArticular}`,
+        `Exercício corretivo: ${effectiveExam.condutaIa.exercicioCorretivo}`,
+        `Liberação miofascial: ${effectiveExam.condutaIa.liberacaoMiofascial}`,
+        `Progressão esportiva: ${effectiveExam.condutaIa.progressaoEsportiva}`,
+      ]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .join("\n");
+      const condutas = condutaParts || "Conduta terapêutica em elaboração.";
 
       if (laudoId) {
         await api.patch(`/laudos/${laudoId}`, {
@@ -528,6 +692,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input label="Assimetria" value={exam.observacao.assimetria} onChangeText={(v) => setField("observacao.assimetria", v)} />
           <Input label="Proteção" value={exam.observacao.protecao} onChangeText={(v) => setField("observacao.protecao", v)} />
           <Input label="Padrão de movimento" value={exam.observacao.padraoMovimento} onChangeText={(v) => setField("observacao.padraoMovimento", v)} />
+          <Input label="Edema" value={exam.observacao.edema} onChangeText={(v) => setField("observacao.edema", v)} />
+          <Input label="Atrofia muscular" value={exam.observacao.atrofiaMuscular} onChangeText={(v) => setField("observacao.atrofiaMuscular", v)} />
+          <Input label="Alterações de marcha" value={exam.observacao.marcha} onChangeText={(v) => setField("observacao.marcha", v)} />
 
           <Input label="Movimento ativo" value={exam.movimento.ativo} onChangeText={(v) => setField("movimento.ativo", v)} />
           <Input label="Movimento passivo" value={exam.movimento.passivo} onChangeText={(v) => setField("movimento.passivo", v)} />
@@ -538,6 +705,21 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("movimento.reproduzDor", v)}
             error={errors.movimentoReproduzDor}
           />
+          <Input
+            label="Qualidade do movimento"
+            value={exam.movimento.qualidadeMovimento}
+            onChangeText={(v) => setField("movimento.qualidadeMovimento", v)}
+          />
+          <Input
+            label="Compensações"
+            value={exam.movimento.compensacoes}
+            onChangeText={(v) => setField("movimento.compensacoes", v)}
+          />
+          <Input
+            label="Dor no movimento"
+            value={exam.movimento.dorNoMovimento}
+            onChangeText={(v) => setField("movimento.dorNoMovimento", v)}
+          />
         </View>
 
         <View style={styles.section}>
@@ -546,10 +728,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input label="Irradiada" value={exam.padraoDor.irradiada} onChangeText={(v) => setField("padraoDor.irradiada", v)} />
           <Input label="Comportamento" value={exam.padraoDor.comportamento} onChangeText={(v) => setField("padraoDor.comportamento", v)} />
 
+          <Input label="Pontos dolorosos" value={exam.palpacao.pontosDolorosos} onChangeText={(v) => setField("palpacao.pontosDolorosos", v)} />
           <Input label="Palpação muscular" value={exam.palpacao.muscular} onChangeText={(v) => setField("palpacao.muscular", v)} />
           <Input label="Palpação articular" value={exam.palpacao.articular} onChangeText={(v) => setField("palpacao.articular", v)} />
           <Input label="Pontos de gatilho" value={exam.palpacao.pontosGatilho} onChangeText={(v) => setField("palpacao.pontosGatilho", v)} />
           <Input label="Palpação dinâmica vertebral" value={exam.palpacao.dinamicaVertebral} onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)} />
+          <Input label="Temperatura local" value={exam.palpacao.temperatura} onChangeText={(v) => setField("palpacao.temperatura", v)} />
+          <Input label="Tônus muscular" value={exam.palpacao.tonusMuscular} onChangeText={(v) => setField("palpacao.tonusMuscular", v)} />
+          <Input label="Estruturas específicas" value={exam.palpacao.estruturasEspecificas} onChangeText={(v) => setField("palpacao.estruturasEspecificas", v)} />
+          <Input label="Hipomobilidade articular" value={exam.palpacao.hipomobilidadeArticular} onChangeText={(v) => setField("palpacao.hipomobilidadeArticular", v)} multiline numberOfLines={3} />
         </View>
 
         <View style={styles.section}>
@@ -563,6 +750,80 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input label="Pelve" value={exam.cadeiaCinetica.pelve} onChangeText={(v) => setField("cadeiaCinetica.pelve", v)} />
           <Input label="Coluna torácica" value={exam.cadeiaCinetica.colunaToracica} onChangeText={(v) => setField("cadeiaCinetica.colunaToracica", v)} />
           <Input label="Pé" value={exam.cadeiaCinetica.pe} onChangeText={(v) => setField("cadeiaCinetica.pe", v)} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.blockTitle}>Testes funcionais (esportivo)</Text>
+          <Input label="Agachamento" value={exam.testesFuncionais.agachamento} onChangeText={(v) => setField("testesFuncionais.agachamento", v)} />
+          <Input label="Agachamento unilateral" value={exam.testesFuncionais.agachamentoUnilateral} onChangeText={(v) => setField("testesFuncionais.agachamentoUnilateral", v)} />
+          <Input label="Salto" value={exam.testesFuncionais.salto} onChangeText={(v) => setField("testesFuncionais.salto", v)} />
+          <Input label="Corrida (se aplicável)" value={exam.testesFuncionais.corrida} onChangeText={(v) => setField("testesFuncionais.corrida", v)} />
+          <Input label="Teste de estabilidade" value={exam.testesFuncionais.estabilidade} onChangeText={(v) => setField("testesFuncionais.estabilidade", v)} />
+          <Input label="Controle motor" value={exam.testesFuncionais.controleMotor} onChangeText={(v) => setField("testesFuncionais.controleMotor", v)} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.blockTitle}>Avaliação por regiões (positivo/negativo)</Text>
+          {exam.avaliacaoRegioes.map((grupo) => (
+            <View key={grupo.regiao} style={styles.regionCard}>
+              <Text style={styles.regionTitle}>{grupo.titulo}</Text>
+              {grupo.testes.map((teste) => (
+                <View
+                  key={`${grupo.regiao}-${teste.nome}`}
+                  style={[
+                    styles.regionTestRow,
+                    teste.selecionado && styles.regionTestRowSelected,
+                  ]}
+                >
+                  <View style={styles.regionTestHeader}>
+                    <Text style={styles.regionTestName}>{teste.nome}</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.regionSuggestToggle,
+                        teste.selecionado && styles.regionSuggestToggleSelected,
+                      ]}
+                      onPress={() =>
+                        setRegionalTestSelected(grupo.regiao, teste.nome, !teste.selecionado)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.regionSuggestToggleText,
+                          teste.selecionado && styles.regionSuggestToggleTextSelected,
+                        ]}
+                      >
+                        {teste.selecionado ? "Selecionado" : "Sugerir"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.regionTestOptions}>
+                    {TEST_RESULT_OPTIONS.map((option) => (
+                      <TouchableOpacity
+                        key={`${grupo.regiao}-${teste.nome}-${option.value}`}
+                        style={[
+                          styles.regionOption,
+                          teste.resultado === option.value && styles.regionOptionSelected,
+                        ]}
+                        onPress={() =>
+                          setRegionalTestResult(grupo.regiao, teste.nome, option.value)
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.regionOptionText,
+                            teste.resultado === option.value &&
+                              styles.regionOptionTextSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
 
         <View style={styles.section}>
@@ -623,6 +884,342 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.blockTitle}>Raciocínio clínico (IA + profissional)</Text>
+          <Input
+            label="Origem provável da dor"
+            value={exam.raciocinioClinico.origemProvavelDor}
+            onChangeText={(v) => setField("raciocinioClinico.origemProvavelDor", v)}
+            multiline
+            numberOfLines={3}
+          />
+          <Input
+            label="Estrutura envolvida"
+            value={exam.raciocinioClinico.estruturaEnvolvida}
+            onChangeText={(v) => setField("raciocinioClinico.estruturaEnvolvida", v)}
+          />
+          <Input
+            label="Tipo de lesão (mecânica/inflamatória/neural)"
+            value={exam.raciocinioClinico.tipoLesao}
+            onChangeText={(v) => setField("raciocinioClinico.tipoLesao", v)}
+          />
+          <View style={styles.optionsRow}>
+            {TIPO_LESAO_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={`tipo-lesao-${item}`}
+                style={[
+                  styles.chip,
+                  exam.raciocinioClinico.tipoLesao === item && styles.chipSelected,
+                ]}
+                onPress={() => setField("raciocinioClinico.tipoLesao", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.raciocinioClinico.tipoLesao === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Input
+            label="Fator biomecânico associado"
+            value={exam.raciocinioClinico.fatorBiomecanicoAssociado}
+            onChangeText={(v) =>
+              setField("raciocinioClinico.fatorBiomecanicoAssociado", v)
+            }
+            multiline
+            numberOfLines={3}
+          />
+          <Input
+            label="Relação com esporte"
+            value={exam.raciocinioClinico.relacaoComEsporte}
+            onChangeText={(v) => setField("raciocinioClinico.relacaoComEsporte", v)}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.blockTitle}>Diagnóstico funcional</Text>
+          <Input
+            label="Disfunção principal"
+            value={exam.diagnosticoFuncionalIa.disfuncaoPrincipal}
+            onChangeText={(v) =>
+              setField("diagnosticoFuncionalIa.disfuncaoPrincipal", v)
+            }
+            multiline
+            numberOfLines={3}
+          />
+          <Input
+            label="Cadeia envolvida"
+            value={exam.diagnosticoFuncionalIa.cadeiaEnvolvida}
+            onChangeText={(v) => setField("diagnosticoFuncionalIa.cadeiaEnvolvida", v)}
+          />
+          <View style={styles.optionsRow}>
+            {CADEIA_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={`cadeia-${item}`}
+                style={[
+                  styles.chip,
+                  exam.diagnosticoFuncionalIa.cadeiaEnvolvida === item &&
+                    styles.chipSelected,
+                ]}
+                onPress={() => setField("diagnosticoFuncionalIa.cadeiaEnvolvida", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.diagnosticoFuncionalIa.cadeiaEnvolvida === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Input
+            label="Compensações"
+            value={exam.diagnosticoFuncionalIa.compensacoes}
+            onChangeText={(v) => setField("diagnosticoFuncionalIa.compensacoes", v)}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.blockTitle}>Conduta direcionada</Text>
+          <Input
+            label="Técnica manual indicada"
+            value={exam.condutaIa.tecnicaManualIndicada}
+            onChangeText={(v) => setField("condutaIa.tecnicaManualIndicada", v)}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={styles.optionsRow}>
+            {CONDUTA_PRESETS.tecnicaManual.map((item) => (
+              <TouchableOpacity
+                key={`conduta-tm-${item}`}
+                style={[
+                  styles.chip,
+                  exam.condutaIa.tecnicaManualIndicada === item &&
+                    styles.chipSelected,
+                ]}
+                onPress={() => setField("condutaIa.tecnicaManualIndicada", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.condutaIa.tecnicaManualIndicada === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Input
+            label="Ajuste articular"
+            value={exam.condutaIa.ajusteArticular}
+            onChangeText={(v) => setField("condutaIa.ajusteArticular", v)}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={styles.optionsRow}>
+            {CONDUTA_PRESETS.ajusteArticular.map((item) => (
+              <TouchableOpacity
+                key={`conduta-aj-${item}`}
+                style={[
+                  styles.chip,
+                  exam.condutaIa.ajusteArticular === item && styles.chipSelected,
+                ]}
+                onPress={() => setField("condutaIa.ajusteArticular", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.condutaIa.ajusteArticular === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Input
+            label="Exercício corretivo"
+            value={exam.condutaIa.exercicioCorretivo}
+            onChangeText={(v) => setField("condutaIa.exercicioCorretivo", v)}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={styles.optionsRow}>
+            {CONDUTA_PRESETS.exercicio.map((item) => (
+              <TouchableOpacity
+                key={`conduta-ex-${item}`}
+                style={[
+                  styles.chip,
+                  exam.condutaIa.exercicioCorretivo === item &&
+                    styles.chipSelected,
+                ]}
+                onPress={() => setField("condutaIa.exercicioCorretivo", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.condutaIa.exercicioCorretivo === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Input
+            label="Liberação miofascial"
+            value={exam.condutaIa.liberacaoMiofascial}
+            onChangeText={(v) => setField("condutaIa.liberacaoMiofascial", v)}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={styles.optionsRow}>
+            {CONDUTA_PRESETS.miofascial.map((item) => (
+              <TouchableOpacity
+                key={`conduta-mi-${item}`}
+                style={[
+                  styles.chip,
+                  exam.condutaIa.liberacaoMiofascial === item &&
+                    styles.chipSelected,
+                ]}
+                onPress={() => setField("condutaIa.liberacaoMiofascial", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.condutaIa.liberacaoMiofascial === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Input
+            label="Progressão esportiva"
+            value={exam.condutaIa.progressaoEsportiva}
+            onChangeText={(v) => setField("condutaIa.progressaoEsportiva", v)}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={styles.optionsRow}>
+            {CONDUTA_PRESETS.progressao.map((item) => (
+              <TouchableOpacity
+                key={`conduta-pr-${item}`}
+                style={[
+                  styles.chip,
+                  exam.condutaIa.progressaoEsportiva === item &&
+                    styles.chipSelected,
+                ]}
+                onPress={() => setField("condutaIa.progressaoEsportiva", item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.condutaIa.progressaoEsportiva === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Confiança da hipótese</Text>
+          <Text style={styles.subtitle}>
+            Calculada pelos testes positivos/sugeridos e passível de ajuste clínico manual.
+          </Text>
+          <View style={styles.optionsRow}>
+            {CONFIANCA_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.chip,
+                  exam.cruzamentoFinal.confiancaHipotese === item && styles.chipSelected,
+                ]}
+                onPress={() =>
+                  setExam({
+                    ...exam,
+                    cruzamentoFinal: {
+                      ...exam.cruzamentoFinal,
+                      confiancaHipotese: item,
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.cruzamentoFinal.confiancaHipotese === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {prettyEnum(item)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.statusText}>
+            Score de evidência: {exam.cruzamentoFinal.scoreEvidencia}
+          </Text>
+          <Text style={styles.label}>Perfil de scoring</Text>
+          <View style={styles.optionsRow}>
+            {SCORING_PROFILE_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.chip,
+                  exam.cruzamentoFinal.perfilScoring === item && styles.chipSelected,
+                ]}
+                onPress={() => {
+                  const latest = getLatestAnamnese();
+                  const nextExam = {
+                    ...exam,
+                    cruzamentoFinal: {
+                      ...exam.cruzamentoFinal,
+                      perfilScoring: item,
+                    },
+                  };
+                  setExam(
+                    enrichStructuredExameWithClinicalLogic(nextExam, latest, {
+                      overwrite: false,
+                      recalculateDecision: true,
+                    }),
+                  );
+                }}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.cruzamentoFinal.perfilScoring === item &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {prettyEnum(item)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.blockTitle}>Prévia clínica</Text>
           <Input value={renderStructuredExameToText(exam)} multiline numberOfLines={12} editable={false} style={{ height: 300, textAlignVertical: "top" }} />
           <View style={styles.actionsRow}>
@@ -633,6 +1230,23 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               activeOpacity={0.8}
             >
               <Text style={styles.actionChipText}>{generating ? "Gerando..." : "Regerar por anamnese"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionChip}
+              onPress={() => {
+                const latest = getLatestAnamnese();
+                setExam((prev) =>
+                  prev
+                    ? enrichStructuredExameWithClinicalLogic(prev, latest, {
+                        overwrite: false,
+                        recalculateDecision: true,
+                      })
+                    : prev,
+                );
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.actionChipText}>Recalcular raciocínio</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionChip}
@@ -840,6 +1454,89 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: FONTS.sizes.md,
     color: COLORS.textSecondary,
+  },
+  regionCard: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    backgroundColor: COLORS.background,
+  },
+  regionTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+  },
+  regionTestRow: {
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.xs,
+    backgroundColor: COLORS.white,
+  },
+  regionTestRowSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  regionTestHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+  },
+  regionSuggestToggle: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    backgroundColor: COLORS.white,
+  },
+  regionSuggestToggleSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  regionSuggestToggleText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+  regionSuggestToggleTextSelected: {
+    color: COLORS.white,
+  },
+  regionTestName: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textPrimary,
+    marginBottom: 6,
+    fontWeight: "600",
+  },
+  regionTestOptions: {
+    flexDirection: "row",
+    gap: SPACING.xs,
+    flexWrap: "wrap",
+  },
+  regionOption: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    backgroundColor: COLORS.white,
+  },
+  regionOptionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  regionOptionText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textPrimary,
+    fontWeight: "600",
+  },
+  regionOptionTextSelected: {
+    color: COLORS.white,
   },
 });
 

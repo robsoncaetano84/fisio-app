@@ -26,6 +26,7 @@ import {
   getCrmAdminProfessionalsPaged,
   getCrmAdminProfessionals,
   getCrmClinicalDashboardSummary,
+  getCrmPhysicalExamTestsSummary,
   getCrmLeads,
   getCrmPipelineSummary,
   getCrmTasks,
@@ -44,6 +45,7 @@ import {
   type CrmLeadStage,
   type CrmPipelineSummary,
   type CrmClinicalDashboardSummary,
+  type CrmPhysicalExamTestsSummary,
   type CrmTask,
 } from "../../services/crm";
 import { UserRole } from "../../types";
@@ -57,6 +59,8 @@ type AdminCrmScreenProps = {
   };
 };
 type TaskBucket = "TODAS" | "ATRASADAS" | "HOJE" | "PROXIMAS" | "CONCLUIDAS";
+type ExamChartMode = "POSITIVOS" | "TAXA";
+type ExamConfidenceFilter = "TODOS" | "ALTA" | "MEDIA" | "BAIXA";
 type SortDir = "asc" | "desc";
 type ProfSortKey = "nome" | "score" | "vulnEmocional" | "pacientes" | "ativos" | "ultimoAcesso";
 type PacSortKey = "nome" | "profissionalNome" | "status" | "ultimoCheckin";
@@ -143,6 +147,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [stageFilter, setStageFilter] = useState<CrmLeadStage | "TODOS">("TODOS");
   const [pipeline, setPipeline] = useState<CrmPipelineSummary | null>(null);
   const [clinicalSummary, setClinicalSummary] = useState<CrmClinicalDashboardSummary | null>(null);
+  const [physicalExamSummary, setPhysicalExamSummary] = useState<CrmPhysicalExamTestsSummary | null>(null);
   const [crmProfessionals, setCrmProfessionals] = useState<CrmAdminProfessional[]>([]);
   const [crmPatients, setCrmPatients] = useState<CrmAdminPatient[]>([]);
   const [crmAuditLogs, setCrmAuditLogs] = useState<CrmAdminAuditLog[]>([]);
@@ -209,7 +214,12 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [pacCidadeFilter, setPacCidadeFilter] = useState("");
   const [pacUfFilter, setPacUfFilter] = useState("");
   const [windowDays, setWindowDays] = useState(7);
+  const [examWindowDays, setExamWindowDays] = useState(30);
   const [semEvolucaoDias, setSemEvolucaoDias] = useState(10);
+  const [examChartMode, setExamChartMode] = useState<ExamChartMode>("POSITIVOS");
+  const [examMinSample, setExamMinSample] = useState(3);
+  const [examConfidenceFilter, setExamConfidenceFilter] =
+    useState<ExamConfidenceFilter>("TODOS");
   const [taskBucketFilter, setTaskBucketFilter] = useState<TaskBucket>("TODAS");
   const [profDetailTab, setProfDetailTab] = useState<"RESUMO" | "PACIENTES">("RESUMO");
   const [pacDetailTab, setPacDetailTab] = useState<"RESUMO" | "CONTATO" | "VINCULO">("RESUMO");
@@ -241,7 +251,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         pacCidadeFilter: string;
         pacUfFilter: string;
         windowDays: number;
+        examWindowDays: number;
         semEvolucaoDias: number;
+        examChartMode: ExamChartMode;
+        examMinSample: number;
+        examConfidenceFilter: ExamConfidenceFilter;
         taskBucketFilter: TaskBucket;
       }>;
       if (prefs.tab) setTab(prefs.tab);
@@ -259,10 +273,20 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       if (typeof prefs.pacCidadeFilter === "string") setPacCidadeFilter(prefs.pacCidadeFilter);
       if (typeof prefs.pacUfFilter === "string") setPacUfFilter(prefs.pacUfFilter);
       if (typeof prefs.windowDays === "number" && prefs.windowDays > 0) {
-        setWindowDays(Math.min(30, Math.max(3, Math.round(prefs.windowDays))));
+        setWindowDays(Math.min(90, Math.max(3, Math.round(prefs.windowDays))));
+      }
+      if (typeof prefs.examWindowDays === "number" && prefs.examWindowDays > 0) {
+        setExamWindowDays(Math.min(90, Math.max(3, Math.round(prefs.examWindowDays))));
       }
       if (typeof prefs.semEvolucaoDias === "number" && prefs.semEvolucaoDias > 0) {
         setSemEvolucaoDias(Math.min(60, Math.max(3, Math.round(prefs.semEvolucaoDias))));
+      }
+      if (prefs.examChartMode) setExamChartMode(prefs.examChartMode);
+      if (typeof prefs.examMinSample === "number" && prefs.examMinSample > 0) {
+        setExamMinSample(Math.min(20, Math.max(1, Math.round(prefs.examMinSample))));
+      }
+      if (prefs.examConfidenceFilter) {
+        setExamConfidenceFilter(prefs.examConfidenceFilter);
       }
       if (prefs.taskBucketFilter) setTaskBucketFilter(prefs.taskBucketFilter);
     } catch {
@@ -291,14 +315,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           pacCidadeFilter,
           pacUfFilter,
           windowDays,
+          examWindowDays,
           semEvolucaoDias,
+          examChartMode,
+          examMinSample,
+          examConfidenceFilter,
           taskBucketFilter,
         }),
       );
     } catch {
       // ignore localStorage errors
     }
-  }, [tab, query, stageFilter, profSort, pacSort, profActiveFilter, profAccountStatusFilter, profEmotionalConcentrationFilter, pacLinkFilter, pacStatusFilter, pacEmotionalFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, windowDays, semEvolucaoDias, taskBucketFilter]);
+  }, [tab, query, stageFilter, profSort, pacSort, profActiveFilter, profAccountStatusFilter, profEmotionalConcentrationFilter, pacLinkFilter, pacStatusFilter, pacEmotionalFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, windowDays, examWindowDays, semEvolucaoDias, examChartMode, examMinSample, examConfidenceFilter, taskBucketFilter]);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof window === "undefined") return;
@@ -386,9 +414,10 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     if (!isWeb || !isMaster) return;
     setLoading(true);
     try {
-      const [p, clinical, auditPaged, profsPaged, pacsPaged, ls, ts] = await Promise.all([
+      const [p, clinical, physicalExam, auditPaged, profsPaged, pacsPaged, ls, ts] = await Promise.all([
         getCrmPipelineSummary(),
         getCrmClinicalDashboardSummary({ windowDays, semEvolucaoDias }),
+        getCrmPhysicalExamTestsSummary({ windowDays: examWindowDays }).catch(() => null),
         getCrmAdminAuditLogs({
           includeSensitive: includeSensitiveData ? true : undefined,
           page: 1,
@@ -429,6 +458,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       ]);
       setPipeline(p);
       setClinicalSummary(clinical);
+      setPhysicalExamSummary(physicalExam);
       setCrmAuditLogs(auditPaged.items || []);
       setCrmProfessionals(profsPaged.items);
       setCrmPatients(pacsPaged.items);
@@ -441,13 +471,13 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       const msg =
         parsed.message?.toLowerCase().includes("network") ||
         parsed.message?.toLowerCase().includes("conectar")
-          ? "API offline ou indisponível (backend)."
-          : `Falha ao carregar CRM: ${parsed.message}`;
+          ? t("crm.messages.apiOffline")
+          : `${t("crm.messages.loadFailed")}: ${parsed.message}`;
       showToast({ type: "error", message: msg });
     } finally {
       setLoading(false);
     }
-  }, [isMaster, isWeb, query, stageFilter, profPage, pacPage, profActiveFilter, pacLinkFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, includeSensitiveData, sensitiveReason, windowDays, semEvolucaoDias, showToast]);
+  }, [isMaster, isWeb, query, stageFilter, profPage, pacPage, profActiveFilter, pacLinkFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, includeSensitiveData, sensitiveReason, windowDays, examWindowDays, semEvolucaoDias, showToast]);
 
   const loadInteractions = useCallback(async (leadId: string) => {
     if (!leadId) { setInteractions([]); return; }
@@ -462,7 +492,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     }
     catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: `Falha ao carregar interações: ${parsed.message}` });
+      showToast({ type: "error", message: `${t("crm.messages.interactionsLoadFailed")}: ${parsed.message}` });
     }
     finally { setLoadingInteractions(false); }
   }, [includeSensitiveData, sensitiveReason, showToast]);
@@ -509,7 +539,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           id: p.id,
           nome: p.nomeCompleto,
           profissionalId: p.usuarioId,
-          profissionalNome: p.profissionalNome || "Sem vínculo",
+          profissionalNome: p.profissionalNome || t("crm.labels.noLink"),
           status: risco ? "RISCO" : "ATIVO",
           emocionalVulneravel: Boolean(p.emocional?.vulnerabilidade),
           emocionalResumo: p.emocional
@@ -548,7 +578,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         id: `pac-${l.id}`,
         nome: l.nome,
         profissionalId: p?.id || "",
-        profissionalNome: p?.nome || "Sem vínculo",
+        profissionalNome: p?.nome || t("crm.labels.noLink"),
         status: risco ? "RISCO" : "ATIVO",
         emocionalVulneravel: false,
         emocionalResumo: null,
@@ -597,20 +627,20 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   }, [taskBucketFilter, taskBuckets, tasks]);
   const clinicalPipelineChartData = useMemo(
     () => [
-      { label: "Novo", value: clinicalSummary?.pipeline.novoPaciente || 0, color: "#6B7280" },
-      { label: "Vínculo", value: clinicalSummary?.pipeline.aguardandoVinculo || 0, color: "#0EA5E9" },
-      { label: "Anamnese", value: clinicalSummary?.pipeline.anamnesePendente || 0, color: "#F59E0B" },
-      { label: "Tratamento", value: clinicalSummary?.pipeline.emTratamento || 0, color: "#10B981" },
-      { label: "Alta", value: clinicalSummary?.pipeline.alta || 0, color: "#22C55E" },
+      { label: t("crm.pipeline.new"), value: clinicalSummary?.pipeline.novoPaciente || 0, color: "#6B7280" },
+      { label: t("crm.pipeline.link"), value: clinicalSummary?.pipeline.aguardandoVinculo || 0, color: "#0EA5E9" },
+      { label: t("crm.pipeline.anamnesis"), value: clinicalSummary?.pipeline.anamnesePendente || 0, color: "#F59E0B" },
+      { label: t("crm.pipeline.treatment"), value: clinicalSummary?.pipeline.emTratamento || 0, color: "#10B981" },
+      { label: t("crm.pipeline.discharge"), value: clinicalSummary?.pipeline.alta || 0, color: "#22C55E" },
     ],
     [clinicalSummary],
   );
   const clinicalAlertsChartData = useMemo(
     () => [
-      { label: "Sem check-in", value: clinicalSummary?.alertas.semCheckin || 0, color: "#F97316" },
-      { label: "Sem evolução", value: clinicalSummary?.alertas.semEvolucao || 0, color: "#EF4444" },
-      { label: "Anamnese pendente", value: clinicalSummary?.alertas.anamnesePendente || 0, color: "#F59E0B" },
-      { label: "Convite pendente", value: clinicalSummary?.alertas.conviteNaoAceito || 0, color: "#EAB308" },
+      { label: t("crm.alerts.noCheckin"), value: clinicalSummary?.alertas.semCheckin || 0, color: "#F97316" },
+      { label: t("crm.alerts.noProgress"), value: clinicalSummary?.alertas.semEvolucao || 0, color: "#EF4444" },
+      { label: t("crm.alerts.pendingAnamnesis"), value: clinicalSummary?.alertas.anamnesePendente || 0, color: "#F59E0B" },
+      { label: t("crm.alerts.pendingInvite"), value: clinicalSummary?.alertas.conviteNaoAceito || 0, color: "#EAB308" },
     ],
     [clinicalSummary],
   );
@@ -622,6 +652,377 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     ],
     [clinicalSummary],
   );
+  const filteredPhysicalExamRegions = useMemo(() => {
+    let rows = [...(physicalExamSummary?.porRegiao || [])];
+    if (examChartMode === "TAXA") {
+      rows = rows.filter((item) => item.avaliados >= examMinSample);
+      if (examConfidenceFilter !== "TODOS") {
+        rows = rows.filter(
+          (item) => getSampleConfidence(item.avaliados) === examConfidenceFilter,
+        );
+      }
+    }
+    return rows;
+  }, [physicalExamSummary, examChartMode, examMinSample, examConfidenceFilter]);
+  const filteredPhysicalExamTests = useMemo(() => {
+    let rows = [...(physicalExamSummary?.topTestesPositivos || [])];
+    if (examChartMode === "TAXA") {
+      rows = rows.filter((item) => item.avaliados >= examMinSample);
+      if (examConfidenceFilter !== "TODOS") {
+        rows = rows.filter(
+          (item) => getSampleConfidence(item.avaliados) === examConfidenceFilter,
+        );
+      }
+    }
+    return rows;
+  }, [physicalExamSummary, examChartMode, examMinSample, examConfidenceFilter]);
+  const physicalExamFilterStats = useMemo(() => {
+    const totalRegions = physicalExamSummary?.porRegiao?.length || 0;
+    const totalTests = physicalExamSummary?.topTestesPositivos?.length || 0;
+    const consideredRegions = filteredPhysicalExamRegions.length;
+    const consideredTests = filteredPhysicalExamTests.length;
+    return {
+      totalRegions,
+      totalTests,
+      consideredRegions,
+      consideredTests,
+      excludedRegions: Math.max(0, totalRegions - consideredRegions),
+      excludedTests: Math.max(0, totalTests - consideredTests),
+    };
+  }, [physicalExamSummary, filteredPhysicalExamRegions, filteredPhysicalExamTests]);
+  const physicalExamRegionChartData = useMemo(() => {
+    if (!filteredPhysicalExamRegions.length) {
+      return [
+        { label: t("crm.common.noData"), value: 0, color: "#CBD5E1" },
+      ];
+    }
+    const ordered = [...filteredPhysicalExamRegions].sort((a, b) =>
+      examChartMode === "TAXA"
+        ? b.taxaPositividade - a.taxaPositividade
+        : b.positivos - a.positivos,
+    );
+    return ordered.slice(0, 8).map((item, index) => ({
+      label: item.regiao,
+      value:
+        examChartMode === "TAXA"
+          ? Math.round(item.taxaPositividade)
+          : item.positivos,
+      color: ["#0EA5E9", "#14B8A6", "#8B5CF6", "#22C55E", "#F59E0B", "#EF4444", "#6366F1", "#84CC16"][index % 8],
+    }));
+  }, [filteredPhysicalExamRegions, examChartMode]);
+  const physicalExamTopTestsChartData = useMemo(() => {
+    if (!filteredPhysicalExamTests.length) {
+      return [
+        { label: t("crm.common.noData"), value: 0, color: "#CBD5E1" },
+      ];
+    }
+    const ordered = [...filteredPhysicalExamTests].sort((a, b) =>
+      examChartMode === "TAXA"
+        ? b.taxaPositividade - a.taxaPositividade
+        : b.positivos - a.positivos,
+    );
+    return ordered.slice(0, 8).map((item, index) => ({
+      label: item.teste,
+      value:
+        examChartMode === "TAXA"
+          ? Math.round(item.taxaPositividade)
+          : item.positivos,
+      color: ["#EF4444", "#F97316", "#F59E0B", "#EAB308", "#22C55E", "#14B8A6", "#0EA5E9", "#6366F1"][index % 8],
+    }));
+  }, [filteredPhysicalExamTests, examChartMode]);
+  const physicalExamProfilesChartData = useMemo(() => {
+    if (!physicalExamSummary?.perfisScoring?.length) {
+      return [
+        { label: t("crm.common.noData"), value: 0, color: "#CBD5E1" },
+      ];
+    }
+    return physicalExamSummary.perfisScoring.slice(0, 8).map((item, index) => ({
+      label: item.perfil,
+      value: item.count,
+      color: ["#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#F59E0B", "#EF4444", "#06B6D4", "#84CC16"][index % 8],
+    }));
+  }, [physicalExamSummary]);
+  const physicalExamTopRegionsList = useMemo(() => {
+    const rows = [...filteredPhysicalExamRegions].sort((a, b) =>
+      examChartMode === "TAXA"
+        ? b.taxaPositividade - a.taxaPositividade
+        : b.positivos - a.positivos,
+    );
+    return rows.slice(0, 5).map((item) => ({
+      label: item.regiao,
+      value:
+        examChartMode === "TAXA"
+          ? `${Math.round(item.taxaPositividade)}%`
+          : String(item.positivos),
+      detail:
+        examChartMode === "TAXA"
+          ? `${item.positivos}/${item.avaliados}`
+          : "",
+      sample: item.avaliados,
+    }));
+  }, [filteredPhysicalExamRegions, examChartMode]);
+  const physicalExamTopTestsList = useMemo(() => {
+    const rows = [...filteredPhysicalExamTests].sort((a, b) =>
+      examChartMode === "TAXA"
+        ? b.taxaPositividade - a.taxaPositividade
+        : b.positivos - a.positivos,
+    );
+    return rows.slice(0, 5).map((item) => ({
+      label: item.teste,
+      value:
+        examChartMode === "TAXA"
+          ? `${Math.round(item.taxaPositividade)}%`
+          : String(item.positivos),
+      detail:
+        examChartMode === "TAXA"
+          ? `${item.positivos}/${item.avaliados}`
+          : "",
+      sample: item.avaliados,
+    }));
+  }, [filteredPhysicalExamTests, examChartMode]);
+  const physicalExamTopInsights = useMemo(() => {
+    const empty = {
+      topRegionLabel: "-",
+      topRegionValue: "-",
+      topRegionDetail: "",
+      topRegionSample: 0,
+      topTestLabel: "-",
+      topTestValue: "-",
+      topTestDetail: "",
+      topTestSample: 0,
+    };
+    if (!physicalExamSummary) return empty;
+
+    const topRegion = [...filteredPhysicalExamRegions].sort((a, b) =>
+      examChartMode === "TAXA"
+        ? b.taxaPositividade - a.taxaPositividade
+        : b.positivos - a.positivos,
+    )[0];
+    const topTest = [...filteredPhysicalExamTests].sort((a, b) =>
+      examChartMode === "TAXA"
+        ? b.taxaPositividade - a.taxaPositividade
+        : b.positivos - a.positivos,
+    )[0];
+
+    return {
+      topRegionLabel: topRegion?.regiao || "-",
+      topRegionValue: topRegion
+        ? examChartMode === "TAXA"
+          ? `${Math.round(topRegion.taxaPositividade)}%`
+          : String(topRegion.positivos)
+        : "-",
+      topRegionDetail:
+        topRegion && examChartMode === "TAXA"
+          ? `${topRegion.positivos}/${topRegion.avaliados}`
+          : "",
+      topRegionSample: topRegion?.avaliados || 0,
+      topTestLabel: topTest?.teste || "-",
+      topTestValue: topTest
+        ? examChartMode === "TAXA"
+          ? `${Math.round(topTest.taxaPositividade)}%`
+          : String(topTest.positivos)
+        : "-",
+      topTestDetail:
+        topTest && examChartMode === "TAXA"
+          ? `${topTest.positivos}/${topTest.avaliados}`
+          : "",
+      topTestSample: topTest?.avaliados || 0,
+    };
+  }, [physicalExamSummary, examChartMode, filteredPhysicalExamRegions, filteredPhysicalExamTests]);
+  const hasPhysicalExamData = useMemo(
+    () => (physicalExamSummary?.laudosComExameEstruturado || 0) > 0,
+    [physicalExamSummary],
+  );
+  const physicalExamCoverage = useMemo(() => {
+    const analyzed = physicalExamSummary?.laudosAnalisados || 0;
+    const structured = physicalExamSummary?.laudosComExameEstruturado || 0;
+    const pct = analyzed > 0 ? Math.round((structured / analyzed) * 100) : 0;
+    const status = pct >= 70 ? "ALTA" : pct >= 40 ? "MEDIA" : "BAIXA";
+    return { pct, status };
+  }, [physicalExamSummary]);
+  const exportPhysicalExamSummaryCsv = useCallback(() => {
+    if (!physicalExamSummary) {
+      showToast({ type: "info", message: t("crm.messages.noPhysicalExamDataToExport") });
+      return;
+    }
+    const now = new Date().toISOString().replace(/[:.]/g, "-");
+    const rows: Array<Record<string, unknown>> = [];
+
+    rows.push({
+      tipo: "resumo",
+      modo_ordenacao: examChartMode,
+      base_minima_avaliados: examChartMode === "TAXA" ? examMinSample : "",
+      filtro_confianca_amostral: examChartMode === "TAXA" ? examConfidenceFilter : "",
+      gerado_em: new Date().toISOString(),
+      janela_dias: physicalExamSummary.windowDays,
+      laudos_analisados: physicalExamSummary.laudosAnalisados,
+      laudos_com_exame_estruturado: physicalExamSummary.laudosComExameEstruturado,
+      total_avaliados: physicalExamSummary.totalAvaliados,
+      total_positivos: physicalExamSummary.totalPositivos,
+      taxa_positividade_geral: `${Math.round(physicalExamSummary.taxaPositividadeGeral)}%`,
+      nome: "",
+      positivos: "",
+      avaliados: "",
+      taxa_positividade: "",
+    });
+
+    physicalExamSummary.porRegiao.forEach((item) => {
+      rows.push({
+        tipo: "regiao",
+        modo_ordenacao: examChartMode,
+        base_minima_avaliados: examChartMode === "TAXA" ? examMinSample : "",
+        filtro_confianca_amostral: examChartMode === "TAXA" ? examConfidenceFilter : "",
+        gerado_em: "",
+        janela_dias: physicalExamSummary.windowDays,
+        laudos_analisados: "",
+        laudos_com_exame_estruturado: "",
+        total_avaliados: "",
+        total_positivos: "",
+        taxa_positividade_geral: "",
+        nome: item.regiao,
+        positivos: item.positivos,
+        avaliados: item.avaliados,
+        taxa_positividade: `${Math.round(item.taxaPositividade)}%`,
+      });
+    });
+
+    physicalExamSummary.topTestesPositivos.forEach((item) => {
+      rows.push({
+        tipo: "teste",
+        modo_ordenacao: examChartMode,
+        base_minima_avaliados: examChartMode === "TAXA" ? examMinSample : "",
+        filtro_confianca_amostral: examChartMode === "TAXA" ? examConfidenceFilter : "",
+        gerado_em: "",
+        janela_dias: physicalExamSummary.windowDays,
+        laudos_analisados: "",
+        laudos_com_exame_estruturado: "",
+        total_avaliados: "",
+        total_positivos: "",
+        taxa_positividade_geral: "",
+        nome: item.teste,
+        positivos: item.positivos,
+        avaliados: item.avaliados,
+        taxa_positividade: `${Math.round(item.taxaPositividade)}%`,
+      });
+    });
+    physicalExamSummary.perfisScoring.forEach((item) => {
+      rows.push({
+        tipo: "perfil_scoring",
+        modo_ordenacao: examChartMode,
+        base_minima_avaliados: examChartMode === "TAXA" ? examMinSample : "",
+        filtro_confianca_amostral: examChartMode === "TAXA" ? examConfidenceFilter : "",
+        gerado_em: "",
+        janela_dias: physicalExamSummary.windowDays,
+        laudos_analisados: "",
+        laudos_com_exame_estruturado: "",
+        total_avaliados: "",
+        total_positivos: "",
+        taxa_positividade_geral: "",
+        nome: item.perfil,
+        positivos: item.count,
+        avaliados: "",
+        taxa_positividade: "",
+      });
+    });
+
+    downloadCsv(
+      `crm-exame-fisico-resumo-${now}.csv`,
+      [
+        "tipo",
+        "modo_ordenacao",
+        "base_minima_avaliados",
+        "filtro_confianca_amostral",
+        "gerado_em",
+        "janela_dias",
+        "laudos_analisados",
+        "laudos_com_exame_estruturado",
+        "total_avaliados",
+        "total_positivos",
+        "taxa_positividade_geral",
+        "nome",
+        "positivos",
+        "avaliados",
+        "taxa_positividade",
+      ],
+      rows,
+    );
+
+    trackEvent("crm_kpi_clicked", {
+      kpi: "physical_exam_csv_exported",
+      windowDays: physicalExamSummary.windowDays,
+      mode: examChartMode,
+      minSample: examChartMode === "TAXA" ? examMinSample : null,
+      confidenceFilter: examChartMode === "TAXA" ? examConfidenceFilter : null,
+      rows: rows.length,
+    }).catch(() => undefined);
+      showToast({ type: "success", message: t("crm.messages.physicalExamSummaryExported") });
+  }, [physicalExamSummary, showToast, examChartMode, examMinSample, examConfidenceFilter]);
+  const copyPhysicalExamExecutiveSummary = useCallback(async () => {
+    if (!physicalExamSummary) {
+      showToast({ type: "info", message: t("crm.messages.noPhysicalExamDataToCopy") });
+      return;
+    }
+
+    const topRegionsText = physicalExamTopRegionsList
+      .slice(0, 3)
+      .map((item, index) => `${index + 1}. ${item.label} (${item.value})`)
+      .join(" | ");
+    const topTestsText = physicalExamTopTestsList
+      .slice(0, 3)
+      .map((item, index) => `${index + 1}. ${item.label} (${item.value})`)
+      .join(" | ");
+
+    const summary = [
+      `${t("crm.summary.executivePhysicalExamTitle")} (${physicalExamSummary.windowDays} ${t("crm.summary.days")})`,
+      `Laudos analisados: ${physicalExamSummary.laudosAnalisados}`,
+      `Com exame estruturado: ${physicalExamSummary.laudosComExameEstruturado}`,
+      `Testes avaliados: ${physicalExamSummary.totalAvaliados}`,
+      `Testes positivos: ${physicalExamSummary.totalPositivos}`,
+      `Taxa de positividade geral: ${Math.round(physicalExamSummary.taxaPositividadeGeral)}%`,
+      `Base mínima para ranking: ${examChartMode === "TAXA" ? `${examMinSample} avaliados` : "não aplicada"}`,
+      `Filtro de confiança amostral: ${examChartMode === "TAXA" ? examConfidenceFilter : "não aplicado"}`,
+      `${examChartMode === "TAXA" ? t("crm.summary.topRegionRate") : t("crm.summary.topRegionPositives")}: ${physicalExamTopInsights.topRegionLabel} (${physicalExamTopInsights.topRegionValue})`,
+      `${examChartMode === "TAXA" ? t("crm.summary.topTestRate") : t("crm.summary.topTestPositives")}: ${physicalExamTopInsights.topTestLabel} (${physicalExamTopInsights.topTestValue})`,
+      `Top regiões: ${topRegionsText || "-"}`,
+      `Top testes: ${topTestsText || "-"}`,
+      `Gerado em: ${new Date().toLocaleString("pt-BR")}`,
+    ].join("\n");
+
+    if (
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.clipboard?.writeText
+    ) {
+      try {
+        await navigator.clipboard.writeText(summary);
+        trackEvent("crm_kpi_clicked", {
+          kpi: "physical_exam_summary_copied",
+          windowDays: physicalExamSummary.windowDays,
+          mode: examChartMode,
+          minSample: examChartMode === "TAXA" ? examMinSample : null,
+          confidenceFilter: examChartMode === "TAXA" ? examConfidenceFilter : null,
+        }).catch(() => undefined);
+      showToast({ type: "success", message: t("crm.messages.summaryCopied") });
+        return;
+      } catch {
+        // fallback below
+      }
+    }
+
+    showToast({ type: "info", message: t("crm.messages.copyWebOnly") });
+  }, [
+    physicalExamSummary,
+    physicalExamTopInsights.topRegionLabel,
+    physicalExamTopInsights.topRegionValue,
+    physicalExamTopInsights.topTestLabel,
+    physicalExamTopInsights.topTestValue,
+    physicalExamTopRegionsList,
+    physicalExamTopTestsList,
+    examChartMode,
+    examMinSample,
+    examConfidenceFilter,
+    showToast,
+  ]);
   const funnelStageChartData = useMemo(
     () => [
       { label: "Novo", value: pipeline?.byStage.NOVO.count || 0, color: "#6B7280" },
@@ -1034,7 +1435,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   };
 
   const saveLead = async () => {
-    if (!leadForm.nome.trim()) return showToast({ type: "error", message: "Informe o nome do lead." });
+    if (!leadForm.nome.trim()) return showToast({ type: "error", message: t("crm.messages.enterLeadName") });
     const payload = { nome: leadForm.nome.trim(), empresa: leadForm.empresa.trim() || undefined, canal: leadForm.canal, stage: leadForm.stage, valorPotencial: Number((leadForm.valor || "0").replace(",", ".")) || 0 };
     try {
       if (leadForm.id) await updateCrmLead(leadForm.id, payload);
@@ -1044,7 +1445,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   };
 
   const saveTask = async () => {
-    if (!taskForm.titulo.trim()) return showToast({ type: "error", message: "Informe o título da tarefa." });
+    if (!taskForm.titulo.trim()) return showToast({ type: "error", message: t("crm.messages.enterTaskTitle") });
     try {
       if (taskForm.id) await updateCrmTask(taskForm.id, { titulo: taskForm.titulo.trim(), leadId: taskForm.leadId.trim() || null, dueAt: taskForm.dueAt ? new Date(taskForm.dueAt).toISOString() : null });
       else await createCrmTask({ titulo: taskForm.titulo.trim(), leadId: taskForm.leadId.trim() || undefined, dueAt: taskForm.dueAt ? new Date(taskForm.dueAt).toISOString() : undefined });
@@ -1054,7 +1455,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
 
   const saveInteraction = async () => {
     if (!selectedLeadId) return showToast({ type: "error", message: t("crm.messages.selectLead") });
-    if (!interactionForm.resumo.trim()) return showToast({ type: "error", message: "Informe o resumo." });
+    if (!interactionForm.resumo.trim()) return showToast({ type: "error", message: t("crm.messages.enterInteractionSummary") });
     try {
       if (interactionForm.id) await updateCrmInteraction(interactionForm.id, { tipo: interactionForm.tipo, resumo: interactionForm.resumo.trim() });
       else await createCrmInteraction({ leadId: selectedLeadId, tipo: interactionForm.tipo, resumo: interactionForm.resumo.trim() });
@@ -1233,7 +1634,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           const risco = Date.now() - new Date(p.updatedAt || p.createdAt).getTime() > 1000 * 60 * 60 * 24 * 10;
           return {
             nome: p.nomeCompleto,
-            profissional: p.profissionalNome || "Sem vínculo",
+            profissional: p.profissionalNome || t("crm.labels.noLink"),
             status: risco ? "RISCO" : "ATIVO",
             emocional_vulnerabilidade: p.emocional?.vulnerabilidade ? "SIM" : "NAO",
             ultimo_checkin: ultimo,
@@ -1370,8 +1771,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     showToast({ type: "success", message: t("crm.messages.csvInteractionsExported") });
   };
 
-  if (!isWeb) return <Blocked icon="desktop-outline" title="CRM somente web" subtitle="Use no navegador." />;
-  if (!isMaster) return <Blocked icon="lock-closed-outline" title="Acesso restrito" subtitle="Somente ADM master." />;
+  if (!isWeb) return <Blocked icon="desktop-outline" title={t("crm.access.webOnlyTitle")} subtitle={t("crm.access.webOnlySubtitle")} />;
+  if (!isMaster) return <Blocked icon="lock-closed-outline" title={t("crm.access.restrictedTitle")} subtitle={t("crm.access.restrictedSubtitle")} />;
 
   const handleToggleSensitiveData = () => {
     if (includeSensitiveData) {
@@ -1381,7 +1782,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     }
     if (Platform.OS === "web" && typeof window !== "undefined") {
       const typedReason = window.prompt(
-        "Informe o motivo para visualizar dados sensíveis (mínimo 8 caracteres):",
+        t("crm.messages.sensitiveDataPrompt"),
         "",
       );
       if (!typedReason) return;
@@ -1389,7 +1790,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       if (normalizedReason.length < 8) {
         showToast({
           type: "error",
-          message: "Informe um motivo com pelo menos 8 caracteres.",
+          message: t("crm.messages.sensitiveReasonMinLength"),
         });
         return;
       }
@@ -1398,11 +1799,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       return;
     }
     Alert.alert(
-      "Exibir dados sensíveis",
-      "Esta ação exibirá dados pessoais detalhados. Continue apenas se necessário para análise administrativa.",
+      t("crm.messages.showSensitiveDataTitle"),
+      t("crm.messages.showSensitiveDataDescription"),
       [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Exibir", onPress: () => setIncludeSensitiveData(true) },
+        { text: t("crm.actions.cancel"), style: "cancel" },
+        { text: t("crm.actions.show"), onPress: () => setIncludeSensitiveData(true) },
       ],
     );
   };
@@ -1410,11 +1811,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const saveAdminProfessional = async () => {
     if (!selectedProfId) return;
     if (!profEditForm.nome.trim()) {
-      showToast({ type: "error", message: "Informe o nome do profissional." });
+      showToast({ type: "error", message: t("crm.messages.enterProfessionalName") });
       return;
     }
     if (!profEditForm.email.trim()) {
-      showToast({ type: "error", message: "Informe o e-mail do profissional." });
+      showToast({ type: "error", message: t("crm.messages.enterProfessionalEmail") });
       return;
     }
     setSavingAdminEntity(true);
@@ -1435,10 +1836,10 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       );
       setEditProfOpen(false);
       await loadMain();
-      showToast({ type: "success", message: "Profissional atualizado com sucesso." });
+      showToast({ type: "success", message: t("crm.messages.professionalUpdatedSuccess") });
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao atualizar profissional." });
+      showToast({ type: "error", message: parsed.message || t("crm.messages.professionalUpdateFailed") });
     } finally {
       setSavingAdminEntity(false);
     }
@@ -1447,7 +1848,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const saveAdminPatient = async () => {
     if (!selectedPacId) return;
     if (!pacEditForm.nomeCompleto.trim()) {
-      showToast({ type: "error", message: "Informe o nome do paciente." });
+      showToast({ type: "error", message: t("crm.messages.enterPatientName") });
       return;
     }
     setSavingAdminEntity(true);
@@ -1480,10 +1881,10 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       );
       setEditPacOpen(false);
       await loadMain();
-      showToast({ type: "success", message: "Paciente atualizado com sucesso." });
+      showToast({ type: "success", message: t("crm.messages.patientUpdatedSuccess") });
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao atualizar paciente." });
+      showToast({ type: "error", message: parsed.message || t("crm.messages.patientUpdateFailed") });
     } finally {
       setSavingAdminEntity(false);
     }
@@ -1495,32 +1896,32 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         <View style={styles.card}>
           <View style={styles.topRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>CRM Administrador Master</Text>
-              <Text style={styles.sub}>Clientes, pacientes, funil, tarefas e interações (somente web).</Text>
+              <Text style={styles.title}>{t("crm.master.title")}</Text>
+              <Text style={styles.sub}>{t("crm.master.subtitle")}</Text>
             </View>
-            <TextInput style={styles.search} placeholder="Busca global" value={query} onChangeText={setQuery} onSubmitEditing={() => loadMain().catch(() => undefined)} />
+            <TextInput style={styles.search} placeholder={t("crm.filters.globalSearch")} value={query} onChangeText={setQuery} onSubmitEditing={() => loadMain().catch(() => undefined)} />
           </View>
           <View style={styles.wrapRow}>
-            <Chip
-              label={includeSensitiveData ? "Dados sensíveis: visíveis" : "Dados sensíveis: ocultos"}
+              <Chip
+              label={includeSensitiveData ? t("crm.messages.sensitiveVisible") : t("crm.messages.sensitiveHidden")}
               active={includeSensitiveData}
               onPress={handleToggleSensitiveData}
             />
             <Text style={styles.muted}>
               {includeSensitiveData
-                ? "Exibição detalhada habilitada para análise pontual."
-                : "Dados mascarados por padrão (LGPD)."}
+                ? t("crm.messages.sensitiveDetailedEnabled")
+                : t("crm.messages.sensitiveMaskedDefault")}
             </Text>
             {includeSensitiveData ? (
               <Text style={styles.muted}>
-                Sessão sensível ativa por até 5 minutos.
+                {t("crm.messages.sensitiveSessionActive")}
               </Text>
             ) : null}
           </View>
           <View style={styles.wrapRow}>
-            <Metric
-              label="Profissionais"
-              value={String(profs.length)}
+              <Metric
+                label={t("crm.sections.professionals")}
+                value={String(profs.length)}
               onPress={() => {
                 trackEvent("crm_kpi_clicked", {
                   kpi: "professionals",
@@ -1534,9 +1935,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 setProfEmotionalConcentrationFilter("TODOS");
               }}
             />
-            <Metric
-              label="Pacientes"
-              value={String(pacs.length)}
+              <Metric
+                label={t("crm.sections.patients")}
+                value={String(pacs.length)}
               onPress={() => {
                 trackEvent("crm_kpi_clicked", {
                   kpi: "patients",
@@ -1549,7 +1950,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               }}
             />
             <Metric
-              label="Ativos"
+              label={t("crm.labels.active")}
               value={String(pacs.filter((p) => p.status === "ATIVO").length)}
               onPress={() => {
                 trackEvent("crm_kpi_clicked", {
@@ -1564,9 +1965,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 setPacEmotionalFilter("TODOS");
               }}
             />
-            <Metric
-              label="Risco"
-              value={String(pacs.filter((p) => p.status === "RISCO").length)}
+              <Metric
+                label={t("crm.status.risk")}
+                value={String(pacs.filter((p) => p.status === "RISCO").length)}
               onPress={() => {
                 trackEvent("crm_kpi_clicked", {
                   kpi: "patients_risk",
@@ -1578,9 +1979,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 setPacEmotionalFilter("TODOS");
               }}
             />
-            <Metric
-              label="Emocional"
-              value={String(pacs.filter((p) => p.emocionalVulneravel).length)}
+              <Metric
+                label={t("crm.labels.emotional")}
+                value={String(pacs.filter((p) => p.emocionalVulneravel).length)}
               onPress={() => {
                 trackEvent("crm_kpi_clicked", {
                   kpi: "patients_emotional_vulnerability",
@@ -1606,12 +2007,12 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           </View>
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Dashboard operacional clínico</Text>
-              <Text style={styles.muted}>Execução do cuidado ({windowDays} dias)</Text>
+              <Text style={styles.section}>{t("crm.dashboard.operationalClinical")}</Text>
+              <Text style={styles.muted}>{t("crm.messages.careExecutionWindow", { days: windowDays })}</Text>
             </View>
             <View style={styles.wrapRow}>
               <Metric
-                label="Em atenção"
+                label={t("crm.status.attention")}
                 value={String(clinicalSummary?.metricas.pacientesEmAtencao || 0)}
                 onPress={() => {
                   setTab("PACIENTES");
@@ -1619,49 +2020,49 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 }}
               />
               <Metric
-                label="Sem check-in"
+                label={t("crm.alerts.noCheckin")}
                 value={String(clinicalSummary?.alertas.semCheckin || 0)}
               />
               <Metric
-                label={`Sem evolução > ${semEvolucaoDias}d`}
+                label={t("crm.messages.noProgressDays", { days: semEvolucaoDias })}
                 value={String(clinicalSummary?.alertas.semEvolucao || 0)}
               />
               <Metric
-                label="Anamnese pendente"
+                label={t("crm.alerts.pendingAnamnesis")}
                 value={String(clinicalSummary?.alertas.anamnesePendente || 0)}
               />
               <Metric
-                label="Convite não aceito"
+                label={t("crm.alerts.pendingInvite")}
                 value={String(clinicalSummary?.alertas.conviteNaoAceito || 0)}
               />
               <Metric
-                label="Abandono"
+                label={t("crm.metrics.dropout")}
                 value={`${clinicalSummary?.metricas.abandonoRate ?? 0}%`}
               />
               <Metric
-                label="Conclusão de plano"
+                label={t("crm.metrics.planCompletion")}
                 value={`${clinicalSummary?.metricas.conclusaoPlanoRate ?? 0}%`}
               />
             </View>
           </View>
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Filtros globais do dashboard</Text>
-              <Action title="Atualizar" secondary onPress={() => loadMain().catch(() => undefined)} />
+              <Text style={styles.section}>{t("crm.dashboard.globalFilters")}</Text>
+              <Action title={t("crm.actions.refresh")} secondary onPress={() => loadMain().catch(() => undefined)} />
             </View>
             <View style={styles.wrapRow}>
-              <Text style={styles.muted}>Janela clínica:</Text>
-              {[7, 14, 30].map((days) => (
+              <Text style={styles.muted}>{t("crm.filters.clinicalWindow")}:</Text>
+              {[7, 30, 90].map((days) => (
                 <Chip
                   key={`window-${days}`}
-                  label={`${days} dias`}
+                  label={t("crm.messages.daysLabel", { days })}
                   active={windowDays === days}
                   onPress={() => setWindowDays(days)}
                 />
               ))}
             </View>
             <View style={styles.wrapRow}>
-              <Text style={styles.muted}>Sem evolução:</Text>
+              <Text style={styles.muted}>{t("crm.filters.noProgress")}:</Text>
               {[7, 10, 14].map((days) => (
                 <Chip
                   key={`sem-evo-${days}`}
@@ -1675,20 +2076,20 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
 
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Pipeline clínico (cuidado)</Text>
-              <Text style={styles.muted}>Etapas assistenciais</Text>
+              <Text style={styles.section}>{t("crm.dashboard.carePipeline")}</Text>
+              <Text style={styles.muted}>{t("crm.messages.assistanceStages")}</Text>
             </View>
             <View style={styles.wrapRow}>
               <Metric
-                label="Novo paciente"
+                label={t("crm.pipeline.newPatient")}
                 value={String(clinicalSummary?.pipeline.novoPaciente || 0)}
               />
               <Metric
-                label="Aguardando vínculo"
+                label={t("crm.pipeline.waitingLink")}
                 value={String(clinicalSummary?.pipeline.aguardandoVinculo || 0)}
               />
               <Metric
-                label="Anamnese pendente"
+                label={t("crm.alerts.pendingAnamnesis")}
                 value={String(clinicalSummary?.pipeline.anamnesePendente || 0)}
                 onPress={() => {
                   setTab("PACIENTES");
@@ -1696,11 +2097,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 }}
               />
               <Metric
-                label="Em tratamento"
+                label={t("crm.pipeline.treatment")}
                 value={String(clinicalSummary?.pipeline.emTratamento || 0)}
               />
               <Metric
-                label="Alta"
+                label={t("crm.pipeline.discharge")}
                 value={String(clinicalSummary?.pipeline.alta || 0)}
               />
             </View>
@@ -1708,60 +2109,437 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
 
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Métricas clínicas (execução)</Text>
-              <Text style={styles.muted}>Tempo, conclusão e bloqueios</Text>
+              <Text style={styles.section}>{t("crm.dashboard.executionMetrics")}</Text>
+              <Text style={styles.muted}>{t("crm.messages.timeCompletionAndBlocks")}</Text>
             </View>
             <View style={styles.wrapRow}>
               <Metric
-                label="Tempo médio anamnese"
+                label={t("crm.metrics.avgTimeAnamnesis")}
                 value={formatDurationMs(clinicalSummary?.metricas.tempoMedioPorEtapaMs.ANAMNESE || 0)}
               />
               <Metric
-                label="Tempo médio exame físico"
+                label={t("crm.metrics.avgTimePhysicalExam")}
                 value={formatDurationMs(clinicalSummary?.metricas.tempoMedioPorEtapaMs.EXAME_FISICO || 0)}
               />
               <Metric
-                label="Tempo médio evolução"
+                label={t("crm.metrics.avgTimeEvolution")}
                 value={formatDurationMs(clinicalSummary?.metricas.tempoMedioPorEtapaMs.EVOLUCAO || 0)}
               />
               <Metric
-                label="Etapas concluídas"
+                label={t("crm.metrics.completedStages")}
                 value={String(clinicalSummary?.metricas.completedTotal || 0)}
               />
               <Metric
-                label="Etapas bloqueadas"
+                label={t("crm.metrics.blockedStages")}
                 value={String(clinicalSummary?.metricas.blockedTotal || 0)}
               />
             </View>
           </View>
+
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Gráficos clínicos e CRM</Text>
-              <Text style={styles.muted}>Visualização executiva dos dados</Text>
+              <Text style={styles.section}>{t("crm.dashboard.physicalExamStructuredMetrics")}</Text>
+              <View style={styles.wrapRow}>
+                <Action
+                  title={t("crm.actions.exportCsv")}
+                  secondary
+                  onPress={exportPhysicalExamSummaryCsv}
+                />
+                <Action
+                  title={t("crm.actions.copySummary")}
+                  secondary
+                  onPress={() => {
+                    copyPhysicalExamExecutiveSummary().catch(() => undefined);
+                  }}
+                />
+                {[7, 30, 90].map((days) => (
+                  <Chip
+                    key={`exam-window-${days}`}
+                    label={`${days}d`}
+                    active={examWindowDays === days}
+                    onPress={() => setExamWindowDays(days)}
+                  />
+                ))}
+                <Text style={styles.muted}>{t("crm.metrics.examWindow")}</Text>
+              </View>
             </View>
+            <View style={styles.wrapRow}>
+              <Metric
+                label={t("crm.metrics.reportsAnalyzed")}
+                value={String(physicalExamSummary?.laudosAnalisados || 0)}
+              />
+              <Metric
+                label={t("crm.metrics.withStructuredExam")}
+                value={String(physicalExamSummary?.laudosComExameEstruturado || 0)}
+              />
+              <Metric
+                label={t("crm.metrics.testsEvaluated")}
+                value={String(physicalExamSummary?.totalAvaliados || 0)}
+              />
+              <Metric
+                label={t("crm.metrics.positiveTests")}
+                value={String(physicalExamSummary?.totalPositivos || 0)}
+              />
+              <Metric
+                label={t("crm.metrics.positivityRate")}
+                value={`${Math.round(physicalExamSummary?.taxaPositividadeGeral || 0)}%`}
+              />
+              <Metric
+                label={t("crm.metrics.structuredCoverage")}
+                value={`${physicalExamCoverage.pct}%`}
+              />
+            </View>
+            <View style={styles.coverageRow}>
+              <Text style={styles.muted}>
+                {t("crm.metrics.structuredCoverageReports")}
+              </Text>
+              <View
+                style={[
+                  styles.coverageBadge,
+                  physicalExamCoverage.status === "ALTA"
+                    ? styles.coverageHigh
+                    : physicalExamCoverage.status === "MEDIA"
+                      ? styles.coverageMedium
+                      : styles.coverageLow,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.coverageBadgeText,
+                    physicalExamCoverage.status === "ALTA"
+                      ? styles.coverageHighText
+                      : physicalExamCoverage.status === "MEDIA"
+                        ? styles.coverageMediumText
+                        : styles.coverageLowText,
+                  ]}
+                >
+                  {physicalExamCoverage.status === "ALTA"
+                    ? "Alta"
+                    : physicalExamCoverage.status === "MEDIA"
+                      ? "Média"
+                      : "Baixa"}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.coverageActionRow}>
+              <Text style={styles.muted}>
+                {physicalExamCoverage.status === "ALTA"
+                  ? "Cobertura adequada. Mantenha o padrão de registro estruturado."
+                  : physicalExamCoverage.status === "MEDIA"
+                    ? "Cobertura intermediária. Priorize registros estruturados em novos laudos."
+                    : "Cobertura baixa. Ative rotina de exame físico estruturado para aumentar confiabilidade."}
+              </Text>
+              {physicalExamCoverage.status !== "ALTA" ? (
+                <View style={[styles.wrapRow, { marginTop: 8 }]}>
+                  <Action
+                    title={t("crm.actions.openPatientsInAttention")}
+                    secondary
+                    onPress={() => {
+                      setTab("PACIENTES");
+                      setPacStatusFilter("RISCO");
+                      setPacEmotionalFilter("TODOS");
+                      trackEvent("crm_kpi_clicked", {
+                        kpi: "physical_exam_coverage_action_clicked",
+                        coverageStatus: physicalExamCoverage.status,
+                        coveragePct: physicalExamCoverage.pct,
+                      }).catch(() => undefined);
+                    }}
+                  />
+                </View>
+              ) : null}
+            </View>
+            {!hasPhysicalExamData ? (
+              <View style={styles.emptyPhysicalExamCallout}>
+                <Text style={styles.muted}>
+                  Ainda não há exame físico estruturado nessa janela. Amplie para 30/90 dias ou avance pacientes com anamnese para exame físico.
+                </Text>
+                <View style={[styles.wrapRow, { marginTop: 8 }]}>
+                  <Action
+                    title={t("crm.actions.openPatientQueue")}
+                    secondary
+                    onPress={() => {
+                      setTab("PACIENTES");
+                      setPacStatusFilter("RISCO");
+                      setPacEmotionalFilter("TODOS");
+                    }}
+                  />
+                </View>
+              </View>
+            ) : null}
+            <View style={styles.insightsRow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.insightCard,
+                  pressed ? styles.insightCardPressed : null,
+                ]}
+                onPress={() => {
+                  setTab("PACIENTES");
+                  setPacStatusFilter("RISCO");
+                  setPacEmotionalFilter("TODOS");
+                  trackEvent("crm_kpi_clicked", {
+                    kpi: "physical_exam_top_region",
+                    targetTab: "PACIENTES",
+                    pacStatusFilter: "RISCO",
+                    mode: examChartMode,
+                    region: physicalExamTopInsights.topRegionLabel,
+                  }).catch(() => undefined);
+                }}
+              >
+                <View style={styles.insightHeader}>
+                  <Ionicons
+                    name="body-outline"
+                    size={14}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.insightLabel}>
+                    {examChartMode === "TAXA"
+                      ? t("crm.dashboard.topRegionRate")
+                      : t("crm.dashboard.topRegionPositives")}
+                  </Text>
+                </View>
+                <Text style={styles.insightTitle}>
+                  {physicalExamTopInsights.topRegionLabel}
+                </Text>
+                <Text style={styles.insightValue}>
+                  {physicalExamTopInsights.topRegionValue}
+                </Text>
+                {physicalExamTopInsights.topRegionDetail ? (
+                  <View style={styles.insightMetaRow}>
+                    <Text style={styles.insightSubValue}>
+                      Base: {physicalExamTopInsights.topRegionDetail}
+                    </Text>
+                    <SampleConfidenceBadge
+                      sample={physicalExamTopInsights.topRegionSample}
+                    />
+                  </View>
+                ) : null}
+                <View style={styles.insightHintRow}>
+                  <Text style={styles.insightHint}>
+                    {t("crm.dashboard.clickToSeePatientsInAttention")}
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={12}
+                    color={COLORS.textSecondary}
+                  />
+                </View>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.insightCard,
+                  pressed ? styles.insightCardPressed : null,
+                ]}
+                onPress={() => {
+                  setTab("PACIENTES");
+                  setPacStatusFilter("RISCO");
+                  setPacEmotionalFilter("TODOS");
+                  trackEvent("crm_kpi_clicked", {
+                    kpi: "physical_exam_top_test",
+                    targetTab: "PACIENTES",
+                    pacStatusFilter: "RISCO",
+                    mode: examChartMode,
+                    test: physicalExamTopInsights.topTestLabel,
+                  }).catch(() => undefined);
+                }}
+              >
+                <View style={styles.insightHeader}>
+                  <Ionicons
+                    name="pulse-outline"
+                    size={14}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.insightLabel}>
+                    {examChartMode === "TAXA"
+                      ? t("crm.dashboard.topTestRate")
+                      : t("crm.dashboard.topTestPositives")}
+                  </Text>
+                </View>
+                <Text style={styles.insightTitle}>
+                  {physicalExamTopInsights.topTestLabel}
+                </Text>
+                <Text style={styles.insightValue}>
+                  {physicalExamTopInsights.topTestValue}
+                </Text>
+                {physicalExamTopInsights.topTestDetail ? (
+                  <View style={styles.insightMetaRow}>
+                    <Text style={styles.insightSubValue}>
+                      Base: {physicalExamTopInsights.topTestDetail}
+                    </Text>
+                    <SampleConfidenceBadge
+                      sample={physicalExamTopInsights.topTestSample}
+                    />
+                  </View>
+                ) : null}
+                <View style={styles.insightHintRow}>
+                  <Text style={styles.insightHint}>
+                    {t("crm.dashboard.clickToSeePatientsInAttention")}
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={12}
+                    color={COLORS.textSecondary}
+                  />
+                </View>
+              </Pressable>
+            </View>
+          </View>
+          <View style={styles.healthKpiBlock}>
+            <View style={styles.topRow}>
+              <Text style={styles.section}>{t("crm.dashboard.clinicalAndCrmCharts")}</Text>
+              <View style={styles.wrapRow}>
+                <Chip
+                  label={t("crm.dashboard.sortByPositives")}
+                  active={examChartMode === "POSITIVOS"}
+                  onPress={() => setExamChartMode("POSITIVOS")}
+                />
+                <Chip
+                  label={t("crm.dashboard.sortByRate")}
+                  active={examChartMode === "TAXA"}
+                  onPress={() => setExamChartMode("TAXA")}
+                />
+                {examChartMode === "TAXA"
+                  ? [1, 3, 5].map((sample) => (
+                      <Chip
+                        key={`exam-min-sample-${sample}`}
+                        label={`${t("crm.dashboard.baseMin")} ${sample}`}
+                        active={examMinSample === sample}
+                        onPress={() => setExamMinSample(sample)}
+                      />
+                    ))
+                  : null}
+                {examChartMode === "TAXA"
+                  ? ([
+                      { key: "TODOS", label: t("crm.dashboard.confidenceAll") },
+                      { key: "ALTA", label: t("crm.dashboard.confidenceHigh") },
+                      { key: "MEDIA", label: t("crm.dashboard.confidenceMedium") },
+                      { key: "BAIXA", label: t("crm.dashboard.confidenceLow") },
+                    ] as const).map((option) => (
+                      <Chip
+                        key={`exam-confidence-${option.key}`}
+                        label={option.label}
+                        active={examConfidenceFilter === option.key}
+                        onPress={() => setExamConfidenceFilter(option.key)}
+                      />
+                    ))
+                  : null}
+              </View>
+            </View>
+            {examChartMode === "TAXA" ? (
+              <View style={styles.sampleInfoBox}>
+                <Text style={styles.muted}>
+                  Ranking por taxa considera apenas itens com pelo menos {examMinSample} avaliados.
+                </Text>
+                <Text style={styles.sampleInfoText}>
+                  {t("crm.messages.confidenceFilter")}: {examConfidenceFilter === "TODOS" ? t("crm.messages.allSamples") : examConfidenceFilter.toLowerCase()}
+                </Text>
+                <Text style={styles.sampleInfoText}>
+                  Regiões consideradas: {physicalExamFilterStats.consideredRegions}/{physicalExamFilterStats.totalRegions}
+                  {" • "}
+                  Testes considerados: {physicalExamFilterStats.consideredTests}/{physicalExamFilterStats.totalTests}
+                </Text>
+                {(physicalExamFilterStats.excludedRegions > 0 ||
+                  physicalExamFilterStats.excludedTests > 0) ? (
+                  <Text style={styles.sampleInfoMuted}>
+                    Excluídos pela base mínima: {physicalExamFilterStats.excludedRegions} região(ões) e {physicalExamFilterStats.excludedTests} teste(s).
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             <View style={styles.split}>
               <View style={styles.chartPane}>
-                <Text style={styles.chartTitle}>Pipeline clínico</Text>
+                <Text style={styles.chartTitle}>{t("crm.dashboard.clinicalPipelineChart")}</Text>
                 <BarChart items={clinicalPipelineChartData} />
               </View>
               <View style={styles.chartPane}>
-                <Text style={styles.chartTitle}>Alertas clínicos</Text>
+                <Text style={styles.chartTitle}>{t("crm.dashboard.clinicalAlertsChart")}</Text>
                 <BarChart items={clinicalAlertsChartData} />
               </View>
               <View style={styles.chartPane}>
-                <Text style={styles.chartTitle}>Tempo médio por etapa (min)</Text>
+                <Text style={styles.chartTitle}>{t("crm.dashboard.avgTimeByStageChart")}</Text>
                 <BarChart items={clinicalDurationChartData} />
               </View>
               <View style={styles.chartPane}>
                 <Text style={styles.chartTitle}>Funil comercial (leads)</Text>
                 <BarChart items={funnelStageChartData} />
               </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>
+                  Exame físico por região ({examChartMode === "TAXA" ? "taxa %" : "positivos"})
+                </Text>
+                <BarChart
+                  items={physicalExamRegionChartData}
+                  formatValue={examChartMode === "TAXA" ? (value) => `${value}%` : undefined}
+                  maxValue={examChartMode === "TAXA" ? 100 : undefined}
+                />
+              </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>
+                  Top testes ({examChartMode === "TAXA" ? "taxa %" : "positivos"})
+                </Text>
+                <BarChart
+                  items={physicalExamTopTestsChartData}
+                  formatValue={examChartMode === "TAXA" ? (value) => `${value}%` : undefined}
+                  maxValue={examChartMode === "TAXA" ? 100 : undefined}
+                />
+              </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>Perfis de scoring</Text>
+                <BarChart items={physicalExamProfilesChartData} />
+              </View>
+            </View>
+            <View style={[styles.split, { marginTop: SPACING.sm }]}>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>
+                  Top 5 regiões ({examChartMode === "TAXA" ? "taxa %" : "positivos"})
+                </Text>
+                {physicalExamTopRegionsList.length === 0 ? (
+                  <Text style={styles.muted}>{t("crm.common.noDataDot")}</Text>
+                ) : (
+                  physicalExamTopRegionsList.map((item) => (
+                    <View key={`region-top-${item.label}`} style={styles.topListRow}>
+                      <View style={styles.topListLabelWrap}>
+                        <Text style={styles.topListLabel}>{item.label}</Text>
+                        {item.detail ? (
+                          <View style={styles.topListDetailRow}>
+                            <Text style={styles.topListDetail}>Base: {item.detail}</Text>
+                            <SampleConfidenceBadge sample={item.sample} />
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.topListValue}>{item.value}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+              <View style={styles.chartPane}>
+                <Text style={styles.chartTitle}>
+                  Top 5 testes ({examChartMode === "TAXA" ? "taxa %" : "positivos"})
+                </Text>
+                {physicalExamTopTestsList.length === 0 ? (
+                  <Text style={styles.muted}>{t("crm.common.noDataDot")}</Text>
+                ) : (
+                  physicalExamTopTestsList.map((item) => (
+                    <View key={`test-top-${item.label}`} style={styles.topListRow}>
+                      <View style={styles.topListLabelWrap}>
+                        <Text style={styles.topListLabel}>{item.label}</Text>
+                        {item.detail ? (
+                          <View style={styles.topListDetailRow}>
+                            <Text style={styles.topListDetail}>Base: {item.detail}</Text>
+                            <SampleConfidenceBadge sample={item.sample} />
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.topListValue}>{item.value}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
             </View>
           </View>
 
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Auditoria administrativa</Text>
+              <Text style={styles.section}>{t("crm.dashboard.adminAudit")}</Text>
               <Text style={styles.muted}>Últimos acessos do admin</Text>
             </View>
             {crmAuditLogs.length === 0 ? (
@@ -1796,11 +2574,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
               <Text style={styles.section}>{t("crm.labels.accountHealth")}</Text>
-              <Text style={styles.muted}>Contas por score</Text>
+              <Text style={styles.muted}>{t("crm.metrics.accountsByScore")}</Text>
             </View>
             <View style={styles.wrapRow}>
               <Metric
-                label="Contas em risco"
+                label={t("crm.metrics.accountsAtRisk")}
                 value={String(
                   profs.filter((p) => profAccountScores.get(p.id)?.status === "RISK").length,
                 )}
@@ -1815,7 +2593,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 }}
               />
               <Metric
-                label="Contas em atenção"
+                label={t("crm.metrics.accountsInAttention")}
                 value={String(
                   profs.filter(
                     (p) => profAccountScores.get(p.id)?.status === "ATTENTION",
@@ -1832,7 +2610,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 }}
               />
               <Metric
-                label="Contas saudáveis"
+                label={t("crm.metrics.accountsHealthy")}
                 value={String(
                   profs.filter((p) => profAccountScores.get(p.id)?.status === "HEALTHY").length,
                 )}
@@ -1877,32 +2655,32 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             <View style={styles.wrapRow}>
               {tab === "PROFISSIONAIS" ? (
                 <>
-                  <Chip label="Todos profissionais" active={profActiveFilter === "TODOS"} onPress={() => setProfActiveFilter("TODOS")} />
-                  <Chip label="Somente ativos" active={profActiveFilter === "ATIVOS"} onPress={() => setProfActiveFilter("ATIVOS")} />
-                  <Chip label="Conta: todas" active={profAccountStatusFilter === "TODOS"} onPress={() => setProfAccountStatusFilter("TODOS")} />
-                  <Chip label="Saudável" active={profAccountStatusFilter === "HEALTHY"} onPress={() => setProfAccountStatusFilter("HEALTHY")} />
-                  <Chip label="Atenção" active={profAccountStatusFilter === "ATTENTION"} onPress={() => setProfAccountStatusFilter("ATTENTION")} />
-                  <Chip label="Risco" active={profAccountStatusFilter === "RISK"} onPress={() => setProfAccountStatusFilter("RISK")} />
+                  <Chip label={t("crm.filters.allProfessionals")} active={profActiveFilter === "TODOS"} onPress={() => setProfActiveFilter("TODOS")} />
+                  <Chip label={t("crm.filters.onlyActive")} active={profActiveFilter === "ATIVOS"} onPress={() => setProfActiveFilter("ATIVOS")} />
+                  <Chip label={t("crm.filters.allAccounts")} active={profAccountStatusFilter === "TODOS"} onPress={() => setProfAccountStatusFilter("TODOS")} />
+                  <Chip label={t("crm.status.healthy")} active={profAccountStatusFilter === "HEALTHY"} onPress={() => setProfAccountStatusFilter("HEALTHY")} />
+                  <Chip label={t("crm.status.attention")} active={profAccountStatusFilter === "ATTENTION"} onPress={() => setProfAccountStatusFilter("ATTENTION")} />
+                  <Chip label={t("crm.status.risk")} active={profAccountStatusFilter === "RISK"} onPress={() => setProfAccountStatusFilter("RISK")} />
                   <Chip label={t("crm.filters.profEmotionalAll")} active={profEmotionalConcentrationFilter === "TODOS"} onPress={() => setProfEmotionalConcentrationFilter("TODOS")} />
                   <Chip label={t("crm.filters.profEmotionalHighConcentration")} active={profEmotionalConcentrationFilter === "ALTA"} onPress={() => setProfEmotionalConcentrationFilter("ALTA")} />
-                  <TextInput style={styles.filterInput} placeholder="Especialidade" value={profEspecialidadeFilter} onChangeText={setProfEspecialidadeFilter} />
+                  <TextInput style={styles.filterInput} placeholder={t("crm.placeholders.specialty")} value={profEspecialidadeFilter} onChangeText={setProfEspecialidadeFilter} />
                 </>
               ) : null}
               {tab === "PACIENTES" ? (
                 <>
-                  <Chip label="Status: todos" active={pacStatusFilter === "TODOS"} onPress={() => setPacStatusFilter("TODOS")} />
-                  <Chip label="Ativo" active={pacStatusFilter === "ATIVO"} onPress={() => setPacStatusFilter("ATIVO")} />
-                  <Chip label="Risco" active={pacStatusFilter === "RISCO"} onPress={() => setPacStatusFilter("RISCO")} />
+                  <Chip label={t("crm.filters.statusAll")} active={pacStatusFilter === "TODOS"} onPress={() => setPacStatusFilter("TODOS")} />
+                  <Chip label={t("crm.labels.active")} active={pacStatusFilter === "ATIVO"} onPress={() => setPacStatusFilter("ATIVO")} />
+                  <Chip label={t("crm.status.risk")} active={pacStatusFilter === "RISCO"} onPress={() => setPacStatusFilter("RISCO")} />
                   <Chip label={t("crm.filters.pacEmotionalAll")} active={pacEmotionalFilter === "TODOS"} onPress={() => setPacEmotionalFilter("TODOS")} />
                   <Chip label={t("crm.filters.pacEmotionalWithVulnerability")} active={pacEmotionalFilter === "EMOCIONAL"} onPress={() => setPacEmotionalFilter("EMOCIONAL")} />
-                  <Chip label="Todos pacientes" active={pacLinkFilter === "TODOS"} onPress={() => setPacLinkFilter("TODOS")} />
-                  <Chip label="Vinculados" active={pacLinkFilter === "VINCULADOS"} onPress={() => setPacLinkFilter("VINCULADOS")} />
-                  <Chip label="Sem usuário" active={pacLinkFilter === "SEM_USUARIO"} onPress={() => setPacLinkFilter("SEM_USUARIO")} />
-                  <TextInput style={styles.filterInput} placeholder="Cidade" value={pacCidadeFilter} onChangeText={setPacCidadeFilter} />
-                  <TextInput style={[styles.filterInput, { width: 70 }]} placeholder="UF" maxLength={2} autoCapitalize="characters" value={pacUfFilter} onChangeText={setPacUfFilter} />
+                  <Chip label={t("crm.filters.allPatients")} active={pacLinkFilter === "TODOS"} onPress={() => setPacLinkFilter("TODOS")} />
+                  <Chip label={t("crm.filters.linked")} active={pacLinkFilter === "VINCULADOS"} onPress={() => setPacLinkFilter("VINCULADOS")} />
+                  <Chip label={t("crm.filters.withoutUser")} active={pacLinkFilter === "SEM_USUARIO"} onPress={() => setPacLinkFilter("SEM_USUARIO")} />
+                  <TextInput style={styles.filterInput} placeholder={t("crm.placeholders.city")} value={pacCidadeFilter} onChangeText={setPacCidadeFilter} />
+                  <TextInput style={[styles.filterInput, { width: 70 }]} placeholder={t("crm.placeholders.uf")} maxLength={2} autoCapitalize="characters" value={pacUfFilter} onChangeText={setPacUfFilter} />
                 </>
               ) : null}
-              <Chip label="Todos" active={stageFilter === "TODOS"} onPress={() => setStageFilter("TODOS")} />
+              <Chip label={t("crm.filters.all")} active={stageFilter === "TODOS"} onPress={() => setStageFilter("TODOS")} />
               {STAGES.map((s) => <Chip key={s} label={stageLabel[s]} active={stageFilter === s} onPress={() => setStageFilter(s)} />)}
             </View>
           </View>
@@ -2005,8 +2783,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             <View style={styles.pane}>
               <Text style={styles.section}>Profissionais</Text>
               <View style={styles.wrapRow}>
-                <Action title="Exportar CSV" secondary onPress={() => exportCurrentTableCsv("PROFISSIONAIS")} />
-                <Action title="Exportar tudo (filtro)" secondary onPress={() => exportAllFilteredCsv("PROFISSIONAIS")} />
+                <Action title={t("crm.actions.exportCsv")} secondary onPress={() => exportCurrentTableCsv("PROFISSIONAIS")} />
+                <Action title={t("crm.actions.exportAllFiltered")} secondary onPress={() => exportAllFilteredCsv("PROFISSIONAIS")} />
               </View>
               <HeadSortable
                 cols={[
@@ -2014,7 +2792,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   { key: "score", label: "Score" },
                   { key: "vulnEmocional", label: t("crm.labels.emotionalVulnerabilityShort") },
                   { key: "pacientes", label: "Pacientes" },
-                  { key: "ativos", label: "Ativos" },
+                  { key: "ativos", label: t("crm.labels.active") },
                   { key: "ultimoAcesso", label: "Último acesso" },
                 ]}
                 sort={profSort}
@@ -2039,18 +2817,31 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   ]}
                 />
               ))}
-              <Pagination page={profPage} totalPages={profTotalPages} onChange={setProfPage} />
+              <Pagination
+                page={profPage}
+                totalPages={profTotalPages}
+                onChange={setProfPage}
+                previousLabel={t("crm.pagination.previous")}
+                nextLabel={t("crm.pagination.next")}
+                pageOfLabel={t("crm.pagination.pageOf", {
+                  page: String(profPage),
+                  total: String(profTotalPages),
+                })}
+              />
             </View>
             <View style={[styles.pane, styles.detailPane]}>
               <Text style={styles.section}>{t("crm.sections.professionalPanel")}</Text>
               {selectedProf ? (
                 <>
-                  <Text style={styles.big}>{selectedProf.nome}</Text>
-                  <Text style={styles.sub}>{selectedProf.cidade}</Text>
-                  <View style={styles.wrapRow}>
+                  <View style={styles.entityHeader}>
+                    <View style={styles.entityHeaderText}>
+                      <Text style={styles.entityName}>{selectedProf.nome}</Text>
+                      <Text style={styles.entityMeta}>{selectedProf.cidade || t("crm.messages.cityNotProvided")}</Text>
+                    </View>
                     <Action
-                      title={editProfOpen ? "Fechar edição" : "Editar dados"}
+                      title={editProfOpen ? t("crm.actions.closeEdit") : t("crm.actions.editProfessional")}
                       secondary
+                      style={styles.entityHeaderAction}
                       onPress={() => {
                         if (!editProfOpen) resetProfEditForm();
                         setEditProfOpen((prev) => !prev);
@@ -2059,16 +2850,16 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   </View>
                   {editProfOpen ? (
                     <View style={styles.line}>
-                      <Text style={styles.lineTitle}>Editar dados do profissional</Text>
+                      <Text style={styles.panelFormTitle}>{t("crm.forms.editProfessionalData")}</Text>
                       <TextInput
                         style={styles.input}
-                        placeholder="Nome"
+                        placeholder={t("crm.placeholders.name")}
                         value={profEditForm.nome}
                         onChangeText={(v) => setProfEditForm((p) => ({ ...p, nome: v }))}
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="E-mail"
+                        placeholder={t("crm.placeholders.email")}
                         value={profEditForm.email}
                         onChangeText={(v) => setProfEditForm((p) => ({ ...p, email: v }))}
                         autoCapitalize="none"
@@ -2076,36 +2867,36 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="Especialidade"
+                        placeholder={t("crm.placeholders.specialty")}
                         value={profEditForm.especialidade}
                         onChangeText={(v) => setProfEditForm((p) => ({ ...p, especialidade: v }))}
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="Registro profissional"
+                        placeholder={t("crm.placeholders.professionalRegistry")}
                         value={profEditForm.registroProf}
                         onChangeText={(v) => setProfEditForm((p) => ({ ...p, registroProf: v }))}
                       />
                       <View style={styles.wrapRow}>
                         <Chip
-                          label="Ativo"
+                          label={t("crm.labels.active")}
                           active={profEditForm.ativo}
                           onPress={() => setProfEditForm((p) => ({ ...p, ativo: true }))}
                         />
                         <Chip
-                          label="Inativo"
+                          label={t("crm.labels.inactive")}
                           active={!profEditForm.ativo}
                           onPress={() => setProfEditForm((p) => ({ ...p, ativo: false }))}
                         />
                       </View>
                       <View style={[styles.wrapRow, styles.panelActionsRow]}>
                         <Action
-                          title={savingAdminEntity ? "Salvando..." : "Salvar alterações"}
+                          title={savingAdminEntity ? t("crm.actions.saving") : t("crm.actions.saveChanges")}
                           onPress={saveAdminProfessional}
                           style={styles.panelActionBtn}
                         />
                         <Action
-                          title="Cancelar"
+                          title={t("crm.actions.cancel")}
                           secondary
                           style={styles.panelActionBtn}
                           onPress={() => {
@@ -2116,7 +2907,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       </View>
                     </View>
                   ) : null}
-                  <View style={styles.wrapRow}>
+                  <View style={styles.panelTabsRow}>
                     <MiniTab label={t("crm.labels.summary")} active={profDetailTab === "RESUMO"} onPress={() => setProfDetailTab("RESUMO")} />
                     <MiniTab label={t("crm.sections.patients")} active={profDetailTab === "PACIENTES"} onPress={() => setProfDetailTab("PACIENTES")} />
                   </View>
@@ -2179,11 +2970,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                           />
                         ) : null}
                       </View>
-                      <Text style={styles.lineTitle}>Prioridade agora</Text>
+                      <Text style={styles.lineTitle}>{t("crm.labels.priorityNow")}</Text>
                       <Text style={styles.lineSub}>{selectedProfAccountScore.nextAction}</Text>
                       {selectedProfEmotionalConcentration && selectedProfEmotionalConcentration.total > 0 ? (
                         <Text style={styles.lineSub}>
-                          Vulnerabilidade emocional: {selectedProfEmotionalConcentration.vulneraveis}/{selectedProfEmotionalConcentration.total} ({selectedProfEmotionalConcentration.percentual}%).
+                          {t("crm.labels.emotionalVulnerability")}: {selectedProfEmotionalConcentration.vulneraveis}/{selectedProfEmotionalConcentration.total} ({selectedProfEmotionalConcentration.percentual}%).
                         </Text>
                       ) : null}
                     </View>
@@ -2220,8 +3011,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             <View style={styles.pane}>
               <Text style={styles.section}>{t("crm.sections.patients")}</Text>
               <View style={styles.wrapRow}>
-                <Action title="Exportar CSV" secondary onPress={() => exportCurrentTableCsv("PACIENTES")} />
-                <Action title="Exportar tudo (filtro)" secondary onPress={() => exportAllFilteredCsv("PACIENTES")} />
+                <Action title={t("crm.actions.exportCsv")} secondary onPress={() => exportCurrentTableCsv("PACIENTES")} />
+                <Action title={t("crm.actions.exportAllFiltered")} secondary onPress={() => exportAllFilteredCsv("PACIENTES")} />
               </View>
               <HeadSortable
                 cols={[
@@ -2246,18 +3037,31 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   ]}
                 />
               ))}
-              <Pagination page={pacPage} totalPages={pacTotalPages} onChange={setPacPage} />
+              <Pagination
+                page={pacPage}
+                totalPages={pacTotalPages}
+                onChange={setPacPage}
+                previousLabel={t("crm.pagination.previous")}
+                nextLabel={t("crm.pagination.next")}
+                pageOfLabel={t("crm.pagination.pageOf", {
+                  page: String(pacPage),
+                  total: String(pacTotalPages),
+                })}
+              />
             </View>
             <View style={[styles.pane, styles.detailPane]}>
               <Text style={styles.section}>{t("crm.sections.patientPanel")}</Text>
               {selectedPac ? (
                 <>
-                  <Text style={styles.big}>{selectedPac.nome}</Text>
-                  <Text style={styles.sub}>{t("crm.labels.professional")}: {selectedPac.profissionalNome}</Text>
-                  <View style={styles.wrapRow}>
+                  <View style={styles.entityHeader}>
+                    <View style={styles.entityHeaderText}>
+                      <Text style={styles.entityName}>{selectedPac.nome}</Text>
+                      <Text style={styles.entityMeta}>{t("crm.labels.professional")}: {selectedPac.profissionalNome}</Text>
+                    </View>
                     <Action
-                      title={editPacOpen ? "Fechar edição" : "Editar dados"}
+                      title={editPacOpen ? t("crm.actions.closeEdit") : t("crm.actions.editPatient")}
                       secondary
+                      style={styles.entityHeaderAction}
                       onPress={() => {
                         if (!editPacOpen) resetPacEditForm();
                         setEditPacOpen((prev) => !prev);
@@ -2266,23 +3070,23 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   </View>
                   {editPacOpen ? (
                     <View style={styles.line}>
-                      <Text style={styles.lineTitle}>Editar dados do paciente</Text>
+                      <Text style={styles.panelFormTitle}>{t("crm.forms.editPatientData")}</Text>
                       <TextInput
                         style={styles.input}
-                        placeholder="Nome completo"
+                        placeholder={t("crm.placeholders.fullName")}
                         value={pacEditForm.nomeCompleto}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, nomeCompleto: v }))}
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="CPF (11 dígitos)"
+                        placeholder={t("crm.placeholders.cpf11")}
                         value={pacEditForm.cpf}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, cpf: v.replace(/\D/g, "").slice(0, 11) }))}
                         keyboardType="numeric"
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="Data de nascimento (YYYY-MM-DD)"
+                        placeholder={t("crm.placeholders.birthDateIso")}
                         value={pacEditForm.dataNascimento}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, dataNascimento: v }))}
                       />
@@ -2298,27 +3102,27 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       </View>
                       <TextInput
                         style={styles.input}
-                        placeholder="Profissão"
+                        placeholder={t("crm.placeholders.profession")}
                         value={pacEditForm.profissao}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, profissao: v }))}
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="WhatsApp"
+                        placeholder={t("crm.placeholders.whatsapp")}
                         value={pacEditForm.contatoWhatsapp}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, contatoWhatsapp: v.replace(/\D/g, "").slice(0, 11) }))}
                         keyboardType="phone-pad"
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="Telefone"
+                        placeholder={t("crm.placeholders.phone")}
                         value={pacEditForm.contatoTelefone}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, contatoTelefone: v.replace(/\D/g, "").slice(0, 11) }))}
                         keyboardType="phone-pad"
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="E-mail"
+                        placeholder={t("crm.placeholders.email")}
                         value={pacEditForm.contatoEmail}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, contatoEmail: v }))}
                         autoCapitalize="none"
@@ -2326,13 +3130,13 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="Cidade"
+                        placeholder={t("crm.placeholders.city")}
                         value={pacEditForm.enderecoCidade}
                         onChangeText={(v) => setPacEditForm((p) => ({ ...p, enderecoCidade: v }))}
                       />
                       <TextInput
                         style={styles.input}
-                        placeholder="UF"
+                        placeholder={t("crm.placeholders.uf")}
                         value={pacEditForm.enderecoUf}
                         onChangeText={(v) =>
                           setPacEditForm((p) => ({ ...p, enderecoUf: v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2) }))
@@ -2340,24 +3144,24 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       />
                       <View style={styles.wrapRow}>
                         <Chip
-                          label="Ativo"
+                          label={t("crm.labels.active")}
                           active={pacEditForm.ativo}
                           onPress={() => setPacEditForm((p) => ({ ...p, ativo: true }))}
                         />
                         <Chip
-                          label="Inativo"
+                          label={t("crm.labels.inactive")}
                           active={!pacEditForm.ativo}
                           onPress={() => setPacEditForm((p) => ({ ...p, ativo: false }))}
                         />
                       </View>
                       <View style={[styles.wrapRow, styles.panelActionsRow]}>
                         <Action
-                          title={savingAdminEntity ? "Salvando..." : "Salvar alterações"}
+                          title={savingAdminEntity ? t("crm.actions.saving") : t("crm.actions.saveChanges")}
                           onPress={saveAdminPatient}
                           style={styles.panelActionBtn}
                         />
                         <Action
-                          title="Cancelar"
+                          title={t("crm.actions.cancel")}
                           secondary
                           style={styles.panelActionBtn}
                           onPress={() => {
@@ -2368,12 +3172,12 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       </View>
                     </View>
                   ) : null}
-                  <View style={styles.wrapRow}>
+                  <View style={styles.panelTabsRow}>
                     <MiniTab label={t("crm.labels.summary")} active={pacDetailTab === "RESUMO"} onPress={() => setPacDetailTab("RESUMO")} />
                     <MiniTab label={t("crm.labels.contact")} active={pacDetailTab === "CONTATO"} onPress={() => setPacDetailTab("CONTATO")} />
                     <MiniTab label={t("crm.labels.link")} active={pacDetailTab === "VINCULO"} onPress={() => setPacDetailTab("VINCULO")} />
                   </View>
-                  <View style={styles.wrapRow}>
+                  <View style={styles.panelMetricsRow}>
                     <MetricMini label={t("crm.labels.status")} value={selectedPac.status} />
                     <MetricMini label={t("crm.labels.adherence")} value={`${selectedPac.adesao}%`} />
                     <MetricMini label={t("crm.labels.channel")} value={selectedPac.lead.canal} />
@@ -2382,7 +3186,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   </View>
                   {selectedPac.emocionalVulneravel && selectedPac.emocionalResumo ? (
                     <View style={styles.line}>
-                      <Text style={styles.lineTitle}>Vulnerabilidade emocional</Text>
+                      <Text style={styles.lineTitle}>{t("crm.labels.emotionalVulnerability")}</Text>
                       <Text style={styles.lineSub}>
                         {[
                           typeof selectedPac.emocionalResumo.estresse === "number" ? `Estresse ${selectedPac.emocionalResumo.estresse}/10` : null,
@@ -2397,8 +3201,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                     </View>
                   ) : null}
                   {pacDetailTab === "RESUMO" ? (
-                    <View style={styles.wrapRow}>
-                      <Action title="Abrir no funil" onPress={() => { setSelectedLeadId(selectedPac.lead.id); setTab("LEADS"); }} />
+                    <View style={styles.panelPrimaryActions}>
+                      <Action title={t("crm.actions.openInFunnel")} onPress={() => { setSelectedLeadId(selectedPac.lead.id); setTab("LEADS"); }} />
                       <Action title={t("crm.actions.registerInteraction")} secondary onPress={() => { setSelectedLeadId(selectedPac.lead.id); setTab("INTERACOES"); }} />
                     </View>
                   ) : null}
@@ -2426,8 +3230,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               <View style={styles.topRow}>
                 <Text style={styles.section}>{t("crm.sections.leadFunnel")}</Text>
                 <View style={styles.wrapRow}>
-                  <Action title="Exportar CSV" secondary onPress={() => exportLeadsCsv(false)} />
-                  <Action title="Exportar todos os leads" secondary onPress={() => exportLeadsCsv(true)} />
+                  <Action title={t("crm.actions.exportCsv")} secondary onPress={() => exportLeadsCsv(false)} />
+                  <Action title={t("crm.actions.exportAllLeads")} secondary onPress={() => exportLeadsCsv(true)} />
                 </View>
               </View>
               <View style={styles.kanbanWrap}>
@@ -2454,8 +3258,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             <View style={styles.split}>
               <View style={styles.pane}>
                 <Text style={styles.section}>{leadForm.id ? t("crm.forms.editLeadTitle") : t("crm.forms.createLeadTitle")}</Text>
-                <TextInput style={styles.input} placeholder="Nome" value={leadForm.nome} onChangeText={(v) => setLeadForm((p) => ({ ...p, nome: v }))} />
-                <TextInput style={styles.input} placeholder="Empresa" value={leadForm.empresa} onChangeText={(v) => setLeadForm((p) => ({ ...p, empresa: v }))} />
+                <TextInput style={styles.input} placeholder={t("crm.placeholders.name")} value={leadForm.nome} onChangeText={(v) => setLeadForm((p) => ({ ...p, nome: v }))} />
+                <TextInput style={styles.input} placeholder={t("crm.placeholders.company")} value={leadForm.empresa} onChangeText={(v) => setLeadForm((p) => ({ ...p, empresa: v }))} />
                 <View style={styles.wrapRow}>{CHANNELS.map((c) => <Chip key={c} label={c} active={leadForm.canal === c} onPress={() => setLeadForm((p) => ({ ...p, canal: c }))} />)}</View>
                 <View style={styles.wrapRow}>{STAGES.map((s) => <Chip key={s} label={stageLabel[s]} active={leadForm.stage === s} onPress={() => setLeadForm((p) => ({ ...p, stage: s }))} />)}</View>
                 <TextInput style={styles.input} placeholder={t("crm.labels.potentialValue")} value={leadForm.valor} onChangeText={(v) => setLeadForm((p) => ({ ...p, valor: v }))} />
@@ -2483,33 +3287,33 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           <View style={styles.split}>
             <View style={styles.pane}>
               <Text style={styles.section}>{taskForm.id ? t("crm.forms.editTaskTitle") : t("crm.forms.createTaskTitle")}</Text>
-              <TextInput style={styles.input} placeholder="Título" value={taskForm.titulo} onChangeText={(v) => setTaskForm((p) => ({ ...p, titulo: v }))} />
-              <TextInput style={styles.input} placeholder="ID do lead (opcional)" value={taskForm.leadId} onChangeText={(v) => setTaskForm((p) => ({ ...p, leadId: v }))} />
-              <TextInput style={styles.input} placeholder="Prazo (2026-02-22T15:30)" value={taskForm.dueAt} onChangeText={(v) => setTaskForm((p) => ({ ...p, dueAt: v }))} />
+              <TextInput style={styles.input} placeholder={t("crm.placeholders.title")} value={taskForm.titulo} onChangeText={(v) => setTaskForm((p) => ({ ...p, titulo: v }))} />
+              <TextInput style={styles.input} placeholder={t("crm.placeholders.leadIdOptional")} value={taskForm.leadId} onChangeText={(v) => setTaskForm((p) => ({ ...p, leadId: v }))} />
+              <TextInput style={styles.input} placeholder={t("crm.placeholders.dueAtIso")} value={taskForm.dueAt} onChangeText={(v) => setTaskForm((p) => ({ ...p, dueAt: v }))} />
               <View style={styles.wrapRow}><Action title={taskForm.id ? t("crm.forms.saveTask") : t("crm.forms.createTask")} onPress={saveTask} /><Action title={t("crm.actions.clear")} secondary onPress={resetTaskForm} /></View>
             </View>
             <View style={styles.pane}>
               <View style={styles.topRow}>
                 <Text style={styles.section}>{t("crm.sections.taskList")}</Text>
-                <Action title="Exportar CSV" secondary onPress={exportTasksCsv} />
+                <Action title={t("crm.actions.exportCsv")} secondary onPress={exportTasksCsv} />
               </View>
               <View style={styles.wrapRow}>
-                <MetricMini label="Todas" value={String(tasks.length)} />
-                <MetricMini label="Atrasadas" value={String(taskBuckets.atrasadas.length)} />
-                <MetricMini label="Hoje" value={String(taskBuckets.hoje.length)} />
-                <MetricMini label="Próximas 7d" value={String(taskBuckets.proximas.length)} />
-                <MetricMini label="Concluídas" value={String(taskBuckets.concluidas.length)} />
+                <MetricMini label={t("crm.tasks.all")} value={String(tasks.length)} />
+                <MetricMini label={t("crm.tasks.late")} value={String(taskBuckets.atrasadas.length)} />
+                <MetricMini label={t("crm.tasks.today")} value={String(taskBuckets.hoje.length)} />
+                <MetricMini label={t("crm.tasks.next7d")} value={String(taskBuckets.proximas.length)} />
+                <MetricMini label={t("crm.tasks.completed")} value={String(taskBuckets.concluidas.length)} />
               </View>
               <View style={{ marginTop: 10 }}>
-                <Text style={styles.chartTitle}>Demonstrativo de tarefas</Text>
+                <Text style={styles.chartTitle}>{t("crm.tasks.chartTitle")}</Text>
                 <BarChart items={taskStatusChartData} />
               </View>
               <View style={styles.wrapRow}>
-                <Chip label="Todas" active={taskBucketFilter === "TODAS"} onPress={() => setTaskBucketFilter("TODAS")} />
-                <Chip label="Atrasadas" active={taskBucketFilter === "ATRASADAS"} onPress={() => setTaskBucketFilter("ATRASADAS")} />
-                <Chip label="Hoje" active={taskBucketFilter === "HOJE"} onPress={() => setTaskBucketFilter("HOJE")} />
-                <Chip label="Próximas 7d" active={taskBucketFilter === "PROXIMAS"} onPress={() => setTaskBucketFilter("PROXIMAS")} />
-                <Chip label="Concluídas" active={taskBucketFilter === "CONCLUIDAS"} onPress={() => setTaskBucketFilter("CONCLUIDAS")} />
+                <Chip label={t("crm.tasks.all")} active={taskBucketFilter === "TODAS"} onPress={() => setTaskBucketFilter("TODAS")} />
+                <Chip label={t("crm.tasks.late")} active={taskBucketFilter === "ATRASADAS"} onPress={() => setTaskBucketFilter("ATRASADAS")} />
+                <Chip label={t("crm.tasks.today")} active={taskBucketFilter === "HOJE"} onPress={() => setTaskBucketFilter("HOJE")} />
+                <Chip label={t("crm.tasks.next7d")} active={taskBucketFilter === "PROXIMAS"} onPress={() => setTaskBucketFilter("PROXIMAS")} />
+                <Chip label={t("crm.tasks.completed")} active={taskBucketFilter === "CONCLUIDAS"} onPress={() => setTaskBucketFilter("CONCLUIDAS")} />
               </View>
               {filteredTasks.map((taskItem) => (
                 <View key={taskItem.id} style={styles.item}>
@@ -2538,7 +3342,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             <View style={styles.pane}>
               <View style={styles.topRow}>
                 <Text style={styles.section}>{t("crm.sections.interactionHistory")}</Text>
-                <Action title="Exportar CSV" secondary onPress={exportInteractionsCsv} />
+                <Action title={t("crm.actions.exportCsv")} secondary onPress={exportInteractionsCsv} />
               </View>
               {loadingInteractions ? <ActivityIndicator color={COLORS.primary} /> : interactions.map((i) => (
                 <View key={i.id} style={styles.item}>
@@ -2569,12 +3373,50 @@ function Metric({ label, value, onPress }: { label: string; value: string; onPre
     </View>
   );
   if (!onPress) return content;
-  return <Pressable onPress={onPress}>{content}</Pressable>;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+      hitSlop={6}
+      style={(state: any) => [state.focused && styles.focusRing]}
+    >
+      {content}
+    </Pressable>
+  );
 }
 function MetricMini({ label, value }: { label: string; value: string }) { return <View style={styles.metricMini}><Text style={styles.metricMiniValue}>{value}</Text><Text style={styles.metricMiniLabel}>{label}</Text></View>; }
-function Tab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.tab, active && styles.tabActive]}><Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text></Pressable>; }
-function MiniTab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.miniTab, active && styles.miniTabActive]}><Text style={[styles.miniTabText, active && styles.miniTabTextActive]}>{label}</Text></Pressable>; }
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>; }
+function SampleConfidenceBadge({ sample }: { sample: number }) {
+  const confidence = getSampleConfidence(sample);
+  return (
+    <View
+      style={[
+        styles.sampleBadge,
+        confidence === "ALTA"
+          ? styles.sampleBadgeHigh
+          : confidence === "MEDIA"
+            ? styles.sampleBadgeMedium
+            : styles.sampleBadgeLow,
+      ]}
+    >
+      <Text
+        style={[
+          styles.sampleBadgeText,
+          confidence === "ALTA"
+            ? styles.sampleBadgeHighText
+            : confidence === "MEDIA"
+              ? styles.sampleBadgeMediumText
+              : styles.sampleBadgeLowText,
+        ]}
+      >
+        {confidence}
+      </Text>
+    </View>
+  );
+}
+function Tab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={label} hitSlop={6} style={(state: any) => [styles.tab, active && styles.tabActive, state.focused && styles.focusRing]}><Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text></Pressable>; }
+function MiniTab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={label} hitSlop={6} style={(state: any) => [styles.miniTab, active && styles.miniTabActive, state.focused && styles.focusRing]}><Text style={[styles.miniTabText, active && styles.miniTabTextActive]}>{label}</Text></Pressable>; }
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) { return <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={label} hitSlop={6} style={(state: any) => [styles.chip, active && styles.chipActive, state.focused && styles.focusRing]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>; }
 function Action({
   title,
   onPress,
@@ -2587,12 +3429,18 @@ function Action({
   style?: any;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.action, secondary && styles.actionSecondary, style]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      hitSlop={6}
+      style={(state: any) => [styles.action, secondary && styles.actionSecondary, style, state.focused && styles.focusRing]}
+    >
       <Text style={[styles.actionText, secondary && styles.actionTextSecondary]}>{title}</Text>
     </Pressable>
   );
 }
-function SmallBtn({ title, onPress, danger }: { title: string; onPress: () => void; danger?: boolean }) { return <Pressable onPress={onPress} style={[styles.small, danger && styles.smallDanger]}><Text style={[styles.smallText, danger && styles.smallTextDanger]}>{title}</Text></Pressable>; }
+function SmallBtn({ title, onPress, danger }: { title: string; onPress: () => void; danger?: boolean }) { return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} hitSlop={6} style={(state: any) => [styles.small, danger && styles.smallDanger, state.focused && styles.focusRing]}><Text style={[styles.smallText, danger && styles.smallTextDanger]}>{title}</Text></Pressable>; }
 function StatusBadge({
   status,
   labels,
@@ -2637,7 +3485,7 @@ function SeverityBadge({
   );
 }
 function Head({ cols }: { cols: string[] }) { return <View style={styles.head}>{cols.map((c) => <Text key={c} style={styles.headText}>{c}</Text>)}</View>; }
-function Row({ cols, onPress, selected }: { cols: string[]; onPress: () => void; selected?: boolean }) { return <Pressable onPress={onPress} style={[styles.row, selected && styles.selected]}>{cols.map((c, i) => <Text key={`${i}-${c}`} style={[styles.rowCell, i===0 && styles.rowCellPrimary]}>{c}</Text>)}</Pressable>; }
+function Row({ cols, onPress, selected }: { cols: string[]; onPress: () => void; selected?: boolean }) { return <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: Boolean(selected) }} accessibilityLabel={cols.join(" - ")} hitSlop={6} style={(state: any) => [styles.row, selected && styles.selected, state.focused && styles.focusRing]}>{cols.map((c, i) => <Text key={`${i}-${c}`} style={[styles.rowCell, i===0 && styles.rowCellPrimary]}>{c}</Text>)}</Pressable>; }
 function HeadSortable<T extends string>({
   cols,
   sort,
@@ -2653,7 +3501,7 @@ function HeadSortable<T extends string>({
         const active = sort.key === c.key;
         const arrow = active ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
         return (
-          <Pressable key={c.key} onPress={() => onSortChange(c.key)} style={styles.headBtn}>
+          <Pressable key={c.key} onPress={() => onSortChange(c.key)} accessibilityRole="button" accessibilityLabel={`${c.label}${active ? `, ordenado ${sort.dir === "asc" ? "crescente" : "decrescente"}` : ""}`} hitSlop={6} style={(state: any) => [styles.headBtn, state.focused && styles.focusRing]}>
             <Text style={[styles.headText, active && styles.headTextActive]}>{c.label}{arrow}</Text>
           </Pressable>
         );
@@ -2665,28 +3513,36 @@ function Pagination({
   page,
   totalPages,
   onChange,
+  previousLabel,
+  nextLabel,
+  pageOfLabel,
 }: {
   page: number;
   totalPages: number;
   onChange: (page: number) => void;
+  previousLabel: string;
+  nextLabel: string;
+  pageOfLabel: string;
 }) {
   if (totalPages <= 1) return null;
   return (
     <View style={styles.pagination}>
-      <SmallBtn title="Anterior" onPress={() => onChange(Math.max(1, page - 1))} />
-      <Text style={styles.paginationText}>
-        Página {page} de {totalPages}
-      </Text>
-      <SmallBtn title="Próxima" onPress={() => onChange(Math.min(totalPages, page + 1))} />
+      <SmallBtn title={previousLabel} onPress={() => onChange(Math.max(1, page - 1))} />
+      <Text style={styles.paginationText}>{pageOfLabel}</Text>
+      <SmallBtn title={nextLabel} onPress={() => onChange(Math.min(totalPages, page + 1))} />
     </View>
   );
 }
 function BarChart({
   items,
+  formatValue,
+  maxValue,
 }: {
   items: Array<{ label: string; value: number; color?: string }>;
+  formatValue?: (value: number) => string;
+  maxValue?: number;
 }) {
-  const max = Math.max(1, ...items.map((i) => i.value || 0));
+  const max = Math.max(1, maxValue ?? Math.max(1, ...items.map((i) => i.value || 0)));
   return (
     <View style={styles.chartWrap}>
       {items.map((item) => {
@@ -2695,7 +3551,9 @@ function BarChart({
           <View key={item.label} style={styles.chartRow}>
             <View style={styles.chartHeaderRow}>
               <Text style={styles.chartLabel}>{item.label}</Text>
-              <Text style={styles.chartValue}>{item.value}</Text>
+              <Text style={styles.chartValue}>
+                {formatValue ? formatValue(item.value) : item.value}
+              </Text>
             </View>
             <View style={styles.chartTrack}>
               <View
@@ -2730,6 +3588,11 @@ const formatDurationMs = (value: number) => {
   const minutes = value / 60000;
   if (minutes < 1) return `${Math.round(value / 1000)}s`;
   return `${minutes.toFixed(1)}min`;
+};
+const getSampleConfidence = (sample: number): "ALTA" | "MEDIA" | "BAIXA" => {
+  if (sample >= 10) return "ALTA";
+  if (sample >= 5) return "MEDIA";
+  return "BAIXA";
 };
 const csvEscape = (value: unknown) => {
   const str = String(value ?? "");
@@ -2843,45 +3706,226 @@ const automationHistoryActionLabel = (action: CrmAutomationHistoryItem["action"]
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F6FA" },
-  content: { padding: SPACING.base, gap: SPACING.base, paddingBottom: SPACING.xl },
-  card: { backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.gray100, padding: SPACING.base },
-  healthKpiBlock: { marginTop: SPACING.sm, borderWidth: 1, borderColor: COLORS.primary + "18", borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.primary + "05", padding: SPACING.sm },
+  content: {
+    padding: Platform.OS === "web" ? SPACING.lg : SPACING.base,
+    gap: Platform.OS === "web" ? SPACING.lg : SPACING.base,
+    paddingBottom: SPACING.xl,
+  },
+  focusRing: {
+    borderColor: COLORS.primary + "88",
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 1,
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    padding: Platform.OS === "web" ? SPACING.lg : SPACING.base,
+  },
+  healthKpiBlock: {
+    marginTop: SPACING.base,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "14",
+    borderRadius: 12,
+    backgroundColor: COLORS.primary + "05",
+    paddingVertical: Platform.OS === "web" ? SPACING.base : SPACING.sm,
+    paddingHorizontal: Platform.OS === "web" ? SPACING.base : SPACING.sm,
+  },
   loading: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, padding: 16, alignItems: "center" },
-  topRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "space-between", alignItems: "center" },
-  wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
-  split: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.base, alignItems: "flex-start" },
-  pane: { flex: 1, minWidth: 360, backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.gray100, padding: SPACING.base },
-  chartPane: { flex: 1, minWidth: 320, backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.gray100, padding: SPACING.sm },
-  chartTitle: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 12, marginBottom: 8 },
+  topRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  wrapRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "center",
+  },
+  split: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Platform.OS === "web" ? SPACING.lg : SPACING.sm,
+    alignItems: "flex-start",
+  },
+  pane: {
+    flex: 1,
+    minWidth: Platform.OS === "web" ? 360 : 280,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    padding: SPACING.base,
+  },
+  chartPane: {
+    flex: 1,
+    minWidth: Platform.OS === "web" ? 320 : 260,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    padding: SPACING.sm,
+  },
+  chartTitle: {
+    color: COLORS.textPrimary,
+    fontWeight: "800",
+    fontSize: 13,
+    marginBottom: 12,
+  },
   chartWrap: { gap: 8 },
   chartRow: { gap: 4 },
   chartHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  chartLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
+  chartLabel: { color: "#5F6368", fontSize: 11, fontWeight: "700" },
   chartValue: { color: COLORS.textPrimary, fontSize: 11, fontWeight: "800" },
   chartTrack: { height: 8, borderRadius: 999, backgroundColor: COLORS.gray100, overflow: "hidden" },
   chartFill: { height: 8, borderRadius: 999 },
   detailPane: { flexGrow: 0, flexBasis: Platform.OS === "web" ? 420 : 360 },
   title: { fontSize: FONTS.sizes.lg, fontWeight: "800", color: COLORS.textPrimary },
   big: { fontSize: FONTS.sizes.base, fontWeight: "800", color: COLORS.textPrimary },
-  sub: { color: COLORS.textSecondary, marginTop: 4 },
-  muted: { color: COLORS.textSecondary, fontSize: 12 },
-  section: { fontSize: FONTS.sizes.base, fontWeight: "800", color: COLORS.textPrimary, marginBottom: 8 },
-  search: { minWidth: 280, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", paddingHorizontal: 10, paddingVertical: 8, color: COLORS.textPrimary },
-  filterInput: { minWidth: 120, borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, backgroundColor: COLORS.white, paddingHorizontal: 10, paddingVertical: 5, color: COLORS.textPrimary, fontSize: 12 },
+  sub: { color: "#5F6368", marginTop: 6, fontSize: 13, lineHeight: 18 },
+  muted: { color: "#5F6368", fontSize: 12, lineHeight: 17 },
+  section: {
+    fontSize: FONTS.sizes.base,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    marginBottom: 12,
+  },
+  search: {
+    minWidth: Platform.OS === "web" ? 340 : 280,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: 12,
+    backgroundColor: "#FBFCFE",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+  },
+  filterInput: {
+    minWidth: 128,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: 999,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    color: COLORS.textPrimary,
+    fontSize: 12,
+  },
   panelActionsRow: {
     marginTop: SPACING.sm,
   },
+  entityHeader: {
+    marginTop: 2,
+    marginBottom: SPACING.xs,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+  },
+  entityHeaderText: {
+    flex: 1,
+    minWidth: 180,
+  },
+  entityName: {
+    color: COLORS.textPrimary,
+    fontWeight: "800",
+    fontSize: FONTS.sizes.lg,
+    lineHeight: 30,
+  },
+  entityMeta: {
+    color: "#5F6368",
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  entityHeaderAction: {
+    minWidth: 170,
+  },
+  panelFormTitle: {
+    color: COLORS.textPrimary,
+    fontWeight: "800",
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  panelTabsRow: {
+    marginTop: SPACING.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
+  panelMetricsRow: {
+    marginTop: SPACING.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
+  panelPrimaryActions: {
+    marginTop: SPACING.xs,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
   panelActionBtn: {
     minWidth: 150,
-    minHeight: 40,
+    minHeight: 42,
     alignItems: "center",
     justifyContent: "center",
   },
-  metric: { minWidth: 120, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10 },
+  metric: {
+    minWidth: 126,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: 12,
+    backgroundColor: "#FBFCFE",
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+  },
   metricInteractive: { borderColor: COLORS.primary + "33" },
-  metricValue: { fontWeight: "800", color: COLORS.textPrimary }, metricLabel: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  metricMini: { minWidth: 100, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 8 },
-  metricMiniValue: { fontWeight: "800", color: COLORS.textPrimary, fontSize: 12 }, metricMiniLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  metricValue: {
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: "#5F6368",
+    marginTop: 3,
+    lineHeight: 14,
+  },
+  metricMini: {
+    minWidth: 112,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: 12,
+    backgroundColor: "#FBFCFE",
+    paddingVertical: 10,
+    paddingHorizontal: 11,
+  },
+  metricMiniValue: {
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  metricMiniLabel: {
+    fontSize: 10,
+    color: "#5F6368",
+    marginTop: 3,
+    lineHeight: 13,
+  },
   kpiGrid: {
     marginTop: SPACING.xs,
     flexDirection: "row",
@@ -2889,14 +3933,14 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   kpiCard: {
-    minWidth: 110,
+    minWidth: Platform.OS === "web" ? 128 : 112,
     flex: 1,
     borderWidth: 1,
     borderColor: COLORS.gray100,
-    borderRadius: 10,
+    borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#FBFCFE",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   kpiValue: {
     color: COLORS.textPrimary,
@@ -2909,35 +3953,316 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-  auditLogItem: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10, flexDirection: "row", gap: 10, alignItems: "center" },
-  automationItem: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10, flexDirection: "row", gap: 10, alignItems: "center" },
-  automationHistoryItem: { marginTop: 6, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: COLORS.white, padding: 10 },
+  auditLogItem: { marginTop: 10, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: "#FBFCFE", padding: 12, flexDirection: "row", gap: 10, alignItems: "center" },
+  automationItem: { marginTop: 10, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: "#FBFCFE", padding: 12, flexDirection: "row", gap: 10, alignItems: "center" },
+  automationHistoryItem: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: COLORS.white, padding: 12 },
   statusBadge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   statusBadgeText: { fontSize: 11, fontWeight: "800" },
-  subtleActionText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: "600" },
-  disclaimerText: { color: COLORS.textSecondary, fontSize: 11, lineHeight: 16, marginTop: 8 },
+  subtleActionText: { color: "#5F6368", fontSize: 12, fontWeight: "600" },
+  disclaimerText: { color: "#5F6368", fontSize: 11, lineHeight: 16, marginTop: 8 },
   reasonTag: { borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, backgroundColor: COLORS.white, paddingHorizontal: 10, paddingVertical: 5 },
-  reasonTagText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
-  tab: { borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: COLORS.white },
-  tabActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "12" }, tabText: { color: COLORS.textSecondary, fontWeight: "700", fontSize: 12 }, tabTextActive: { color: COLORS.primary },
-  miniTab: { borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: COLORS.white },
+  reasonTagText: { color: "#5F6368", fontSize: 11, fontWeight: "700" },
+  insightsRow: {
+    marginTop: SPACING.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  insightCard: {
+    flex: 1,
+    minWidth: Platform.OS === "web" ? 240 : 220,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "22",
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    padding: Platform.OS === "web" ? SPACING.sm : SPACING.xs,
+  },
+  insightCardPressed: {
+    opacity: 0.9,
+    borderColor: COLORS.primary + "55",
+  },
+  insightLabel: {
+    color: "#5F6368",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  insightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  insightTitle: {
+    marginTop: 4,
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  insightValue: {
+    marginTop: 2,
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  insightSubValue: {
+    marginTop: 2,
+    color: "#5F6368",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  insightMetaRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  insightHint: {
+    color: "#5F6368",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  insightHintRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  emptyPhysicalExamCallout: {
+    marginTop: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.warning + "44",
+    backgroundColor: COLORS.warning + "12",
+    borderRadius: 12,
+    padding: SPACING.sm,
+  },
+  coverageRow: {
+    marginTop: SPACING.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+  },
+  coverageActionRow: {
+    marginTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray100,
+    paddingTop: SPACING.xs,
+  },
+  coverageBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  coverageBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  coverageHigh: {
+    borderColor: COLORS.success + "55",
+    backgroundColor: COLORS.success + "12",
+  },
+  coverageHighText: {
+    color: COLORS.success,
+  },
+  coverageMedium: {
+    borderColor: COLORS.warning + "55",
+    backgroundColor: COLORS.warning + "12",
+  },
+  coverageMediumText: {
+    color: COLORS.warning,
+  },
+  coverageLow: {
+    borderColor: COLORS.error + "55",
+    backgroundColor: COLORS.error + "12",
+  },
+  coverageLowText: {
+    color: COLORS.error,
+  },
+  topListRow: {
+    marginTop: 6,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray100,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  topListLabelWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  topListLabel: {
+    color: "#5F6368",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  topListDetail: {
+    color: "#5F6368",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  topListDetailRow: {
+    marginTop: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  sampleBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  sampleBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  sampleBadgeHigh: {
+    borderColor: COLORS.success + "55",
+    backgroundColor: COLORS.success + "12",
+  },
+  sampleBadgeHighText: {
+    color: COLORS.success,
+  },
+  sampleBadgeMedium: {
+    borderColor: COLORS.warning + "55",
+    backgroundColor: COLORS.warning + "12",
+  },
+  sampleBadgeMediumText: {
+    color: COLORS.warning,
+  },
+  sampleBadgeLow: {
+    borderColor: COLORS.error + "55",
+    backgroundColor: COLORS.error + "12",
+  },
+  sampleBadgeLowText: {
+    color: COLORS.error,
+  },
+  topListValue: {
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  sampleInfoBox: {
+    marginTop: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.white,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+  },
+  sampleInfoText: {
+    marginTop: 4,
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  sampleInfoMuted: {
+    marginTop: 4,
+    color: "#5F6368",
+    fontSize: 11,
+  },
+  tab: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minHeight: 36,
+    backgroundColor: COLORS.white,
+  },
+  tabActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "12" }, tabText: { color: "#5F6368", fontWeight: "700", fontSize: 12 }, tabTextActive: { color: COLORS.primary },
+  miniTab: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    minHeight: 36,
+    backgroundColor: COLORS.white,
+  },
   miniTabActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "12" },
-  miniTabText: { color: COLORS.textSecondary, fontWeight: "700", fontSize: 11 },
+  miniTabText: { color: "#5F6368", fontWeight: "700", fontSize: 11 },
   miniTabTextActive: { color: COLORS.primary },
-  chip: { borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: COLORS.white },
-  chipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "12" }, chipText: { color: COLORS.textSecondary, fontWeight: "700", fontSize: 11 }, chipTextActive: { color: COLORS.primary },
-  input: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", paddingHorizontal: 10, paddingVertical: 8, color: COLORS.textPrimary },
-  action: { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }, actionSecondary: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.gray200 }, actionText: { color: COLORS.white, fontWeight: "700" }, actionTextSecondary: { color: COLORS.textSecondary },
-  small: { borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: COLORS.white }, smallDanger: { borderColor: "#efb0b0", backgroundColor: "#fff5f5" }, smallText: { fontSize: 10, color: COLORS.textSecondary, fontWeight: "700" }, smallTextDanger: { color: "#b52828" },
-  head: { flexDirection: "row", gap: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#F7F9FC", paddingHorizontal: 10, paddingVertical: 8 }, headText: { flex: 1, fontSize: 11, fontWeight: "700", color: COLORS.textSecondary },
+  chip: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    minHeight: 36,
+    backgroundColor: COLORS.white,
+  },
+  chipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "12" }, chipText: { color: "#5F6368", fontWeight: "700", fontSize: 11 }, chipTextActive: { color: COLORS.primary },
+  input: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: 12,
+    backgroundColor: "#FBFCFE",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  action: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    minHeight: 40,
+    justifyContent: "center",
+  },
+  actionSecondary: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+  },
+  actionText: {
+    color: COLORS.white,
+    fontWeight: "700",
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  actionTextSecondary: {
+    color: "#5F6368",
+  },
+  small: { borderWidth: 1, borderColor: COLORS.gray200, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, minHeight: 36, backgroundColor: COLORS.white }, smallDanger: { borderColor: "#efb0b0", backgroundColor: "#fff5f5" }, smallText: { fontSize: 11, color: "#5F6368", fontWeight: "700" }, smallTextDanger: { color: "#b52828" },
+  head: { flexDirection: "row", gap: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: "#F7F9FC", paddingHorizontal: 12, paddingVertical: 9, minHeight: 42 }, headText: { flex: 1, fontSize: 11, fontWeight: "700", color: "#5F6368" },
   headBtn: { flex: 1 },
   headTextActive: { color: COLORS.primary },
-  row: { flexDirection: "row", gap: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", paddingHorizontal: 10, paddingVertical: 10, marginTop: 8 },
-  rowCell: { flex: 1, fontSize: 11, color: COLORS.textSecondary }, rowCellPrimary: { color: COLORS.textPrimary, fontWeight: "700" }, selected: { borderColor: COLORS.primary + "55", backgroundColor: COLORS.primary + "08" },
-  pagination: { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, borderTopWidth: 1, borderTopColor: COLORS.gray100, paddingTop: 10 },
-  paginationText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
-  item: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10, flexDirection: "row", gap: 6, alignItems: "center" },
-  line: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#FBFCFE", padding: 10 }, lineTitle: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 12 }, lineSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
-  kanbanWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 }, kanbanCol: { flex: 1, minWidth: 240, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: "#F8FAFD", padding: 10 }, kanbanCard: { marginTop: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 10, backgroundColor: COLORS.white, padding: 10 },
+  row: { flexDirection: "row", gap: 8, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: "#FBFCFE", paddingHorizontal: 12, paddingVertical: 11, marginTop: 8, minHeight: 46 },
+  rowCell: { flex: 1, fontSize: 11, color: "#5F6368" }, rowCellPrimary: { color: COLORS.textPrimary, fontWeight: "700" }, selected: { borderColor: COLORS.primary + "55", backgroundColor: COLORS.primary + "08" },
+  pagination: { marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, borderTopWidth: 1, borderTopColor: COLORS.gray100, paddingTop: 12 },
+  paginationText: { color: "#5F6368", fontSize: 11, fontWeight: "700" },
+  item: { marginTop: 10, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: "#FBFCFE", padding: 12, flexDirection: "row", gap: 8, alignItems: "center" },
+  line: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    borderRadius: 12,
+    backgroundColor: "#FBFCFE",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  lineTitle: {
+    color: COLORS.textPrimary,
+    fontWeight: "700",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  lineSub: {
+    color: "#5F6368",
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  kanbanWrap: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, kanbanCol: { flex: 1, minWidth: 240, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: "#F8FAFD", padding: 12 }, kanbanCard: { marginTop: 10, borderWidth: 1, borderColor: COLORS.gray100, borderRadius: 12, backgroundColor: COLORS.white, padding: 12 },
   blocked: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 8 },
 });

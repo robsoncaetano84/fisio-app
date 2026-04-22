@@ -13,6 +13,7 @@ export type LaudoAiSuggestion = Partial<{
   source: "ai" | "rules";
   examesConsiderados: number;
   examesComLeituraIa: number;
+  sugestaoGeradaEm: string;
 }>;
 
 const mapMotivoBusca = (motivo?: Anamnese["motivoBusca"]) => {

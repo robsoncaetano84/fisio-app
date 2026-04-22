@@ -25,6 +25,13 @@ export enum TipoDor {
   MISTA = 'MISTA',
 }
 
+export enum MecanismoLesao {
+  TRAUMA = 'TRAUMA',
+  SOBRECARGA = 'SOBRECARGA',
+  MISTO = 'MISTO',
+  NAO_DEFINIDO = 'NAO_DEFINIDO',
+}
+
 export interface AreaAfetada {
   regiao: string;
   lado?: 'esquerdo' | 'direito' | 'ambos';
@@ -71,6 +78,17 @@ export class Anamnese extends BaseEntity {
   @Column({ name: 'fator_alivio', type: 'text', nullable: true })
   fatorAlivio: string;
 
+  @Column({
+    name: 'mecanismo_lesao',
+    type: 'enum',
+    enum: MecanismoLesao,
+    nullable: true,
+  })
+  mecanismoLesao: MecanismoLesao;
+
+  @Column({ name: 'fatores_piora', type: 'text', nullable: true })
+  fatoresPiora: string;
+
   @Column({ name: 'dor_repouso', type: 'boolean', nullable: true })
   dorRepouso: boolean;
 
@@ -110,6 +128,15 @@ export class Anamnese extends BaseEntity {
 
   @Column({ name: 'historico_familiar', type: 'text', nullable: true })
   historicoFamiliar: string;
+
+  @Column({ name: 'historico_esportivo', type: 'text', nullable: true })
+  historicoEsportivo: string;
+
+  @Column({ name: 'lesoes_previas', type: 'text', nullable: true })
+  lesoesPrevias: string;
+
+  @Column({ name: 'uso_medicamentos', type: 'text', nullable: true })
+  usoMedicamentos: string;
 
   @Column({ name: 'limitacoes_funcionais', type: 'text', nullable: true })
   limitacoesFuncionais: string;

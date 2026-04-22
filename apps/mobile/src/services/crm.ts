@@ -93,6 +93,37 @@ export type CrmClinicalDashboardSummary = {
   };
 };
 
+export type ClinicalExamRegionSummary = {
+  regiao: string;
+  positivos: number;
+  avaliados: number;
+  taxaPositividade: number;
+};
+
+export type ClinicalExamTopTestSummary = {
+  teste: string;
+  positivos: number;
+  avaliados: number;
+  taxaPositividade: number;
+};
+
+export type ClinicalExamScoringProfileSummary = {
+  perfil: string;
+  count: number;
+};
+
+export type CrmPhysicalExamTestsSummary = {
+  windowDays: number;
+  laudosAnalisados: number;
+  laudosComExameEstruturado: number;
+  totalAvaliados: number;
+  totalPositivos: number;
+  taxaPositividadeGeral: number;
+  porRegiao: ClinicalExamRegionSummary[];
+  topTestesPositivos: ClinicalExamTopTestSummary[];
+  perfisScoring: ClinicalExamScoringProfileSummary[];
+};
+
 export type CrmAdminProfessional = {
   id: string;
   nome: string;
@@ -184,6 +215,16 @@ export async function getCrmClinicalDashboardSummary(params?: {
 }): Promise<CrmClinicalDashboardSummary> {
   const response = await api.get<CrmClinicalDashboardSummary>(
     "/crm/clinical/dashboard-summary",
+    { params },
+  );
+  return response.data;
+}
+
+export async function getCrmPhysicalExamTestsSummary(params?: {
+  windowDays?: number;
+}): Promise<CrmPhysicalExamTestsSummary> {
+  const response = await api.get<CrmPhysicalExamTestsSummary>(
+    "/metrics/clinical-flow/physical-exam-tests-summary",
     { params },
   );
   return response.data;

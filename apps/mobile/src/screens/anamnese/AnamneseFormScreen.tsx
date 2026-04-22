@@ -41,6 +41,7 @@ import {
   MotivoBusca,
   InicioProblema,
   TipoDor,
+  MecanismoLesao,
   Anamnese,
 } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
@@ -137,6 +138,15 @@ const FATOR_ALIVIO_PRESETS = [
   "Mudança de posição",
   "Movimento leve",
 ];
+const FATORES_PIORA_PRESETS = [
+  "Esforço físico",
+  "Carga repetitiva",
+  "Postura mantida",
+  "Impacto",
+  "Movimento brusco",
+  "Sedentarismo",
+  "Estresse",
+];
 const LIMITACOES_PRESETS = [
   "Sentar",
   "Caminhar",
@@ -226,6 +236,9 @@ export function AnamneseFormScreen({
   );
   const [eventoEspecifico, setEventoEspecifico] = useState("");
   const [fatorAlivio, setFatorAlivio] = useState("");
+  const [mecanismoLesao, setMecanismoLesao] =
+    useState<MecanismoLesao | null>(null);
+  const [fatoresPiora, setFatoresPiora] = useState("");
 
   const [dorRepouso, setDorRepouso] = useState<boolean | null>(null);
   const [dorNoturna, setDorNoturna] = useState<boolean | null>(null);
@@ -245,6 +258,9 @@ export function AnamneseFormScreen({
     [],
   );
   const [historicoFamiliar, setHistoricoFamiliar] = useState("");
+  const [historicoEsportivo, setHistoricoEsportivo] = useState("");
+  const [lesoesPrevias, setLesoesPrevias] = useState("");
+  const [usoMedicamentos, setUsoMedicamentos] = useState("");
   const [limitacoesFuncionais, setLimitacoesFuncionais] = useState("");
   const [atividadesQuePioram, setAtividadesQuePioram] = useState("");
   const [metaPrincipalPaciente, setMetaPrincipalPaciente] = useState("");
@@ -328,11 +344,23 @@ export function AnamneseFormScreen({
         case "fatorAlivio":
           appendText(setFatorAlivio, text);
           break;
+        case "fatoresPiora":
+          appendText(setFatoresPiora, text);
+          break;
         case "quandoProblemaAnterior":
           appendText(setQuandoProblemaAnterior, text);
           break;
         case "historicoFamiliar":
           appendText(setHistoricoFamiliar, text);
+          break;
+        case "historicoEsportivo":
+          appendText(setHistoricoEsportivo, text);
+          break;
+        case "lesoesPrevias":
+          appendText(setLesoesPrevias, text);
+          break;
+        case "usoMedicamentos":
+          appendText(setUsoMedicamentos, text);
           break;
         case "limitacoesFuncionais":
           appendText(setLimitacoesFuncionais, text);
@@ -367,6 +395,8 @@ export function AnamneseFormScreen({
     setInicioProblema(anamnese.inicioProblema || null);
     setEventoEspecifico(anamnese.eventoEspecifico || "");
     setFatorAlivio(anamnese.fatorAlivio || "");
+    setMecanismoLesao(anamnese.mecanismoLesao || null);
+    setFatoresPiora(anamnese.fatoresPiora || "");
     setDorRepouso(
       typeof anamnese.dorRepouso === "boolean" ? anamnese.dorRepouso : null,
     );
@@ -389,6 +419,9 @@ export function AnamneseFormScreen({
     setQuandoProblemaAnterior(anamnese.quandoProblemaAnterior || "");
     setTratamentosAnteriores(anamnese.tratamentosAnteriores || []);
     setHistoricoFamiliar(anamnese.historicoFamiliar || "");
+    setHistoricoEsportivo(anamnese.historicoEsportivo || "");
+    setLesoesPrevias(anamnese.lesoesPrevias || "");
+    setUsoMedicamentos(anamnese.usoMedicamentos || "");
     setLimitacoesFuncionais(anamnese.limitacoesFuncionais || "");
     setAtividadesQuePioram(anamnese.atividadesQuePioram || "");
     setMetaPrincipalPaciente(anamnese.metaPrincipalPaciente || "");
@@ -497,10 +530,15 @@ export function AnamneseFormScreen({
           inicioProblema?: InicioProblema | null;
           eventoEspecifico?: string;
           fatorAlivio?: string;
+          mecanismoLesao?: MecanismoLesao | null;
+          fatoresPiora?: string;
           problemaAnterior?: boolean | null;
           quandoProblemaAnterior?: string;
           tratamentosAnteriores?: string[];
           historicoFamiliar?: string;
+          historicoEsportivo?: string;
+          lesoesPrevias?: string;
+          usoMedicamentos?: string;
           limitacoesFuncionais?: string;
           atividadesQuePioram?: string;
           metaPrincipalPaciente?: string;
@@ -530,6 +568,9 @@ export function AnamneseFormScreen({
           setInicioProblema(draft.inicioProblema ?? null);
         if (draft.eventoEspecifico) setEventoEspecifico(draft.eventoEspecifico);
         if (draft.fatorAlivio) setFatorAlivio(draft.fatorAlivio);
+        if (draft.mecanismoLesao !== undefined)
+          setMecanismoLesao(draft.mecanismoLesao ?? null);
+        if (draft.fatoresPiora) setFatoresPiora(draft.fatoresPiora);
         if (draft.problemaAnterior !== undefined)
           setProblemaAnterior(draft.problemaAnterior);
         if (draft.quandoProblemaAnterior)
@@ -538,6 +579,10 @@ export function AnamneseFormScreen({
           setTratamentosAnteriores(draft.tratamentosAnteriores);
         if (draft.historicoFamiliar)
           setHistoricoFamiliar(draft.historicoFamiliar);
+        if (draft.historicoEsportivo)
+          setHistoricoEsportivo(draft.historicoEsportivo);
+        if (draft.lesoesPrevias) setLesoesPrevias(draft.lesoesPrevias);
+        if (draft.usoMedicamentos) setUsoMedicamentos(draft.usoMedicamentos);
         if (draft.limitacoesFuncionais)
           setLimitacoesFuncionais(draft.limitacoesFuncionais);
         if (draft.atividadesQuePioram)
@@ -596,10 +641,15 @@ export function AnamneseFormScreen({
         inicioProblema,
         eventoEspecifico,
         fatorAlivio,
+        mecanismoLesao,
+        fatoresPiora,
         problemaAnterior,
         quandoProblemaAnterior,
         tratamentosAnteriores,
         historicoFamiliar,
+        historicoEsportivo,
+        lesoesPrevias,
+        usoMedicamentos,
         limitacoesFuncionais,
         atividadesQuePioram,
         metaPrincipalPaciente,
@@ -645,10 +695,15 @@ export function AnamneseFormScreen({
     inicioProblema,
     eventoEspecifico,
     fatorAlivio,
+    mecanismoLesao,
+    fatoresPiora,
     problemaAnterior,
     quandoProblemaAnterior,
     tratamentosAnteriores,
     historicoFamiliar,
+    historicoEsportivo,
+    lesoesPrevias,
+    usoMedicamentos,
     limitacoesFuncionais,
     atividadesQuePioram,
     metaPrincipalPaciente,
@@ -840,10 +895,15 @@ export function AnamneseFormScreen({
         inicioProblema: inicioProblema || undefined,
         eventoEspecifico,
         fatorAlivio,
+        mecanismoLesao: mecanismoLesao || undefined,
+        fatoresPiora,
         problemaAnterior: problemaAnterior || false,
         quandoProblemaAnterior,
         tratamentosAnteriores,
         historicoFamiliar,
+        historicoEsportivo,
+        lesoesPrevias,
+        usoMedicamentos,
         limitacoesFuncionais,
         atividadesQuePioram,
         metaPrincipalPaciente,
@@ -929,10 +989,15 @@ export function AnamneseFormScreen({
             setInicioProblema(null);
             setEventoEspecifico("");
             setFatorAlivio("");
+            setMecanismoLesao(null);
+            setFatoresPiora("");
             setProblemaAnterior(null);
             setQuandoProblemaAnterior("");
             setTratamentosAnteriores([]);
             setHistoricoFamiliar("");
+            setHistoricoEsportivo("");
+            setLesoesPrevias("");
+            setUsoMedicamentos("");
             setLimitacoesFuncionais("");
             setAtividadesQuePioram("");
             setMetaPrincipalPaciente("");
@@ -1150,10 +1215,10 @@ export function AnamneseFormScreen({
               />
             </FormSection>
 
-            <FormSection title="Como os sintomas começaram?">
+            <FormSection title="Início da dor / sintomas">
               <View style={styles.optionsGrid}>
                 <SelectOption
-                  label="Gradual"
+                  label="Insidioso"
                   selected={inicioProblema === InicioProblema.GRADUAL}
                   onPress={() => {
                     setInicioProblema(InicioProblema.GRADUAL);
@@ -1163,7 +1228,7 @@ export function AnamneseFormScreen({
                   }}
                 />
                 <SelectOption
-                  label="Repentino"
+                  label="Agudo"
                   selected={inicioProblema === InicioProblema.REPENTINO}
                   onPress={() => {
                     setInicioProblema(InicioProblema.REPENTINO);
@@ -1230,7 +1295,7 @@ export function AnamneseFormScreen({
               )}
             </FormSection>
 
-            <FormSection title="O que melhora ou alivia os sintomas?">
+            <FormSection title="Fatores de melhora / alívio">
               <View style={styles.optionsGrid}>
                 {FATOR_ALIVIO_PRESETS.map((preset) => (
                   <SelectOption
@@ -1269,6 +1334,73 @@ export function AnamneseFormScreen({
                     : undefined
                 }
                 leftIcon="medkit-outline"
+                containerStyle={{ marginTop: SPACING.sm }}
+              />
+            </FormSection>
+
+            <FormSection title="Mecanismo provável da lesão">
+              <View style={styles.optionsGrid}>
+                <SelectOption
+                  label="Trauma"
+                  selected={mecanismoLesao === MecanismoLesao.TRAUMA}
+                  onPress={() => setMecanismoLesao(MecanismoLesao.TRAUMA)}
+                />
+                <SelectOption
+                  label="Sobrecarga"
+                  selected={mecanismoLesao === MecanismoLesao.SOBRECARGA}
+                  onPress={() => setMecanismoLesao(MecanismoLesao.SOBRECARGA)}
+                />
+                <SelectOption
+                  label="Misto"
+                  selected={mecanismoLesao === MecanismoLesao.MISTO}
+                  onPress={() => setMecanismoLesao(MecanismoLesao.MISTO)}
+                />
+                <SelectOption
+                  label="Não definido"
+                  selected={mecanismoLesao === MecanismoLesao.NAO_DEFINIDO}
+                  onPress={() =>
+                    setMecanismoLesao(MecanismoLesao.NAO_DEFINIDO)
+                  }
+                />
+              </View>
+            </FormSection>
+
+            <FormSection title="Fatores de piora / agravo">
+              <View style={styles.optionsGrid}>
+                {FATORES_PIORA_PRESETS.map((preset) => (
+                  <SelectOption
+                    key={preset}
+                    label={preset}
+                    selected={parsePresetValues(fatoresPiora).includes(preset)}
+                    onPress={() =>
+                      setFatoresPiora(togglePresetInText(fatoresPiora, preset))
+                    }
+                  />
+                ))}
+              </View>
+
+              <Input
+                placeholder="Quais fatores pioram? (ex.: carga repetitiva, postura mantida, impacto)"
+                value={fatoresPiora}
+                onChangeText={setFatoresPiora}
+                showCount
+                showClear
+                maxLength={1000}
+                onClear={() => setFatoresPiora("")}
+                rightIcon={
+                  VOICE_ENABLED ? getMicIcon("fatoresPiora") : undefined
+                }
+                onRightIconPress={
+                  VOICE_ENABLED ? () => toggleVoice("fatoresPiora") : undefined
+                }
+                hint={
+                  activeField === "fatoresPiora" && isRecording
+                    ? partial
+                    : undefined
+                }
+                multiline
+                numberOfLines={3}
+                style={{ height: 90, textAlignVertical: "top" }}
                 containerStyle={{ marginTop: SPACING.sm }}
               />
             </FormSection>
@@ -1533,6 +1665,88 @@ export function AnamneseFormScreen({
                 }
                 hint={
                   activeField === "historicoFamiliar" && isRecording
+                    ? partial
+                    : undefined
+                }
+                multiline
+                numberOfLines={3}
+                style={{ height: 80, textAlignVertical: "top" }}
+              />
+            </FormSection>
+
+            <FormSection title="Histórico esportivo">
+              <Input
+                placeholder="Modalidades, frequência, nível e demandas esportivas relevantes"
+                value={historicoEsportivo}
+                onChangeText={setHistoricoEsportivo}
+                showCount
+                showClear
+                maxLength={2000}
+                onClear={() => setHistoricoEsportivo("")}
+                rightIcon={
+                  VOICE_ENABLED ? getMicIcon("historicoEsportivo") : undefined
+                }
+                onRightIconPress={
+                  VOICE_ENABLED
+                    ? () => toggleVoice("historicoEsportivo")
+                    : undefined
+                }
+                hint={
+                  activeField === "historicoEsportivo" && isRecording
+                    ? partial
+                    : undefined
+                }
+                multiline
+                numberOfLines={3}
+                style={{ height: 80, textAlignVertical: "top" }}
+              />
+            </FormSection>
+
+            <FormSection title="Lesões prévias">
+              <Input
+                placeholder="Lesões anteriores, lado afetado, tempo de recuperação e recorrência"
+                value={lesoesPrevias}
+                onChangeText={setLesoesPrevias}
+                showCount
+                showClear
+                maxLength={2000}
+                onClear={() => setLesoesPrevias("")}
+                rightIcon={
+                  VOICE_ENABLED ? getMicIcon("lesoesPrevias") : undefined
+                }
+                onRightIconPress={
+                  VOICE_ENABLED ? () => toggleVoice("lesoesPrevias") : undefined
+                }
+                hint={
+                  activeField === "lesoesPrevias" && isRecording
+                    ? partial
+                    : undefined
+                }
+                multiline
+                numberOfLines={3}
+                style={{ height: 80, textAlignVertical: "top" }}
+              />
+            </FormSection>
+
+            <FormSection title="Uso de medicamentos">
+              <Input
+                placeholder="Medicamentos em uso, dose/frequência e efeito nos sintomas"
+                value={usoMedicamentos}
+                onChangeText={setUsoMedicamentos}
+                showCount
+                showClear
+                maxLength={2000}
+                onClear={() => setUsoMedicamentos("")}
+                rightIcon={
+                  VOICE_ENABLED ? getMicIcon("usoMedicamentos") : undefined
+                }
+                onRightIconPress={
+                  VOICE_ENABLED
+                    ? () => toggleVoice("usoMedicamentos")
+                    : undefined
+                }
+                hint={
+                  activeField === "usoMedicamentos" && isRecording
                     ? partial
                     : undefined
                 }

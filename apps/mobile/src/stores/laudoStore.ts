@@ -20,6 +20,9 @@ type CreateLaudoPayload = {
   rascunhoProfissional?: string;
   observacoes?: string;
   criteriosAlta?: string;
+  sugestaoSource?: "ai" | "rules";
+  examesConsiderados?: number;
+  examesComLeituraIa?: number;
 };
 
 export const useLaudoStore = create<{

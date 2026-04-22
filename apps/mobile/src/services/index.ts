@@ -42,7 +42,14 @@ export {
 
 export { openQuickActionSelection, navigateByQuickAction, quickActionIcon } from './quickActions';
 export { getLaudoAiSuggestion, buildPhysicalExamTemplateFromAnamnese } from './laudoAi';
-export { buildStructuredExameFromAnamnese, updateRedFlagAnswer, parseStructuredExame, renderStructuredExameToText, serializeStructuredExame } from './physicalExamModel';
+export {
+  buildStructuredExameFromAnamnese,
+  enrichStructuredExameWithClinicalLogic,
+  updateRedFlagAnswer,
+  parseStructuredExame,
+  renderStructuredExameToText,
+  serializeStructuredExame,
+} from './physicalExamModel';
 export { cachedGet, invalidateCachedGet } from "./requestCache";
 
 

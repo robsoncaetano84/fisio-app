@@ -16,6 +16,7 @@ import {
   MotivoBusca,
   InicioProblema,
   AreaAfetada,
+  MecanismoLesao,
 } from '../entities/anamnese.entity';
 
 export class UpdateAnamneseDto {
@@ -58,6 +59,14 @@ export class UpdateAnamneseDto {
   fatorAlivio?: string;
 
   @IsOptional()
+  @IsEnum(MecanismoLesao)
+  mecanismoLesao?: MecanismoLesao;
+
+  @IsOptional()
+  @IsString()
+  fatoresPiora?: string;
+
+  @IsOptional()
   @IsBoolean()
   problemaAnterior?: boolean;
 
@@ -72,6 +81,18 @@ export class UpdateAnamneseDto {
   @IsOptional()
   @IsString()
   historicoFamiliar?: string;
+
+  @IsOptional()
+  @IsString()
+  historicoEsportivo?: string;
+
+  @IsOptional()
+  @IsString()
+  lesoesPrevias?: string;
+
+  @IsOptional()
+  @IsString()
+  usoMedicamentos?: string;
 
   @IsOptional()
   @IsString()

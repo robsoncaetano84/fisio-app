@@ -6,7 +6,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { api } from "../services";
-import { Anamnese, AreaAfetada, MotivoBusca, InicioProblema, TipoDor } from "../types";
+import {
+  Anamnese,
+  AreaAfetada,
+  MotivoBusca,
+  InicioProblema,
+  TipoDor,
+  MecanismoLesao,
+} from "../types";
 
 type AnamnesePayload = {
   pacienteId?: string;
@@ -19,6 +26,8 @@ type AnamnesePayload = {
   inicioProblema?: InicioProblema;
   eventoEspecifico?: string;
   fatorAlivio?: string;
+  mecanismoLesao?: MecanismoLesao;
+  fatoresPiora?: string;
   dorRepouso?: boolean;
   dorNoturna?: boolean;
   irradiacao?: boolean;
@@ -31,6 +40,9 @@ type AnamnesePayload = {
   quandoProblemaAnterior?: string;
   tratamentosAnteriores?: string[];
   historicoFamiliar?: string;
+  historicoEsportivo?: string;
+  lesoesPrevias?: string;
+  usoMedicamentos?: string;
   limitacoesFuncionais?: string;
   atividadesQuePioram?: string;
   metaPrincipalPaciente?: string;

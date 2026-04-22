@@ -63,4 +63,17 @@ export class MetricsController {
       windowDays,
     );
   }
+
+  @Get('physical-exam-tests-summary')
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  getPhysicalExamTestsSummary(
+    @CurrentUser() usuario: Usuario,
+    @Query('windowDays', new DefaultValuePipe(30), ParseIntPipe)
+    windowDays: number,
+  ) {
+    return this.metricsService.getPhysicalExamTestsSummary(
+      usuario.id,
+      windowDays,
+    );
+  }
 }

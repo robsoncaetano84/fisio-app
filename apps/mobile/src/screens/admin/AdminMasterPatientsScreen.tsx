@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../constants/theme";
 import { useToast } from "../../components/ui";
+import { useLanguage } from "../../i18n/LanguageProvider";
 import { parseApiError } from "../../utils/apiErrors";
 import {
   getCrmAdminPatientsPaged,
@@ -16,6 +17,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "AdminPatients">;
 
 export function AdminMasterPatientsScreen({ navigation }: Props) {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
@@ -45,11 +47,11 @@ export function AdminMasterPatientsScreen({ navigation }: Props) {
       setItems(response.items || []);
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao carregar pacientes." });
+      showToast({ type: "error", message: parsed.message || t("errors.loadFailed") });
     } finally {
       setLoading(false);
     }
-  }, [query, showToast]);
+  }, [query, showToast, t]);
 
   useEffect(() => {
     load().catch(() => undefined);
@@ -81,7 +83,7 @@ export function AdminMasterPatientsScreen({ navigation }: Props) {
   const save = useCallback(async () => {
     if (!selected) return;
     if (!form.nomeCompleto.trim()) {
-      showToast({ type: "error", message: "Informe o nome do paciente." });
+      showToast({ type: "error", message: t("errors.required") });
       return;
     }
     setSaving(true);
@@ -103,29 +105,35 @@ export function AdminMasterPatientsScreen({ navigation }: Props) {
           sensitiveReason: "edicao cadastro paciente master",
         },
       );
-      showToast({ type: "success", message: "Paciente atualizado." });
+      showToast({ type: "success", message: t("crm.actions.saveChanges") });
       await load();
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao salvar paciente." });
+      showToast({ type: "error", message: parsed.message || t("errors.saveFailed") });
     } finally {
       setSaving(false);
     }
-  }, [form, load, selected, showToast]);
+  }, [form, load, selected, showToast, t]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Gestao de pacientes</Text>
-          <Pressable style={styles.linkBtn} onPress={() => navigation.navigate("AdminCrm")}>
-            <Text style={styles.linkBtnText}>Abrir CRM</Text>
+          <Text style={styles.title}>{t("crm.sections.patients")}</Text>
+          <Pressable
+            style={styles.linkBtn}
+            onPress={() => navigation.navigate("AdminCrm")}
+            accessibilityRole="button"
+            accessibilityLabel="CRM"
+            hitSlop={8}
+          >
+            <Text style={styles.linkBtnText}>CRM</Text>
           </Pressable>
         </View>
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Buscar por nome, email, cidade ou profissional"
+          placeholder={t("crm.filters.globalSearch")}
           style={styles.search}
           autoCapitalize="none"
           onSubmitEditing={() => load().catch(() => undefined)}
@@ -142,11 +150,13 @@ export function AdminMasterPatientsScreen({ navigation }: Props) {
                   key={item.id}
                   style={[styles.row, selectedId === item.id && styles.rowSelected]}
                   onPress={() => setSelectedId(item.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedId === item.id }}
                 >
                   <Text style={styles.rowTitle}>{item.nomeCompleto}</Text>
-                  <Text style={styles.rowSub}>{item.contatoEmail || "Sem e-mail"}</Text>
+                  <Text style={styles.rowSub}>{item.contatoEmail || t("crm.common.noData")}</Text>
                   <Text style={styles.rowSub}>
-                    {item.profissionalNome || "Sem profissional"} - {item.ativo ? "Ativo" : "Inativo"}
+                    {item.profissionalNome || t("crm.common.noData")} - {item.ativo ? t("crm.labels.active") : "Inativo"}
                   </Text>
                 </Pressable>
               ))}
@@ -154,45 +164,45 @@ export function AdminMasterPatientsScreen({ navigation }: Props) {
             <View style={styles.formPane}>
               {selected ? (
                 <>
-                  <Text style={styles.formTitle}>Editar paciente</Text>
+                  <Text style={styles.formTitle}>{t("crm.actions.editPatient")}</Text>
                   <TextInput
                     style={styles.input}
                     value={form.nomeCompleto}
                     onChangeText={(v) => setForm((p) => ({ ...p, nomeCompleto: v }))}
-                    placeholder="Nome completo"
+                    placeholder={t("crm.placeholders.fullName")}
                   />
                   <TextInput
                     style={styles.input}
                     value={form.cpf}
                     onChangeText={(v) => setForm((p) => ({ ...p, cpf: v.replace(/\D/g, "").slice(0, 11) }))}
-                    placeholder="CPF (11 digitos)"
+                    placeholder={t("crm.placeholders.cpf11")}
                     keyboardType="numeric"
                   />
                   <TextInput
                     style={styles.input}
                     value={form.profissao}
                     onChangeText={(v) => setForm((p) => ({ ...p, profissao: v }))}
-                    placeholder="Profissao"
+                    placeholder={t("crm.placeholders.profession")}
                   />
                   <TextInput
                     style={styles.input}
                     value={form.contatoEmail}
                     onChangeText={(v) => setForm((p) => ({ ...p, contatoEmail: v }))}
-                    placeholder="E-mail"
+                    placeholder={t("crm.placeholders.email")}
                     autoCapitalize="none"
                   />
                   <TextInput
                     style={styles.input}
                     value={form.contatoWhatsapp}
                     onChangeText={(v) => setForm((p) => ({ ...p, contatoWhatsapp: v.replace(/\D/g, "").slice(0, 11) }))}
-                    placeholder="WhatsApp"
+                    placeholder={t("crm.placeholders.whatsapp")}
                     keyboardType="phone-pad"
                   />
                   <TextInput
                     style={styles.input}
                     value={form.enderecoCidade}
                     onChangeText={(v) => setForm((p) => ({ ...p, enderecoCidade: v }))}
-                    placeholder="Cidade"
+                    placeholder={t("crm.placeholders.city")}
                   />
                   <TextInput
                     style={styles.input}
@@ -203,28 +213,38 @@ export function AdminMasterPatientsScreen({ navigation }: Props) {
                         enderecoUf: v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2),
                       }))
                     }
-                    placeholder="UF"
+                    placeholder={t("crm.placeholders.uf")}
                   />
                   <View style={styles.toggleRow}>
                     <Pressable
                       style={[styles.toggle, form.ativo && styles.toggleActive]}
                       onPress={() => setForm((p) => ({ ...p, ativo: true }))}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: form.ativo }}
                     >
-                      <Text style={[styles.toggleText, form.ativo && styles.toggleTextActive]}>Ativo</Text>
+                      <Text style={[styles.toggleText, form.ativo && styles.toggleTextActive]}>{t("crm.labels.active")}</Text>
                     </Pressable>
                     <Pressable
                       style={[styles.toggle, !form.ativo && styles.toggleActive]}
                       onPress={() => setForm((p) => ({ ...p, ativo: false }))}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: !form.ativo }}
                     >
                       <Text style={[styles.toggleText, !form.ativo && styles.toggleTextActive]}>Inativo</Text>
                     </Pressable>
                   </View>
-                  <Pressable style={styles.saveBtn} onPress={() => save().catch(() => undefined)}>
-                    <Text style={styles.saveBtnText}>{saving ? "Salvando..." : "Salvar alteracoes"}</Text>
+                  <Pressable
+                    style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+                    onPress={() => save().catch(() => undefined)}
+                    disabled={saving}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: saving, busy: saving }}
+                  >
+                    <Text style={styles.saveBtnText}>{saving ? t("crm.actions.saving") : t("crm.actions.saveChanges")}</Text>
                   </Pressable>
                 </>
               ) : (
-                <Text style={styles.empty}>Selecione um paciente.</Text>
+                <Text style={styles.empty}>{t("crm.messages.selectPatient")}</Text>
               )}
             </View>
           </View>
@@ -266,6 +286,7 @@ const styles = StyleSheet.create({
   toggleText: { color: COLORS.textSecondary, fontWeight: "700", fontSize: 12 },
   toggleTextActive: { color: COLORS.primary },
   saveBtn: { marginTop: 8, backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
+  saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: COLORS.white, fontWeight: "700" },
   empty: { color: COLORS.textSecondary, fontSize: 13 },
 });

@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   IsInt,
+  IsIn,
   Min,
   Max,
 } from 'class-validator';
@@ -64,6 +65,21 @@ export class CreateLaudoDto {
   @IsOptional()
   @IsString()
   criteriosAlta?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['ai', 'rules'])
+  sugestaoSource?: 'ai' | 'rules';
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  examesConsiderados?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  examesComLeituraIa?: number;
 }
 
 

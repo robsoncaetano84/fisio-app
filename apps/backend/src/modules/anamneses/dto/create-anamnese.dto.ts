@@ -14,7 +14,13 @@ import {
   Max,
   IsUUID,
 } from 'class-validator';
-import { MotivoBusca, InicioProblema, AreaAfetada, TipoDor } from '../entities/anamnese.entity';
+import {
+  MotivoBusca,
+  InicioProblema,
+  AreaAfetada,
+  TipoDor,
+  MecanismoLesao,
+} from '../entities/anamnese.entity';
 
 export class CreateAnamneseDto {
   @IsNotEmpty({ message: 'ID do paciente é obrigatório' })
@@ -60,6 +66,14 @@ export class CreateAnamneseDto {
   fatorAlivio?: string;
 
   @IsOptional()
+  @IsEnum(MecanismoLesao)
+  mecanismoLesao?: MecanismoLesao;
+
+  @IsOptional()
+  @IsString()
+  fatoresPiora?: string;
+
+  @IsOptional()
   @IsBoolean()
   problemaAnterior?: boolean;
 
@@ -74,6 +88,18 @@ export class CreateAnamneseDto {
   @IsOptional()
   @IsString()
   historicoFamiliar?: string;
+
+  @IsOptional()
+  @IsString()
+  historicoEsportivo?: string;
+
+  @IsOptional()
+  @IsString()
+  lesoesPrevias?: string;
+
+  @IsOptional()
+  @IsString()
+  usoMedicamentos?: string;
 
   @IsOptional()
   @IsString()

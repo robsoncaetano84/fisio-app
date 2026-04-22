@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../constants/theme";
 import { useToast } from "../../components/ui";
+import { useLanguage } from "../../i18n/LanguageProvider";
 import { parseApiError } from "../../utils/apiErrors";
 import {
   getCrmAdminProfessionalsPaged,
@@ -16,6 +17,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "AdminProfessionals">;
 
 export function AdminMasterProfessionalsScreen({ navigation }: Props) {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
@@ -42,11 +44,11 @@ export function AdminMasterProfessionalsScreen({ navigation }: Props) {
       setItems(response.items || []);
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao carregar profissionais." });
+      showToast({ type: "error", message: parsed.message || t("errors.loadFailed") });
     } finally {
       setLoading(false);
     }
-  }, [query, showToast]);
+  }, [query, showToast, t]);
 
   useEffect(() => {
     load().catch(() => undefined);
@@ -77,11 +79,11 @@ export function AdminMasterProfessionalsScreen({ navigation }: Props) {
   const save = useCallback(async () => {
     if (!selected) return;
     if (!form.nome.trim()) {
-      showToast({ type: "error", message: "Informe o nome." });
+      showToast({ type: "error", message: t("errors.required") });
       return;
     }
     if (!form.email.trim()) {
-      showToast({ type: "error", message: "Informe o e-mail." });
+      showToast({ type: "error", message: t("errors.required") });
       return;
     }
     setSaving(true);
@@ -100,29 +102,35 @@ export function AdminMasterProfessionalsScreen({ navigation }: Props) {
           sensitiveReason: "edicao cadastro profissional master",
         },
       );
-      showToast({ type: "success", message: "Profissional atualizado." });
+      showToast({ type: "success", message: t("crm.actions.saveChanges") });
       await load();
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao salvar." });
+      showToast({ type: "error", message: parsed.message || t("errors.saveFailed") });
     } finally {
       setSaving(false);
     }
-  }, [form, load, selected, showToast]);
+  }, [form, load, selected, showToast, t]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Gestao de profissionais</Text>
-          <Pressable style={styles.linkBtn} onPress={() => navigation.navigate("AdminCrm")}>
-            <Text style={styles.linkBtnText}>Abrir CRM</Text>
+          <Text style={styles.title}>{t("crm.sections.professionals")}</Text>
+          <Pressable
+            style={styles.linkBtn}
+            onPress={() => navigation.navigate("AdminCrm")}
+            accessibilityRole="button"
+            accessibilityLabel="CRM"
+            hitSlop={8}
+          >
+            <Text style={styles.linkBtnText}>CRM</Text>
           </Pressable>
         </View>
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Buscar por nome, email ou especialidade"
+          placeholder={t("crm.filters.globalSearch")}
           style={styles.search}
           autoCapitalize="none"
           onSubmitEditing={() => load().catch(() => undefined)}
@@ -139,11 +147,13 @@ export function AdminMasterProfessionalsScreen({ navigation }: Props) {
                   key={item.id}
                   style={[styles.row, selectedId === item.id && styles.rowSelected]}
                   onPress={() => setSelectedId(item.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedId === item.id }}
                 >
                   <Text style={styles.rowTitle}>{item.nome}</Text>
                   <Text style={styles.rowSub}>{item.email}</Text>
                   <Text style={styles.rowSub}>
-                    {item.especialidade || "Sem especialidade"} - {item.ativo ? "Ativo" : "Inativo"}
+                    {item.especialidade || t("crm.common.noData")} - {item.ativo ? t("crm.labels.active") : "Inativo"}
                   </Text>
                 </Pressable>
               ))}
@@ -151,52 +161,62 @@ export function AdminMasterProfessionalsScreen({ navigation }: Props) {
             <View style={styles.formPane}>
               {selected ? (
                 <>
-                  <Text style={styles.formTitle}>Editar profissional</Text>
+                  <Text style={styles.formTitle}>{t("crm.actions.editProfessional")}</Text>
                   <TextInput
                     style={styles.input}
                     value={form.nome}
                     onChangeText={(v) => setForm((p) => ({ ...p, nome: v }))}
-                    placeholder="Nome"
+                    placeholder={t("crm.placeholders.name")}
                   />
                   <TextInput
                     style={styles.input}
                     value={form.email}
                     onChangeText={(v) => setForm((p) => ({ ...p, email: v }))}
-                    placeholder="E-mail"
+                    placeholder={t("crm.placeholders.email")}
                     autoCapitalize="none"
                   />
                   <TextInput
                     style={styles.input}
                     value={form.especialidade}
                     onChangeText={(v) => setForm((p) => ({ ...p, especialidade: v }))}
-                    placeholder="Especialidade"
+                    placeholder={t("crm.placeholders.specialty")}
                   />
                   <TextInput
                     style={styles.input}
                     value={form.registroProf}
                     onChangeText={(v) => setForm((p) => ({ ...p, registroProf: v }))}
-                    placeholder="Registro profissional"
+                    placeholder={t("crm.placeholders.professionalRegistry")}
                   />
                   <View style={styles.toggleRow}>
                     <Pressable
                       style={[styles.toggle, form.ativo && styles.toggleActive]}
                       onPress={() => setForm((p) => ({ ...p, ativo: true }))}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: form.ativo }}
                     >
-                      <Text style={[styles.toggleText, form.ativo && styles.toggleTextActive]}>Ativo</Text>
+                      <Text style={[styles.toggleText, form.ativo && styles.toggleTextActive]}>{t("crm.labels.active")}</Text>
                     </Pressable>
                     <Pressable
                       style={[styles.toggle, !form.ativo && styles.toggleActive]}
                       onPress={() => setForm((p) => ({ ...p, ativo: false }))}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: !form.ativo }}
                     >
                       <Text style={[styles.toggleText, !form.ativo && styles.toggleTextActive]}>Inativo</Text>
                     </Pressable>
                   </View>
-                  <Pressable style={styles.saveBtn} onPress={() => save().catch(() => undefined)}>
-                    <Text style={styles.saveBtnText}>{saving ? "Salvando..." : "Salvar alteracoes"}</Text>
+                  <Pressable
+                    style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+                    onPress={() => save().catch(() => undefined)}
+                    disabled={saving}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: saving, busy: saving }}
+                  >
+                    <Text style={styles.saveBtnText}>{saving ? t("crm.actions.saving") : t("crm.actions.saveChanges")}</Text>
                   </Pressable>
                 </>
               ) : (
-                <Text style={styles.empty}>Selecione um profissional.</Text>
+                <Text style={styles.empty}>{t("crm.messages.selectProfessional")}</Text>
               )}
             </View>
           </View>
@@ -238,6 +258,7 @@ const styles = StyleSheet.create({
   toggleText: { color: COLORS.textSecondary, fontWeight: "700", fontSize: 12 },
   toggleTextActive: { color: COLORS.primary },
   saveBtn: { marginTop: 8, backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
+  saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: COLORS.white, fontWeight: "700" },
   empty: { color: COLORS.textSecondary, fontSize: 13 },
 });

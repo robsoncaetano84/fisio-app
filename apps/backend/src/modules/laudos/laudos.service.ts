@@ -106,11 +106,17 @@ export class LaudosService {
       throw new BadRequestException('Ja existe laudo para este paciente');
     }
 
+    const hasSuggestionMeta =
+      createLaudoDto.sugestaoSource ||
+      typeof createLaudoDto.examesConsiderados === 'number' ||
+      typeof createLaudoDto.examesComLeituraIa === 'number';
+
     const laudo = this.laudoRepository.create({
       ...createLaudoDto,
       status: LaudoStatus.RASCUNHO_IA,
       validadoPorUsuarioId: null,
       validadoEm: null,
+      sugestaoGeradaEm: hasSuggestionMeta ? new Date() : null,
     });
     return this.laudoRepository.save(laudo);
   }
@@ -168,7 +174,14 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<Laudo> {
     const laudo = await this.findOne(id, usuarioId);
+    const hasSuggestionMetaUpdate =
+      updateLaudoDto.sugestaoSource ||
+      typeof updateLaudoDto.examesConsiderados === 'number' ||
+      typeof updateLaudoDto.examesComLeituraIa === 'number';
     Object.assign(laudo, sanitizePartialUpdate(updateLaudoDto));
+    if (hasSuggestionMetaUpdate) {
+      laudo.sugestaoGeradaEm = new Date();
+    }
     // Qualquer alteracao apos aprovacao volta para rascunho e exige nova validacao.
     laudo.status = LaudoStatus.RASCUNHO_IA;
     laudo.validadoPorUsuarioId = null;
@@ -519,6 +532,7 @@ export class LaudosService {
       source: "ai" | "rules";
       examesConsiderados: number;
       examesComLeituraIa: number;
+      sugestaoGeradaEm: string;
     } & Partial<CreateLaudoDto>
   > {
     const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } = await this.buildAiInput(
@@ -575,6 +589,7 @@ export class LaudosService {
       source,
       examesConsiderados,
       examesComLeituraIa,
+      sugestaoGeradaEm: new Date().toISOString(),
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ??
         `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
@@ -873,12 +888,15 @@ criteriosAlta (string).
 
 Regras clinicas:
 - Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
+- Use explicitamente os campos da anamnese: inicioProblema, mecanismoLesao, fatorAlivio, fatoresPiora, historicoEsportivo, lesoesPrevias e usoMedicamentos.
+- Se algum desses campos estiver vazio, declare a lacuna clinica em vez de supor informacao.
 - Considere os exames anexados (tipoExame, observacao, dataExame, mimeType e aiInterpretacao quando houver) para orientar diagnostico funcional, condutas e plano.
 - Nao invente achados de imagem nao descritos no contexto.
 - Se houver informacao insuficiente dos exames, explicite a limitacao e mantenha conduta prudente.
 - Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
 - Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
 - Evite termos vagos; relacione cada bloco a achados (dor, funcao, testes positivos/deficits funcionais).
+- Em diagnosticoFuncional, identifique (quando possivel) origem provavel da dor, estrutura envolvida, tipo de lesao (mecanica/inflamatoria/neural) e fator biomecanico associado.
 
 Resumo do exame fisico estruturado:
 ${input.exameFisicoResumo || 'Nao informado'}
@@ -1338,9 +1356,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
-
-
 
 
 
