@@ -12,6 +12,8 @@ export declare class CrmController {
     private readonly crmService;
     private readonly logger;
     constructor(crmService: CrmService);
+    private requirePermission;
+    private runAudited;
     private auditAdminAccess;
     getPipelineSummary(usuario: Usuario): Promise<{
         totalLeads: number;
@@ -166,7 +168,7 @@ export declare class CrmController {
         limit: number;
         totalPages: number;
     }>;
-    listLeads(usuario: Usuario, q?: string, stage?: CrmLeadStage | 'TODOS'): Promise<{
+    listLeads(usuario: Usuario, q?: string, stage?: CrmLeadStage | 'TODOS', includeSensitive?: string, sensitiveReason?: string): Promise<{
         id: string;
         nome: string;
         empresa: string | null;
@@ -187,7 +189,7 @@ export declare class CrmController {
         limit: number;
         totalPages: number;
     }>;
-    listLeadsPaged(usuario: Usuario, q?: string, stage?: CrmLeadStage | 'TODOS', page?: string, limit?: string): Promise<{
+    listLeadsPaged(usuario: Usuario, q?: string, stage?: CrmLeadStage | 'TODOS', includeSensitive?: string, sensitiveReason?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             nome: string;
@@ -207,7 +209,7 @@ export declare class CrmController {
         limit: number;
         totalPages: number;
     }>;
-    getLeadById(usuario: Usuario, id: string): Promise<{
+    getLeadById(usuario: Usuario, id: string, includeSensitive?: string, sensitiveReason?: string): Promise<{
         id: string;
         nome: string;
         empresa: string | null;
@@ -252,7 +254,7 @@ export declare class CrmController {
     deleteLead(usuario: Usuario, id: string): Promise<{
         success: boolean;
     }>;
-    listTasks(usuario: Usuario, status?: CrmTaskStatus | 'TODOS', limit?: string): Promise<{
+    listTasks(usuario: Usuario, status?: CrmTaskStatus | 'TODOS', includeSensitive?: string, sensitiveReason?: string, limit?: string): Promise<{
         id: string;
         titulo: string;
         descricao: string | null;
@@ -265,7 +267,7 @@ export declare class CrmController {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
-    listTasksPaged(usuario: Usuario, status?: CrmTaskStatus | 'TODOS', leadId?: string, q?: string, page?: string, limit?: string): Promise<{
+    listTasksPaged(usuario: Usuario, status?: CrmTaskStatus | 'TODOS', leadId?: string, q?: string, includeSensitive?: string, sensitiveReason?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             titulo: string;
@@ -313,7 +315,7 @@ export declare class CrmController {
     deleteTask(usuario: Usuario, id: string): Promise<{
         success: boolean;
     }>;
-    listInteractions(usuario: Usuario, leadId: string): Promise<{
+    listInteractions(usuario: Usuario, leadId: string, includeSensitive?: string, sensitiveReason?: string): Promise<{
         id: string;
         leadId: string;
         tipo: import("./entities/crm-interaction.entity").CrmInteractionType;
@@ -326,7 +328,7 @@ export declare class CrmController {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
-    listInteractionsPaged(usuario: Usuario, leadId: string, tipo?: string, q?: string, page?: string, limit?: string): Promise<{
+    listInteractionsPaged(usuario: Usuario, leadId: string, tipo?: string, q?: string, includeSensitive?: string, sensitiveReason?: string, page?: string, limit?: string): Promise<{
         items: {
             id: string;
             leadId: string;

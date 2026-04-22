@@ -240,6 +240,8 @@ export async function getCrmAdminPatientsPaged(params?: {
 export async function getCrmLeads(params?: {
   q?: string;
   stage?: CrmLeadStage | "TODOS";
+  includeSensitive?: boolean;
+  sensitiveReason?: string;
 }): Promise<CrmLead[]> {
   const response = await api.get<CrmLead[]>("/crm/leads", { params });
   return response.data;
@@ -281,6 +283,8 @@ export async function deleteCrmLead(id: string): Promise<void> {
 export async function getCrmTasks(params?: {
   status?: CrmTaskStatus | "TODOS";
   limit?: number;
+  includeSensitive?: boolean;
+  sensitiveReason?: string;
 }): Promise<CrmTask[]> {
   const response = await api.get<CrmTask[]>("/crm/tasks", { params });
   return response.data;
@@ -317,8 +321,13 @@ export async function deleteCrmTask(id: string): Promise<void> {
   await api.delete(`/crm/tasks/${id}`);
 }
 
-export async function getCrmInteractions(leadId: string): Promise<CrmInteraction[]> {
-  const response = await api.get<CrmInteraction[]>(`/crm/leads/${leadId}/interactions`);
+export async function getCrmInteractions(
+  leadId: string,
+  params?: { includeSensitive?: boolean; sensitiveReason?: string },
+): Promise<CrmInteraction[]> {
+  const response = await api.get<CrmInteraction[]>(`/crm/leads/${leadId}/interactions`, {
+    params,
+  });
   return response.data;
 }
 

@@ -388,8 +388,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           page: pacPage,
           limit: 10,
         }),
-        getCrmLeads({ q: query || undefined, stage: stageFilter }),
-        getCrmTasks({ status: "TODOS", limit: 200 }),
+        getCrmLeads({
+          q: query || undefined,
+          stage: stageFilter,
+          includeSensitive: includeSensitiveData,
+          sensitiveReason: includeSensitiveData ? sensitiveReason : undefined,
+        }),
+        getCrmTasks({
+          status: "TODOS",
+          limit: 200,
+          includeSensitive: includeSensitiveData,
+          sensitiveReason: includeSensitiveData ? sensitiveReason : undefined,
+        }),
       ]);
       setPipeline(p);
       setClinicalSummary(clinical);
@@ -416,13 +426,20 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const loadInteractions = useCallback(async (leadId: string) => {
     if (!leadId) { setInteractions([]); return; }
     setLoadingInteractions(true);
-    try { setInteractions(await getCrmInteractions(leadId)); }
+    try {
+      setInteractions(
+        await getCrmInteractions(leadId, {
+          includeSensitive: includeSensitiveData,
+          sensitiveReason: includeSensitiveData ? sensitiveReason : undefined,
+        }),
+      );
+    }
     catch (error) {
       const parsed = parseApiError(error);
       showToast({ type: "error", message: `Falha ao carregar interações: ${parsed.message}` });
     }
     finally { setLoadingInteractions(false); }
-  }, [showToast]);
+  }, [includeSensitiveData, sensitiveReason, showToast]);
 
   useEffect(() => { loadMain().catch(() => undefined); }, [loadMain]);
   useEffect(() => { loadInteractions(selectedLeadId).catch(() => undefined); }, [loadInteractions, selectedLeadId]);

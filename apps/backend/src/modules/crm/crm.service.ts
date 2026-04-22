@@ -26,8 +26,18 @@ import { CrmInteraction } from './entities/crm-interaction.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
 
+export type CrmAdminPermission =
+  | 'dashboard.read'
+  | 'crm.read'
+  | 'crm.write'
+  | 'audit.read'
+  | 'sensitive.read';
+
 @Injectable()
 export class CrmService {
+  private permissionsCacheRaw: string | null = null;
+  private permissionsCache: Map<string, Set<CrmAdminPermission>> | null = null;
+
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(CrmLead)
@@ -71,6 +81,11 @@ export class CrmService {
     return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
   }
 
+  private maskRichText(value?: string | null, includeSensitive?: boolean): string | null {
+    if (!value) return null;
+    return includeSensitive ? value : '[mascarado]';
+  }
+
   assertMasterAdmin(usuario: Usuario): void {
     if (usuario.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Acesso restrito ao administrador master');
@@ -86,6 +101,83 @@ export class CrmService {
 
     if (!allowedEmails.includes((usuario.email || '').trim().toLowerCase())) {
       throw new ForbiddenException('Acesso restrito ao administrador master');
+    }
+  }
+
+  private parsePermissionsConfig(): Map<string, Set<CrmAdminPermission>> {
+    const raw = (this.configService.get<string>('MASTER_ADMIN_PERMISSIONS') || '').trim();
+    if (!raw) return new Map();
+
+    if (this.permissionsCache && this.permissionsCacheRaw === raw) {
+      return this.permissionsCache;
+    }
+
+    const allowed = new Set<CrmAdminPermission>([
+      'dashboard.read',
+      'crm.read',
+      'crm.write',
+      'audit.read',
+      'sensitive.read',
+    ]);
+
+    const map = new Map<string, Set<CrmAdminPermission>>();
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      for (const [emailKey, permissionsRaw] of Object.entries(parsed || {})) {
+        const email = emailKey.trim().toLowerCase();
+        if (!email) continue;
+        const permissions = Array.isArray(permissionsRaw)
+          ? permissionsRaw
+          : typeof permissionsRaw === 'string'
+            ? String(permissionsRaw).split('|')
+            : [];
+        const normalized = new Set<CrmAdminPermission>();
+        permissions.forEach((item) => {
+          const permission = String(item).trim() as CrmAdminPermission;
+          if (allowed.has(permission)) normalized.add(permission);
+        });
+        if (normalized.size > 0) map.set(email, normalized);
+      }
+    } catch {
+      const pairs = raw
+        .split(';')
+        .map((chunk) => chunk.trim())
+        .filter(Boolean);
+      pairs.forEach((pair) => {
+        const [emailRaw, permissionsRaw] = pair.split('=');
+        const email = (emailRaw || '').trim().toLowerCase();
+        if (!email) return;
+        const normalized = new Set<CrmAdminPermission>();
+        (permissionsRaw || '')
+          .split('|')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .forEach((item) => {
+            const permission = item as CrmAdminPermission;
+            if (allowed.has(permission)) normalized.add(permission);
+          });
+        if (normalized.size > 0) map.set(email, normalized);
+      });
+    }
+
+    this.permissionsCacheRaw = raw;
+    this.permissionsCache = map;
+    return map;
+  }
+
+  assertMasterAdminPermission(usuario: Usuario, permission: CrmAdminPermission): void {
+    this.assertMasterAdmin(usuario);
+    const permissionMap = this.parsePermissionsConfig();
+    if (permissionMap.size === 0) return;
+
+    const email = (usuario.email || '').trim().toLowerCase();
+    const direct = permissionMap.get(email);
+    const wildcard = permissionMap.get('*');
+    const merged = new Set<CrmAdminPermission>([...(wildcard || []), ...(direct || [])]);
+
+    if (!merged.has(permission)) {
+      throw new ForbiddenException('Permissão insuficiente para esta operação administrativa');
     }
   }
 
@@ -645,14 +737,21 @@ export class CrmService {
     };
   }
 
-  async listLeads(params?: { q?: string; stage?: CrmLeadStage | 'TODOS' }) {
+  async listLeads(params?: {
+    q?: string;
+    stage?: CrmLeadStage | 'TODOS';
+    includeSensitive?: boolean;
+  }) {
     const leads = await this.buildLeadQuery(params).getMany();
-    return leads.map((lead) => this.mapLead(lead));
+    return leads.map((lead) =>
+      this.mapLead(lead, { includeSensitive: params?.includeSensitive }),
+    );
   }
 
   async listLeadsPaged(params?: {
     q?: string;
     stage?: CrmLeadStage | 'TODOS';
+    includeSensitive?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -664,7 +763,9 @@ export class CrmService {
       .getManyAndCount();
 
     return {
-      items: items.map((lead) => this.mapLead(lead)),
+      items: items.map((lead) =>
+        this.mapLead(lead, { includeSensitive: params?.includeSensitive }),
+      ),
       total,
       page,
       limit,
@@ -672,10 +773,10 @@ export class CrmService {
     };
   }
 
-  async getLeadById(id: string) {
+  async getLeadById(id: string, params?: { includeSensitive?: boolean }) {
     const lead = await this.crmLeadRepository.findOne({ where: { id, ativo: true } });
     if (!lead) throw new NotFoundException('Lead não encontrado');
-    return this.mapLead(lead);
+    return this.mapLead(lead, { includeSensitive: params?.includeSensitive });
   }
 
   async createLead(dto: CreateCrmLeadDto, usuario: Usuario) {
@@ -690,7 +791,9 @@ export class CrmService {
       observacoes: dto.observacoes?.trim() || null,
       ativo: true,
     });
-    return this.mapLead(await this.crmLeadRepository.save(entity));
+    return this.mapLead(await this.crmLeadRepository.save(entity), {
+      includeSensitive: true,
+    });
   }
 
   async updateLead(id: string, dto: UpdateCrmLeadDto) {
@@ -705,7 +808,9 @@ export class CrmService {
     if (dto.valorPotencial !== undefined) lead.valorPotencial = String(dto.valorPotencial);
     if (dto.observacoes !== undefined) lead.observacoes = dto.observacoes?.trim() || null;
 
-    return this.mapLead(await this.crmLeadRepository.save(lead));
+    return this.mapLead(await this.crmLeadRepository.save(lead), {
+      includeSensitive: true,
+    });
   }
 
   async deleteLead(id: string): Promise<void> {
@@ -715,17 +820,24 @@ export class CrmService {
     await this.crmLeadRepository.save(lead);
   }
 
-  async listTasks(params?: { status?: CrmTaskStatus | 'TODOS'; limit?: number }) {
+  async listTasks(params?: {
+    status?: CrmTaskStatus | 'TODOS';
+    limit?: number;
+    includeSensitive?: boolean;
+  }) {
     const qb = this.buildTaskQuery(params);
     if (params?.limit) qb.take(Math.max(1, Math.min(params.limit, 100)));
     const tasks = await qb.getMany();
-    return tasks.map((task) => this.mapTask(task));
+    return tasks.map((task) =>
+      this.mapTask(task, { includeSensitive: params?.includeSensitive }),
+    );
   }
 
   async listTasksPaged(params?: {
     status?: CrmTaskStatus | 'TODOS';
     q?: string;
     leadId?: string;
+    includeSensitive?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -736,7 +848,9 @@ export class CrmService {
       .take(limit)
       .getManyAndCount();
     return {
-      items: items.map((task) => this.mapTask(task)),
+      items: items.map((task) =>
+        this.mapTask(task, { includeSensitive: params?.includeSensitive }),
+      ),
       total,
       page,
       limit,
@@ -755,7 +869,9 @@ export class CrmService {
       status: dto.status ?? CrmTaskStatus.PENDENTE,
       ativo: true,
     });
-    return this.mapTask(await this.crmTaskRepository.save(entity));
+    return this.mapTask(await this.crmTaskRepository.save(entity), {
+      includeSensitive: true,
+    });
   }
 
   async updateTask(id: string, dto: UpdateCrmTaskDto) {
@@ -769,7 +885,9 @@ export class CrmService {
     if (dto.dueAt !== undefined) task.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
     if (dto.status !== undefined) task.status = dto.status;
 
-    return this.mapTask(await this.crmTaskRepository.save(task));
+    return this.mapTask(await this.crmTaskRepository.save(task), {
+      includeSensitive: true,
+    });
   }
 
   async deleteTask(id: string): Promise<void> {
@@ -779,16 +897,19 @@ export class CrmService {
     await this.crmTaskRepository.save(task);
   }
 
-  async listInteractions(leadId: string) {
+  async listInteractions(leadId: string, params?: { includeSensitive?: boolean }) {
     await this.ensureLeadExists(leadId);
     const items = await this.buildInteractionQuery({ leadId }).getMany();
-    return items.map((item) => this.mapInteraction(item));
+    return items.map((item) =>
+      this.mapInteraction(item, { includeSensitive: params?.includeSensitive }),
+    );
   }
 
   async listInteractionsPaged(params: {
     leadId: string;
     tipo?: string;
     q?: string;
+    includeSensitive?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -800,7 +921,9 @@ export class CrmService {
       .take(limit)
       .getManyAndCount();
     return {
-      items: items.map((item) => this.mapInteraction(item)),
+      items: items.map((item) =>
+        this.mapInteraction(item, { includeSensitive: params?.includeSensitive }),
+      ),
       total,
       page,
       limit,
@@ -820,7 +943,9 @@ export class CrmService {
       occurredAt: dto.occurredAt ? new Date(dto.occurredAt) : new Date(),
       ativo: true,
     });
-    return this.mapInteraction(await this.crmInteractionRepository.save(entity));
+    return this.mapInteraction(await this.crmInteractionRepository.save(entity), {
+      includeSensitive: true,
+    });
   }
 
   async updateInteraction(id: string, dto: UpdateCrmInteractionDto) {
@@ -837,7 +962,9 @@ export class CrmService {
     if (dto.responsavelNome !== undefined) item.responsavelNome = dto.responsavelNome?.trim() || null;
     if (dto.occurredAt !== undefined && dto.occurredAt) item.occurredAt = new Date(dto.occurredAt);
 
-    return this.mapInteraction(await this.crmInteractionRepository.save(item));
+    return this.mapInteraction(await this.crmInteractionRepository.save(item), {
+      includeSensitive: true,
+    });
   }
 
   async deleteInteraction(id: string): Promise<void> {
@@ -900,7 +1027,7 @@ export class CrmService {
     return qb;
   }
 
-  private mapLead(lead: CrmLead) {
+  private mapLead(lead: CrmLead, params?: { includeSensitive?: boolean }) {
     return {
       id: lead.id,
       nome: lead.nome,
@@ -910,18 +1037,18 @@ export class CrmService {
       responsavelNome: lead.responsavelNome,
       responsavelUsuarioId: lead.responsavelUsuarioId,
       valorPotencial: Number(lead.valorPotencial || 0),
-      observacoes: lead.observacoes,
+      observacoes: this.maskRichText(lead.observacoes, params?.includeSensitive),
       ativo: lead.ativo,
       createdAt: lead.createdAt,
       updatedAt: lead.updatedAt,
     };
   }
 
-  private mapTask(task: CrmTask) {
+  private mapTask(task: CrmTask, params?: { includeSensitive?: boolean }) {
     return {
       id: task.id,
       titulo: task.titulo,
-      descricao: task.descricao,
+      descricao: this.maskRichText(task.descricao, params?.includeSensitive),
       leadId: task.leadId,
       responsavelNome: task.responsavelNome,
       responsavelUsuarioId: task.responsavelUsuarioId,
@@ -933,13 +1060,13 @@ export class CrmService {
     };
   }
 
-  private mapInteraction(item: CrmInteraction) {
+  private mapInteraction(item: CrmInteraction, params?: { includeSensitive?: boolean }) {
     return {
       id: item.id,
       leadId: item.leadId,
       tipo: item.tipo,
       resumo: item.resumo,
-      detalhes: item.detalhes,
+      detalhes: this.maskRichText(item.detalhes, params?.includeSensitive),
       responsavelNome: item.responsavelNome,
       responsavelUsuarioId: item.responsavelUsuarioId,
       occurredAt: item.occurredAt,

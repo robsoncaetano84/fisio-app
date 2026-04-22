@@ -18,6 +18,7 @@ import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
+export type CrmAdminPermission = 'dashboard.read' | 'crm.read' | 'crm.write' | 'audit.read' | 'sensitive.read';
 export declare class CrmService {
     private readonly configService;
     private readonly crmLeadRepository;
@@ -32,10 +33,15 @@ export declare class CrmService {
     private readonly laudoRepository;
     private readonly clinicalFlowEventRepository;
     private readonly crmAdminAuditLogRepository;
+    private permissionsCacheRaw;
+    private permissionsCache;
     constructor(configService: ConfigService, crmLeadRepository: Repository<CrmLead>, crmTaskRepository: Repository<CrmTask>, crmInteractionRepository: Repository<CrmInteraction>, pacienteRepository: Repository<Paciente>, usuarioRepository: Repository<Usuario>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, atividadeRepository: Repository<Atividade>, atividadeCheckinRepository: Repository<AtividadeCheckin>, laudoRepository: Repository<Laudo>, clinicalFlowEventRepository: Repository<ClinicalFlowEvent>, crmAdminAuditLogRepository: Repository<CrmAdminAuditLog>);
     private maskEmail;
     private maskPhone;
+    private maskRichText;
     assertMasterAdmin(usuario: Usuario): void;
+    private parsePermissionsConfig;
+    assertMasterAdminPermission(usuario: Usuario, permission: CrmAdminPermission): void;
     createAdminAuditLog(params: {
         actorId: string;
         actorEmail: string;
@@ -244,6 +250,7 @@ export declare class CrmService {
     listLeads(params?: {
         q?: string;
         stage?: CrmLeadStage | 'TODOS';
+        includeSensitive?: boolean;
     }): Promise<{
         id: string;
         nome: string;
@@ -261,6 +268,7 @@ export declare class CrmService {
     listLeadsPaged(params?: {
         q?: string;
         stage?: CrmLeadStage | 'TODOS';
+        includeSensitive?: boolean;
         page?: number;
         limit?: number;
     }): Promise<{
@@ -283,7 +291,9 @@ export declare class CrmService {
         limit: number;
         totalPages: number;
     }>;
-    getLeadById(id: string): Promise<{
+    getLeadById(id: string, params?: {
+        includeSensitive?: boolean;
+    }): Promise<{
         id: string;
         nome: string;
         empresa: string | null;
@@ -329,6 +339,7 @@ export declare class CrmService {
     listTasks(params?: {
         status?: CrmTaskStatus | 'TODOS';
         limit?: number;
+        includeSensitive?: boolean;
     }): Promise<{
         id: string;
         titulo: string;
@@ -346,6 +357,7 @@ export declare class CrmService {
         status?: CrmTaskStatus | 'TODOS';
         q?: string;
         leadId?: string;
+        includeSensitive?: boolean;
         page?: number;
         limit?: number;
     }): Promise<{
@@ -394,7 +406,9 @@ export declare class CrmService {
         updatedAt: Date;
     }>;
     deleteTask(id: string): Promise<void>;
-    listInteractions(leadId: string): Promise<{
+    listInteractions(leadId: string, params?: {
+        includeSensitive?: boolean;
+    }): Promise<{
         id: string;
         leadId: string;
         tipo: import("./entities/crm-interaction.entity").CrmInteractionType;
@@ -411,6 +425,7 @@ export declare class CrmService {
         leadId: string;
         tipo?: string;
         q?: string;
+        includeSensitive?: boolean;
         page?: number;
         limit?: number;
     }): Promise<{

@@ -111,6 +111,7 @@ exports.AppModule = AppModule = __decorate([
                     REDIS_URL: Joi.string().allow('').optional(),
                     ALLOW_ADMIN_REGISTRATION: Joi.string().valid('true', 'false').default('false'),
                     MASTER_ADMIN_EMAILS: Joi.string().allow('').optional(),
+                    MASTER_ADMIN_PERMISSIONS: Joi.string().allow('').optional(),
                     OPENAI_API_KEY: Joi.string().allow('').optional(),
                     OPENAI_MODEL: Joi.string().allow('').optional(),
                     EXPO_ACCESS_TOKEN: Joi.string().allow('').optional(),

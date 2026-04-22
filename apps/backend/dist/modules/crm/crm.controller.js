@@ -32,6 +32,26 @@ let CrmController = CrmController_1 = class CrmController {
     constructor(crmService) {
         this.crmService = crmService;
     }
+    requirePermission(usuario, permission) {
+        this.crmService.assertMasterAdminPermission(usuario, permission);
+    }
+    async runAudited(params) {
+        const { usuario, action, metadata, execute } = params;
+        this.auditAdminAccess(usuario, `${action}_attempt`, metadata);
+        try {
+            const result = await execute();
+            this.auditAdminAccess(usuario, `${action}_success`, metadata);
+            return result;
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : 'erro_desconhecido';
+            this.auditAdminAccess(usuario, `${action}_error`, {
+                ...(metadata || {}),
+                errorMessage: message,
+            });
+            throw error;
+        }
+    }
     auditAdminAccess(usuario, action, metadata) {
         const includeSensitive = typeof metadata?.includeSensitive === 'boolean'
             ? Boolean(metadata.includeSensitive)
@@ -62,12 +82,12 @@ let CrmController = CrmController_1 = class CrmController {
         });
     }
     async getPipelineSummary(usuario) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'dashboard.read');
         this.auditAdminAccess(usuario, 'pipeline_summary');
         return this.crmService.getPipelineSummary();
     }
     async getClinicalDashboardSummary(usuario, windowDays, semEvolucaoDias) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'dashboard.read');
         this.auditAdminAccess(usuario, 'clinical_dashboard_summary', {
             windowDays,
             semEvolucaoDias,
@@ -78,9 +98,9 @@ let CrmController = CrmController_1 = class CrmController {
         });
     }
     async listAdminProfissionais(usuario, q, ativo, especialidade, includeSensitive, sensitiveReason) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'crm.read');
         const includeSensitiveBool = parseBoolQuery(includeSensitive);
-        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_profissionais_list', {
             q,
             ativo,
@@ -96,9 +116,9 @@ let CrmController = CrmController_1 = class CrmController {
         });
     }
     async listAdminProfissionaisPaged(usuario, q, ativo, especialidade, includeSensitive, sensitiveReason, page, limit) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'crm.read');
         const includeSensitiveBool = parseBoolQuery(includeSensitive);
-        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_profissionais_paged', {
             q,
             ativo,
@@ -118,9 +138,9 @@ let CrmController = CrmController_1 = class CrmController {
         });
     }
     async listAdminPacientes(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive, sensitiveReason) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'crm.read');
         const includeSensitiveBool = parseBoolQuery(includeSensitive);
-        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_pacientes_list', {
             q,
             ativo,
@@ -140,9 +160,9 @@ let CrmController = CrmController_1 = class CrmController {
         });
     }
     async listAdminPacientesPaged(usuario, q, ativo, vinculadoUsuarioPaciente, cidade, uf, includeSensitive, sensitiveReason, page, limit) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'crm.read');
         const includeSensitiveBool = parseBoolQuery(includeSensitive);
-        this.validateSensitiveReason(includeSensitiveBool, sensitiveReason);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'admin_pacientes_paged', {
             q,
             ativo,
@@ -165,13 +185,24 @@ let CrmController = CrmController_1 = class CrmController {
             limit: limit ? Number(limit) : 20,
         });
     }
-    async listLeads(usuario, q, stage) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'leads_list', { q, stage });
-        return this.crmService.listLeads({ q, stage });
+    async listLeads(usuario, q, stage, includeSensitive, sensitiveReason) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        this.auditAdminAccess(usuario, 'leads_list', {
+            q,
+            stage,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+        });
+        return this.crmService.listLeads({
+            q,
+            stage,
+            includeSensitive: includeSensitiveBool,
+        });
     }
     async listAdminAuditLogs(usuario, q, action, includeSensitive, page, limit) {
-        this.crmService.assertMasterAdmin(usuario);
+        this.requirePermission(usuario, 'audit.read');
         this.auditAdminAccess(usuario, 'admin_audit_logs_list', {
             q,
             action,
@@ -187,51 +218,94 @@ let CrmController = CrmController_1 = class CrmController {
             limit: limit ? Number(limit) : 20,
         });
     }
-    async listLeadsPaged(usuario, q, stage, page, limit) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'leads_paged', { q, stage, page, limit });
+    async listLeadsPaged(usuario, q, stage, includeSensitive, sensitiveReason, page, limit) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        this.auditAdminAccess(usuario, 'leads_paged', {
+            q,
+            stage,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+            page,
+            limit,
+        });
         return this.crmService.listLeadsPaged({
             q,
             stage,
+            includeSensitive: includeSensitiveBool,
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
     }
-    async getLeadById(usuario, id) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'lead_detail', { id });
-        return this.crmService.getLeadById(id);
+    async getLeadById(usuario, id, includeSensitive, sensitiveReason) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        this.auditAdminAccess(usuario, 'lead_detail', {
+            id,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+        });
+        return this.crmService.getLeadById(id, {
+            includeSensitive: includeSensitiveBool,
+        });
     }
     async createLead(usuario, dto) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'lead_create');
-        return this.crmService.createLead(dto, usuario);
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'lead_create',
+            execute: () => this.crmService.createLead(dto, usuario),
+        });
     }
     async updateLead(usuario, id, dto) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'lead_update', { id });
-        return this.crmService.updateLead(id, dto);
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'lead_update',
+            metadata: { id },
+            execute: () => this.crmService.updateLead(id, dto),
+        });
     }
     async deleteLead(usuario, id) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'lead_delete', { id });
-        await this.crmService.deleteLead(id);
-        return { success: true };
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'lead_delete',
+            metadata: { id },
+            execute: async () => {
+                await this.crmService.deleteLead(id);
+                return { success: true };
+            },
+        });
     }
-    async listTasks(usuario, status, limit) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'tasks_list', { status, limit });
+    async listTasks(usuario, status, includeSensitive, sensitiveReason, limit) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        this.auditAdminAccess(usuario, 'tasks_list', {
+            status,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+            limit,
+        });
         return this.crmService.listTasks({
             status,
+            includeSensitive: includeSensitiveBool,
             limit: limit ? Number(limit) : undefined,
         });
     }
-    async listTasksPaged(usuario, status, leadId, q, page, limit) {
-        this.crmService.assertMasterAdmin(usuario);
+    async listTasksPaged(usuario, status, leadId, q, includeSensitive, sensitiveReason, page, limit) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'tasks_paged', {
             status,
             leadId,
             q,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
             page,
             limit,
         });
@@ -239,37 +313,63 @@ let CrmController = CrmController_1 = class CrmController {
             status,
             leadId,
             q,
+            includeSensitive: includeSensitiveBool,
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
     }
     async createTask(usuario, dto) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'task_create');
-        return this.crmService.createTask(dto, usuario);
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'task_create',
+            execute: () => this.crmService.createTask(dto, usuario),
+        });
     }
     async updateTask(usuario, id, dto) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'task_update', { id });
-        return this.crmService.updateTask(id, dto);
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'task_update',
+            metadata: { id },
+            execute: () => this.crmService.updateTask(id, dto),
+        });
     }
     async deleteTask(usuario, id) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'task_delete', { id });
-        await this.crmService.deleteTask(id);
-        return { success: true };
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'task_delete',
+            metadata: { id },
+            execute: async () => {
+                await this.crmService.deleteTask(id);
+                return { success: true };
+            },
+        });
     }
-    async listInteractions(usuario, leadId) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'interactions_list', { leadId });
-        return this.crmService.listInteractions(leadId);
+    async listInteractions(usuario, leadId, includeSensitive, sensitiveReason) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+        this.auditAdminAccess(usuario, 'interactions_list', {
+            leadId,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
+        });
+        return this.crmService.listInteractions(leadId, {
+            includeSensitive: includeSensitiveBool,
+        });
     }
-    async listInteractionsPaged(usuario, leadId, tipo, q, page, limit) {
-        this.crmService.assertMasterAdmin(usuario);
+    async listInteractionsPaged(usuario, leadId, tipo, q, includeSensitive, sensitiveReason, page, limit) {
+        this.requirePermission(usuario, 'crm.read');
+        const includeSensitiveBool = parseBoolQuery(includeSensitive);
+        this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
         this.auditAdminAccess(usuario, 'interactions_paged', {
             leadId,
             tipo,
             q,
+            includeSensitive: includeSensitiveBool,
+            sensitiveReason: includeSensitiveBool ? sensitiveReason : undefined,
             page,
             limit,
         });
@@ -277,29 +377,44 @@ let CrmController = CrmController_1 = class CrmController {
             leadId,
             tipo,
             q,
+            includeSensitive: includeSensitiveBool,
             page: page ? Number(page) : 1,
             limit: limit ? Number(limit) : 20,
         });
     }
     async createInteraction(usuario, dto) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'interaction_create');
-        return this.crmService.createInteraction(dto, usuario);
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'interaction_create',
+            execute: () => this.crmService.createInteraction(dto, usuario),
+        });
     }
     async updateInteraction(usuario, id, dto) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'interaction_update', { id });
-        return this.crmService.updateInteraction(id, dto);
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'interaction_update',
+            metadata: { id },
+            execute: () => this.crmService.updateInteraction(id, dto),
+        });
     }
     async deleteInteraction(usuario, id) {
-        this.crmService.assertMasterAdmin(usuario);
-        this.auditAdminAccess(usuario, 'interaction_delete', { id });
-        await this.crmService.deleteInteraction(id);
-        return { success: true };
+        this.requirePermission(usuario, 'crm.write');
+        return this.runAudited({
+            usuario,
+            action: 'interaction_delete',
+            metadata: { id },
+            execute: async () => {
+                await this.crmService.deleteInteraction(id);
+                return { success: true };
+            },
+        });
     }
-    validateSensitiveReason(includeSensitive, sensitiveReason) {
+    validateSensitiveReason(usuario, includeSensitive, sensitiveReason) {
         if (!includeSensitive)
             return;
+        this.requirePermission(usuario, 'sensitive.read');
         const reason = (sensitiveReason || '').trim();
         if (reason.length < 8) {
             throw new common_1.BadRequestException('Informe o motivo da consulta de dados sensíveis (mínimo 8 caracteres).');
@@ -384,8 +499,10 @@ __decorate([
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('q')),
     __param(2, (0, common_1.Query)('stage')),
+    __param(3, (0, common_1.Query)('includeSensitive')),
+    __param(4, (0, common_1.Query)('sensitiveReason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listLeads", null);
 __decorate([
@@ -405,18 +522,22 @@ __decorate([
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('q')),
     __param(2, (0, common_1.Query)('stage')),
-    __param(3, (0, common_1.Query)('page')),
-    __param(4, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('includeSensitive')),
+    __param(4, (0, common_1.Query)('sensitiveReason')),
+    __param(5, (0, common_1.Query)('page')),
+    __param(6, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listLeadsPaged", null);
 __decorate([
     (0, common_1.Get)('leads/:id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Query)('includeSensitive')),
+    __param(3, (0, common_1.Query)('sensitiveReason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "getLeadById", null);
 __decorate([
@@ -448,9 +569,11 @@ __decorate([
     (0, common_1.Get)('tasks'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('status')),
-    __param(2, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('includeSensitive')),
+    __param(3, (0, common_1.Query)('sensitiveReason')),
+    __param(4, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listTasks", null);
 __decorate([
@@ -459,10 +582,12 @@ __decorate([
     __param(1, (0, common_1.Query)('status')),
     __param(2, (0, common_1.Query)('leadId')),
     __param(3, (0, common_1.Query)('q')),
-    __param(4, (0, common_1.Query)('page')),
-    __param(5, (0, common_1.Query)('limit')),
+    __param(4, (0, common_1.Query)('includeSensitive')),
+    __param(5, (0, common_1.Query)('sensitiveReason')),
+    __param(6, (0, common_1.Query)('page')),
+    __param(7, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listTasksPaged", null);
 __decorate([
@@ -494,8 +619,10 @@ __decorate([
     (0, common_1.Get)('leads/:leadId/interactions'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('leadId')),
+    __param(2, (0, common_1.Query)('includeSensitive')),
+    __param(3, (0, common_1.Query)('sensitiveReason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listInteractions", null);
 __decorate([
@@ -504,10 +631,12 @@ __decorate([
     __param(1, (0, common_1.Param)('leadId')),
     __param(2, (0, common_1.Query)('tipo')),
     __param(3, (0, common_1.Query)('q')),
-    __param(4, (0, common_1.Query)('page')),
-    __param(5, (0, common_1.Query)('limit')),
+    __param(4, (0, common_1.Query)('includeSensitive')),
+    __param(5, (0, common_1.Query)('sensitiveReason')),
+    __param(6, (0, common_1.Query)('page')),
+    __param(7, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "listInteractionsPaged", null);
 __decorate([
