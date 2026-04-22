@@ -46,3 +46,21 @@
 - Pendencias para virar `GO`:
   - aprovacao manual dos cenarios A/B/C na matriz QA;
   - confirmacao de ausencia de 5xx recorrente em uso real.
+
+## Registro de execucao clinica (preencher)
+| Item | Resultado | Evidencia |
+|---|---|---|
+| Cenario A (Joelho/Futebol) | Pendente | docs/qa-execucao-cenario-a-joelho.md |
+| Cenario B (Lombar/Neural) | Pendente | docs/qa-execucao-cenario-b-lombar-neural.md |
+| Cenario C (Ombro/Voleibol) | Pendente | docs/qa-execucao-cenario-c-ombro-esportivo.md |
+| Sem 5xx recorrente (monitoramento) | Pendente | logs/monitoramento |
+
+## Regra objetiva de decisao final
+- `GO` quando:
+  - cenarios A, B e C = `Aprovado` (ou `Aprovado com ressalvas nao bloqueantes`);
+  - sem bloqueador critico aberto;
+  - sem 5xx recorrente nos endpoints clinicos.
+- `NO-GO` quando:
+  - qualquer cenario = `Reprovado`;
+  - houver bloqueador critico aberto;
+  - houver 5xx recorrente sem mitigacao.
