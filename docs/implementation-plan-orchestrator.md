@@ -78,6 +78,14 @@ Critérios de aceite:
 3. Checklist go/no-go aprovado.
 4. Plano de rollback testado.
 
+### Status atual (2026-04-23)
+- [x] Feature flags por usuário com endpoint autenticado (`/auth/feature-flags`)
+- [x] Flags retornadas em `/auth/login` e `/auth/me`
+- [x] App mobile aplica flags em runtime (login + restore session)
+- [x] Gate automático de release (`scripts/release-gates.ps1`) com relatório em `logs/`
+- [x] Testes de RBAC CRM admin (`modules/crm/crm.service.spec.ts`)
+- [x] Drill de rollback simulado (`scripts/rollback-drill.ps1`) com relatório em `logs/`
+
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
 2. Sem decisão clínica automática final sem aprovação profissional.
