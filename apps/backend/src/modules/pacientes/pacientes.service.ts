@@ -70,7 +70,7 @@ export class PacientesService {
       )
       .where('p.ativo = :ativo', { ativo: true })
       .andWhere(
-        '((p.usuario_id = :usuarioId AND p.paciente_usuario_id IS NULL) OR vScope.id IS NOT NULL)',
+        '((p.usuarioId = :usuarioId AND p.pacienteUsuarioId IS NULL) OR vScope.id IS NOT NULL)',
         {
           usuarioId,
           vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
@@ -681,8 +681,8 @@ export class PacientesService {
         .where('v.status = :status', {
           status: ProfissionalPacienteVinculoStatus.ATIVO,
         })
-        .andWhere('p.paciente_usuario_id = :usuarioId', { usuarioId })
-        .orderBy('v.created_at', 'DESC')
+        .andWhere('p.pacienteUsuarioId = :usuarioId', { usuarioId })
+        .orderBy('v.createdAt', 'DESC')
         .getOne());
 
     if (vinculoAtivoLegado) {
@@ -723,8 +723,8 @@ export class PacientesService {
         .where('v.status = :status', {
           status: ProfissionalPacienteVinculoStatus.ATIVO,
         })
-        .andWhere('p.paciente_usuario_id = :usuarioId', { usuarioId })
-        .orderBy('v.created_at', 'DESC')
+        .andWhere('p.pacienteUsuarioId = :usuarioId', { usuarioId })
+        .orderBy('v.createdAt', 'DESC')
         .getOne());
 
     if (vinculoAtivoLegado) {
@@ -791,17 +791,17 @@ export class PacientesService {
       )
       .andWhere('p.ativo = :ativo', { ativo: true })
       .andWhere(
-        '(p.usuario_id = :usuarioId OR vScope.id IS NOT NULL)',
+        '(p.usuarioId = :usuarioId OR vScope.id IS NOT NULL)',
         {
           usuarioId,
           vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
         },
       )
       .select('p.id', 'pacienteId')
-      .addSelect('p.created_at', 'createdAt')
+      .addSelect('p.createdAt', 'createdAt')
       .addSelect('MAX(e.data)', 'lastEvolucaoAt')
       .groupBy('p.id')
-      .addGroupBy('p.created_at')
+      .addGroupBy('p.createdAt')
       .getRawMany<{
         pacienteId: string;
         createdAt: string | null;
