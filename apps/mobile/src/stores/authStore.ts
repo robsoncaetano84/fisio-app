@@ -53,13 +53,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   applySession: async (response: LoginResponse) => {
     setIsLoggingOut(false);
-    const { token, refreshToken, usuario } = response;
+    const { token, refreshToken, usuario, featureFlags } = response;
 
     await AsyncStorage.setItem(APP_CONFIG.storage.tokenKey, token);
     await AsyncStorage.setItem(APP_CONFIG.storage.refreshTokenKey, refreshToken);
     await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
 
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    applyRuntimeFeatureFlags(featureFlags);
     try {
       const runtimeFlags = await getRuntimeFeatureFlags();
       applyRuntimeFeatureFlags(runtimeFlags);
@@ -82,11 +83,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ isLoading: true });
 
       const response = await api.post<LoginResponse>("/auth/login", credentials);
-      const { token, refreshToken, usuario } = response.data;
+      const { token, refreshToken, usuario, featureFlags } = response.data;
       await AsyncStorage.setItem(APP_CONFIG.storage.tokenKey, token);
       await AsyncStorage.setItem(APP_CONFIG.storage.refreshTokenKey, refreshToken);
       await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      applyRuntimeFeatureFlags(featureFlags);
       try {
         const runtimeFlags = await getRuntimeFeatureFlags();
         applyRuntimeFeatureFlags(runtimeFlags);

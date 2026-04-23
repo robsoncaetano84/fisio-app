@@ -52,6 +52,7 @@ type InvitePayload = {
 export interface LoginResponse {
   token: string;
   refreshToken: string;
+  featureFlags: AuthFeatureFlagsResponse;
   usuario: {
     id: string;
     nome: string;
@@ -243,6 +244,7 @@ export class AuthService {
     return {
       token: this.signAccessToken(payload),
       refreshToken: this.signRefreshToken(payload),
+      featureFlags: this.getFeatureFlagsForUser(usuario),
       usuario: {
         id: usuario.id,
         nome: usuario.nome,

@@ -330,6 +330,13 @@ export interface LoginResponse {
   usuario: Usuario;
   token: string;
   refreshToken: string;
+  featureFlags?: {
+    speechToText?: boolean;
+    requireAiSuggestionConfirmation?: boolean;
+    crmAdminWeb?: boolean;
+    clinicalOrchestrator?: boolean;
+    generatedAt?: string;
+  };
 }
 
 export interface PacienteUsuarioLookupResponse {
