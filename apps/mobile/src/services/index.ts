@@ -52,6 +52,8 @@ export {
 } from './physicalExamModel';
 export {
   getClinicalOrchestratorNextAction,
+  logClinicalAiSuggestion,
+  type LogAiSuggestionPayload,
   type ClinicalOrchestratorNextActionResponse,
 } from "./clinicalOrchestrator";
 export { cachedGet, invalidateCachedGet } from "./requestCache";

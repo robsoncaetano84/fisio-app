@@ -16,6 +16,7 @@ import {
   type ClinicalOrchestratorNextActionResponse,
   enrichStructuredExameWithClinicalLogic,
   getClinicalOrchestratorNextAction,
+  logClinicalAiSuggestion,
   parseStructuredExame,
   renderStructuredExameToText,
   serializeStructuredExame,
@@ -222,6 +223,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [orchestratorNextAction, setOrchestratorNextAction] =
     useState<ClinicalOrchestratorNextActionResponse | null>(null);
+  const [classificationConfirmed, setClassificationConfirmed] = useState(true);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
 
@@ -639,6 +641,10 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         );
       }
     }
+    if (exam.source === "rule-based" && !classificationConfirmed) {
+      nextErrors.classificationConfirmation =
+        "Confirme a classificação sugerida por IA antes de salvar.";
+    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -673,6 +679,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       if (!String(source.redFlags.referralReason || "").trim()) {
         fields.push("referralReason");
       }
+    }
+    if (source.source === "rule-based" && !classificationConfirmed) {
+      fields.push("classificationConfirmation");
     }
     return fields;
   };
@@ -802,19 +811,40 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     }
     setExam({
       ...exam,
+      source: "rule-based",
       dorPrincipal: dorSuggestion.principal,
       dorSubtipo: dorSuggestion.subtipo,
     });
+    setClassificationConfirmed(false);
+    setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+    logClinicalAiSuggestion({
+      stage: "EXAME_FISICO",
+      suggestionType: "DOR_CLASSIFICATION",
+      confidence: dorSuggestion.confidence,
+      reason: dorSuggestion.reason,
+      evidenceFields: dorSuggestion.evidenceFields,
+      patientId: pacienteId,
+    }).catch(() => undefined);
     showToast({
       type: "success",
       message: `Sugestao aplicada (${dorSuggestion.confidence.toLowerCase()}): ${dorSuggestion.reason}`,
     });
   };
 
+  const handleConfirmClassification = () => {
+    setClassificationConfirmed(true);
+    setExam((prev) => (prev ? { ...prev, source: "manual" } : prev));
+    setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+    showToast({
+      type: "success",
+      message: "Classificação confirmada pelo profissional.",
+    });
+  };
+
   useEffect(() => {
     if (!hasAttemptedSave || !exam) return;
     validateForm();
-  }, [hasAttemptedSave, exam]);
+  }, [hasAttemptedSave, exam, classificationConfirmed]);
 
   if (!paciente || !exam) {
     return (
@@ -844,6 +874,37 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Classificacao de dor</Text>
+          <View style={styles.classificationStatusRow}>
+            <View
+              style={[
+                styles.classificationStatusChip,
+                exam.source === "rule-based"
+                  ? styles.classificationStatusChipSuggested
+                  : styles.classificationStatusChipConfirmed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.classificationStatusChipText,
+                  exam.source === "rule-based"
+                    ? styles.classificationStatusChipTextSuggested
+                    : styles.classificationStatusChipTextConfirmed,
+                ]}
+              >
+                {exam.source === "rule-based"
+                  ? "Sugerido por IA"
+                  : "Confirmado pelo profissional"}
+              </Text>
+            </View>
+            {exam.source === "rule-based" ? (
+              <TouchableOpacity
+                style={styles.classificationConfirmButton}
+                onPress={handleConfirmClassification}
+              >
+                <Text style={styles.classificationConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <View style={styles.classificationSuggestionRow}>
             <Text style={styles.classificationSuggestionText}>
               Sugestao da anamnese:{" "}
@@ -851,6 +912,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 ? `${prettyEnum(dorSuggestion.principal)} / ${prettyEnum(dorSuggestion.subtipo)} (${dorSuggestion.confidence.toLowerCase()})`
                 : "sem inferencia segura"}
             </Text>
+            {dorSuggestion.confidence === "BAIXA" ? (
+              <Text style={styles.classificationLowConfidenceText}>
+                Baixa confiança: revise manualmente antes de aplicar.
+              </Text>
+            ) : null}
+            {dorSuggestion.evidenceFields.length > 0 ? (
+              <Text style={styles.classificationEvidenceText}>
+                Evidências: {dorSuggestion.evidenceFields.join(", ")}
+              </Text>
+            ) : null}
             <TouchableOpacity
               style={styles.classificationSuggestionButton}
               onPress={handleApplyDorSuggestion}
@@ -863,7 +934,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               <TouchableOpacity
                 key={item}
                 style={[styles.chip, exam.dorPrincipal === item && styles.chipSelected]}
-                onPress={() => setExam({ ...exam, dorPrincipal: item })}
+                onPress={() => {
+                  setExam({ ...exam, source: "manual", dorPrincipal: item });
+                  setClassificationConfirmed(true);
+                  setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+                }}
               >
                 <Text style={[styles.chipText, exam.dorPrincipal === item && styles.chipTextSelected]}>
                   {prettyEnum(item)}
@@ -876,7 +951,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               <TouchableOpacity
                 key={item}
                 style={[styles.chip, exam.dorSubtipo === item && styles.chipSelected]}
-                onPress={() => setExam({ ...exam, dorSubtipo: item })}
+                onPress={() => {
+                  setExam({ ...exam, source: "manual", dorSubtipo: item });
+                  setClassificationConfirmed(true);
+                  setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+                }}
               >
                 <Text style={[styles.chipText, exam.dorSubtipo === item && styles.chipTextSelected]}>
                   {prettyEnum(item)}
@@ -1632,6 +1711,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               </TouchableOpacity>
             ))}
           </View>
+          {errors.classificationConfirmation ? (
+            <Text style={styles.validationErrorText}>
+              {errors.classificationConfirmation}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -1932,6 +2016,63 @@ const styles = StyleSheet.create({
   },
   classificationSuggestionText: {
     flex: 1,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+  },
+  classificationStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  classificationStatusChip: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  classificationStatusChipSuggested: {
+    borderColor: `${COLORS.warning}88`,
+    backgroundColor: `${COLORS.warning}15`,
+  },
+  classificationStatusChipConfirmed: {
+    borderColor: `${COLORS.primary}88`,
+    backgroundColor: `${COLORS.primary}12`,
+  },
+  classificationStatusChipText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  classificationStatusChipTextSuggested: {
+    color: COLORS.warning,
+  },
+  classificationStatusChipTextConfirmed: {
+    color: COLORS.primary,
+  },
+  classificationConfirmButton: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    backgroundColor: COLORS.white,
+  },
+  classificationConfirmButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  classificationLowConfidenceText: {
+    flexBasis: "100%",
+    marginTop: 2,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.warning,
+    fontWeight: "600",
+  },
+  classificationEvidenceText: {
+    flexBasis: "100%",
+    marginTop: 2,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
   },

@@ -12,6 +12,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
 import { ActivateProtocolDto } from './dto/activate-protocol.dto';
+import { LogAiSuggestionDto } from './dto/log-ai-suggestion.dto';
 import { UpsertConsentDto } from './dto/upsert-consent.dto';
 import { ClinicalGovernanceService } from './clinical-governance.service';
 
@@ -56,6 +57,12 @@ export class ClinicalGovernanceController {
   @Post('consent/my')
   upsertMyConsent(@CurrentUser() usuario: Usuario, @Body() dto: UpsertConsentDto) {
     return this.governanceService.upsertMyConsent(usuario, dto);
+  }
+
+  @Post('ai-suggestions/log')
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  logAiSuggestion(@CurrentUser() usuario: Usuario, @Body() dto: LogAiSuggestionDto) {
+    return this.governanceService.logAiSuggestion(usuario, dto);
   }
 
   @Get('audit-logs')

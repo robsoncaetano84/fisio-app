@@ -40,3 +40,17 @@ export const getClinicalOrchestratorNextAction = async (
   return response.data;
 };
 
+export type LogAiSuggestionPayload = {
+  stage: string;
+  suggestionType: string;
+  confidence: "BAIXA" | "MODERADA" | "ALTA";
+  reason: string;
+  evidenceFields?: string[];
+  patientId?: string;
+};
+
+export const logClinicalAiSuggestion = async (
+  payload: LogAiSuggestionPayload,
+): Promise<void> => {
+  await api.post("/clinical-governance/ai-suggestions/log", payload);
+};

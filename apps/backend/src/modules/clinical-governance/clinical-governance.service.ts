@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
 import { ActivateProtocolDto } from './dto/activate-protocol.dto';
+import { LogAiSuggestionDto } from './dto/log-ai-suggestion.dto';
 import { UpsertConsentDto } from './dto/upsert-consent.dto';
 import { ClinicalAuditActionType, ClinicalAuditLog } from './entities/clinical-audit-log.entity';
 import {
@@ -245,6 +246,38 @@ export class ClinicalGovernanceService {
     }
   }
 
+  async logAiSuggestion(usuario: Usuario, dto: LogAiSuggestionDto) {
+    const protocol = await this.protocolRepository.findOne({
+      where: { isActive: true },
+      order: { activatedAt: 'DESC', createdAt: 'DESC' },
+    });
+
+    await this.writeAudit({
+      actor: usuario,
+      actionType: 'APPROVAL',
+      action: 'ai.suggestion.applied',
+      resourceType: 'AI_SUGGESTION',
+      resourceId: `${dto.stage}:${dto.suggestionType}`,
+      patientId: dto.patientId || null,
+      metadata: {
+        stage: dto.stage,
+        suggestionType: dto.suggestionType,
+        confidence: dto.confidence,
+        reason: dto.reason,
+        evidenceFields: Array.isArray(dto.evidenceFields)
+          ? dto.evidenceFields
+          : [],
+        protocolVersion: protocol?.version || null,
+        protocolName: protocol?.name || null,
+      },
+    });
+
+    return {
+      ok: true,
+      protocolVersion: protocol?.version || null,
+    };
+  }
+
   private applyConsentToUser(
     user: Usuario,
     purpose: ConsentPurpose,
@@ -279,4 +312,3 @@ export class ClinicalGovernanceService {
     }
   }
 }
-

@@ -265,6 +265,7 @@ export interface DorClassificationSuggestion {
   subtipo: DorSubtipoClinico | null;
   confidence: "BAIXA" | "MODERADA" | "ALTA";
   reason: string;
+  evidenceFields: string[];
 }
 
 export function inferDorClassificationFromAnamnese(
@@ -276,6 +277,7 @@ export function inferDorClassificationFromAnamnese(
       subtipo: null,
       confidence: "BAIXA",
       reason: "Sem anamnese disponivel para inferencia.",
+      evidenceFields: [],
     };
   }
 
@@ -286,6 +288,7 @@ export function inferDorClassificationFromAnamnese(
       subtipo: mappedByTipo.subtipo,
       confidence: "ALTA",
       reason: "Classificacao inferida diretamente do tipo de dor da anamnese.",
+      evidenceFields: ["tipoDor"],
     };
   }
 
@@ -307,6 +310,7 @@ export function inferDorClassificationFromAnamnese(
       subtipo: "NEURAL",
       confidence: "MODERADA",
       reason: "Sinais de irradiacao/parestesia sugerem componente neural.",
+      evidenceFields: ["irradiacao", "localIrradiacao", "descricaoSintomas"],
     };
   }
 
@@ -320,6 +324,7 @@ export function inferDorClassificationFromAnamnese(
       subtipo: "INFLAMATORIA",
       confidence: "MODERADA",
       reason: "Padrao em repouso/noturno sugere componente inflamatorio.",
+      evidenceFields: ["dorRepouso", "dorNoturna", "descricaoSintomas"],
     };
   }
 
@@ -333,6 +338,7 @@ export function inferDorClassificationFromAnamnese(
       subtipo: "MIOFASCIAL",
       confidence: "MODERADA",
       reason: "Padrao de sensibilizacao central/dor difusa sugere nociplastia.",
+      evidenceFields: ["sinaisSensibilizacaoCentral", "descricaoSintomas"],
     };
   }
 
@@ -342,6 +348,7 @@ export function inferDorClassificationFromAnamnese(
       subtipo: "MECANICA",
       confidence: "MODERADA",
       reason: "Fatores de piora/alivio com movimento sugerem dor mecanica.",
+      evidenceFields: ["fatoresPiora", "fatorAlivio"],
     };
   }
 
@@ -350,6 +357,7 @@ export function inferDorClassificationFromAnamnese(
     subtipo: null,
     confidence: "BAIXA",
     reason: "Dados insuficientes na anamnese para sugerir classificacao com seguranca.",
+    evidenceFields: [],
   };
 }
 
