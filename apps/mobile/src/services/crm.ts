@@ -257,6 +257,26 @@ export type ClinicalAuditLogsResponse = {
   count: number;
 };
 
+export type ClinicalAiSuggestionsSummaryResponse = {
+  windowDays: number;
+  since: string;
+  totals: {
+    reads: number;
+    applied: number;
+    confirmed: number;
+    adoptionRate: number;
+    confirmationRate: number;
+  };
+  byStage: Record<
+    "EXAME_FISICO" | "EVOLUCAO" | "LAUDO" | "PLANO" | "OUTROS",
+    {
+      reads: number;
+      applied: number;
+      confirmed: number;
+    }
+  >;
+};
+
 export async function getCrmPipelineSummary(): Promise<CrmPipelineSummary> {
   const response = await api.get<CrmPipelineSummary>("/crm/pipeline/summary");
   return response.data;
@@ -574,6 +594,16 @@ export async function getClinicalGovernanceAuditLogs(params?: {
 }): Promise<ClinicalAuditLogsResponse> {
   const response = await api.get<ClinicalAuditLogsResponse>(
     "/clinical-governance/audit-logs",
+    { params },
+  );
+  return response.data;
+}
+
+export async function getClinicalGovernanceAiSuggestionsSummary(params?: {
+  windowDays?: number;
+}): Promise<ClinicalAiSuggestionsSummaryResponse> {
+  const response = await api.get<ClinicalAiSuggestionsSummaryResponse>(
+    "/clinical-governance/ai-suggestions/summary",
     { params },
   );
   return response.data;

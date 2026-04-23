@@ -13,6 +13,9 @@ describe('ClinicalGovernanceController', () => {
       upsertMyConsent: jest.fn().mockResolvedValue({ ok: true }),
       logAiSuggestion: jest.fn().mockResolvedValue({ ok: true }),
       listAuditLogs: jest.fn().mockResolvedValue({ items: [], count: 0 }),
+      getAiSuggestionSummary: jest
+        .fn()
+        .mockResolvedValue({ totals: { reads: 0, applied: 0, confirmed: 0 } }),
     } as unknown as jest.Mocked<ClinicalGovernanceService>;
 
     const controller = new ClinicalGovernanceController(service);
@@ -72,10 +75,15 @@ describe('ClinicalGovernanceController', () => {
       ROLES_KEY,
       ClinicalGovernanceController.prototype.listAuditLogs,
     );
+    const summaryRoles = Reflect.getMetadata(
+      ROLES_KEY,
+      ClinicalGovernanceController.prototype.getAiSuggestionSummary,
+    );
 
     expect(historyRoles).toEqual([UserRole.ADMIN]);
     expect(activateRoles).toEqual([UserRole.ADMIN]);
     expect(auditRoles).toEqual([UserRole.ADMIN]);
+    expect(summaryRoles).toEqual([UserRole.ADMIN]);
   });
 
   it('enforces admin/user role metadata on ai-suggestions log endpoint', () => {
@@ -84,5 +92,16 @@ describe('ClinicalGovernanceController', () => {
       ClinicalGovernanceController.prototype.logAiSuggestion,
     );
     expect(roles).toEqual([UserRole.ADMIN, UserRole.USER]);
+  });
+
+  it('forwards ai suggestion summary filters to service', async () => {
+    const { controller, service } = make();
+    const admin = { id: 'adm-1', role: UserRole.ADMIN } as any;
+
+    await controller.getAiSuggestionSummary(admin, 14);
+
+    expect(service.getAiSuggestionSummary).toHaveBeenCalledWith(admin, {
+      windowDays: 14,
+    });
   });
 });

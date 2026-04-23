@@ -35,6 +35,7 @@ import {
   activateClinicalGovernanceProtocol,
   getClinicalGovernanceMyConsents,
   getClinicalGovernanceAuditLogs,
+  getClinicalGovernanceAiSuggestionsSummary,
   updateCrmAdminPatient,
   updateCrmAdminProfessional,
   updateCrmInteraction,
@@ -55,6 +56,7 @@ import {
   type ClinicalProtocolVersion,
   type ClinicalMyConsentsResponse,
   type ClinicalAuditLog,
+  type ClinicalAiSuggestionsSummaryResponse,
 } from "../../services/crm";
 import { UserRole } from "../../types";
 
@@ -172,6 +174,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [govActiveProtocol, setGovActiveProtocol] = useState<ClinicalProtocolVersion | null>(null);
   const [govProtocolHistory, setGovProtocolHistory] = useState<ClinicalProtocolVersion[]>([]);
   const [govAuditLogs, setGovAuditLogs] = useState<ClinicalAuditLog[]>([]);
+  const [govAiSummary, setGovAiSummary] =
+    useState<ClinicalAiSuggestionsSummaryResponse | null>(null);
   const [govMyConsents, setGovMyConsents] = useState<ClinicalMyConsentsResponse | null>(null);
   const [govLoading, setGovLoading] = useState(false);
   const [govProtocolName, setGovProtocolName] = useState("Protocolo Clinico Base");
@@ -548,17 +552,19 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     if (!isWeb || !isMaster) return;
     setGovLoading(true);
     try {
-      const [activeProtocol, protocolHistory, myConsents, auditLogs] = await Promise.all([
+      const [activeProtocol, protocolHistory, myConsents, auditLogs, aiSummary] = await Promise.all([
         getClinicalGovernanceActiveProtocol().catch(() => null),
         getClinicalGovernanceProtocolHistory({ limit: 6 }).catch(() => []),
         getClinicalGovernanceMyConsents().catch(() => null),
         getClinicalGovernanceAuditLogs({ limit: 8 }).catch(() => ({ items: [], count: 0 })),
+        getClinicalGovernanceAiSuggestionsSummary({ windowDays }).catch(() => null),
       ]);
 
       setGovActiveProtocol(activeProtocol);
       setGovProtocolHistory(protocolHistory);
       setGovMyConsents(myConsents);
       setGovAuditLogs(auditLogs.items || []);
+      setGovAiSummary(aiSummary);
       if (activeProtocol?.name) {
         setGovProtocolName(activeProtocol.name);
       }
@@ -570,7 +576,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     } finally {
       setGovLoading(false);
     }
-  }, [isMaster, isWeb, govProtocolVersion]);
+  }, [isMaster, isWeb, govProtocolVersion, windowDays]);
 
   const handleActivateProtocol = useCallback(async () => {
     if (!govProtocolName.trim() || !govProtocolVersion.trim()) {
@@ -2241,6 +2247,42 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                   <Metric
                     label="Consentimentos (usuario)"
                     value={String(govMyConsents?.history?.length || 0)}
+                  />
+                </View>
+                <View style={styles.wrapRow}>
+                  <Metric
+                    label="Sugestões IA (leituras)"
+                    value={String(govAiSummary?.totals.reads || 0)}
+                  />
+                  <Metric
+                    label="Sugestões IA (aplicadas)"
+                    value={String(govAiSummary?.totals.applied || 0)}
+                  />
+                  <Metric
+                    label="Taxa de adoção IA"
+                    value={`${Math.round((govAiSummary?.totals.adoptionRate || 0) * 100)}%`}
+                  />
+                  <Metric
+                    label="Taxa de confirmação IA"
+                    value={`${Math.round((govAiSummary?.totals.confirmationRate || 0) * 100)}%`}
+                  />
+                </View>
+                <View style={styles.wrapRow}>
+                  <Metric
+                    label="IA Exame físico"
+                    value={String(govAiSummary?.byStage.EXAME_FISICO.applied || 0)}
+                  />
+                  <Metric
+                    label="IA Evolução"
+                    value={String(govAiSummary?.byStage.EVOLUCAO.applied || 0)}
+                  />
+                  <Metric
+                    label="IA Laudo"
+                    value={String(govAiSummary?.byStage.LAUDO.applied || 0)}
+                  />
+                  <Metric
+                    label="IA Plano"
+                    value={String(govAiSummary?.byStage.PLANO.applied || 0)}
                   />
                 </View>
                 <View style={styles.wrapRow}>

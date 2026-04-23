@@ -79,4 +79,15 @@ export class ClinicalGovernanceController {
       limit,
     });
   }
+
+  @Get('ai-suggestions/summary')
+  @Roles(UserRole.ADMIN)
+  getAiSuggestionSummary(
+    @CurrentUser() usuario: Usuario,
+    @Query('windowDays', new ParseIntPipe({ optional: true })) windowDays?: number,
+  ) {
+    return this.governanceService.getAiSuggestionSummary(usuario, {
+      windowDays,
+    });
+  }
 }

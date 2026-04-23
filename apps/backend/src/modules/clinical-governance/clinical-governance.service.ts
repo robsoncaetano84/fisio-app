@@ -232,6 +232,108 @@ export class ClinicalGovernanceService {
     return { items: rows, count: rows.length };
   }
 
+  async getAiSuggestionSummary(
+    usuario: Usuario,
+    params?: { windowDays?: number },
+  ) {
+    this.assertAdmin(usuario);
+    const safeWindowDays = Number.isFinite(params?.windowDays)
+      ? Math.min(Math.max(Number(params?.windowDays), 1), 90)
+      : 7;
+    const since = new Date(Date.now() - safeWindowDays * 24 * 60 * 60 * 1000);
+
+    const rows = await this.auditRepository
+      .createQueryBuilder('a')
+      .where('a.created_at >= :since', { since: since.toISOString() })
+      .andWhere('a.resource_type = :resourceType', { resourceType: 'AI_SUGGESTION' })
+      .andWhere('a.action IN (:...actions)', {
+        actions: ['orchestrator.ai_suggestion.read', 'ai.suggestion.applied'],
+      })
+      .orderBy('a.created_at', 'DESC')
+      .take(5000)
+      .getMany();
+
+    type StageKey = 'EXAME_FISICO' | 'EVOLUCAO' | 'LAUDO' | 'PLANO' | 'OUTROS';
+    const stageCounters: Record<
+      StageKey,
+      { reads: number; applied: number; confirmed: number }
+    > = {
+      EXAME_FISICO: { reads: 0, applied: 0, confirmed: 0 },
+      EVOLUCAO: { reads: 0, applied: 0, confirmed: 0 },
+      LAUDO: { reads: 0, applied: 0, confirmed: 0 },
+      PLANO: { reads: 0, applied: 0, confirmed: 0 },
+      OUTROS: { reads: 0, applied: 0, confirmed: 0 },
+    };
+
+    let totalReads = 0;
+    let totalApplied = 0;
+    let totalConfirmed = 0;
+
+    const resolveStage = (value?: string | null): StageKey => {
+      const normalized = String(value || '').trim().toUpperCase();
+      if (normalized === 'EXAME_FISICO') return 'EXAME_FISICO';
+      if (normalized === 'EVOLUCAO') return 'EVOLUCAO';
+      if (normalized === 'LAUDO') return 'LAUDO';
+      if (normalized === 'PLANO') return 'PLANO';
+      return 'OUTROS';
+    };
+
+    for (const row of rows) {
+      const metadata = (row.metadata || {}) as Record<string, any>;
+      const stage = resolveStage(metadata.stage);
+      const suggestionType = String(metadata.suggestionType || '').toUpperCase();
+      const isRead = row.action === 'orchestrator.ai_suggestion.read';
+      const isConfirmed =
+        suggestionType.endsWith('_CONFIRMED') ||
+        suggestionType.endsWith('_REVIEWED');
+
+      if (isRead) {
+        totalReads += 1;
+        stageCounters[stage].reads += 1;
+        continue;
+      }
+
+      totalApplied += 1;
+      stageCounters[stage].applied += 1;
+      if (isConfirmed) {
+        totalConfirmed += 1;
+        stageCounters[stage].confirmed += 1;
+      }
+    }
+
+    const adoptionRate = totalReads > 0 ? Number((totalApplied / totalReads).toFixed(4)) : 0;
+    const confirmationRate = totalApplied > 0 ? Number((totalConfirmed / totalApplied).toFixed(4)) : 0;
+
+    await this.writeAudit({
+      actor: usuario,
+      actionType: 'READ',
+      action: 'ai.suggestions.summary.read',
+      resourceType: 'AI_SUGGESTION',
+      metadata: {
+        windowDays: safeWindowDays,
+        rows: rows.length,
+        totalReads,
+        totalApplied,
+        totalConfirmed,
+        adoptionRate,
+        confirmationRate,
+      },
+    });
+
+    return {
+      windowDays: safeWindowDays,
+      since,
+      totals: {
+        reads: totalReads,
+        applied: totalApplied,
+        confirmed: totalConfirmed,
+        adoptionRate,
+        confirmationRate,
+      },
+      byStage: stageCounters,
+    };
+  }
+
   async writeAudit(input: {
     actor: Usuario | null;
     actionType: ClinicalAuditActionType;

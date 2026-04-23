@@ -25,6 +25,7 @@ describe('ClinicalGovernanceService', () => {
       save: jest.fn(async (row) => row),
       create: jest.fn((row) => ({ id: 'audit-1', ...row })),
       createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -199,5 +200,71 @@ describe('ClinicalGovernanceService', () => {
       patientId: 'pac-1',
       limit: 10,
     });
+  });
+
+  it('builds ai suggestion summary grouped by stage', async () => {
+    const { service, auditRepository } = makeService();
+    const admin = { id: 'adm-1', role: UserRole.ADMIN } as any;
+    const mockedRows = [
+      {
+        action: 'orchestrator.ai_suggestion.read',
+        metadata: { stage: 'EXAME_FISICO', suggestionType: 'CLASSIFICACAO_DOR' },
+      },
+      {
+        action: 'orchestrator.ai_suggestion.read',
+        metadata: { stage: 'EVOLUCAO', suggestionType: 'SOAP_SUGGESTION' },
+      },
+      {
+        action: 'ai.suggestion.applied',
+        metadata: { stage: 'EXAME_FISICO', suggestionType: 'CLASSIFICACAO_DOR_CONFIRMED' },
+      },
+      {
+        action: 'ai.suggestion.applied',
+        metadata: { stage: 'EVOLUCAO', suggestionType: 'SOAP_SUGGESTION_REVIEWED' },
+      },
+      {
+        action: 'ai.suggestion.applied',
+        metadata: { stage: 'LAUDO', suggestionType: 'RASCUNHO_LAUDO' },
+      },
+    ];
+
+    const qb = auditRepository.createQueryBuilder();
+    qb.getMany.mockResolvedValue(mockedRows);
+    auditRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.getAiSuggestionSummary(admin, { windowDays: 7 });
+
+    expect(result.windowDays).toBe(7);
+    expect(result.totals).toMatchObject({
+      reads: 2,
+      applied: 3,
+      confirmed: 2,
+      adoptionRate: 1.5,
+      confirmationRate: 0.6667,
+    });
+    expect(result.byStage.EXAME_FISICO).toMatchObject({
+      reads: 1,
+      applied: 1,
+      confirmed: 1,
+    });
+    expect(result.byStage.EVOLUCAO).toMatchObject({
+      reads: 1,
+      applied: 1,
+      confirmed: 1,
+    });
+    expect(result.byStage.LAUDO).toMatchObject({
+      reads: 0,
+      applied: 1,
+      confirmed: 0,
+    });
+  });
+
+  it('blocks ai suggestion summary for non-admin users', async () => {
+    const { service } = makeService();
+    await expect(
+      service.getAiSuggestionSummary({ id: 'user-1', role: UserRole.USER } as any, {
+        windowDays: 7,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
