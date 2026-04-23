@@ -27,7 +27,15 @@ import { usePacienteStore } from "../../stores/pacienteStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
 import { useEvolucaoStore } from "../../stores/evolucaoStore";
 import { useLaudoStore } from "../../stores/laudoStore";
-import { api, getAuditEntries, recordAuditAction, toAuditRef, trackEvent } from "../../services";
+import {
+  api,
+  getAuditEntries,
+  getClinicalOrchestratorNextAction,
+  recordAuditAction,
+  toAuditRef,
+  trackEvent,
+  type ClinicalOrchestratorNextActionResponse,
+} from "../../services";
 import {
   getExamErrorMessage,
   isAllowedExamFile,
@@ -206,6 +214,8 @@ export function PacienteDetailsScreen({
     exameFisico?: string;
     condutas?: string;
   } | null>(null);
+  const [orchestratorNextAction, setOrchestratorNextAction] =
+    useState<ClinicalOrchestratorNextActionResponse | null>(null);
   const paciente = getPacienteById(pacienteId);
 
   const cicloStatusUi = useMemo(() => {
@@ -325,6 +335,22 @@ export function PacienteDetailsScreen({
       active = false;
     };
   }, [fetchLaudoByPaciente, pacienteId]);
+
+  useEffect(() => {
+    let active = true;
+    getClinicalOrchestratorNextAction(pacienteId)
+      .then((response) => {
+        if (!active) return;
+        setOrchestratorNextAction(response);
+      })
+      .catch(() => {
+        if (!active) return;
+        setOrchestratorNextAction(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pacienteId]);
 
   useEffect(() => {
     getAuditEntries(200)
@@ -1413,6 +1439,61 @@ export function PacienteDetailsScreen({
     t,
   ]);
 
+  const orchestratorActionConfig = useMemo(() => {
+    if (!orchestratorNextAction?.nextAction) return null;
+    const stage = String(orchestratorNextAction.nextAction.stage || "").toUpperCase();
+    const fallbackAction = () => navigation.navigate("PacienteAdesao", { pacienteId });
+    const actionByStage: Record<string, { cta: string; onPress: () => void }> = {
+      ANAMNESE: {
+        cta: "Continuar fluxo · Anamnese",
+        onPress: handleOpenAnamnese,
+      },
+      EXAME_FISICO: {
+        cta: "Continuar fluxo · Exame físico",
+        onPress: handleOpenExameFisico,
+      },
+      EVOLUCAO: {
+        cta: "Continuar fluxo · Evolução",
+        onPress: handleOpenEvolucao,
+      },
+      LAUDO: {
+        cta: "Continuar fluxo · Laudo",
+        onPress: handleOpenLaudo,
+      },
+      PLANO: {
+        cta: "Continuar fluxo · Plano",
+        onPress: handleOpenPlano,
+      },
+      MONITORAMENTO: {
+        cta: "Abrir painel de acompanhamento",
+        onPress: fallbackAction,
+      },
+    };
+    const mapped = actionByStage[stage] || {
+      cta: "Abrir painel de acompanhamento",
+      onPress: fallbackAction,
+    };
+    return {
+      title: `Próxima ação (orquestrador) · ${stage || "CLINICO"}`,
+      description: `${orchestratorNextAction.nextAction.reason}. ${orchestratorNextAction.nextAction.guidance}`,
+      ctaLabel: mapped.cta,
+      onPress: mapped.onPress,
+      blocked: orchestratorNextAction.blocked,
+      blockerMessage: orchestratorNextAction.blockers?.[0]?.message || "",
+    };
+  }, [
+    handleOpenAnamnese,
+    handleOpenEvolucao,
+    handleOpenExameFisico,
+    handleOpenLaudo,
+    handleOpenPlano,
+    navigation,
+    orchestratorNextAction,
+    pacienteId,
+  ]);
+
+  const effectiveNextActionConfig = orchestratorActionConfig || nextActionConfig;
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -1839,17 +1920,25 @@ export function PacienteDetailsScreen({
           <View style={styles.nextActionCard}>
             <View style={styles.nextActionHeader}>
               <Ionicons name="sparkles-outline" size={18} color={COLORS.primary} />
-              <Text style={styles.nextActionTitle}>{nextActionConfig.title}</Text>
+              <Text style={styles.nextActionTitle}>{effectiveNextActionConfig.title}</Text>
             </View>
+            {orchestratorActionConfig?.blocked ? (
+              <View style={styles.nextActionBlockedChip}>
+                <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                <Text style={styles.nextActionBlockedChipText}>
+                  {orchestratorActionConfig.blockerMessage || "Há bloqueio clínico ativo no fluxo."}
+                </Text>
+              </View>
+            ) : null}
             <Text style={styles.nextActionDescription}>
-              {nextActionConfig.description}
+              {effectiveNextActionConfig.description}
             </Text>
             <TouchableOpacity
               style={styles.nextActionButton}
-              onPress={nextActionConfig.onPress}
+              onPress={effectiveNextActionConfig.onPress}
               activeOpacity={0.85}
             >
-              <Text style={styles.nextActionButtonText}>{nextActionConfig.ctaLabel}</Text>
+              <Text style={styles.nextActionButtonText}>{effectiveNextActionConfig.ctaLabel}</Text>
               <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
             </TouchableOpacity>
           </View>
@@ -2498,6 +2587,24 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.sm,
     lineHeight: 18,
+  },
+  nextActionBlockedChip: {
+    marginTop: SPACING.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.error + "55",
+    backgroundColor: COLORS.error + "12",
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+  },
+  nextActionBlockedChipText: {
+    flex: 1,
+    color: COLORS.error,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "600",
   },
   nextActionButton: {
     marginTop: SPACING.md,

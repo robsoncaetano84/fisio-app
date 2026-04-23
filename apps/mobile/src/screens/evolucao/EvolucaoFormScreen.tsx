@@ -18,7 +18,11 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, Input, PainScale, useToast } from "../../components/ui";
-import { trackEvent } from "../../services";
+import {
+  getClinicalOrchestratorNextAction,
+  trackEvent,
+  type ClinicalOrchestratorNextActionResponse,
+} from "../../services";
 import { useEvolucaoStore } from "../../stores/evolucaoStore";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
@@ -42,6 +46,8 @@ import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
   CLINICAL_REGION_LABELS,
+  inferClinicalRegionsFromHints,
+  mapClinicalChainCodeToLabel,
   inferClinicalRegionsFromAnamnese,
   resolveRelevantClinicalRegions,
 } from "../../utils/clinicalRegionContext";
@@ -100,6 +106,23 @@ export function EvolucaoFormScreen({
   const relevantRegions = useMemo(
     () => resolveRelevantClinicalRegions(latestAnamnese),
     [latestAnamnese],
+  );
+  const [orchestratorNextAction, setOrchestratorNextAction] =
+    useState<ClinicalOrchestratorNextActionResponse | null>(null);
+  const orchestratorFocusedRegions = useMemo(
+    () =>
+      inferClinicalRegionsFromHints(
+        orchestratorNextAction?.context?.regioesPrioritarias || [],
+      ),
+    [orchestratorNextAction],
+  );
+  const focusedRegions = useMemo(
+    () => Array.from(new Set([...orchestratorFocusedRegions, ...relevantRegions])),
+    [orchestratorFocusedRegions, relevantRegions],
+  );
+  const cadeiaProvavel = useMemo(
+    () => mapClinicalChainCodeToLabel(orchestratorNextAction?.context?.cadeiaProvavel),
+    [orchestratorNextAction],
   );
 
   const [loading, setLoading] = useState(false);
@@ -229,6 +252,22 @@ export function EvolucaoFormScreen({
   useEffect(() => {
     fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
   }, [fetchAnamnesesByPaciente, pacienteId]);
+
+  useEffect(() => {
+    let active = true;
+    getClinicalOrchestratorNextAction(pacienteId)
+      .then((response) => {
+        if (!active) return;
+        setOrchestratorNextAction(response);
+      })
+      .catch(() => {
+        if (!active) return;
+        setOrchestratorNextAction(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pacienteId]);
 
   useEffect(() => {
     trackEvent("session_started", {
@@ -562,7 +601,16 @@ export function EvolucaoFormScreen({
             S: Subjetivo | O: Objetivo | A: Avaliação | P: Plano
           </Text>
         </View>
-        {relevantRegions.length ? (
+        {orchestratorNextAction?.blocked ? (
+          <View style={[styles.contextCard, styles.contextBlockedCard]}>
+            <Text style={styles.contextTitle}>Atenção clínica imediata</Text>
+            <Text style={styles.contextDescription}>
+              {orchestratorNextAction.blockers[0]?.message ||
+                "Há bloqueio clínico para continuidade do fluxo."}
+            </Text>
+          </View>
+        ) : null}
+        {focusedRegions.length ? (
           <View style={styles.contextCard}>
             <Text style={styles.contextTitle}>Foco clinico por regiao</Text>
             <Text style={styles.contextDescription}>
@@ -570,12 +618,13 @@ export function EvolucaoFormScreen({
               {directRegions.length
                 ? directRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")
                 : "Nao identificada"}{" "}
-              | Cadeia relacionada: {relevantRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
+              | Cadeia relacionada: {focusedRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
+              {cadeiaProvavel ? ` • ${cadeiaProvavel}` : ""}
             </Text>
             <TouchableOpacity
               style={styles.contextAction}
               onPress={() => {
-                const focusText = `Foco regional: ${relevantRegions
+                const focusText = `Foco regional: ${focusedRegions
                   .map((r) => CLINICAL_REGION_LABELS[r])
                   .join(", ")}.`;
                 if (!objetivo.includes("Foco regional")) {
@@ -953,6 +1002,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.primary + "33",
+  },
+  contextBlockedCard: {
+    backgroundColor: COLORS.error + "10",
+    borderColor: COLORS.error + "33",
   },
   contextTitle: {
     color: COLORS.primary,

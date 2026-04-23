@@ -1,0 +1,42 @@
+import { api } from "./api";
+
+export type ClinicalOrchestratorSeverity =
+  | "CRITICAL"
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW";
+
+export type ClinicalOrchestratorNextActionResponse = {
+  orchestrator: "CLINICAL_ORCHESTRATOR";
+  mode: string;
+  blocked: boolean;
+  context: {
+    regioesPrioritarias: string[];
+    cadeiaProvavel: string | null;
+  };
+  blockers: Array<{
+    code: string;
+    severity: Exclude<ClinicalOrchestratorSeverity, "LOW">;
+    message: string;
+  }>;
+  alerts: Array<{
+    code: string;
+    severity: Exclude<ClinicalOrchestratorSeverity, "CRITICAL">;
+    message: string;
+  }>;
+  nextAction: {
+    stage: string;
+    reason: string;
+    guidance: string;
+  };
+};
+
+export const getClinicalOrchestratorNextAction = async (
+  pacienteId: string,
+): Promise<ClinicalOrchestratorNextActionResponse> => {
+  const response = await api.get<ClinicalOrchestratorNextActionResponse>(
+    `/clinical-orchestrator/patients/${pacienteId}/next-action`,
+  );
+  return response.data;
+};
+

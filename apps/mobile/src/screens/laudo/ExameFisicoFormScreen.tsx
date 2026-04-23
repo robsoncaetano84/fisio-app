@@ -13,7 +13,9 @@ import { useLaudoStore } from "../../stores/laudoStore";
 import {
   api,
   buildStructuredExameFromAnamnese,
+  type ClinicalOrchestratorNextActionResponse,
   enrichStructuredExameWithClinicalLogic,
+  getClinicalOrchestratorNextAction,
   parseStructuredExame,
   renderStructuredExameToText,
   serializeStructuredExame,
@@ -23,6 +25,8 @@ import {
 import { parseApiError } from "../../utils/apiErrors";
 import {
   CLINICAL_REGION_LABELS,
+  inferClinicalRegionsFromHints,
+  mapClinicalChainCodeToLabel,
   resolveRelevantClinicalRegions,
   shouldShowChainField,
 } from "../../utils/clinicalRegionContext";
@@ -216,6 +220,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [showAllRegions, setShowAllRegions] = useState(false);
+  const [orchestratorNextAction, setOrchestratorNextAction] =
+    useState<ClinicalOrchestratorNextActionResponse | null>(null);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
 
@@ -238,11 +244,21 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     () => inferDorClassificationFromAnamnese(latestAnamnese),
     [latestAnamnese],
   );
-  const relevantRegions = useMemo(
-    () => resolveRelevantClinicalRegions(latestAnamnese),
-    [latestAnamnese],
-  );
+  const orchestratorFocusedRegions = useMemo(() => {
+    return inferClinicalRegionsFromHints(
+      orchestratorNextAction?.context?.regioesPrioritarias || [],
+    );
+  }, [orchestratorNextAction]);
+  const relevantRegions = useMemo(() => {
+    const fromAnamnese = resolveRelevantClinicalRegions(latestAnamnese);
+    return Array.from(new Set([...orchestratorFocusedRegions, ...fromAnamnese]));
+  }, [latestAnamnese, orchestratorFocusedRegions]);
   const relevantRegionSet = useMemo(() => new Set(relevantRegions), [relevantRegions]);
+  const cadeiaProvavel = useMemo(() => {
+    return mapClinicalChainCodeToLabel(
+      orchestratorNextAction?.context?.cadeiaProvavel,
+    );
+  }, [orchestratorNextAction]);
   const visibleRegionalGroups = useMemo(() => {
     if (!exam) return [];
     if (showAllRegions || !relevantRegionSet.size) return exam.avaliacaoRegioes;
@@ -341,6 +357,22 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     paciente,
     pacienteId,
   ]);
+
+  useEffect(() => {
+    let active = true;
+    getClinicalOrchestratorNextAction(pacienteId)
+      .then((response) => {
+        if (!active) return;
+        setOrchestratorNextAction(response);
+      })
+      .catch(() => {
+        if (!active) return;
+        setOrchestratorNextAction(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pacienteId]);
 
   useEffect(() => {
     if (!draftLoaded || !exam) return;
@@ -1057,10 +1089,30 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Avaliacao por regioes (marque o resultado de cada teste)</Text>
+          {orchestratorNextAction?.blocked ? (
+            <View style={[styles.orchestratorNoticeCard, styles.orchestratorBlockedCard]}>
+              <Text style={styles.orchestratorNoticeTitle}>
+                Fluxo com bloqueio clínico detectado
+              </Text>
+              <Text style={styles.orchestratorNoticeText}>
+                {orchestratorNextAction.blockers[0]?.message ||
+                  "Revise os bloqueios antes de concluir o exame físico."}
+              </Text>
+            </View>
+          ) : null}
+          {!orchestratorNextAction?.blocked && orchestratorNextAction?.alerts?.length ? (
+            <View style={styles.orchestratorNoticeCard}>
+              <Text style={styles.orchestratorNoticeTitle}>Alerta do orquestrador</Text>
+              <Text style={styles.orchestratorNoticeText}>
+                {orchestratorNextAction.alerts[0]?.message}
+              </Text>
+            </View>
+          ) : null}
           {relevantRegions.length ? (
             <View style={styles.contextHeaderRow}>
               <Text style={styles.contextHintText}>
-                Foco por anamnese: {relevantRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
+                Foco clínico: {relevantRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
+                {cadeiaProvavel ? ` • ${cadeiaProvavel}` : ""}
               </Text>
               <TouchableOpacity
                 style={styles.contextToggleChip}
@@ -1895,6 +1947,29 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONTS.sizes.xs,
     fontWeight: "700",
+  },
+  orchestratorNoticeCard: {
+    borderWidth: 1,
+    borderColor: `${COLORS.warning}66`,
+    backgroundColor: `${COLORS.warning}10`,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  orchestratorBlockedCard: {
+    borderColor: `${COLORS.error}66`,
+    backgroundColor: `${COLORS.error}10`,
+  },
+  orchestratorNoticeTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  orchestratorNoticeText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
   contextHeaderRow: {
     flexDirection: "row",

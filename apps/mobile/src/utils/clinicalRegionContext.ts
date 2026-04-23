@@ -16,6 +16,12 @@ export const CLINICAL_REGION_LABELS: Record<ClinicalRegion, string> = {
   PUNHO_MAO: "Punho/Mao",
 };
 
+export const CLINICAL_CHAIN_LABELS: Record<string, string> = {
+  CADEIA_LOWER: "cadeia de membro inferior",
+  CADEIA_UPPER: "cadeia de membro superior",
+  CADEIA_LOCAL: "cadeia local",
+};
+
 const REGION_KEYWORDS: Array<{ keyword: string; region: ClinicalRegion }> = [
   { keyword: "cabeca", region: "CERVICAL" },
   { keyword: "pescoco", region: "CERVICAL" },
@@ -85,6 +91,19 @@ const inferRegionFromText = (value: string): ClinicalRegion[] => {
   return [...regions];
 };
 
+export const inferClinicalRegionsFromHints = (hints: string[]): ClinicalRegion[] => {
+  const regions = new Set<ClinicalRegion>();
+  hints.forEach((hint) => {
+    inferRegionFromText(String(hint || "")).forEach((region) => regions.add(region));
+  });
+  return [...regions];
+};
+
+export const mapClinicalChainCodeToLabel = (chainCode?: string | null): string | null => {
+  if (!chainCode) return null;
+  return CLINICAL_CHAIN_LABELS[String(chainCode)] || null;
+};
+
 export const inferClinicalRegionsFromAnamnese = (
   anamnese?: Anamnese,
 ): ClinicalRegion[] => {
@@ -147,4 +166,3 @@ export const shouldShowChainField = (
       return true;
   }
 };
-

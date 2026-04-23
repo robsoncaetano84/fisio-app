@@ -50,6 +50,10 @@ export {
   renderStructuredExameToText,
   serializeStructuredExame,
 } from './physicalExamModel';
+export {
+  getClinicalOrchestratorNextAction,
+  type ClinicalOrchestratorNextActionResponse,
+} from "./clinicalOrchestrator";
 export { cachedGet, invalidateCachedGet } from "./requestCache";
 
 
