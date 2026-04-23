@@ -86,6 +86,7 @@ Critérios de aceite:
 - [x] Gate automático de release (`scripts/release-gates.ps1`) com relatório em `logs/`
 - [x] CI com job dedicado de release gates (`.github/workflows/ci.yml`)
 - [x] Testes de RBAC CRM admin (`modules/crm/crm.service.spec.ts`)
+- [x] Testes de acesso sensível CRM (`modules/crm/crm.controller.spec.ts`)
 - [x] Drill de rollback simulado (`scripts/rollback-drill.ps1`) com relatório em `logs/`
 
 ## Diretrizes de execução

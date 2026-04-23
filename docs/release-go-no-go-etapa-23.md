@@ -82,6 +82,7 @@ cd ../backend
 npm run -s build
 npm run test -- modules/laudos/laudos.service.spec.ts
 npm run test -- modules/crm/crm.service.spec.ts
+npm run test -- modules/crm/crm.controller.spec.ts
 ```
 
 ## Gate automatizado (recomendado)
