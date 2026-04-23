@@ -217,6 +217,18 @@ export class ClinicalGovernanceService {
     if (params.patientId) qb.andWhere('a.patient_id = :patientId', { patientId: params.patientId });
 
     const rows = await qb.getMany();
+    await this.writeAudit({
+      actor: usuario,
+      actionType: 'READ',
+      action: 'audit.logs.read',
+      resourceType: 'AUDIT_LOG',
+      metadata: {
+        actionType: params.actionType || null,
+        patientId: params.patientId || null,
+        limit: take,
+        count: rows.length,
+      },
+    });
     return { items: rows, count: rows.length };
   }
 

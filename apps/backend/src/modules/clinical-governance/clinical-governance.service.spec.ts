@@ -180,4 +180,24 @@ describe('ClinicalGovernanceService', () => {
       service.getProtocolHistory({ id: 'user-1', role: UserRole.USER } as any),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('writes audit when listing audit logs', async () => {
+    const { service, auditRepository } = makeService();
+    const admin = { id: 'adm-1', role: UserRole.ADMIN } as any;
+
+    await service.listAuditLogs(admin, {
+      actionType: 'READ',
+      patientId: 'pac-1',
+      limit: 10,
+    });
+
+    const payload = auditRepository.create.mock.calls.at(-1)[0];
+    expect(payload.action).toBe('audit.logs.read');
+    expect(payload.actionType).toBe('READ');
+    expect(payload.metadata).toMatchObject({
+      actionType: 'READ',
+      patientId: 'pac-1',
+      limit: 10,
+    });
+  });
 });
