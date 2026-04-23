@@ -89,6 +89,10 @@ Invoke-Step -Name "Backend CRM controller sensitive spec" -WorkingDirectory $bac
   npm run test -- modules/crm/crm.controller.spec.ts
 }
 
+Invoke-Step -Name "Backend governance protocol+consent spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
+  npm run test -- modules/clinical-governance/clinical-governance.service.spec.ts
+}
+
 if (-not $SkipSmoke) {
   Invoke-Step -Name "Backend smoke health ($BaseUrl/health)" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
     powershell -ExecutionPolicy Bypass -File scripts/smoke-health.ps1 -BaseUrl $BaseUrl

@@ -84,6 +84,7 @@ npm run -s build
 npm run test -- modules/laudos/laudos.service.spec.ts
 npm run test -- modules/crm/crm.service.spec.ts
 npm run test -- modules/crm/crm.controller.spec.ts
+npm run test -- modules/clinical-governance/clinical-governance.service.spec.ts
 ```
 
 ## Gate automatizado (recomendado)
