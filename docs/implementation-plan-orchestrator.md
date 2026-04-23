@@ -109,7 +109,9 @@ Critérios de aceite:
 - [x] CRM Admin mostra métricas de adoção/confirmação por etapa (Exame/Evolução/Laudo/Plano)
 - [x] CRM Admin exibe gráficos de adoção IA (ciclo geral e aplicações por etapa)
 - [x] Resumo de IA inclui série temporal diária (`timeline`) para análise de tendência
+- [x] Resumo de IA aceita filtros por profissional/paciente e exibe filtros ativos no CRM Admin
 - [x] Sprint 4 (UX de aprovação clínica) atendida: sugestão vs confirmação visível, aplicação opcional auditável e confirmação humana exigida em campos críticos
+- [x] Release gates executado localmente com decisão GO (relatório: `logs/release-gates-20260423-150802.md`)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
