@@ -1,6 +1,9 @@
 param(
   [string]$BaseUrl = "http://localhost:3000/api",
   [switch]$SkipSmoke,
+  [switch]$EnableAuthMonitor,
+  [int]$MonitorWindowMinutes = 5,
+  [int]$MonitorIntervalSeconds = 15,
   [string]$ReportPath
 )
 
@@ -90,8 +93,28 @@ if (-not $SkipSmoke) {
   Invoke-Step -Name "Backend smoke health ($BaseUrl/health)" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
     powershell -ExecutionPolicy Bypass -File scripts/smoke-health.ps1 -BaseUrl $BaseUrl
   }
+
+  Invoke-Step -Name "Clinical 5xx monitor (public)" -WorkingDirectory $repoRoot -Mandatory $true -Results $results -Action {
+    powershell -ExecutionPolicy Bypass -File scripts/monitor-clinical-5xx.ps1 -BaseUrl $BaseUrl -WindowMinutes $MonitorWindowMinutes -IntervalSeconds $MonitorIntervalSeconds
+  }
+
+  $envIdentifier = if ($null -ne $env:MONITOR_IDENTIFIER) { "$env:MONITOR_IDENTIFIER".Trim() } else { "" }
+  $envPassword = if ($null -ne $env:MONITOR_PASSWORD) { "$env:MONITOR_PASSWORD".Trim() } else { "" }
+  $hasEnvCredentials = [bool]($envIdentifier -and $envPassword)
+
+  if ($EnableAuthMonitor -and -not $hasEnvCredentials) {
+    Add-Result -Target $results -Name "Clinical 5xx monitor (authenticated)" -Mandatory $true -Passed $false -Details "EnableAuthMonitor set but MONITOR_IDENTIFIER/MONITOR_PASSWORD are missing."
+  } elseif ($EnableAuthMonitor -or $hasEnvCredentials) {
+    Invoke-Step -Name "Clinical 5xx monitor (authenticated)" -WorkingDirectory $repoRoot -Mandatory $true -Results $results -Action {
+      powershell -ExecutionPolicy Bypass -File scripts/monitor-clinical-5xx.ps1 -BaseUrl $BaseUrl -UseEnvCredentials -WindowMinutes $MonitorWindowMinutes -IntervalSeconds $MonitorIntervalSeconds
+    }
+  } else {
+    Add-Result -Target $results -Name "Clinical 5xx monitor (authenticated)" -Mandatory $false -Passed $true -Details "SKIPPED (no credentials in env)"
+  }
 } else {
   Add-Result -Target $results -Name "Backend smoke health ($BaseUrl/health)" -Mandatory $true -Passed $true -Details "SKIPPED (explicit)"
+  Add-Result -Target $results -Name "Clinical 5xx monitor (public)" -Mandatory $true -Passed $true -Details "SKIPPED (explicit)"
+  Add-Result -Target $results -Name "Clinical 5xx monitor (authenticated)" -Mandatory $false -Passed $true -Details "SKIPPED (explicit)"
 }
 
 $mandatoryFailures = @($results | Where-Object { $_.Mandatory -and -not $_.Passed })

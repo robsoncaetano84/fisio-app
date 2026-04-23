@@ -90,37 +90,42 @@ npm run test -- modules/crm/crm.controller.spec.ts
 ```powershell
 # no raiz do repositorio
 powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -BaseUrl "http://localhost:3000/api"
+
+# modo completo com monitoramento autenticado (usa MONITOR_IDENTIFIER/MONITOR_PASSWORD)
+$env:MONITOR_IDENTIFIER = "<EMAIL_OU_CPF>"
+$env:MONITOR_PASSWORD = "<SENHA>"
+powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -EnableAuthMonitor -MonitorWindowMinutes 5 -MonitorIntervalSeconds 15
 ```
 
-ObservaÃ§Ãµes:
-- O script gera um relatÃ³rio em `logs/release-gates-YYYYMMDD-HHMMSS.md`.
-- Para validar sem ambiente backend em execuÃ§Ã£o local: `-SkipSmoke`.
+Observações:
+- O script gera um relatório em `logs/release-gates-YYYYMMDD-HHMMSS.md`.
+- Para validar sem ambiente backend em execução local: `-SkipSmoke`.
 
-## Drill de rollback (simulado, sem mutaÃ§Ã£o)
+## Drill de rollback (simulado, sem mutação)
 ```powershell
-# valida alvo de rollback e gera plano + diff em relatÃ³rio
+# valida alvo de rollback e gera plano + diff em relatório
 powershell -ExecutionPolicy Bypass -File .\scripts\rollback-drill.ps1 -TargetCommit "HEAD~1"
 ```
 
-ObservaÃ§Ãµes:
-- Gera relatÃ³rio em `logs/rollback-drill-YYYYMMDD-HHMMSS.md`.
-- NÃ£o executa `reset`/`push`; apenas valida o procedimento e prepara evidÃªncia.
+Observações:
+- Gera relatório em `logs/rollback-drill-YYYYMMDD-HHMMSS.md`.
+- Não executa `reset`/`push`; apenas valida o procedimento e prepara evidência.
 
-## Monitoramento de 5xx (prÃ©-go-live)
+## Monitoramento de 5xx (pré-go-live)
 ```powershell
-# modo sem auth (somente endpoints pÃºblicos, ex.: /health)
+# modo sem auth (somente endpoints públicos, ex.: /health)
 powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -WindowMinutes 5 -IntervalSeconds 15
 
-# modo autenticado (inclui endpoints clÃ­nicos protegidos)
+# modo autenticado (inclui endpoints clínicos protegidos)
 powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -BearerToken "<TOKEN>" -WindowMinutes 5 -IntervalSeconds 15
 
 # modo autenticado com login automatico
 powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -Identifier "<EMAIL_OU_CPF>" -Password "<SENHA>" -WindowMinutes 5 -IntervalSeconds 15
 ```
 
-ObservaÃ§Ãµes:
-- Gera relatÃ³rio em `logs/monitor-clinical-5xx-YYYYMMDD-HHMMSS.md`.
-- CritÃ©rio objetivo: `Total5xx = 0` e `TotalTransportErrors = 0` durante a janela monitorada.
+Observações:
+- Gera relatório em `logs/monitor-clinical-5xx-YYYYMMDD-HHMMSS.md`.
+- Critério objetivo: `Total5xx = 0` e `TotalTransportErrors = 0` durante a janela monitorada.
 
 ### Token rapido para monitoramento autenticado (alternativa)
 ```powershell
