@@ -20,6 +20,7 @@ import {
   logClinicalAiSuggestion,
   trackEvent,
 } from "../../services";
+import { FEATURE_FLAGS } from "../../constants/featureFlags";
 import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING } from "../../constants/theme";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -44,6 +45,7 @@ type PlanoDraft = {
 export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const { pacienteId } = route.params;
   const { t } = useLanguage();
+  const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const { showToast } = useToast();
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchLaudoByPaciente, createLaudo, updateLaudo } = useLaudoStore();
@@ -143,7 +145,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         examesComLeituraIa: data.examesComLeituraIa || 0,
         generatedAt: data.sugestaoGeradaEm || new Date().toISOString(),
       });
-      setAiSuggestionConfirmed(false);
+      setAiSuggestionConfirmed(!AI_REVIEW_REQUIRED);
       setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
       logClinicalAiSuggestion({
         stage: "PLANO",
@@ -249,7 +251,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             examesComLeituraIa,
             generatedAt: laudo.sugestaoGeradaEm || null,
           });
-          setAiSuggestionConfirmed(false);
+          setAiSuggestionConfirmed(!AI_REVIEW_REQUIRED);
           if (examesComLeituraIa > 0) {
             setAiExamContextMessage(
               t("clinical.messages.aiUsedExamReadings", {
@@ -361,7 +363,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     if (duracaoSemanas.trim() && (!Number.isFinite(dur) || dur <= 0)) {
       nextErrors.duracaoSemanas = t("clinical.validation.numberGreaterThanZero");
     }
-    if (aiSuggestionMeta && !aiSuggestionConfirmed) {
+    if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
       nextErrors.aiSuggestionConfirmation = t(
         "clinical.validation.aiSuggestionConfirmationRequired",
       );
@@ -458,6 +460,14 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const handleConfirmAiSuggestion = () => {
     setAiSuggestionConfirmed(true);
     setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
+    logClinicalAiSuggestion({
+      stage: "PLANO",
+      suggestionType: "PLANO_TRATAMENTO_CONFIRMED",
+      confidence: aiConfidence || "BAIXA",
+      reason: "Sugestão de plano revisada e confirmada por profissional.",
+      evidenceFields: ["objetivosCurtoPrazo", "condutas", "planoTratamentoIA"],
+      patientId: pacienteId,
+    }).catch(() => undefined);
     showToast({
       type: "success",
       message: t("clinical.status.professionalConfirmed"),
@@ -501,7 +511,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
                     ? t("clinical.status.professionalConfirmed")
                     : t("clinical.status.aiSuggested")}
                 </Text>
-                {!aiSuggestionConfirmed ? (
+                {AI_REVIEW_REQUIRED && !aiSuggestionConfirmed ? (
                   <TouchableOpacity
                     style={styles.aiConfirmButton}
                     onPress={handleConfirmAiSuggestion}

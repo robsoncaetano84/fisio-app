@@ -16,5 +16,9 @@ export const FEATURE_FLAGS = {
     process.env.EXPO_PUBLIC_ENABLE_SPEECH_TO_TEXT,
     true,
   ),
+  requireAiSuggestionConfirmation: parseBoolean(
+    process.env.EXPO_PUBLIC_REQUIRE_AI_SUGGESTION_CONFIRMATION,
+    true,
+  ),
 };
 

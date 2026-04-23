@@ -39,6 +39,7 @@ import {
   BORDER_RADIUS,
   SHADOWS,
 } from "../../constants/theme";
+import { FEATURE_FLAGS } from "../../constants/featureFlags";
 import { RootStackParamList } from "../../types";
 import { LaudoStatus } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
@@ -157,6 +158,7 @@ const TEMPLATE_CONTENT: Record<
 export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const { pacienteId } = route.params;
   const { t, language } = useLanguage();
+  const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const dateLocale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
@@ -307,7 +309,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           examesComLeituraIa: data.examesComLeituraIa || 0,
           generatedAt: data.sugestaoGeradaEm || new Date().toISOString(),
         });
-        setAiSuggestionConfirmed(false);
+        setAiSuggestionConfirmed(!AI_REVIEW_REQUIRED);
         setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
         logClinicalAiSuggestion({
           stage: "LAUDO",
@@ -513,7 +515,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           generatedAt: laudo.sugestaoGeradaEm || null,
         });
         setAiSuggestionConfirmed(
-          laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL,
+          !AI_REVIEW_REQUIRED ||
+            laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL,
         );
         if (examesComLeituraIa > 0) {
           setAiExamContextMessage(
@@ -704,7 +707,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     if (duracaoSemanas.trim() && (!dur || dur < 1 || dur > 52)) {
       nextErrors.duracaoSemanas = t("clinical.validation.durationWeeksRange");
     }
-    if (aiSuggestionMeta && !aiSuggestionConfirmed) {
+    if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
       nextErrors.aiSuggestionConfirmation = t(
         "clinical.validation.aiSuggestionConfirmationRequired",
       );
@@ -853,7 +856,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       });
       return;
     }
-    if (aiSuggestionMeta && !aiSuggestionConfirmed) {
+    if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
       showToast({
         message: t("clinical.validation.aiSuggestionConfirmationRequired"),
         type: "info",
@@ -923,6 +926,14 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const handleConfirmAiSuggestion = () => {
     setAiSuggestionConfirmed(true);
     setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
+    logClinicalAiSuggestion({
+      stage: "LAUDO",
+      suggestionType: "LAUDO_DRAFT_CONFIRMED",
+      confidence: aiConfidence || "BAIXA",
+      reason: "Sugestão de laudo revisada e confirmada por profissional.",
+      evidenceFields: ["diagnosticoFuncional", "condutas", "planoTratamentoIA"],
+      patientId: pacienteId,
+    }).catch(() => undefined);
     showToast({
       type: "success",
       message: t("clinical.status.professionalConfirmed"),
@@ -1280,7 +1291,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                     ? t("clinical.status.professionalConfirmed")
                     : t("clinical.status.aiSuggested")}
                 </Text>
-                {!aiSuggestionConfirmed ? (
+                {AI_REVIEW_REQUIRED && !aiSuggestionConfirmed ? (
                   <TouchableOpacity
                     style={styles.aiConfirmButton}
                     onPress={handleConfirmAiSuggestion}

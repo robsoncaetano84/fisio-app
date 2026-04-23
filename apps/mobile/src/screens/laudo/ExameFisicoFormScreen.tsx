@@ -31,6 +31,7 @@ import {
   resolveRelevantClinicalRegions,
   shouldShowChainField,
 } from "../../utils/clinicalRegionContext";
+import { FEATURE_FLAGS } from "../../constants/featureFlags";
 import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING } from "../../constants/theme";
 import { RootStackParamList } from "../../types";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -205,6 +206,7 @@ const buildHipomobilidadeSummary = (segmentar: {
 
 export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScreenProps) {
   const { t } = useLanguage();
+  const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const { pacienteId } = route.params;
   const { showToast } = useToast();
   const { getPacienteById, fetchPacientes } = usePacienteStore();
@@ -641,7 +643,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         );
       }
     }
-    if (exam.source === "rule-based" && !classificationConfirmed) {
+    if (
+      AI_REVIEW_REQUIRED &&
+      exam.source === "rule-based" &&
+      !classificationConfirmed
+    ) {
       nextErrors.classificationConfirmation =
         "Confirme a classificação sugerida por IA antes de salvar.";
     }
@@ -680,7 +686,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         fields.push("referralReason");
       }
     }
-    if (source.source === "rule-based" && !classificationConfirmed) {
+    if (
+      AI_REVIEW_REQUIRED &&
+      source.source === "rule-based" &&
+      !classificationConfirmed
+    ) {
       fields.push("classificationConfirmation");
     }
     return fields;
@@ -815,7 +825,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       dorPrincipal: dorSuggestion.principal,
       dorSubtipo: dorSuggestion.subtipo,
     });
-    setClassificationConfirmed(false);
+    setClassificationConfirmed(!AI_REVIEW_REQUIRED);
     setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
     logClinicalAiSuggestion({
       stage: "EXAME_FISICO",
@@ -835,6 +845,14 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     setClassificationConfirmed(true);
     setExam((prev) => (prev ? { ...prev, source: "manual" } : prev));
     setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+    logClinicalAiSuggestion({
+      stage: "EXAME_FISICO",
+      suggestionType: "DOR_CLASSIFICATION_CONFIRMED",
+      confidence: dorSuggestion.confidence,
+      reason: "Classificação sugerida revisada e confirmada por profissional.",
+      evidenceFields: dorSuggestion.evidenceFields,
+      patientId: pacienteId,
+    }).catch(() => undefined);
     showToast({
       type: "success",
       message: "Classificação confirmada pelo profissional.",
@@ -896,7 +914,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                   : "Confirmado pelo profissional"}
               </Text>
             </View>
-            {exam.source === "rule-based" ? (
+            {AI_REVIEW_REQUIRED && exam.source === "rule-based" ? (
               <TouchableOpacity
                 style={styles.classificationConfirmButton}
                 onPress={handleConfirmClassification}
