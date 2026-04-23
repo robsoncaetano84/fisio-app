@@ -92,7 +92,9 @@ Critérios de aceite:
 - [x] Script de monitoramento 5xx para endpoints clínicos (`scripts/monitor-clinical-5xx.ps1`)
 - [x] `release-gates` suporta monitoramento autenticado por env (`MONITOR_*`)
 - [x] Testes de governança clínica Sprint 1 (`modules/clinical-governance/clinical-governance.service.spec.ts`)
+- [x] Testes de RBAC/metadata do controller de governança (`modules/clinical-governance/clinical-governance.controller.spec.ts`)
 - [x] Leitura de trilha de auditoria também auditável (`audit.logs.read`)
+- [x] `release-gates` exige os testes de governança (service + controller)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
