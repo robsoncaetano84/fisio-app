@@ -81,4 +81,15 @@ npm run validate:critical
 cd ../backend
 npm run -s build
 npm run test -- modules/laudos/laudos.service.spec.ts
+npm run test -- modules/crm/crm.service.spec.ts
 ```
+
+## Gate automatizado (recomendado)
+```powershell
+# no raiz do repositorio
+powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -BaseUrl "http://localhost:3000/api"
+```
+
+Observações:
+- O script gera um relatório em `logs/release-gates-YYYYMMDD-HHMMSS.md`.
+- Para validar sem ambiente backend em execução local: `-SkipSmoke`.
