@@ -85,9 +85,13 @@ export class ClinicalGovernanceController {
   getAiSuggestionSummary(
     @CurrentUser() usuario: Usuario,
     @Query('windowDays', new ParseIntPipe({ optional: true })) windowDays?: number,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
   ) {
     return this.governanceService.getAiSuggestionSummary(usuario, {
       windowDays,
+      professionalId,
+      patientId,
     });
   }
 }

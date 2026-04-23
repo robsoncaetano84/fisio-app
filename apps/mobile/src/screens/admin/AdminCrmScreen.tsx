@@ -557,7 +557,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         getClinicalGovernanceProtocolHistory({ limit: 6 }).catch(() => []),
         getClinicalGovernanceMyConsents().catch(() => null),
         getClinicalGovernanceAuditLogs({ limit: 8 }).catch(() => ({ items: [], count: 0 })),
-        getClinicalGovernanceAiSuggestionsSummary({ windowDays }).catch(() => null),
+        getClinicalGovernanceAiSuggestionsSummary({
+          windowDays,
+          professionalId: selectedProfId || undefined,
+          patientId: selectedPacId || undefined,
+        }).catch(() => null),
       ]);
 
       setGovActiveProtocol(activeProtocol);
@@ -576,7 +580,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     } finally {
       setGovLoading(false);
     }
-  }, [isMaster, isWeb, govProtocolVersion, windowDays]);
+  }, [isMaster, isWeb, govProtocolVersion, windowDays, selectedProfId, selectedPacId]);
 
   const handleActivateProtocol = useCallback(async () => {
     if (!govProtocolName.trim() || !govProtocolVersion.trim()) {
@@ -2297,6 +2301,12 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               </View>
             ) : (
               <>
+                <Text style={styles.muted}>
+                  {t("crm.labels.professional")}:{" "}
+                  {govAiSummary?.filters.professionalId || t("crm.common.noData")} |{" "}
+                  {t("crm.labels.patient")}:{" "}
+                  {govAiSummary?.filters.patientId || t("crm.common.noData")}
+                </Text>
                 <View style={styles.wrapRow}>
                   <Metric
                     label={t("crm.governance.protocolHistoryCount")}

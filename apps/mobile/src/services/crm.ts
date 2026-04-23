@@ -260,6 +260,10 @@ export type ClinicalAuditLogsResponse = {
 export type ClinicalAiSuggestionsSummaryResponse = {
   windowDays: number;
   since: string;
+  filters: {
+    professionalId: string | null;
+    patientId: string | null;
+  };
   totals: {
     reads: number;
     applied: number;
@@ -607,6 +611,8 @@ export async function getClinicalGovernanceAuditLogs(params?: {
 
 export async function getClinicalGovernanceAiSuggestionsSummary(params?: {
   windowDays?: number;
+  professionalId?: string;
+  patientId?: string;
 }): Promise<ClinicalAiSuggestionsSummaryResponse> {
   const response = await api.get<ClinicalAiSuggestionsSummaryResponse>(
     "/clinical-governance/ai-suggestions/summary",

@@ -276,4 +276,29 @@ describe('ClinicalGovernanceService', () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('applies professional and patient filters in ai suggestion summary query', async () => {
+    const { service, auditRepository } = makeService();
+    const admin = { id: 'adm-1', role: UserRole.ADMIN } as any;
+    const qb = auditRepository.createQueryBuilder();
+    qb.getMany.mockResolvedValue([]);
+    auditRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.getAiSuggestionSummary(admin, {
+      windowDays: 14,
+      professionalId: 'prof-1',
+      patientId: 'pac-1',
+    });
+
+    expect(result.filters).toMatchObject({
+      professionalId: 'prof-1',
+      patientId: 'pac-1',
+    });
+    expect(qb.andWhere).toHaveBeenCalledWith('a.actor_id = :professionalId', {
+      professionalId: 'prof-1',
+    });
+    expect(qb.andWhere).toHaveBeenCalledWith('a.patient_id = :patientId', {
+      patientId: 'pac-1',
+    });
+  });
 });

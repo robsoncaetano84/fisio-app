@@ -234,24 +234,31 @@ export class ClinicalGovernanceService {
 
   async getAiSuggestionSummary(
     usuario: Usuario,
-    params?: { windowDays?: number },
+    params?: { windowDays?: number; professionalId?: string; patientId?: string },
   ) {
     this.assertAdmin(usuario);
     const safeWindowDays = Number.isFinite(params?.windowDays)
       ? Math.min(Math.max(Number(params?.windowDays), 1), 90)
       : 7;
     const since = new Date(Date.now() - safeWindowDays * 24 * 60 * 60 * 1000);
+    const professionalId = String(params?.professionalId || '').trim() || null;
+    const patientId = String(params?.patientId || '').trim() || null;
 
-    const rows = await this.auditRepository
+    const qb = this.auditRepository
       .createQueryBuilder('a')
       .where('a.created_at >= :since', { since: since.toISOString() })
       .andWhere('a.resource_type = :resourceType', { resourceType: 'AI_SUGGESTION' })
       .andWhere('a.action IN (:...actions)', {
         actions: ['orchestrator.ai_suggestion.read', 'ai.suggestion.applied'],
-      })
-      .orderBy('a.created_at', 'DESC')
-      .take(5000)
-      .getMany();
+      });
+    if (professionalId) {
+      qb.andWhere('a.actor_id = :professionalId', { professionalId });
+    }
+    if (patientId) {
+      qb.andWhere('a.patient_id = :patientId', { patientId });
+    }
+
+    const rows = await qb.orderBy('a.created_at', 'DESC').take(5000).getMany();
 
     type StageKey = 'EXAME_FISICO' | 'EVOLUCAO' | 'LAUDO' | 'PLANO' | 'OUTROS';
     const stageCounters: Record<
@@ -327,6 +334,8 @@ export class ClinicalGovernanceService {
       resourceType: 'AI_SUGGESTION',
       metadata: {
         windowDays: safeWindowDays,
+        professionalId,
+        patientId,
         rows: rows.length,
         totalReads,
         totalApplied,
@@ -348,6 +357,10 @@ export class ClinicalGovernanceService {
     return {
       windowDays: safeWindowDays,
       since,
+      filters: {
+        professionalId,
+        patientId,
+      },
       totals: {
         reads: totalReads,
         applied: totalApplied,

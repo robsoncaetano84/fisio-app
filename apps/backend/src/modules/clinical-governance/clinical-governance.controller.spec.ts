@@ -98,10 +98,12 @@ describe('ClinicalGovernanceController', () => {
     const { controller, service } = make();
     const admin = { id: 'adm-1', role: UserRole.ADMIN } as any;
 
-    await controller.getAiSuggestionSummary(admin, 14);
+    await controller.getAiSuggestionSummary(admin, 14, 'prof-1', 'pac-1');
 
     expect(service.getAiSuggestionSummary).toHaveBeenCalledWith(admin, {
       windowDays: 14,
+      professionalId: 'prof-1',
+      patientId: 'pac-1',
     });
   });
 });
