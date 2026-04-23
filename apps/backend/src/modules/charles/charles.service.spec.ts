@@ -15,6 +15,10 @@ describe('CharlesService - deterministic orchestrator', () => {
 
     const governanceService = {
       writeAudit: jest.fn().mockResolvedValue(undefined),
+      getActiveProtocol: jest.fn().mockResolvedValue({
+        version: '1.0.0',
+        name: 'Protocolo clinico base',
+      }),
     } as any;
 
     const anamneseRepo = {
@@ -221,6 +225,10 @@ describe('CharlesService - deterministic orchestrator', () => {
     } as any;
     const governanceService = {
       writeAudit: jest.fn().mockResolvedValue(undefined),
+      getActiveProtocol: jest.fn().mockResolvedValue({
+        version: '1.0.0',
+        name: 'Protocolo clinico base',
+      }),
     } as any;
     const anamneseRepo = {
       findOne: jest.fn().mockResolvedValue(null),

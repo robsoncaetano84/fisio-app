@@ -114,6 +114,7 @@ export function EvolucaoFormScreen({
     useState<ClinicalOrchestratorNextActionResponse | null>(null);
   const [evolucaoSuggestion, setEvolucaoSuggestion] =
     useState<EvolucaoSoapSuggestionResponse | null>(null);
+  const [soapSuggestionApplied, setSoapSuggestionApplied] = useState(false);
   const orchestratorFocusedRegions = useMemo(
     () => {
       const hints = [
@@ -312,6 +313,7 @@ export function EvolucaoFormScreen({
     setObjetivo((prev) => prev || evolucaoSuggestion.objetivo || "");
     setAvaliacao((prev) => prev || evolucaoSuggestion.avaliacao || "");
     setPlano((prev) => prev || evolucaoSuggestion.plano || "");
+    setSoapSuggestionApplied(true);
 
     logClinicalAiSuggestion({
       patientId: pacienteId,
@@ -537,6 +539,19 @@ export function EvolucaoFormScreen({
           stage: "EVOLUCAO",
           durationMs: Math.max(0, Date.now() - stageOpenedAtRef.current),
         }),
+        ...(soapSuggestionApplied && evolucaoSuggestion
+          ? [
+              logClinicalAiSuggestion({
+                patientId: pacienteId,
+                stage: "EVOLUCAO",
+                suggestionType: "EVOLUCAO_SOAP_CONFIRMED",
+                confidence: evolucaoSuggestion.confidence,
+                reason:
+                  "Sugestao SOAP assistiva confirmada pelo profissional no salvamento.",
+                evidenceFields: evolucaoSuggestion.evidenceFields,
+              }),
+            ]
+          : []),
       ]);
       showToast({
         message: "Evolução salva com sucesso.",
@@ -672,6 +687,24 @@ export function EvolucaoFormScreen({
             {evolucaoSuggestion.evidenceFields.length > 0 ? (
               <Text style={styles.suggestionEvidence}>
                 Evidências: {evolucaoSuggestion.evidenceFields.join(", ")}
+              </Text>
+            ) : null}
+            {evolucaoSuggestion.protocolVersion ? (
+              <Text style={styles.suggestionEvidence}>
+                Protocolo: {evolucaoSuggestion.protocolName || "Ativo"} v
+                {evolucaoSuggestion.protocolVersion}
+              </Text>
+            ) : null}
+            {soapSuggestionApplied ? (
+              <View style={styles.suggestionAppliedPill}>
+                <Text style={styles.suggestionAppliedPillText}>
+                  Sugestão aplicada (aguardando confirmação no salvamento)
+                </Text>
+              </View>
+            ) : null}
+            {evolucaoSuggestion.confidence === "BAIXA" ? (
+              <Text style={styles.suggestionLowConfidenceText}>
+                Baixa confiança: revise os campos antes de confirmar.
               </Text>
             ) : null}
             <TouchableOpacity
@@ -1126,6 +1159,27 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONTS.sizes.xs,
     fontWeight: "700",
+  },
+  suggestionAppliedPill: {
+    alignSelf: "flex-start",
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.success + "1A",
+    borderWidth: 1,
+    borderColor: COLORS.success + "66",
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
+    marginBottom: SPACING.sm,
+  },
+  suggestionAppliedPillText: {
+    color: COLORS.success,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  suggestionLowConfidenceText: {
+    color: COLORS.warning,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "600",
+    marginBottom: SPACING.sm,
   },
   contextCard: {
     backgroundColor: COLORS.primary + "10",

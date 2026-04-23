@@ -65,6 +65,8 @@ export type ExameFisicoDorSuggestionResponse = {
   confidence: "BAIXA" | "MODERADA" | "ALTA";
   reason: string;
   evidenceFields: string[];
+  protocolVersion: string | null;
+  protocolName: string | null;
   dorPrincipal: "NOCICEPTIVA" | "NEUROPATICA" | "NOCIPLASTICA" | "INFLAMATORIA" | "VISCERAL" | null;
   dorSubtipo:
     | "MECANICA"
@@ -88,6 +90,8 @@ export type EvolucaoSoapSuggestionResponse = {
   confidence: "BAIXA" | "MODERADA" | "ALTA";
   reason: string;
   evidenceFields: string[];
+  protocolVersion: string | null;
+  protocolName: string | null;
   subjetivo: string | null;
   objetivo: string | null;
   avaliacao: string | null;

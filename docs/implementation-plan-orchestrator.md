@@ -100,6 +100,8 @@ Critérios de aceite:
 - [x] Endpoint assistivo de sugestão explicável para Exame Físico (`DOR_CLASSIFICATION`) com auditoria de leitura no backend
 - [x] Fluxo de Laudo/Plano passa a consumir `confidence`, `reason` e `evidenceFields` retornados pelo backend para log explicável
 - [x] Endpoint assistivo de sugestão explicável para Evolução (`EVOLUCAO_SOAP`) com auditoria de leitura no backend e aplicação opcional no app
+- [x] Sugestões assistivas passam a carregar versão/nome do protocolo ativo para rastreabilidade
+- [x] Evolução registra evento de confirmação profissional (`EVOLUCAO_SOAP_CONFIRMED`) ao salvar após aplicar sugestão
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

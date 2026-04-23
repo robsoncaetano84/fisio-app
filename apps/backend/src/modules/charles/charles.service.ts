@@ -115,6 +115,8 @@ export interface CharlesExameFisicoDorSuggestionResponse {
   confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
   reason: string;
   evidenceFields: string[];
+  protocolVersion: string | null;
+  protocolName: string | null;
   dorPrincipal:
     | 'NOCICEPTIVA'
     | 'NEUROPATICA'
@@ -144,6 +146,8 @@ export interface CharlesEvolucaoSoapSuggestionResponse {
   confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
   reason: string;
   evidenceFields: string[];
+  protocolVersion: string | null;
+  protocolName: string | null;
   subjetivo: string | null;
   objetivo: string | null;
   avaliacao: string | null;
@@ -318,6 +322,7 @@ export class CharlesService {
       order: { createdAt: 'DESC' },
     });
     const suggestion = this.inferDorClassificationFromAnamnese(latestAnamnese);
+    const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
     await this.governanceService.writeAudit({
       actor: usuario,
@@ -331,6 +336,8 @@ export class CharlesService {
         suggestionType: 'DOR_CLASSIFICATION',
         confidence: suggestion.confidence,
         evidenceFields: suggestion.evidenceFields,
+        protocolVersion: activeProtocol?.version || null,
+        protocolName: activeProtocol?.name || null,
       },
     });
 
@@ -344,6 +351,8 @@ export class CharlesService {
       confidence: suggestion.confidence,
       reason: suggestion.reason,
       evidenceFields: suggestion.evidenceFields,
+      protocolVersion: activeProtocol?.version || null,
+      protocolName: activeProtocol?.name || null,
       dorPrincipal: suggestion.principal,
       dorSubtipo: suggestion.subtipo,
     };
@@ -374,6 +383,7 @@ export class CharlesService {
       evolucao: latestEvolucao,
       laudo: latestLaudo,
     });
+    const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
     await this.governanceService.writeAudit({
       actor: usuario,
@@ -387,6 +397,8 @@ export class CharlesService {
         suggestionType: 'EVOLUCAO_SOAP',
         confidence: suggestion.confidence,
         evidenceFields: suggestion.evidenceFields,
+        protocolVersion: activeProtocol?.version || null,
+        protocolName: activeProtocol?.name || null,
       },
     });
 
@@ -400,11 +412,28 @@ export class CharlesService {
       confidence: suggestion.confidence,
       reason: suggestion.reason,
       evidenceFields: suggestion.evidenceFields,
+      protocolVersion: activeProtocol?.version || null,
+      protocolName: activeProtocol?.name || null,
       subjetivo: suggestion.subjetivo,
       objetivo: suggestion.objetivo,
       avaliacao: suggestion.avaliacao,
       plano: suggestion.plano,
     };
+  }
+
+  private async getActiveProtocolSafe(
+    usuario: Usuario,
+  ): Promise<{ version: string; name: string } | null> {
+    try {
+      const protocol = await this.governanceService.getActiveProtocol(usuario);
+      if (!protocol) return null;
+      return {
+        version: protocol.version,
+        name: protocol.name,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private hasStructuredExame(raw?: string | null): boolean {
