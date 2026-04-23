@@ -497,6 +497,10 @@ export function PacienteDetailsScreen({
   };
 
   const handleOpenExame = async (item: PacienteExameItem) => {
+    let webPopup: Window | null = null;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      webPopup = window.open("about:blank", "_blank");
+    }
     setDownloadingExameId(item.id);
     try {
       if (Platform.OS === "web") {
@@ -509,7 +513,11 @@ export function PacienteDetailsScreen({
           700,
         );
         const blobUrl = window.URL.createObjectURL(response.data);
-        window.open(blobUrl, "_blank", "noopener,noreferrer");
+        if (webPopup && !webPopup.closed) {
+          webPopup.location.href = blobUrl;
+        } else {
+          window.open(blobUrl, "_blank");
+        }
         window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
       } else {
         const absoluteUrl = resolveAbsoluteDownloadUrl(item.downloadUrl);
@@ -544,6 +552,9 @@ export function PacienteDetailsScreen({
         }
       }
     } catch (error) {
+      if (webPopup && !webPopup.closed) {
+        webPopup.close();
+      }
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       const message = getExamErrorMessage(error, t, "patientDetails", "open");
       trackEvent("patient_exam_open_failed", {

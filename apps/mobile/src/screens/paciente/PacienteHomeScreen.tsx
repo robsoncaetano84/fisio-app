@@ -449,6 +449,10 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
 
   const handleOpenExame = async (item: PacienteExameItem) => {
     if (!pacienteId) return;
+    let webPopup: Window | null = null;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      webPopup = window.open("about:blank", "_blank");
+    }
     setDownloadingExameId(item.id);
     try {
       if (Platform.OS === "web") {
@@ -461,7 +465,11 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
           700,
         );
         const blobUrl = window.URL.createObjectURL(response.data);
-        window.open(blobUrl, "_blank", "noopener,noreferrer");
+        if (webPopup && !webPopup.closed) {
+          webPopup.location.href = blobUrl;
+        } else {
+          window.open(blobUrl, "_blank");
+        }
         window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
       } else {
         const absoluteUrl = resolveAbsoluteDownloadUrl(item.downloadUrl);
@@ -497,6 +505,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
         }
       }
     } catch (error) {
+      if (webPopup && !webPopup.closed) {
+        webPopup.close();
+      }
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       const message = getExamErrorMessage(error, t, "patient", "open");
       trackEvent("patient_exam_open_failed", {
@@ -733,6 +744,10 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     }, [usuario?.nome]),
   );
   const openMyPdf = async (type: "laudo" | "plano") => {
+    let webPopup: Window | null = null;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      webPopup = window.open("about:blank", "_blank");
+    }
     try {
       setLoadingPdf(type);
       const authHeader = token
@@ -746,10 +761,14 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       const endpoint =
         type === "laudo" ? "/laudos/self/pdf-laudo" : "/laudos/self/pdf-plano";
       if (Platform.OS === "web") {
-        const response = await api.get<Blob>(endpoint, { responseType: "blob" });
-        const blobUrl = window.URL.createObjectURL(response.data);
-        window.open(blobUrl, "_blank", "noopener,noreferrer");
-        window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+        const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
+        const tokenValue = authHeader.replace(/^Bearer\s+/i, "").trim();
+        const finalUrl = `${absoluteUrl}?token=${encodeURIComponent(tokenValue)}`;
+        if (webPopup && !webPopup.closed) {
+          webPopup.location.href = finalUrl;
+        } else if (typeof window !== "undefined") {
+          window.open(finalUrl, "_blank");
+        }
       } else {
         const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
         const localPathBase =
@@ -774,6 +793,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
         }
       }
     } catch {
+      if (webPopup && !webPopup.closed) {
+        webPopup.close();
+      }
       showToast({ message: t("patient.openPdfError"), type: "error" });
     } finally {
       setLoadingPdf(null);

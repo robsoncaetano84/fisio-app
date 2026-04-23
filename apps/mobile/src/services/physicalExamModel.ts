@@ -78,8 +78,8 @@ export interface ExameFisicoStructured {
   version: 1;
   source: "rule-based" | "manual";
   generatedAt: string;
-  dorPrincipal: DorClassificacaoPrincipal;
-  dorSubtipo: DorSubtipoClinico;
+  dorPrincipal: DorClassificacaoPrincipal | null;
+  dorSubtipo: DorSubtipoClinico | null;
   observacao: {
     postura: string;
     assimetria: string;
@@ -244,7 +244,7 @@ const deriveRedFlagMeta = (answers: RedFlagAnswer[]): RedFlagBlock => {
 
 const mapAnamneseTipo = (
   tipo?: Anamnese["tipoDor"] | null,
-): { principal: DorClassificacaoPrincipal; subtipo: DorSubtipoClinico } => {
+): { principal: DorClassificacaoPrincipal | null; subtipo: DorSubtipoClinico | null } => {
   if (tipo === "NEUROPATICA") {
     return { principal: "NEUROPATICA", subtipo: "NEURAL" };
   }
@@ -257,8 +257,101 @@ const mapAnamneseTipo = (
   if (tipo === "MISTA") {
     return { principal: "NOCIPLASTICA", subtipo: "MIOFASCIAL" };
   }
-  return { principal: "NOCICEPTIVA", subtipo: "MECANICA" };
+  return { principal: null, subtipo: null };
 };
+
+export interface DorClassificationSuggestion {
+  principal: DorClassificacaoPrincipal | null;
+  subtipo: DorSubtipoClinico | null;
+  confidence: "BAIXA" | "MODERADA" | "ALTA";
+  reason: string;
+}
+
+export function inferDorClassificationFromAnamnese(
+  anamnese?: Anamnese,
+): DorClassificationSuggestion {
+  if (!anamnese) {
+    return {
+      principal: null,
+      subtipo: null,
+      confidence: "BAIXA",
+      reason: "Sem anamnese disponivel para inferencia.",
+    };
+  }
+
+  const mappedByTipo = mapAnamneseTipo(anamnese.tipoDor);
+  if (mappedByTipo.principal && mappedByTipo.subtipo) {
+    return {
+      principal: mappedByTipo.principal,
+      subtipo: mappedByTipo.subtipo,
+      confidence: "ALTA",
+      reason: "Classificacao inferida diretamente do tipo de dor da anamnese.",
+    };
+  }
+
+  const sintomas = String(anamnese.descricaoSintomas || "").toLowerCase();
+  const piora = String(anamnese.fatoresPiora || "").toLowerCase();
+  const alivio = String(anamnese.fatorAlivio || "").toLowerCase();
+  const sinaisCentral = String(anamnese.sinaisSensibilizacaoCentral || "").toLowerCase();
+  const hasIrradiacao = anamnese.irradiacao === true || String(anamnese.localIrradiacao || "").trim().length > 0;
+  const hasInflammatoryBehavior = anamnese.dorRepouso === true || anamnese.dorNoturna === true;
+
+  if (
+    hasIrradiacao ||
+    sintomas.includes("choque") ||
+    sintomas.includes("formig") ||
+    sintomas.includes("queima")
+  ) {
+    return {
+      principal: "NEUROPATICA",
+      subtipo: "NEURAL",
+      confidence: "MODERADA",
+      reason: "Sinais de irradiacao/parestesia sugerem componente neural.",
+    };
+  }
+
+  if (
+    hasInflammatoryBehavior ||
+    sintomas.includes("rigidez matinal") ||
+    sinaisCentral.includes("inflama")
+  ) {
+    return {
+      principal: "INFLAMATORIA",
+      subtipo: "INFLAMATORIA",
+      confidence: "MODERADA",
+      reason: "Padrao em repouso/noturno sugere componente inflamatorio.",
+    };
+  }
+
+  if (
+    sinaisCentral.includes("hipersens") ||
+    sintomas.includes("dor difusa") ||
+    sintomas.includes("dor generalizada")
+  ) {
+    return {
+      principal: "NOCIPLASTICA",
+      subtipo: "MIOFASCIAL",
+      confidence: "MODERADA",
+      reason: "Padrao de sensibilizacao central/dor difusa sugere nociplastia.",
+    };
+  }
+
+  if (piora.length > 0 || alivio.length > 0) {
+    return {
+      principal: "NOCICEPTIVA",
+      subtipo: "MECANICA",
+      confidence: "MODERADA",
+      reason: "Fatores de piora/alivio com movimento sugerem dor mecanica.",
+    };
+  }
+
+  return {
+    principal: null,
+    subtipo: null,
+    confidence: "BAIXA",
+    reason: "Dados insuficientes na anamnese para sugerir classificacao com seguranca.",
+  };
+}
 
 const makeTests = (names: string[]): RegionalTest[] =>
   names.map((nome) => ({ nome, resultado: "NAO_TESTADO", selecionado: false }));
@@ -1450,8 +1543,8 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
 
   return [
     "Classificacao de dor",
-    `Principal: ${exam.dorPrincipal}`,
-    `Subtipo clinico: ${exam.dorSubtipo}`,
+    `Principal: ${exam.dorPrincipal || "Nao classificada"}`,
+    `Subtipo clinico: ${exam.dorSubtipo || "Nao classificado"}`,
     "",
     "Observacao",
     `Postura: ${exam.observacao.postura}`,

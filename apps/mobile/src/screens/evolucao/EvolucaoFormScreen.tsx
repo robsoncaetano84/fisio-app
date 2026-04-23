@@ -3,7 +3,7 @@
 // EVOLUCAO FORM SCREEN
 // ==========================================
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -40,6 +40,11 @@ import {
 } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import {
+  CLINICAL_REGION_LABELS,
+  inferClinicalRegionsFromAnamnese,
+  resolveRelevantClinicalRegions,
+} from "../../utils/clinicalRegionContext";
 
 type EvolucaoFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "EvolucaoForm">;
@@ -82,6 +87,20 @@ export function EvolucaoFormScreen({
   const { showToast } = useToast();
   const paciente = getPacienteById(pacienteId);
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
+  const latestAnamnese = useMemo(() => {
+    const list = anamneses
+      .filter((item) => item.pacienteId === pacienteId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list[0];
+  }, [anamneses, pacienteId]);
+  const directRegions = useMemo(
+    () => inferClinicalRegionsFromAnamnese(latestAnamnese),
+    [latestAnamnese],
+  );
+  const relevantRegions = useMemo(
+    () => resolveRelevantClinicalRegions(latestAnamnese),
+    [latestAnamnese],
+  );
 
   const [loading, setLoading] = useState(false);
 
@@ -206,6 +225,10 @@ export function EvolucaoFormScreen({
       }).catch(() => undefined);
     };
   }, [evolucaoId, pacienteId]);
+
+  useEffect(() => {
+    fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
+  }, [fetchAnamnesesByPaciente, pacienteId]);
 
   useEffect(() => {
     trackEvent("session_started", {
@@ -539,6 +562,31 @@ export function EvolucaoFormScreen({
             S: Subjetivo | O: Objetivo | A: Avaliação | P: Plano
           </Text>
         </View>
+        {relevantRegions.length ? (
+          <View style={styles.contextCard}>
+            <Text style={styles.contextTitle}>Foco clinico por regiao</Text>
+            <Text style={styles.contextDescription}>
+              Queixa principal:{" "}
+              {directRegions.length
+                ? directRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")
+                : "Nao identificada"}{" "}
+              | Cadeia relacionada: {relevantRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
+            </Text>
+            <TouchableOpacity
+              style={styles.contextAction}
+              onPress={() => {
+                const focusText = `Foco regional: ${relevantRegions
+                  .map((r) => CLINICAL_REGION_LABELS[r])
+                  .join(", ")}.`;
+                if (!objetivo.includes("Foco regional")) {
+                  setObjetivo((prev) => (prev ? `${prev}\n${focusText}` : focusText));
+                }
+              }}
+            >
+              <Text style={styles.contextActionText}>Inserir foco no Objetivo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <FormSection
           title="S - Subjetivo"
@@ -897,6 +945,40 @@ const styles = StyleSheet.create({
   soapSubtitle: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
+  },
+  contextCard: {
+    backgroundColor: COLORS.primary + "10",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+  },
+  contextTitle: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  contextDescription: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+    marginBottom: SPACING.sm,
+  },
+  contextAction: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    backgroundColor: COLORS.white,
+  },
+  contextActionText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
   },
   section: {
     backgroundColor: COLORS.white,

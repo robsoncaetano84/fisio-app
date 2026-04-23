@@ -921,10 +921,18 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         type: "info",
       });
     }
+    let webPopup: Window | null = null;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      webPopup = window.open("about:blank", "_blank");
+    }
+
     setLoading(true);
     try {
-      await openPdfUrl(type, laudoId);
+      await openPdfUrl(type, laudoId, webPopup);
     } catch (error: unknown) {
+      if (webPopup && !webPopup.closed) {
+        webPopup.close();
+      }
       const { message } = parseApiError(error);
       showToast({
         message:
@@ -938,7 +946,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
   };
 
-  const openPdfUrl = async (type: "laudo" | "plano", id: string) => {
+  const openPdfUrl = async (
+    type: "laudo" | "plano",
+    id: string,
+    webPopup?: Window | null,
+  ) => {
     const endpoint =
       type === "laudo" ? `/laudos/${id}/pdf-laudo` : `/laudos/${id}/pdf-plano`;
     const authHeader = token
@@ -973,13 +985,20 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     );
 
     if (Platform.OS === "web") {
-      const response = await api.get<Blob>(endpoint, {
-        responseType: "blob",
-        params,
-      });
-      const blobUrl = window.URL.createObjectURL(response.data);
-      window.open(blobUrl, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+      const tokenValue = authHeader.replace(/^Bearer\s+/i, "").trim();
+      const queryParams = new URLSearchParams();
+      queryParams.set("token", tokenValue);
+      if (params?.consultedRefs) {
+        queryParams.set("consultedRefs", params.consultedRefs);
+      }
+      const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
+      const finalUrl = `${absoluteUrl}?${queryParams.toString()}`;
+
+      if (webPopup && !webPopup.closed) {
+        webPopup.location.href = finalUrl;
+      } else if (typeof window !== "undefined") {
+        window.open(finalUrl, "_blank");
+      }
       return;
     }
 

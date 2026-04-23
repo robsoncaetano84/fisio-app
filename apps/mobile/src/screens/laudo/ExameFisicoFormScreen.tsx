@@ -21,13 +21,20 @@ import {
   updateRedFlagAnswer,
 } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
+import {
+  CLINICAL_REGION_LABELS,
+  resolveRelevantClinicalRegions,
+  shouldShowChainField,
+} from "../../utils/clinicalRegionContext";
 import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING } from "../../constants/theme";
 import { RootStackParamList } from "../../types";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
   DorClassificacaoPrincipal,
+  DorClassificationSuggestion,
   DorSubtipoClinico,
   ExameFisicoStructured,
+  inferDorClassificationFromAnamnese,
   RedFlagKey,
   RegionalTestGroup,
   TestResult,
@@ -208,22 +215,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const [showAllRegions, setShowAllRegions] = useState(false);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
 
   const draftKey = `draft:exame-fisico-structured:${pacienteId}`;
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
-  const regionalProgress = useMemo(() => {
-    if (!exam) return { tested: 0, total: 0, pending: 0 };
-    const total = exam.avaliacaoRegioes.reduce((acc, group) => acc + group.testes.length, 0);
-    const tested = exam.avaliacaoRegioes.reduce(
-      (acc, group) =>
-        acc + group.testes.filter((test) => test.resultado !== "NAO_TESTADO").length,
-      0,
-    );
-    return { tested, total, pending: Math.max(total - tested, 0) };
-  }, [exam]);
-
   const getLatestAnamnese = useMemo(
     () => () => {
       const anamneseList = useAnamneseStore
@@ -236,6 +233,34 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     },
     [pacienteId],
   );
+  const latestAnamnese = useMemo(() => getLatestAnamnese(), [getLatestAnamnese, anamneses]);
+  const dorSuggestion: DorClassificationSuggestion = useMemo(
+    () => inferDorClassificationFromAnamnese(latestAnamnese),
+    [latestAnamnese],
+  );
+  const relevantRegions = useMemo(
+    () => resolveRelevantClinicalRegions(latestAnamnese),
+    [latestAnamnese],
+  );
+  const relevantRegionSet = useMemo(() => new Set(relevantRegions), [relevantRegions]);
+  const visibleRegionalGroups = useMemo(() => {
+    if (!exam) return [];
+    if (showAllRegions || !relevantRegionSet.size) return exam.avaliacaoRegioes;
+    return exam.avaliacaoRegioes.filter((group) => relevantRegionSet.has(group.regiao));
+  }, [exam, relevantRegionSet, showAllRegions]);
+  const regionalProgress = useMemo(() => {
+    if (!visibleRegionalGroups.length) return { tested: 0, total: 0, pending: 0 };
+    const total = visibleRegionalGroups.reduce(
+      (acc, group) => acc + group.testes.length,
+      0,
+    );
+    const tested = visibleRegionalGroups.reduce(
+      (acc, group) =>
+        acc + group.testes.filter((test) => test.resultado !== "NAO_TESTADO").length,
+      0,
+    );
+    return { tested, total, pending: Math.max(total - tested, 0) };
+  }, [visibleRegionalGroups]);
 
   const generateSuggestion = async (force = false) => {
     if (generating) return;
@@ -734,6 +759,26 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     }
   };
 
+  const handleApplyDorSuggestion = () => {
+    if (!exam) return;
+    if (!dorSuggestion.principal || !dorSuggestion.subtipo) {
+      showToast({
+        type: "error",
+        message: "Nao foi possivel sugerir classificacao de dor com os dados atuais da anamnese.",
+      });
+      return;
+    }
+    setExam({
+      ...exam,
+      dorPrincipal: dorSuggestion.principal,
+      dorSubtipo: dorSuggestion.subtipo,
+    });
+    showToast({
+      type: "success",
+      message: `Sugestao aplicada (${dorSuggestion.confidence.toLowerCase()}): ${dorSuggestion.reason}`,
+    });
+  };
+
   useEffect(() => {
     if (!hasAttemptedSave || !exam) return;
     validateForm();
@@ -767,6 +812,20 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Classificacao de dor</Text>
+          <View style={styles.classificationSuggestionRow}>
+            <Text style={styles.classificationSuggestionText}>
+              Sugestao da anamnese:{" "}
+              {dorSuggestion.principal && dorSuggestion.subtipo
+                ? `${prettyEnum(dorSuggestion.principal)} / ${prettyEnum(dorSuggestion.subtipo)} (${dorSuggestion.confidence.toLowerCase()})`
+                : "sem inferencia segura"}
+            </Text>
+            <TouchableOpacity
+              style={styles.classificationSuggestionButton}
+              onPress={handleApplyDorSuggestion}
+            >
+              <Text style={styles.classificationSuggestionButtonText}>Sugerir por IA</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.optionsRow}>
             {DOR_PRINCIPAL_OPTIONS.map((item) => (
               <TouchableOpacity
@@ -972,10 +1031,18 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             <Text style={styles.validationErrorText}>{errors.neurologicoDetalhado}</Text>
           ) : null}
 
-          <Input label="Quadril" value={exam.cadeiaCinetica.quadril} onChangeText={(v) => setField("cadeiaCinetica.quadril", v)} />
-          <Input label="Pelve" value={exam.cadeiaCinetica.pelve} onChangeText={(v) => setField("cadeiaCinetica.pelve", v)} />
-          <Input label="Coluna torácica" value={exam.cadeiaCinetica.colunaToracica} onChangeText={(v) => setField("cadeiaCinetica.colunaToracica", v)} />
-          <Input label="Pé" value={exam.cadeiaCinetica.pe} onChangeText={(v) => setField("cadeiaCinetica.pe", v)} />
+          {shouldShowChainField("quadril", relevantRegions) ? (
+            <Input label="Quadril" value={exam.cadeiaCinetica.quadril} onChangeText={(v) => setField("cadeiaCinetica.quadril", v)} />
+          ) : null}
+          {shouldShowChainField("pelve", relevantRegions) ? (
+            <Input label="Pelve" value={exam.cadeiaCinetica.pelve} onChangeText={(v) => setField("cadeiaCinetica.pelve", v)} />
+          ) : null}
+          {shouldShowChainField("colunaToracica", relevantRegions) ? (
+            <Input label="Coluna torácica" value={exam.cadeiaCinetica.colunaToracica} onChangeText={(v) => setField("cadeiaCinetica.colunaToracica", v)} />
+          ) : null}
+          {shouldShowChainField("pe", relevantRegions) ? (
+            <Input label="Pé" value={exam.cadeiaCinetica.pe} onChangeText={(v) => setField("cadeiaCinetica.pe", v)} />
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -990,6 +1057,21 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Avaliacao por regioes (marque o resultado de cada teste)</Text>
+          {relevantRegions.length ? (
+            <View style={styles.contextHeaderRow}>
+              <Text style={styles.contextHintText}>
+                Foco por anamnese: {relevantRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
+              </Text>
+              <TouchableOpacity
+                style={styles.contextToggleChip}
+                onPress={() => setShowAllRegions((prev) => !prev)}
+              >
+                <Text style={styles.contextToggleChipText}>
+                  {showAllRegions ? "Ver foco" : "Mostrar todas"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           <Text style={styles.regionProgressText}>
             Progresso: {regionalProgress.tested}/{regionalProgress.total} testados •{" "}
             {regionalProgress.pending} pendente(s)
@@ -1008,7 +1090,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               </TouchableOpacity>
             ))}
           </View>
-          {exam.avaliacaoRegioes.map((grupo) => {
+          {visibleRegionalGroups.map((grupo) => {
             const testedCount = grupo.testes.filter(
               (teste) => teste.resultado !== "NAO_TESTADO",
             ).length;
@@ -1788,6 +1870,56 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
+  },
+  classificationSuggestionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  classificationSuggestionText: {
+    flex: 1,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+  },
+  classificationSuggestionButton: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: `${COLORS.primary}10`,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  classificationSuggestionButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  contextHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  contextHintText: {
+    flex: 1,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+  },
+  contextToggleChip: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  contextToggleChipText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
   },
   regionProgressText: {
     fontSize: FONTS.sizes.xs,
