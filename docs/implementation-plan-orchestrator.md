@@ -1,4 +1,4 @@
-# Plano de Implementação - Clinical Orchestrator
+﻿# Plano de Implementação - Clinical Orchestrator
 
 ## Objetivo
 Implementar arquitetura híbrida (motor determinístico + IA assistiva explicável) para fluxo clínico completo com governança.
@@ -118,3 +118,4 @@ Critérios de aceite:
 2. Sem decisão clínica automática final sem aprovação profissional.
 3. Explicabilidade e auditoria em todas as sugestões IA.
 4. Uso de feature flags para rollout progressivo.
+

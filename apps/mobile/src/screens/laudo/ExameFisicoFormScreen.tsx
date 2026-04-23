@@ -176,6 +176,78 @@ const prettyEnum = (value: string) =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (l) => l.toUpperCase());
 
+const prettyEvidenceField = (value: string) =>
+  value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+
+const EXAM_FIELD_SUGGESTION_HINTS: Record<string, string> = {
+  "observacao.postura": "Avaliar alinhamento global e compensacoes.",
+  "observacao.assimetria": "Comparar hemicorpos e desvios relevantes.",
+  "observacao.padraoMovimento": "Observar estrategia antalgica durante tarefas funcionais.",
+  "movimento.ativo": "Testar movimentos ativos da regiao",
+  "movimento.passivo": "Comparar amplitude e qualidade com ativo.",
+  "movimento.resistido": "Testar grupos motores principais e reproducao de sintomas.",
+  "movimento.reproduzDor": "Identificar movimento-chave que reproduz dor.",
+  "palpacao.pontosDolorosos": "Mapear pontos dolorosos por regiao e profundidade.",
+  "palpacao.muscular": "Identificar hipertonia, dor a pressao e consistencia tecidual.",
+  "palpacao.articular": "Avaliar dor segmentar e mobilidade acessoria.",
+  "palpacao.pontosGatilho": "Pesquisar pontos gatilho ativos/latentes.",
+  "palpacao.dinamicaVertebral": "Palpacao dinamica para disfuncao segmentar e resposta a movimento.",
+  "testes.biomecanicos": "Selecionar testes funcionais de carga e controle motor.",
+  "testes.ortopedicos": "Selecionar conforme hipotese principal e diferencial.",
+  "testes.neurologicos": "Dermatomo, miotomo e reflexos profundos.",
+  "testes.imagem": "Correlacionar exames de imagem com quadro clinico (se disponiveis).",
+  "cadeiaCinetica.quadril": "Avaliar mobilidade e controle do quadril.",
+  "cadeiaCinetica.pelve": "Avaliar alinhamento e dissociacao pelvica.",
+  "cadeiaCinetica.colunaToracica": "Avaliar mobilidade toracica e impacto em cadeia.",
+  "cadeiaCinetica.pe": "Avaliar apoio plantar e estrategia de propulsao.",
+};
+
+const EXAM_FIELD_SUGGESTION_LABELS: Record<string, string> = {
+  "observacao.postura": "Avaliar alinhamento global e compensações",
+  "observacao.assimetria": "Comparar hemicorpos e desvios relevantes",
+  "observacao.padraoMovimento": "Observar estratégia antálgica durante tarefas funcionais",
+  "movimento.ativo": "Testar movimentos ativos da região principal",
+  "movimento.passivo": "Comparar amplitude e qualidade com ativo",
+  "movimento.resistido": "Testar grupos motores principais e reprodução de sintomas",
+  "movimento.reproduzDor": "Identificar movimento-chave que reproduz dor",
+  "palpacao.pontosDolorosos": "Mapear pontos dolorosos por região e profundidade",
+  "palpacao.muscular": "Identificar hipertonia, dor à pressão e consistência tecidual",
+  "palpacao.articular": "Avaliar dor segmentar e mobilidade acessória",
+  "palpacao.pontosGatilho": "Pesquisar pontos gatilho ativos/latentes",
+  "palpacao.dinamicaVertebral": "Palpação dinâmica para disfunção segmentar e resposta a movimento",
+  "testes.biomecanicos": "Selecionar testes funcionais de carga e controle motor",
+  "testes.ortopedicos": "Selecionar conforme hipótese principal e diferencial",
+  "testes.neurologicos": "Dermátomo, miótomo e reflexos profundos",
+  "testes.imagem": "Correlacionar exame de imagem com quadro clínico",
+  "cadeiaCinetica.quadril": "Avaliar mobilidade e controle do quadril",
+  "cadeiaCinetica.pelve": "Avaliar alinhamento e dissociação pélvica",
+  "cadeiaCinetica.colunaToracica": "Avaliar mobilidade torácica e impacto em cadeia",
+  "cadeiaCinetica.pe": "Avaliar apoio plantar e estratégia de propulsão",
+};
+
+const resolveInputSuggestionPresentation = (
+  fieldKey: string,
+  baseLabel: string,
+  currentValue?: string,
+) => {
+  const raw = String(currentValue || "").trim();
+  const hintStart = EXAM_FIELD_SUGGESTION_HINTS[fieldKey];
+  const hintLabel = EXAM_FIELD_SUGGESTION_LABELS[fieldKey];
+  if (!raw || !hintStart || !hintLabel) {
+    return { label: baseLabel, value: currentValue ?? "" };
+  }
+
+  const startsWithHint = raw.toLowerCase().startsWith(hintStart.toLowerCase());
+  if (!startsWithHint) {
+    return { label: baseLabel, value: currentValue ?? "" };
+  }
+
+  return { label: `${baseLabel} (${hintLabel})`, value: "" };
+};
+
 type HipomobilidadeSegmentarField =
   | "cervical"
   | "toracica"
@@ -919,6 +991,106 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   }
 
   const redFlagCount = exam.redFlags.answers.filter((item) => item.positive).length;
+  const observacaoPosturaInput = resolveInputSuggestionPresentation(
+    "observacao.postura",
+    "Postura",
+    exam.observacao.postura,
+  );
+  const observacaoAssimetriaInput = resolveInputSuggestionPresentation(
+    "observacao.assimetria",
+    "Assimetria",
+    exam.observacao.assimetria,
+  );
+  const observacaoPadraoInput = resolveInputSuggestionPresentation(
+    "observacao.padraoMovimento",
+    "Padrão de movimento",
+    exam.observacao.padraoMovimento,
+  );
+  const movimentoAtivoInput = resolveInputSuggestionPresentation(
+    "movimento.ativo",
+    "Movimento ativo",
+    exam.movimento.ativo,
+  );
+  const movimentoPassivoInput = resolveInputSuggestionPresentation(
+    "movimento.passivo",
+    "Movimento passivo",
+    exam.movimento.passivo,
+  );
+  const movimentoResistidoInput = resolveInputSuggestionPresentation(
+    "movimento.resistido",
+    "Movimento resistido",
+    exam.movimento.resistido,
+  );
+  const movimentoReproduzDorInput = resolveInputSuggestionPresentation(
+    "movimento.reproduzDor",
+    "Qual movimento reproduz a dor?",
+    exam.movimento.reproduzDor,
+  );
+  const palpacaoPontosDolorososInput = resolveInputSuggestionPresentation(
+    "palpacao.pontosDolorosos",
+    "Pontos dolorosos",
+    exam.palpacao.pontosDolorosos,
+  );
+  const palpacaoMuscularInput = resolveInputSuggestionPresentation(
+    "palpacao.muscular",
+    "Palpação muscular",
+    exam.palpacao.muscular,
+  );
+  const palpacaoArticularInput = resolveInputSuggestionPresentation(
+    "palpacao.articular",
+    "Palpação articular",
+    exam.palpacao.articular,
+  );
+  const palpacaoPontosGatilhoInput = resolveInputSuggestionPresentation(
+    "palpacao.pontosGatilho",
+    "Pontos de gatilho",
+    exam.palpacao.pontosGatilho,
+  );
+  const palpacaoDinamicaInput = resolveInputSuggestionPresentation(
+    "palpacao.dinamicaVertebral",
+    "Palpação dinâmica vertebral",
+    exam.palpacao.dinamicaVertebral,
+  );
+  const testesBiomecanicosInput = resolveInputSuggestionPresentation(
+    "testes.biomecanicos",
+    "Testes biomecânicos",
+    exam.testes.biomecanicos,
+  );
+  const testesOrtopedicosInput = resolveInputSuggestionPresentation(
+    "testes.ortopedicos",
+    "Testes ortopédicos",
+    exam.testes.ortopedicos,
+  );
+  const testesNeurologicosInput = resolveInputSuggestionPresentation(
+    "testes.neurologicos",
+    "Neurológico (dermátomo, miótomo, reflexos)",
+    exam.testes.neurologicos,
+  );
+  const testesImagemInput = resolveInputSuggestionPresentation(
+    "testes.imagem",
+    "Exame de imagem",
+    exam.testes.imagem,
+  );
+  const cadeiaQuadrilInput = resolveInputSuggestionPresentation(
+    "cadeiaCinetica.quadril",
+    "Quadril",
+    exam.cadeiaCinetica.quadril,
+  );
+  const cadeiaPelveInput = resolveInputSuggestionPresentation(
+    "cadeiaCinetica.pelve",
+    "Pelve",
+    exam.cadeiaCinetica.pelve,
+  );
+  const cadeiaToracicaInput = resolveInputSuggestionPresentation(
+    "cadeiaCinetica.colunaToracica",
+    "Coluna torácica",
+    exam.cadeiaCinetica.colunaToracica,
+  );
+  const cadeiaPeInput = resolveInputSuggestionPresentation(
+    "cadeiaCinetica.pe",
+    "Pé",
+    exam.cadeiaCinetica.pe,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -966,12 +1138,23 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               </TouchableOpacity>
             ) : null}
           </View>
-          <View style={styles.classificationSuggestionRow}>
+          <View style={styles.classificationSuggestionCard}>
+            <View style={styles.classificationSuggestionHeader}>
+              <Text style={styles.classificationSuggestionLabel}>Sugestão da anamnese</Text>
+              <TouchableOpacity
+                style={styles.classificationSuggestionButton}
+                onPress={handleApplyDorSuggestion}
+              >
+                <Text style={styles.classificationSuggestionButtonText}>Sugerir por IA</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.classificationSuggestionText}>
-              Sugestao da anamnese:{" "}
               {effectiveDorSuggestion.principal && effectiveDorSuggestion.subtipo
-                ? `${prettyEnum(effectiveDorSuggestion.principal)} / ${prettyEnum(effectiveDorSuggestion.subtipo)} (${effectiveDorSuggestion.confidence.toLowerCase()})`
-                : "sem inferencia segura"}
+                ? `${prettyEnum(effectiveDorSuggestion.principal)} / ${prettyEnum(effectiveDorSuggestion.subtipo)}`
+                : "Sem inferência segura"}
+            </Text>
+            <Text style={styles.classificationConfidenceText}>
+              Confiança: {effectiveDorSuggestion.confidence.toLowerCase()}
             </Text>
             {effectiveDorSuggestion.confidence === "BAIXA" ? (
               <Text style={styles.classificationLowConfidenceText}>
@@ -979,9 +1162,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               </Text>
             ) : null}
             {effectiveDorSuggestion.evidenceFields.length > 0 ? (
-              <Text style={styles.classificationEvidenceText}>
-                Evidências: {effectiveDorSuggestion.evidenceFields.join(", ")}
-              </Text>
+              <View style={styles.classificationEvidenceGroup}>
+                <Text style={styles.classificationEvidenceLabel}>Evidências</Text>
+                <View style={styles.classificationEvidenceChips}>
+                  {effectiveDorSuggestion.evidenceFields.map((field) => (
+                    <View key={field} style={styles.classificationEvidenceChip}>
+                      <Text style={styles.classificationEvidenceChipText}>{prettyEvidenceField(field)}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             ) : null}
             {effectiveDorSuggestion.protocolVersion ? (
               <Text style={styles.classificationEvidenceText}>
@@ -989,12 +1179,6 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 {effectiveDorSuggestion.protocolVersion}
               </Text>
             ) : null}
-            <TouchableOpacity
-              style={styles.classificationSuggestionButton}
-              onPress={handleApplyDorSuggestion}
-            >
-              <Text style={styles.classificationSuggestionButtonText}>Sugerir por IA</Text>
-            </TouchableOpacity>
           </View>
           <View style={styles.optionsRow}>
             {DOR_PRINCIPAL_OPTIONS.map((item) => (
@@ -1095,20 +1279,44 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Observacao e movimento</Text>
-          <Input label="Postura" value={exam.observacao.postura} onChangeText={(v) => setField("observacao.postura", v)} />
-          <Input label="Assimetria" value={exam.observacao.assimetria} onChangeText={(v) => setField("observacao.assimetria", v)} />
+          <Input
+            label={observacaoPosturaInput.label}
+            value={observacaoPosturaInput.value}
+            onChangeText={(v) => setField("observacao.postura", v)}
+          />
+          <Input
+            label={observacaoAssimetriaInput.label}
+            value={observacaoAssimetriaInput.value}
+            onChangeText={(v) => setField("observacao.assimetria", v)}
+          />
           <Input label="Proteção" value={exam.observacao.protecao} onChangeText={(v) => setField("observacao.protecao", v)} />
-          <Input label="Padrão de movimento" value={exam.observacao.padraoMovimento} onChangeText={(v) => setField("observacao.padraoMovimento", v)} />
+          <Input
+            label={observacaoPadraoInput.label}
+            value={observacaoPadraoInput.value}
+            onChangeText={(v) => setField("observacao.padraoMovimento", v)}
+          />
           <Input label="Edema" value={exam.observacao.edema} onChangeText={(v) => setField("observacao.edema", v)} />
           <Input label="Atrofia muscular" value={exam.observacao.atrofiaMuscular} onChangeText={(v) => setField("observacao.atrofiaMuscular", v)} />
           <Input label="Alterações de marcha" value={exam.observacao.marcha} onChangeText={(v) => setField("observacao.marcha", v)} />
 
-          <Input label="Movimento ativo" value={exam.movimento.ativo} onChangeText={(v) => setField("movimento.ativo", v)} />
-          <Input label="Movimento passivo" value={exam.movimento.passivo} onChangeText={(v) => setField("movimento.passivo", v)} />
-          <Input label="Movimento resistido" value={exam.movimento.resistido} onChangeText={(v) => setField("movimento.resistido", v)} />
           <Input
-            label="Qual movimento reproduz a dor?"
-            value={exam.movimento.reproduzDor}
+            label={movimentoAtivoInput.label}
+            value={movimentoAtivoInput.value}
+            onChangeText={(v) => setField("movimento.ativo", v)}
+          />
+          <Input
+            label={movimentoPassivoInput.label}
+            value={movimentoPassivoInput.value}
+            onChangeText={(v) => setField("movimento.passivo", v)}
+          />
+          <Input
+            label={movimentoResistidoInput.label}
+            value={movimentoResistidoInput.value}
+            onChangeText={(v) => setField("movimento.resistido", v)}
+          />
+          <Input
+            label={movimentoReproduzDorInput.label}
+            value={movimentoReproduzDorInput.value}
             onChangeText={(v) => setField("movimento.reproduzDor", v)}
             error={errors.movimentoReproduzDor}
           />
@@ -1135,11 +1343,31 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input label="Irradiada" value={exam.padraoDor.irradiada} onChangeText={(v) => setField("padraoDor.irradiada", v)} />
           <Input label="Comportamento" value={exam.padraoDor.comportamento} onChangeText={(v) => setField("padraoDor.comportamento", v)} />
 
-          <Input label="Pontos dolorosos" value={exam.palpacao.pontosDolorosos} onChangeText={(v) => setField("palpacao.pontosDolorosos", v)} />
-          <Input label="Palpação muscular" value={exam.palpacao.muscular} onChangeText={(v) => setField("palpacao.muscular", v)} />
-          <Input label="Palpação articular" value={exam.palpacao.articular} onChangeText={(v) => setField("palpacao.articular", v)} />
-          <Input label="Pontos de gatilho" value={exam.palpacao.pontosGatilho} onChangeText={(v) => setField("palpacao.pontosGatilho", v)} />
-          <Input label="Palpação dinâmica vertebral" value={exam.palpacao.dinamicaVertebral} onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)} />
+          <Input
+            label={palpacaoPontosDolorososInput.label}
+            value={palpacaoPontosDolorososInput.value}
+            onChangeText={(v) => setField("palpacao.pontosDolorosos", v)}
+          />
+          <Input
+            label={palpacaoMuscularInput.label}
+            value={palpacaoMuscularInput.value}
+            onChangeText={(v) => setField("palpacao.muscular", v)}
+          />
+          <Input
+            label={palpacaoArticularInput.label}
+            value={palpacaoArticularInput.value}
+            onChangeText={(v) => setField("palpacao.articular", v)}
+          />
+          <Input
+            label={palpacaoPontosGatilhoInput.label}
+            value={palpacaoPontosGatilhoInput.value}
+            onChangeText={(v) => setField("palpacao.pontosGatilho", v)}
+          />
+          <Input
+            label={palpacaoDinamicaInput.label}
+            value={palpacaoDinamicaInput.value}
+            onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)}
+          />
           <Input label="Temperatura local" value={exam.palpacao.temperatura} onChangeText={(v) => setField("palpacao.temperatura", v)} />
           <Input label="Tônus muscular" value={exam.palpacao.tonusMuscular} onChangeText={(v) => setField("palpacao.tonusMuscular", v)} />
           <Input label="Estruturas específicas" value={exam.palpacao.estruturasEspecificas} onChangeText={(v) => setField("palpacao.estruturasEspecificas", v)} />
@@ -1194,10 +1422,26 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Testes e cadeia cinetica</Text>
-          <Input label="Testes biomecânicos" value={exam.testes.biomecanicos} onChangeText={(v) => setField("testes.biomecanicos", v)} />
-          <Input label="Testes ortopédicos" value={exam.testes.ortopedicos} onChangeText={(v) => setField("testes.ortopedicos", v)} />
-          <Input label="Neurológico (dermátomo, miótomo, reflexos)" value={exam.testes.neurologicos} onChangeText={(v) => setField("testes.neurologicos", v)} />
-          <Input label="Exame de imagem" value={exam.testes.imagem} onChangeText={(v) => setField("testes.imagem", v)} />
+          <Input
+            label={testesBiomecanicosInput.label}
+            value={testesBiomecanicosInput.value}
+            onChangeText={(v) => setField("testes.biomecanicos", v)}
+          />
+          <Input
+            label={testesOrtopedicosInput.label}
+            value={testesOrtopedicosInput.value}
+            onChangeText={(v) => setField("testes.ortopedicos", v)}
+          />
+          <Input
+            label={testesNeurologicosInput.label}
+            value={testesNeurologicosInput.value}
+            onChangeText={(v) => setField("testes.neurologicos", v)}
+          />
+          <Input
+            label={testesImagemInput.label}
+            value={testesImagemInput.value}
+            onChangeText={(v) => setField("testes.imagem", v)}
+          />
 
           <Text style={styles.label}>Bloco neurológico detalhado</Text>
           <Input label="Força" value={exam.neurologico.forca} onChangeText={(v) => setField("neurologico.forca", v)} />
@@ -1210,16 +1454,32 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           ) : null}
 
           {shouldShowChainField("quadril", relevantRegions) ? (
-            <Input label="Quadril" value={exam.cadeiaCinetica.quadril} onChangeText={(v) => setField("cadeiaCinetica.quadril", v)} />
+            <Input
+              label={cadeiaQuadrilInput.label}
+              value={cadeiaQuadrilInput.value}
+              onChangeText={(v) => setField("cadeiaCinetica.quadril", v)}
+            />
           ) : null}
           {shouldShowChainField("pelve", relevantRegions) ? (
-            <Input label="Pelve" value={exam.cadeiaCinetica.pelve} onChangeText={(v) => setField("cadeiaCinetica.pelve", v)} />
+            <Input
+              label={cadeiaPelveInput.label}
+              value={cadeiaPelveInput.value}
+              onChangeText={(v) => setField("cadeiaCinetica.pelve", v)}
+            />
           ) : null}
           {shouldShowChainField("colunaToracica", relevantRegions) ? (
-            <Input label="Coluna torácica" value={exam.cadeiaCinetica.colunaToracica} onChangeText={(v) => setField("cadeiaCinetica.colunaToracica", v)} />
+            <Input
+              label={cadeiaToracicaInput.label}
+              value={cadeiaToracicaInput.value}
+              onChangeText={(v) => setField("cadeiaCinetica.colunaToracica", v)}
+            />
           ) : null}
           {shouldShowChainField("pe", relevantRegions) ? (
-            <Input label="Pé" value={exam.cadeiaCinetica.pe} onChangeText={(v) => setField("cadeiaCinetica.pe", v)} />
+            <Input
+              label={cadeiaPeInput.label}
+              value={cadeiaPeInput.value}
+              onChangeText={(v) => setField("cadeiaCinetica.pe", v)}
+            />
           ) : null}
         </View>
 
@@ -2074,15 +2334,33 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.xs,
   },
-  classificationSuggestionRow: {
+  classificationSuggestionCard: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    gap: 6,
+  },
+  classificationSuggestionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: SPACING.xs,
-    marginBottom: SPACING.xs,
+  },
+  classificationSuggestionLabel: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textPrimary,
+    fontWeight: "700",
+    flex: 1,
   },
   classificationSuggestionText: {
-    flex: 1,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textPrimary,
+    fontWeight: "600",
+  },
+  classificationConfidenceText: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
   },
@@ -2131,14 +2409,39 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   classificationLowConfidenceText: {
-    flexBasis: "100%",
     marginTop: 2,
     fontSize: FONTS.sizes.xs,
     color: COLORS.warning,
     fontWeight: "600",
   },
+  classificationEvidenceGroup: {
+    marginTop: 2,
+    gap: 4,
+  },
+  classificationEvidenceLabel: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+  classificationEvidenceChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  classificationEvidenceChip: {
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}33`,
+    backgroundColor: `${COLORS.primary}10`,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  classificationEvidenceChipText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
   classificationEvidenceText: {
-    flexBasis: "100%",
     marginTop: 2,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
