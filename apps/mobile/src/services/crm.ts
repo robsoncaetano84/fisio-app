@@ -190,6 +190,68 @@ export type CrmAdminAuditLog = {
   updatedAt: string;
 };
 
+export type ClinicalProtocolVersion = {
+  id: string;
+  name: string;
+  version: string;
+  isActive: boolean;
+  definition: Record<string, unknown>;
+  activatedAt: string | null;
+  deactivatedAt: string | null;
+  activatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClinicalConsentLog = {
+  id: string;
+  userId: string;
+  purpose:
+    | "TERMS_REQUIRED"
+    | "PRIVACY_REQUIRED"
+    | "RESEARCH_OPTIONAL"
+    | "AI_OPTIONAL"
+    | "PROFESSIONAL_LGPD_REQUIRED";
+  accepted: boolean;
+  acceptedAt: string | null;
+  protocolVersion: string | null;
+  source: string;
+  changedBy: string | null;
+  createdAt: string;
+};
+
+export type ClinicalMyConsentsResponse = {
+  userId: string;
+  role: "ADMIN" | "USER" | "PACIENTE";
+  snapshot: {
+    consentTermsRequired: boolean;
+    consentPrivacyRequired: boolean;
+    consentResearchOptional: boolean;
+    consentAiOptional: boolean;
+    consentProfessionalLgpdRequired: boolean;
+    consentAcceptedAt: string | null;
+  };
+  history: ClinicalConsentLog[];
+};
+
+export type ClinicalAuditLog = {
+  id: string;
+  actorId: string | null;
+  actorRole: string | null;
+  patientId: string | null;
+  actionType: "READ" | "EDIT" | "APPROVAL";
+  action: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type ClinicalAuditLogsResponse = {
+  items: ClinicalAuditLog[];
+  count: number;
+};
+
 export async function getCrmPipelineSummary(): Promise<CrmPipelineSummary> {
   const response = await api.get<CrmPipelineSummary>("/crm/pipeline/summary");
   return response.data;
@@ -456,4 +518,52 @@ export async function updateCrmInteraction(
 
 export async function deleteCrmInteraction(id: string): Promise<void> {
   await api.delete(`/crm/interactions/${id}`);
+}
+
+export async function getClinicalGovernanceActiveProtocol(): Promise<ClinicalProtocolVersion | null> {
+  const response = await api.get<ClinicalProtocolVersion | null>(
+    "/clinical-governance/protocol/active",
+  );
+  return response.data;
+}
+
+export async function getClinicalGovernanceProtocolHistory(params?: {
+  limit?: number;
+}): Promise<ClinicalProtocolVersion[]> {
+  const response = await api.get<ClinicalProtocolVersion[]>(
+    "/clinical-governance/protocol/history",
+    { params },
+  );
+  return response.data;
+}
+
+export async function activateClinicalGovernanceProtocol(payload: {
+  name: string;
+  version: string;
+  definition?: Record<string, unknown>;
+}): Promise<ClinicalProtocolVersion> {
+  const response = await api.post<ClinicalProtocolVersion>(
+    "/clinical-governance/protocol/activate",
+    payload,
+  );
+  return response.data;
+}
+
+export async function getClinicalGovernanceMyConsents(): Promise<ClinicalMyConsentsResponse> {
+  const response = await api.get<ClinicalMyConsentsResponse>(
+    "/clinical-governance/consent/my",
+  );
+  return response.data;
+}
+
+export async function getClinicalGovernanceAuditLogs(params?: {
+  actionType?: "READ" | "EDIT" | "APPROVAL";
+  patientId?: string;
+  limit?: number;
+}): Promise<ClinicalAuditLogsResponse> {
+  const response = await api.get<ClinicalAuditLogsResponse>(
+    "/clinical-governance/audit-logs",
+    { params },
+  );
+  return response.data;
 }

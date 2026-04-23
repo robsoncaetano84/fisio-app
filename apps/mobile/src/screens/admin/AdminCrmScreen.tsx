@@ -30,6 +30,11 @@ import {
   getCrmLeads,
   getCrmPipelineSummary,
   getCrmTasks,
+  getClinicalGovernanceActiveProtocol,
+  getClinicalGovernanceProtocolHistory,
+  activateClinicalGovernanceProtocol,
+  getClinicalGovernanceMyConsents,
+  getClinicalGovernanceAuditLogs,
   updateCrmAdminPatient,
   updateCrmAdminProfessional,
   updateCrmInteraction,
@@ -47,6 +52,9 @@ import {
   type CrmClinicalDashboardSummary,
   type CrmPhysicalExamTestsSummary,
   type CrmTask,
+  type ClinicalProtocolVersion,
+  type ClinicalMyConsentsResponse,
+  type ClinicalAuditLog,
 } from "../../services/crm";
 import { UserRole } from "../../types";
 
@@ -154,6 +162,14 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
   const [interactions, setInteractions] = useState<CrmInteraction[]>([]);
+  const [govActiveProtocol, setGovActiveProtocol] = useState<ClinicalProtocolVersion | null>(null);
+  const [govProtocolHistory, setGovProtocolHistory] = useState<ClinicalProtocolVersion[]>([]);
+  const [govAuditLogs, setGovAuditLogs] = useState<ClinicalAuditLog[]>([]);
+  const [govMyConsents, setGovMyConsents] = useState<ClinicalMyConsentsResponse | null>(null);
+  const [govLoading, setGovLoading] = useState(false);
+  const [govProtocolName, setGovProtocolName] = useState("Protocolo Clinico Base");
+  const [govProtocolVersion, setGovProtocolVersion] = useState("");
+  const [govActivating, setGovActivating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingInteractions, setLoadingInteractions] = useState(false);
   const [includeSensitiveData, setIncludeSensitiveData] = useState(false);
@@ -497,8 +513,61 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     finally { setLoadingInteractions(false); }
   }, [includeSensitiveData, sensitiveReason, showToast]);
 
+  const loadGovernance = useCallback(async () => {
+    if (!isWeb || !isMaster) return;
+    setGovLoading(true);
+    try {
+      const [activeProtocol, protocolHistory, myConsents, auditLogs] = await Promise.all([
+        getClinicalGovernanceActiveProtocol().catch(() => null),
+        getClinicalGovernanceProtocolHistory({ limit: 6 }).catch(() => []),
+        getClinicalGovernanceMyConsents().catch(() => null),
+        getClinicalGovernanceAuditLogs({ limit: 8 }).catch(() => ({ items: [], count: 0 })),
+      ]);
+
+      setGovActiveProtocol(activeProtocol);
+      setGovProtocolHistory(protocolHistory);
+      setGovMyConsents(myConsents);
+      setGovAuditLogs(auditLogs.items || []);
+      if (activeProtocol?.name) {
+        setGovProtocolName(activeProtocol.name);
+      }
+      if (!govProtocolVersion && activeProtocol?.version) {
+        setGovProtocolVersion(activeProtocol.version);
+      }
+    } catch {
+      // keep CRM usable even if governance block fails
+    } finally {
+      setGovLoading(false);
+    }
+  }, [isMaster, isWeb, govProtocolVersion]);
+
+  const handleActivateProtocol = useCallback(async () => {
+    if (!govProtocolName.trim() || !govProtocolVersion.trim()) {
+      showToast({
+        type: "error",
+        message: "Informe nome e versao do protocolo",
+      });
+      return;
+    }
+    setGovActivating(true);
+    try {
+      await activateClinicalGovernanceProtocol({
+        name: govProtocolName.trim(),
+        version: govProtocolVersion.trim(),
+      });
+      showToast({ type: "success", message: "Protocolo ativado com sucesso." });
+      await loadGovernance();
+    } catch (error) {
+      const parsed = parseApiError(error);
+      showToast({ type: "error", message: parsed.message || "Falha ao ativar protocolo." });
+    } finally {
+      setGovActivating(false);
+    }
+  }, [govProtocolName, govProtocolVersion, loadGovernance, showToast]);
+
   useEffect(() => { loadMain().catch(() => undefined); }, [loadMain]);
   useEffect(() => { loadInteractions(selectedLeadId).catch(() => undefined); }, [loadInteractions, selectedLeadId]);
+  useEffect(() => { loadGovernance().catch(() => undefined); }, [loadGovernance]);
 
   const profs = useMemo<ProfRow[]>(() => {
     if (crmProfessionals.length) {
@@ -2048,7 +2117,14 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
               <Text style={styles.section}>{t("crm.dashboard.globalFilters")}</Text>
-              <Action title={t("crm.actions.refresh")} secondary onPress={() => loadMain().catch(() => undefined)} />
+              <Action
+                title={t("crm.actions.refresh")}
+                secondary
+                onPress={() => {
+                  loadMain().catch(() => undefined);
+                  loadGovernance().catch(() => undefined);
+                }}
+              />
             </View>
             <View style={styles.wrapRow}>
               <Text style={styles.muted}>{t("crm.filters.clinicalWindow")}:</Text>
@@ -2072,6 +2148,81 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 />
               ))}
             </View>
+          </View>
+
+          <View style={styles.healthKpiBlock}>
+            <View style={styles.topRow}>
+              <Text style={styles.section}>Governanca clinica</Text>
+              <Text style={styles.muted}>
+                {govActiveProtocol
+                  ? `Ativo: ${govActiveProtocol.name} v${govActiveProtocol.version}`
+                  : "Sem protocolo ativo"}
+              </Text>
+            </View>
+            {govLoading ? (
+              <View style={styles.loading}>
+                <ActivityIndicator color={COLORS.primary} />
+              </View>
+            ) : (
+              <>
+                <View style={styles.wrapRow}>
+                  <Metric
+                    label="Historico de protocolo"
+                    value={String(govProtocolHistory.length)}
+                  />
+                  <Metric
+                    label="Auditoria clinica"
+                    value={String(govAuditLogs.length)}
+                  />
+                  <Metric
+                    label="Consentimentos (usuario)"
+                    value={String(govMyConsents?.history?.length || 0)}
+                  />
+                </View>
+                <View style={styles.wrapRow}>
+                  <TextInput
+                    style={[styles.filterInput, { minWidth: 220 }]}
+                    placeholder="Nome do protocolo"
+                    value={govProtocolName}
+                    onChangeText={setGovProtocolName}
+                  />
+                  <TextInput
+                    style={[styles.filterInput, { minWidth: 160 }]}
+                    placeholder="Versao (ex: 1.1.0)"
+                    value={govProtocolVersion}
+                    onChangeText={setGovProtocolVersion}
+                  />
+                  <Action
+                    title={govActivating ? "Ativando..." : "Ativar versao"}
+                    onPress={() => handleActivateProtocol().catch(() => undefined)}
+                    secondary={false}
+                  />
+                </View>
+                <Text style={styles.disclaimerText}>
+                  Sprint 1: versionamento de protocolo, consentimentos por finalidade e trilha de auditoria.
+                </Text>
+                {govProtocolHistory.slice(0, 3).map((item) => (
+                  <View key={item.id} style={styles.line}>
+                    <Text style={styles.lineTitle}>
+                      {item.name} v{item.version} {item.isActive ? "(ativo)" : ""}
+                    </Text>
+                    <Text style={styles.lineSub}>
+                      Criado em {dt(item.createdAt)} {item.activatedAt ? `| Ativado em ${dt(item.activatedAt)}` : ""}
+                    </Text>
+                  </View>
+                ))}
+                {govAuditLogs.slice(0, 4).map((item) => (
+                  <View key={item.id} style={styles.line}>
+                    <Text style={styles.lineTitle}>
+                      [{item.actionType}] {item.action}
+                    </Text>
+                    <Text style={styles.lineSub}>
+                      Ator: {item.actorRole || "-"} | Paciente: {item.patientId || "-"} | {dt(item.createdAt)}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
 
           <View style={styles.healthKpiBlock}>
