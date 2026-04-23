@@ -61,3 +61,15 @@ jobs:
       - name: Run release gates (CI mode)
         shell: pwsh
         run: powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -SkipSmoke
+
+      - name: Run rollback drill (simulation)
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\rollback-drill.ps1 -TargetCommit "HEAD~1"
+
+      - name: Upload release evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.run_id }}
+          path: logs/*.md
+          if-no-files-found: warn
