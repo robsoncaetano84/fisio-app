@@ -82,6 +82,7 @@ Critérios de aceite:
 - [x] Feature flags por usuário com endpoint autenticado (`/auth/feature-flags`)
 - [x] Flags retornadas em `/auth/login` e `/auth/me`
 - [x] App mobile aplica flags em runtime (login + restore session)
+- [x] Runbook de rollout por usuário (`docs/feature-flags-rollout.md`)
 - [x] Gate automático de release (`scripts/release-gates.ps1`) com relatório em `logs/`
 - [x] CI com job dedicado de release gates (`.github/workflows/ci.yml`)
 - [x] Testes de RBAC CRM admin (`modules/crm/crm.service.spec.ts`)
