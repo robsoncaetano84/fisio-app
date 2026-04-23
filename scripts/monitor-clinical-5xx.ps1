@@ -38,8 +38,7 @@ $authMode = "none"
 if (-not $BearerToken -and $Identifier -and $Password) {
   $payload = @{ identificador = $Identifier; senha = $Password } | ConvertTo-Json -Compress
   try {
-    $loginRaw = & curl.exe -sS -X POST -H "Content-Type: application/json" -d $payload "$BaseUrl/auth/login"
-    $loginObj = $loginRaw | ConvertFrom-Json
+    $loginObj = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/login" -ContentType "application/json" -Body $payload
     if ($loginObj.token) {
       $BearerToken = [string]$loginObj.token
       $authMode = "credentials"

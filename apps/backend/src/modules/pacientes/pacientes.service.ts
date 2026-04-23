@@ -491,7 +491,7 @@ export class PacientesService {
     const pacientes = await this.addPacienteListSelects(
       this.buildScopedPacientesQuery(usuarioId),
     )
-      .orderBy('p.nome_completo', 'ASC')
+      .orderBy('p.nomeCompleto', 'ASC')
       .getMany();
 
     const statusByPaciente = await this.buildCicloStatusByPacienteIds(
@@ -520,7 +520,7 @@ export class PacientesService {
     const baseQuery = this.buildScopedPacientesQuery(usuarioId);
     const total = await baseQuery.clone().getCount();
     const data = await this.addPacienteListSelects(baseQuery)
-      .orderBy('p.nome_completo', 'ASC')
+      .orderBy('p.nomeCompleto', 'ASC')
       .take(safeLimit)
       .skip(skip)
       .getMany();

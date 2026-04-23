@@ -60,7 +60,11 @@
 | Cenario B (Lombar/Neural) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-b-lombar-neural.md |
 | Cenario C (Ombro/Voleibol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-c-ombro-esportivo.md |
 | Sem 5xx recorrente (monitoramento publico) | Aprovado | logs/monitor-clinical-5xx-*.md (ultimo: PASS em 2026-04-23) |
-| Sem 5xx recorrente (monitoramento autenticado) | Pendente | executar `scripts/monitor-clinical-5xx.ps1` com `-Identifier` + `-Password` (ou `-BearerToken`) |
+| Sem 5xx recorrente (monitoramento autenticado) | Reprovado (23/04/2026) | `logs/monitor-clinical-5xx-20260423-151620.md` (5x `500` em `GET /pacientes/paged`) |
+
+### Correção aplicada após monitoramento autenticado (23/04/2026)
+- Ajustada ordenação paginada em `PacientesService.findAll/findPaged` para usar propriedade de entidade (`p.nomeCompleto`) em vez de coluna crua (`p.nome_completo`), evitando erro interno de QueryBuilder em paginação.
+- Após deploy dessa correção, rerodar monitor autenticado para confirmar `Total5xx = 0`.
 
 ## Regra objetiva de decisao final
 - `GO` quando:
