@@ -535,6 +535,9 @@ export class LaudosService {
       examesConsiderados: number;
       examesComLeituraIa: number;
       sugestaoGeradaEm: string;
+      confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
+      reason: string;
+      evidenceFields: string[];
     } & Partial<CreateLaudoDto>
   > {
     const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } = await this.buildAiInput(
@@ -585,6 +588,22 @@ export class LaudosService {
     const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
     const examesConsiderados = exames.length;
     const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
+    const confidence: 'BAIXA' | 'MODERADA' | 'ALTA' =
+      source === 'ai' && examesComLeituraIa > 0
+        ? 'ALTA'
+        : source === 'ai' || examesConsiderados > 0
+          ? 'MODERADA'
+          : 'BAIXA';
+    const reason =
+      source === 'ai'
+        ? 'Sugestao de plano gerada por IA com base no historico clinico.'
+        : 'Sugestao de plano gerada por regras clinicas (fallback).';
+    const evidenceFields = [
+      'anamnese',
+      ...(evolucoes.length > 0 ? ['evolucoes'] : []),
+      ...(exameFisicoResumo ? ['exameFisico'] : []),
+      ...(examesConsiderados > 0 ? ['exames'] : []),
+    ];
 
     const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
     return {
@@ -592,6 +611,9 @@ export class LaudosService {
       examesConsiderados,
       examesComLeituraIa,
       sugestaoGeradaEm: new Date().toISOString(),
+      confidence,
+      reason,
+      evidenceFields,
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ??
         `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
@@ -1451,7 +1473,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
 
 
 

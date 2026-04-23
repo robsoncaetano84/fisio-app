@@ -14,6 +14,9 @@ export type LaudoAiSuggestion = Partial<{
   examesConsiderados: number;
   examesComLeituraIa: number;
   sugestaoGeradaEm: string;
+  confidence: "BAIXA" | "MODERADA" | "ALTA";
+  reason: string;
+  evidenceFields: string[];
 }>;
 
 const mapMotivoBusca = (motivo?: Anamnese["motivoBusca"]) => {

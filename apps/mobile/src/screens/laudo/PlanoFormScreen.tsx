@@ -134,11 +134,12 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     try {
       const data = await getLaudoAiSuggestion(pacienteId);
       const confidence: "ALTA" | "MODERADA" | "BAIXA" =
-        data.source === "ai" && (data.examesComLeituraIa || 0) > 0
+        data.confidence ||
+        (data.source === "ai" && (data.examesComLeituraIa || 0) > 0
           ? "ALTA"
           : data.source === "ai" || (data.examesConsiderados || 0) > 0
             ? "MODERADA"
-            : "BAIXA";
+            : "BAIXA");
       setAiSuggestionMeta({
         source: data.source,
         examesConsiderados: data.examesConsiderados || 0,
@@ -152,10 +153,14 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         suggestionType: "PLANO_TRATAMENTO",
         confidence,
         reason:
-          data.source === "ai"
+          data.reason ||
+          (data.source === "ai"
             ? "Sugestão de plano gerada por IA."
-            : "Sugestão de plano gerada por regras clínicas (fallback).",
-        evidenceFields: ["anamnese", "exames"],
+            : "Sugestão de plano gerada por regras clínicas (fallback)."),
+        evidenceFields:
+          Array.isArray(data.evidenceFields) && data.evidenceFields.length > 0
+            ? data.evidenceFields
+            : ["anamnese", "exames"],
         patientId: pacienteId,
       }).catch(() => undefined);
       if ((data.examesComLeituraIa || 0) > 0) {
