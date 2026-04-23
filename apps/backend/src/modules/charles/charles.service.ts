@@ -36,9 +36,14 @@ export interface CharlesNextActionResponse {
   orchestrator: 'CLINICAL_ORCHESTRATOR';
   mode: 'deterministic-v1';
   requiresProfessionalApproval: true;
+  blocked: boolean;
   paciente: {
     id: string;
     nomeCompleto: string;
+  };
+  context: {
+    regioesPrioritarias: string[];
+    cadeiaProvavel: string | null;
   };
   timeline: {
     anamneseEm: Date | null;
@@ -46,6 +51,16 @@ export interface CharlesNextActionResponse {
     evolucaoEm: Date | null;
     laudoEm: Date | null;
   };
+  blockers: Array<{
+    code: string;
+    severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+    message: string;
+  }>;
+  alerts: Array<{
+    code: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH';
+    message: string;
+  }>;
   stages: CharlesStageItem[];
   nextAction: CharlesNextAction;
 }
@@ -89,6 +104,27 @@ export class CharlesService {
     const hasEvolucao = !!latestEvolucao;
     const laudoValidado = latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL;
     const hasPlanoOuAlta = !!String(latestLaudo?.criteriosAlta || '').trim();
+    const hasCriticalRedFlag = !!(latestAnamnese?.redFlags || []).length;
+    const context = this.buildClinicalContext(latestAnamnese);
+    const blockers: CharlesNextActionResponse['blockers'] = [];
+    const alerts: CharlesNextActionResponse['alerts'] = [];
+
+    if (hasCriticalRedFlag) {
+      blockers.push({
+        code: 'RED_FLAG_CRITICA',
+        severity: 'CRITICAL',
+        message:
+          'Red flag critica detectada na anamnese. Continuidade do ciclo deve ser bloqueada ate encaminhamento.',
+      });
+    }
+    if ((latestAnamnese?.yellowFlags || []).length >= 2) {
+      alerts.push({
+        code: 'YELLOW_FLAGS_RELEVANTES',
+        severity: 'MEDIUM',
+        message:
+          'Paciente com yellow flags relevantes; manter acompanhamento de adesao e abordagem biopsicossocial.',
+      });
+    }
 
     const stages: CharlesStageItem[] = [
       {
@@ -134,22 +170,27 @@ export class CharlesService {
       hasEvolucao,
       laudoValidado,
       hasPlanoOuAlta,
+      hasCriticalRedFlag,
     });
 
     const response: CharlesNextActionResponse = {
       orchestrator: 'CLINICAL_ORCHESTRATOR',
       mode: 'deterministic-v1',
       requiresProfessionalApproval: true,
+      blocked: blockers.length > 0,
       paciente: {
         id: paciente.id,
         nomeCompleto: paciente.nomeCompleto,
       },
+      context,
       timeline: {
         anamneseEm: latestAnamnese?.createdAt || null,
         exameFisicoEm: hasExameFisico ? latestLaudo?.updatedAt || null : null,
         evolucaoEm: latestEvolucao?.data || null,
         laudoEm: latestLaudo?.updatedAt || null,
       },
+      blockers,
+      alerts,
       stages,
       nextAction,
     };
@@ -182,7 +223,16 @@ export class CharlesService {
     hasEvolucao: boolean;
     laudoValidado: boolean;
     hasPlanoOuAlta: boolean;
+    hasCriticalRedFlag: boolean;
   }): CharlesNextAction {
+    if (args.hasCriticalRedFlag) {
+      return {
+        stage: 'MONITORAMENTO',
+        reason: 'Red flag critica detectada.',
+        guidance:
+          'Interromper continuidade do fluxo e encaminhar paciente para avaliacao medica/servico de urgencia conforme protocolo.',
+      };
+    }
     if (!args.hasAnamnese) {
       return {
         stage: 'ANAMNESE',
@@ -224,5 +274,30 @@ export class CharlesService {
       guidance:
         'Manter monitoramento por check-ins e reavaliacao conforme necessidade.',
     };
+  }
+
+  private buildClinicalContext(anamnese?: Anamnese | null): {
+    regioesPrioritarias: string[];
+    cadeiaProvavel: string | null;
+  } {
+    const regioes = Array.from(
+      new Set(
+        (anamnese?.areasAfetadas || [])
+          .map((a) => String(a.regiao || '').trim())
+          .filter((r) => !!r),
+      ),
+    );
+
+    const regiaoKey = regioes.join(' ').toLowerCase();
+    let cadeiaProvavel: string | null = null;
+    if (/(lombar|sacro|quadril|joelho|tornozelo|pe)/.test(regiaoKey)) {
+      cadeiaProvavel = 'CADEIA_LOWER';
+    } else if (/(cervical|ombro|cotovelo|punho|mao|toracica)/.test(regiaoKey)) {
+      cadeiaProvavel = 'CADEIA_UPPER';
+    } else if (regioes.length > 0) {
+      cadeiaProvavel = 'CADEIA_LOCAL';
+    }
+
+    return { regioesPrioritarias: regioes, cadeiaProvavel };
   }
 }
