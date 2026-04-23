@@ -298,11 +298,12 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       const data = await getLaudoAiSuggestion(pacienteId);
       if (data) {
         const confidence: "ALTA" | "MODERADA" | "BAIXA" =
-          data.source === "ai" && (data.examesComLeituraIa || 0) > 0
+          data.confidence ||
+          (data.source === "ai" && (data.examesComLeituraIa || 0) > 0
             ? "ALTA"
             : data.source === "ai" || (data.examesConsiderados || 0) > 0
               ? "MODERADA"
-              : "BAIXA";
+              : "BAIXA");
         setAiSuggestionMeta({
           source: data.source,
           examesConsiderados: data.examesConsiderados || 0,
@@ -316,10 +317,14 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           suggestionType: "LAUDO_DRAFT",
           confidence,
           reason:
-            data.source === "ai"
+            data.reason ||
+            (data.source === "ai"
               ? "Sugestão gerada por IA com base em anamnese e exames."
-              : "Sugestão gerada por regras clínicas (fallback).",
-          evidenceFields: ["anamnese", "exames"],
+              : "Sugestão gerada por regras clínicas (fallback)."),
+          evidenceFields:
+            Array.isArray(data.evidenceFields) && data.evidenceFields.length > 0
+              ? data.evidenceFields
+              : ["anamnese", "exames"],
           patientId: pacienteId,
         }).catch(() => undefined);
         if ((data.examesComLeituraIa || 0) > 0) {
