@@ -25,6 +25,11 @@ export type ClinicalOrchestratorNextActionResponse = {
     severity: Exclude<ClinicalOrchestratorSeverity, "CRITICAL">;
     message: string;
   }>;
+  stages?: Array<{
+    stage: "ANAMNESE" | "EXAME_FISICO" | "EVOLUCAO" | "LAUDO" | "PLANO" | "MONITORAMENTO";
+    status: "PENDING" | "COMPLETED" | "BLOCKED";
+    reason: string;
+  }>;
   nextAction: {
     stage: string;
     reason: string;

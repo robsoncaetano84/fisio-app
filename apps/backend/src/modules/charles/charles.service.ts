@@ -57,7 +57,7 @@ export type CharlesClinicalStage =
   | 'PLANO'
   | 'MONITORAMENTO';
 
-export type CharlesStageStatus = 'PENDING' | 'COMPLETED';
+export type CharlesStageStatus = 'PENDING' | 'COMPLETED' | 'BLOCKED';
 
 export interface CharlesStageItem {
   stage: CharlesClinicalStage;
@@ -166,7 +166,7 @@ export class CharlesService {
       });
     }
 
-    const stages: CharlesStageItem[] = [
+    let stages: CharlesStageItem[] = [
       {
         stage: 'ANAMNESE',
         status: hasAnamnese ? 'COMPLETED' : 'PENDING',
@@ -203,6 +203,18 @@ export class CharlesService {
           : 'Defina criterios de alta e plano final do ciclo.',
       },
     ];
+
+    if (hasCriticalRedFlag) {
+      stages = stages.map((item) => {
+        if (item.status === 'COMPLETED') return item;
+        return {
+          ...item,
+          status: 'BLOCKED',
+          reason:
+            'Etapa bloqueada por red flag critica ate encaminhamento e reavaliacao.',
+        };
+      });
+    }
 
     const nextAction = this.resolveNextAction({
       hasAnamnese,

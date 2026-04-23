@@ -54,6 +54,12 @@ describe('CharlesService - deterministic orchestrator', () => {
     expect(result.blocked).toBe(true);
     expect(result.blockers.some((b) => b.code === 'RED_FLAG_CRITICA')).toBe(true);
     expect(result.nextAction.reason.toLowerCase()).toContain('red flag');
+    expect(result.stages.find((s) => s.stage === 'EXAME_FISICO')?.status).toBe(
+      'BLOCKED',
+    );
+    expect(result.stages.find((s) => s.stage === 'EVOLUCAO')?.status).toBe(
+      'BLOCKED',
+    );
   });
 
   it('returns context with region and probable chain from anamnesis areas', async () => {

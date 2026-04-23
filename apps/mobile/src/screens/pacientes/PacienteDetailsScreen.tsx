@@ -811,7 +811,7 @@ export function PacienteDetailsScreen({
     return "IN_PROGRESS";
   };
 
-  const clinicalFlowItems = [
+  const localClinicalFlowItems = [
     {
       key: "anamnese",
       label: "Anamnese",
@@ -841,6 +841,48 @@ export function PacienteDetailsScreen({
       status: resolveStageStatus(hasLaudoPlano, hasVinculoAtivo && hasAnamnese),
     },
   ] as const;
+
+  const clinicalFlowItems = useMemo(() => {
+    const stages = orchestratorNextAction?.stages;
+    if (!Array.isArray(stages) || !stages.length) return localClinicalFlowItems;
+
+    const stageKeyMap: Record<string, "anamnese" | "exame" | "evolucao" | "laudo" | "plano"> = {
+      ANAMNESE: "anamnese",
+      EXAME_FISICO: "exame",
+      EVOLUCAO: "evolucao",
+      LAUDO: "laudo",
+      PLANO: "plano",
+    };
+    const labels: Record<"anamnese" | "exame" | "evolucao" | "laudo" | "plano", string> = {
+      anamnese: "Anamnese",
+      exame: "Exame físico",
+      evolucao: "Evolução",
+      laudo: "Laudo",
+      plano: "Plano",
+    };
+
+    const nextStage = String(orchestratorNextAction?.nextAction?.stage || "").toUpperCase();
+    const nextKey = stageKeyMap[nextStage];
+
+    const items = (Object.keys(labels) as Array<keyof typeof labels>).map((key) => ({
+      key,
+      label: labels[key],
+      status: "NOT_STARTED" as ClinicalStageStatus,
+    }));
+
+    for (const stage of stages) {
+      const mappedKey = stageKeyMap[String(stage.stage || "").toUpperCase()];
+      if (!mappedKey) continue;
+      let status: ClinicalStageStatus = "NOT_STARTED";
+      if (stage.status === "COMPLETED") status = "DONE";
+      else if (stage.status === "BLOCKED") status = "BLOCKED";
+      else if (mappedKey === nextKey && !orchestratorNextAction?.blocked) status = "IN_PROGRESS";
+      const target = items.find((item) => item.key === mappedKey);
+      if (target) target.status = status;
+    }
+
+    return items;
+  }, [localClinicalFlowItems, orchestratorNextAction]);
 
   const clinicalFlowProgress =
     (clinicalFlowItems.filter((item) => item.status === "DONE").length /

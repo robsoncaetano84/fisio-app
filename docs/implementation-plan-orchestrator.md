@@ -96,6 +96,7 @@ Critérios de aceite:
 - [x] Leitura de trilha de auditoria também auditável (`audit.logs.read`)
 - [x] `release-gates` exige os testes de governança (service + controller)
 - [x] Charles retorna contexto de regiões relacionadas por cadeia (`regioesRelacionadas`) para orientar Exame/Evolução
+- [x] Charles marca etapas como `BLOCKED` em red flag crítica e a UI usa esse status no fluxo clínico
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
