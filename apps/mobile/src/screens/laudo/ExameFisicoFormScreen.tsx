@@ -261,8 +261,14 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             confidence: serverDorSuggestion.confidence,
             reason: serverDorSuggestion.reason,
             evidenceFields: serverDorSuggestion.evidenceFields || [],
+            protocolVersion: serverDorSuggestion.protocolVersion || null,
+            protocolName: serverDorSuggestion.protocolName || null,
           }
-        : dorSuggestion,
+        : {
+            ...dorSuggestion,
+            protocolVersion: null,
+            protocolName: null,
+          },
     [dorSuggestion, serverDorSuggestion],
   );
   const orchestratorFocusedRegions = useMemo(() => {
@@ -975,6 +981,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             {effectiveDorSuggestion.evidenceFields.length > 0 ? (
               <Text style={styles.classificationEvidenceText}>
                 Evidências: {effectiveDorSuggestion.evidenceFields.join(", ")}
+              </Text>
+            ) : null}
+            {effectiveDorSuggestion.protocolVersion ? (
+              <Text style={styles.classificationEvidenceText}>
+                Protocolo: {effectiveDorSuggestion.protocolName || "Ativo"} v
+                {effectiveDorSuggestion.protocolVersion}
               </Text>
             ) : null}
             <TouchableOpacity
