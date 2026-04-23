@@ -12,6 +12,10 @@ const makeService = (
   clinicalRepo: RepoMock,
   checkClickRepo?: RepoMock,
   checkinRepo?: RepoMock,
+  laudoRepo?: RepoMock,
+  pacienteRepo?: RepoMock,
+  anamneseRepo?: RepoMock,
+  atividadeRepo?: RepoMock,
 ) =>
   new MetricsService(
     clinicalRepo as unknown as never,
@@ -29,6 +33,42 @@ const makeService = (
         find: jest.fn(async () => []),
         count: jest.fn(async () => 0),
       } as RepoMock)) as unknown as never,
+    (laudoRepo ||
+      ({
+        create: jest.fn((v) => v),
+        save: jest.fn(async (v) => v),
+        find: jest.fn(async () => []),
+        count: jest.fn(async () => 0),
+        createQueryBuilder: jest.fn(),
+      } as unknown as RepoMock)) as unknown as never,
+    (pacienteRepo ||
+      ({
+        create: jest.fn((v) => v),
+        save: jest.fn(async (v) => v),
+        find: jest.fn(async () => []),
+        count: jest.fn(async () => 0),
+      } as RepoMock)) as unknown as never,
+    (anamneseRepo ||
+      ({
+        create: jest.fn((v) => v),
+        save: jest.fn(async (v) => v),
+        find: jest.fn(async () => []),
+        count: jest.fn(async () => 0),
+      } as RepoMock)) as unknown as never,
+    (atividadeRepo ||
+      ({
+        create: jest.fn((v) => v),
+        save: jest.fn(async (v) => v),
+        find: jest.fn(async () => []),
+        count: jest.fn(async () => 0),
+        createQueryBuilder: jest.fn(() => ({
+          select: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          andWhere: jest.fn().mockReturnThis(),
+          groupBy: jest.fn().mockReturnThis(),
+          getRawMany: jest.fn(async () => []),
+        })),
+      } as unknown as RepoMock)) as unknown as never,
   );
 
 describe('MetricsService', () => {
@@ -70,7 +110,7 @@ describe('MetricsService', () => {
     };
 
     const service = makeService(repo);
-    const summary = await service.getClinicalFlowSummary('prof-1', 7);
+    const summary = await service.getClinicalFlowSummary('prof-1', 'USER' as never, 7);
 
     expect(summary.windowDays).toBe(7);
     expect(summary.opened).toBe(2);
@@ -84,6 +124,7 @@ describe('MetricsService', () => {
       reason: 'MISSING_ANAMNESE',
       count: 2,
     });
+    expect(summary.filters.professionalId).toBe('prof-1');
   });
 
   it('tracks a clinical flow event with normalized blocked reason', async () => {
@@ -134,11 +175,42 @@ describe('MetricsService', () => {
     };
 
     const service = makeService(clinicalRepo, clickRepo, checkinRepo);
-    const summary = await service.getPatientCheckEngagementSummary('prof-1', 7);
+    const summary = await service.getPatientCheckEngagementSummary(
+      'prof-1',
+      'USER' as never,
+      7,
+    );
 
     expect(summary.windowDays).toBe(7);
     expect(summary.checkClicks).toBe(10);
     expect(summary.checkinsSubmitted).toBe(6);
     expect(summary.conversionRate).toBe(60);
+  });
+
+  it('applies status and patient filters for admin summary', async () => {
+    const repo: RepoMock = {
+      create: jest.fn((v) => v),
+      save: jest.fn(async (v) => v),
+      find: jest.fn(async () => []),
+      count: jest.fn(async () => 0),
+    };
+    const service = makeService(repo);
+    await service.getClinicalFlowSummary('admin-1', 'ADMIN' as never, 14, {
+      professionalId: 'prof-2',
+      patientId: 'pat-1',
+      status: 'blocked',
+      stage: 'evolucao',
+    });
+
+    expect(repo.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          professionalId: 'prof-2',
+          patientId: 'pat-1',
+          eventType: 'STAGE_BLOCKED',
+          stage: 'EVOLUCAO',
+        }),
+      }),
+    );
   });
 });

@@ -47,8 +47,22 @@ export class MetricsController {
     @CurrentUser() usuario: Usuario,
     @Query('windowDays', new DefaultValuePipe(7), ParseIntPipe)
     windowDays: number,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('stage') stage?: string,
+    @Query('status') status?: string,
   ) {
-    return this.metricsService.getClinicalFlowSummary(usuario.id, windowDays);
+    return this.metricsService.getClinicalFlowSummary(
+      usuario.id,
+      usuario.role,
+      windowDays,
+      {
+        professionalId,
+        patientId,
+        stage,
+        status,
+      },
+    );
   }
 
   @Get('check-engagement-summary')
@@ -57,10 +71,19 @@ export class MetricsController {
     @CurrentUser() usuario: Usuario,
     @Query('windowDays', new DefaultValuePipe(7), ParseIntPipe)
     windowDays: number,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('status') status?: string,
   ) {
     return this.metricsService.getPatientCheckEngagementSummary(
       usuario.id,
+      usuario.role,
       windowDays,
+      {
+        professionalId,
+        patientId,
+        status,
+      },
     );
   }
 
@@ -70,10 +93,19 @@ export class MetricsController {
     @CurrentUser() usuario: Usuario,
     @Query('windowDays', new DefaultValuePipe(30), ParseIntPipe)
     windowDays: number,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('status') status?: string,
   ) {
     return this.metricsService.getPhysicalExamTestsSummary(
       usuario.id,
+      usuario.role,
       windowDays,
+      {
+        professionalId,
+        patientId,
+        status,
+      },
     );
   }
 }

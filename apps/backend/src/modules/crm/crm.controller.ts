@@ -117,15 +117,24 @@ export class CrmController {
     @CurrentUser() usuario: Usuario,
     @Query('windowDays') windowDays?: string,
     @Query('semEvolucaoDias') semEvolucaoDias?: string,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('status') status?: string,
   ) {
     this.requirePermission(usuario, 'dashboard.read');
     this.auditAdminAccess(usuario, 'clinical_dashboard_summary', {
       windowDays,
       semEvolucaoDias,
+      professionalId,
+      patientId,
+      status,
     });
     return this.crmService.getClinicalDashboardSummary({
       windowDays: windowDays ? Number(windowDays) : 7,
       semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
+      professionalId,
+      patientId,
+      status,
     });
   }
 

@@ -15,6 +15,21 @@ export type ClinicalFlowEventType =
 
 @Entity('clinical_flow_events')
 @Index('idx_clinical_flow_events_prof_occurred_at', ['professionalId', 'occurredAt'])
+@Index('idx_clinical_flow_events_prof_patient_occurred_at', [
+  'professionalId',
+  'patientId',
+  'occurredAt',
+])
+@Index('idx_clinical_flow_events_prof_stage_occurred_at', [
+  'professionalId',
+  'stage',
+  'occurredAt',
+])
+@Index('idx_clinical_flow_events_prof_event_occurred_at', [
+  'professionalId',
+  'eventType',
+  'occurredAt',
+])
 export class ClinicalFlowEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -43,4 +58,3 @@ export class ClinicalFlowEvent {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }
-

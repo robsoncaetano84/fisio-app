@@ -69,6 +69,13 @@ type AdminCrmScreenProps = {
 type TaskBucket = "TODAS" | "ATRASADAS" | "HOJE" | "PROXIMAS" | "CONCLUIDAS";
 type ExamChartMode = "POSITIVOS" | "TAXA";
 type ExamConfidenceFilter = "TODOS" | "ALTA" | "MEDIA" | "BAIXA";
+type ClinicalPipelineStatusFilter =
+  | "TODOS"
+  | "NOVO_PACIENTE"
+  | "AGUARDANDO_VINCULO"
+  | "ANAMNESE_PENDENTE"
+  | "EM_TRATAMENTO"
+  | "ALTA";
 type SortDir = "asc" | "desc";
 type ProfSortKey = "nome" | "score" | "vulnEmocional" | "pacientes" | "ativos" | "ultimoAcesso";
 type PacSortKey = "nome" | "profissionalNome" | "status" | "ultimoCheckin";
@@ -232,6 +239,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [windowDays, setWindowDays] = useState(7);
   const [examWindowDays, setExamWindowDays] = useState(30);
   const [semEvolucaoDias, setSemEvolucaoDias] = useState(10);
+  const [clinicalPipelineStatusFilter, setClinicalPipelineStatusFilter] =
+    useState<ClinicalPipelineStatusFilter>("TODOS");
   const [examChartMode, setExamChartMode] = useState<ExamChartMode>("POSITIVOS");
   const [examMinSample, setExamMinSample] = useState(3);
   const [examConfidenceFilter, setExamConfidenceFilter] =
@@ -269,6 +278,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         windowDays: number;
         examWindowDays: number;
         semEvolucaoDias: number;
+        clinicalPipelineStatusFilter: ClinicalPipelineStatusFilter;
         examChartMode: ExamChartMode;
         examMinSample: number;
         examConfidenceFilter: ExamConfidenceFilter;
@@ -296,6 +306,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       }
       if (typeof prefs.semEvolucaoDias === "number" && prefs.semEvolucaoDias > 0) {
         setSemEvolucaoDias(Math.min(60, Math.max(3, Math.round(prefs.semEvolucaoDias))));
+      }
+      if (prefs.clinicalPipelineStatusFilter) {
+        setClinicalPipelineStatusFilter(prefs.clinicalPipelineStatusFilter);
       }
       if (prefs.examChartMode) setExamChartMode(prefs.examChartMode);
       if (typeof prefs.examMinSample === "number" && prefs.examMinSample > 0) {
@@ -333,6 +346,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           windowDays,
           examWindowDays,
           semEvolucaoDias,
+          clinicalPipelineStatusFilter,
           examChartMode,
           examMinSample,
           examConfidenceFilter,
@@ -342,7 +356,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     } catch {
       // ignore localStorage errors
     }
-  }, [tab, query, stageFilter, profSort, pacSort, profActiveFilter, profAccountStatusFilter, profEmotionalConcentrationFilter, pacLinkFilter, pacStatusFilter, pacEmotionalFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, windowDays, examWindowDays, semEvolucaoDias, examChartMode, examMinSample, examConfidenceFilter, taskBucketFilter]);
+  }, [tab, query, stageFilter, profSort, pacSort, profActiveFilter, profAccountStatusFilter, profEmotionalConcentrationFilter, pacLinkFilter, pacStatusFilter, pacEmotionalFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, windowDays, examWindowDays, semEvolucaoDias, clinicalPipelineStatusFilter, examChartMode, examMinSample, examConfidenceFilter, taskBucketFilter]);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof window === "undefined") return;
@@ -432,8 +446,25 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     try {
       const [p, clinical, physicalExam, auditPaged, profsPaged, pacsPaged, ls, ts] = await Promise.all([
         getCrmPipelineSummary(),
-        getCrmClinicalDashboardSummary({ windowDays, semEvolucaoDias }),
-        getCrmPhysicalExamTestsSummary({ windowDays: examWindowDays }).catch(() => null),
+        getCrmClinicalDashboardSummary({
+          windowDays,
+          semEvolucaoDias,
+          professionalId: selectedProfId || undefined,
+          patientId: selectedPacId || undefined,
+          status:
+            clinicalPipelineStatusFilter === "TODOS"
+              ? undefined
+              : clinicalPipelineStatusFilter,
+        }),
+        getCrmPhysicalExamTestsSummary({
+          windowDays: examWindowDays,
+          professionalId: selectedProfId || undefined,
+          patientId: selectedPacId || undefined,
+          status:
+            clinicalPipelineStatusFilter === "TODOS"
+              ? undefined
+              : clinicalPipelineStatusFilter,
+        }).catch(() => null),
         getCrmAdminAuditLogs({
           includeSensitive: includeSensitiveData ? true : undefined,
           page: 1,
@@ -493,7 +524,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     } finally {
       setLoading(false);
     }
-  }, [isMaster, isWeb, query, stageFilter, profPage, pacPage, profActiveFilter, pacLinkFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, includeSensitiveData, sensitiveReason, windowDays, examWindowDays, semEvolucaoDias, showToast]);
+  }, [isMaster, isWeb, query, stageFilter, profPage, pacPage, profActiveFilter, pacLinkFilter, profEspecialidadeFilter, pacCidadeFilter, pacUfFilter, includeSensitiveData, sensitiveReason, windowDays, examWindowDays, semEvolucaoDias, clinicalPipelineStatusFilter, selectedProfId, selectedPacId, showToast]);
 
   const loadInteractions = useCallback(async (leadId: string) => {
     if (!leadId) { setInteractions([]); return; }
@@ -2148,6 +2179,39 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                 />
               ))}
             </View>
+            <View style={styles.wrapRow}>
+              <Text style={styles.muted}>Status clínico:</Text>
+              <Chip
+                label={t("crm.filters.all")}
+                active={clinicalPipelineStatusFilter === "TODOS"}
+                onPress={() => setClinicalPipelineStatusFilter("TODOS")}
+              />
+              <Chip
+                label={t("crm.pipeline.newPatient")}
+                active={clinicalPipelineStatusFilter === "NOVO_PACIENTE"}
+                onPress={() => setClinicalPipelineStatusFilter("NOVO_PACIENTE")}
+              />
+              <Chip
+                label={t("crm.pipeline.waitingLink")}
+                active={clinicalPipelineStatusFilter === "AGUARDANDO_VINCULO"}
+                onPress={() => setClinicalPipelineStatusFilter("AGUARDANDO_VINCULO")}
+              />
+              <Chip
+                label={t("crm.alerts.pendingAnamnesis")}
+                active={clinicalPipelineStatusFilter === "ANAMNESE_PENDENTE"}
+                onPress={() => setClinicalPipelineStatusFilter("ANAMNESE_PENDENTE")}
+              />
+              <Chip
+                label={t("crm.pipeline.treatment")}
+                active={clinicalPipelineStatusFilter === "EM_TRATAMENTO"}
+                onPress={() => setClinicalPipelineStatusFilter("EM_TRATAMENTO")}
+              />
+              <Chip
+                label={t("crm.pipeline.discharge")}
+                active={clinicalPipelineStatusFilter === "ALTA"}
+                onPress={() => setClinicalPipelineStatusFilter("ALTA")}
+              />
+            </View>
           </View>
 
           <View style={styles.healthKpiBlock}>
@@ -2234,15 +2298,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               <Metric
                 label={t("crm.pipeline.newPatient")}
                 value={String(clinicalSummary?.pipeline.novoPaciente || 0)}
+                onPress={() => setClinicalPipelineStatusFilter("NOVO_PACIENTE")}
               />
               <Metric
                 label={t("crm.pipeline.waitingLink")}
                 value={String(clinicalSummary?.pipeline.aguardandoVinculo || 0)}
+                onPress={() => setClinicalPipelineStatusFilter("AGUARDANDO_VINCULO")}
               />
               <Metric
                 label={t("crm.alerts.pendingAnamnesis")}
                 value={String(clinicalSummary?.pipeline.anamnesePendente || 0)}
                 onPress={() => {
+                  setClinicalPipelineStatusFilter("ANAMNESE_PENDENTE");
                   setTab("PACIENTES");
                   setPacStatusFilter("RISCO");
                 }}
@@ -2250,10 +2317,12 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               <Metric
                 label={t("crm.pipeline.treatment")}
                 value={String(clinicalSummary?.pipeline.emTratamento || 0)}
+                onPress={() => setClinicalPipelineStatusFilter("EM_TRATAMENTO")}
               />
               <Metric
                 label={t("crm.pipeline.discharge")}
                 value={String(clinicalSummary?.pipeline.alta || 0)}
+                onPress={() => setClinicalPipelineStatusFilter("ALTA")}
               />
             </View>
           </View>

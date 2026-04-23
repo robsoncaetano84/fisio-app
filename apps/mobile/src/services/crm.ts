@@ -91,6 +91,11 @@ export type CrmClinicalDashboardSummary = {
     completedTotal?: number;
     blockedTotal?: number;
   };
+  filtros?: {
+    professionalId?: string | null;
+    patientId?: string | null;
+    status?: string | null;
+  };
 };
 
 export type ClinicalExamRegionSummary = {
@@ -274,6 +279,9 @@ export async function getCrmAdminAuditLogs(params?: {
 export async function getCrmClinicalDashboardSummary(params?: {
   windowDays?: number;
   semEvolucaoDias?: number;
+  professionalId?: string;
+  patientId?: string;
+  status?: string;
 }): Promise<CrmClinicalDashboardSummary> {
   const response = await api.get<CrmClinicalDashboardSummary>(
     "/crm/clinical/dashboard-summary",
@@ -284,6 +292,9 @@ export async function getCrmClinicalDashboardSummary(params?: {
 
 export async function getCrmPhysicalExamTestsSummary(params?: {
   windowDays?: number;
+  professionalId?: string;
+  patientId?: string;
+  status?: string;
 }): Promise<CrmPhysicalExamTestsSummary> {
   const response = await api.get<CrmPhysicalExamTestsSummary>(
     "/metrics/clinical-flow/physical-exam-tests-summary",
