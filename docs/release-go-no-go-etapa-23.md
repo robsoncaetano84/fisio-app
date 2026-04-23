@@ -93,3 +93,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -BaseUrl "h
 Observações:
 - O script gera um relatório em `logs/release-gates-YYYYMMDD-HHMMSS.md`.
 - Para validar sem ambiente backend em execução local: `-SkipSmoke`.
+
+## Drill de rollback (simulado, sem mutação)
+```powershell
+# valida alvo de rollback e gera plano + diff em relatório
+powershell -ExecutionPolicy Bypass -File .\scripts\rollback-drill.ps1 -TargetCommit "HEAD~1"
+```
+
+Observações:
+- Gera relatório em `logs/rollback-drill-YYYYMMDD-HHMMSS.md`.
+- Não executa `reset`/`push`; apenas valida o procedimento e prepara evidência.
