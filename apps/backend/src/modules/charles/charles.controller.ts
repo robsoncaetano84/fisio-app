@@ -6,7 +6,7 @@ import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
 import { CharlesNextActionResponse, CharlesService } from './charles.service';
 import { GetCharlesNextActionDto } from './dto/get-charles-next-action.dto';
 
-@Controller('charles')
+@Controller(['clinical-orchestrator', 'charles'])
 @UseGuards(JwtAuthGuard)
 @Roles(UserRole.ADMIN, UserRole.USER)
 export class CharlesController {

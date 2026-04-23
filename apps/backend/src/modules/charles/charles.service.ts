@@ -31,7 +31,7 @@ export interface CharlesNextAction {
 }
 
 export interface CharlesNextActionResponse {
-  orchestrator: 'Charles';
+  orchestrator: 'CLINICAL_ORCHESTRATOR';
   mode: 'deterministic-v1';
   requiresProfessionalApproval: true;
   paciente: {
@@ -134,7 +134,7 @@ export class CharlesService {
     });
 
     return {
-      orchestrator: 'Charles',
+      orchestrator: 'CLINICAL_ORCHESTRATOR',
       mode: 'deterministic-v1',
       requiresProfessionalApproval: true,
       paciente: {
