@@ -107,6 +107,7 @@ Critérios de aceite:
 - [x] Evolução exige confirmação explícita do profissional após aplicar sugestão SOAP antes de salvar
 - [x] Governança clínica expõe resumo de adoção de sugestões IA (`/clinical-governance/ai-suggestions/summary`) para admin
 - [x] CRM Admin mostra métricas de adoção/confirmação por etapa (Exame/Evolução/Laudo/Plano)
+- [x] CRM Admin exibe gráficos de adoção IA (ciclo geral e aplicações por etapa)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

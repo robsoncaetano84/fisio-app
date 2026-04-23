@@ -938,6 +938,51 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       topTestSample: topTest?.avaliados || 0,
     };
   }, [physicalExamSummary, examChartMode, filteredPhysicalExamRegions, filteredPhysicalExamTests]);
+  const governanceAiAppliedByStageChartData = useMemo(
+    () => [
+      {
+        label: t("crm.governance.aiPhysicalExam"),
+        value: govAiSummary?.byStage.EXAME_FISICO.applied || 0,
+        color: "#0EA5E9",
+      },
+      {
+        label: t("crm.governance.aiEvolution"),
+        value: govAiSummary?.byStage.EVOLUCAO.applied || 0,
+        color: "#8B5CF6",
+      },
+      {
+        label: t("crm.governance.aiReport"),
+        value: govAiSummary?.byStage.LAUDO.applied || 0,
+        color: "#14B8A6",
+      },
+      {
+        label: t("crm.governance.aiPlan"),
+        value: govAiSummary?.byStage.PLANO.applied || 0,
+        color: "#22C55E",
+      },
+    ],
+    [govAiSummary, t],
+  );
+  const governanceAiLifecycleChartData = useMemo(
+    () => [
+      {
+        label: t("crm.governance.aiReads"),
+        value: govAiSummary?.totals.reads || 0,
+        color: "#94A3B8",
+      },
+      {
+        label: t("crm.governance.aiApplied"),
+        value: govAiSummary?.totals.applied || 0,
+        color: "#0EA5E9",
+      },
+      {
+        label: t("crm.governance.aiConfirmed"),
+        value: govAiSummary?.totals.confirmed || 0,
+        color: "#22C55E",
+      },
+    ],
+    [govAiSummary, t],
+  );
   const hasPhysicalExamData = useMemo(
     () => (physicalExamSummary?.laudosComExameEstruturado || 0) > 0,
     [physicalExamSummary],
@@ -2290,6 +2335,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                     label={t("crm.governance.aiPlan")}
                     value={String(govAiSummary?.byStage.PLANO.applied || 0)}
                   />
+                </View>
+                <View style={styles.chartPane}>
+                  <Text style={styles.chartTitle}>
+                    {t("crm.governance.chartLifecycleTitle")}
+                  </Text>
+                  <BarChart items={governanceAiLifecycleChartData} />
+                </View>
+                <View style={styles.chartPane}>
+                  <Text style={styles.chartTitle}>
+                    {t("crm.governance.chartAppliedByStageTitle")}
+                  </Text>
+                  <BarChart items={governanceAiAppliedByStageChartData} />
                 </View>
                 <View style={styles.wrapRow}>
                   <TextInput
