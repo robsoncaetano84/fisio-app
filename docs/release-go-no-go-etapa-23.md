@@ -39,7 +39,7 @@
 - Status: `NO-GO`
 - Responsavel: Robson Caetano
 - Data: 2026-04-23
-- Commit candidato: f8b01d6
+- Commit candidato: 70fcd02
 - Motivo objetivo: monitoramento autenticado em producao ainda apresenta 5xx recorrente em `GET /pacientes/paged`.
 
 ## Status intermediario atual
@@ -61,7 +61,7 @@
 | Cenario B (Lombar/Neural) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-b-lombar-neural.md |
 | Cenario C (Ombro/Voleibol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-c-ombro-esportivo.md |
 | Sem 5xx recorrente (monitoramento publico) | Aprovado | logs/monitor-clinical-5xx-*.md (ultimo: PASS em 2026-04-23) |
-| Sem 5xx recorrente (monitoramento autenticado) | Reprovado (23/04/2026) | `logs/monitor-clinical-5xx-20260423-160253.md` (5x `500` em `GET /pacientes/paged`) |
+| Sem 5xx recorrente (monitoramento autenticado) | Reprovado (23/04/2026) | `logs/monitor-clinical-5xx-20260423-161515.md` (5x `500` em `GET /pacientes/paged`) |
 
 ### Correção aplicada após monitoramento autenticado (23/04/2026)
 - Ajustada ordenação paginada em `PacientesService.findAll/findPaged` para usar propriedade de entidade (`p.nomeCompleto`) em vez de coluna crua (`p.nome_completo`), evitando erro interno de QueryBuilder em paginação.
