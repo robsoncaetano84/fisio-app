@@ -105,6 +105,8 @@ Critérios de aceite:
 - [x] Auditoria do orquestrador em modo best-effort (falha não interrompe fluxo clínico)
 - [x] Evolução usa fallback local de sugestão SOAP (baixa confiança) quando backend está indisponível
 - [x] Evolução exige confirmação explícita do profissional após aplicar sugestão SOAP antes de salvar
+- [x] Governança clínica expõe resumo de adoção de sugestões IA (`/clinical-governance/ai-suggestions/summary`) para admin
+- [x] CRM Admin mostra métricas de adoção/confirmação por etapa (Exame/Evolução/Laudo/Plano)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
