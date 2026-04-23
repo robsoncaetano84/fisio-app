@@ -91,6 +91,8 @@ Critérios de aceite:
 - [x] Drill de rollback simulado (`scripts/rollback-drill.ps1`) com relatório em `logs/`
 - [x] Script de monitoramento 5xx para endpoints clínicos (`scripts/monitor-clinical-5xx.ps1`)
 - [x] `release-gates` suporta monitoramento autenticado por env (`MONITOR_*`)
+- [x] Testes de governança clínica Sprint 1 (`modules/clinical-governance/clinical-governance.service.spec.ts`)
+- [x] Leitura de trilha de auditoria também auditável (`audit.logs.read`)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
