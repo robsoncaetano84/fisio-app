@@ -42,6 +42,7 @@ export const ptClinical: TranslationMap = {
   "clinical.actions.recalculateReasoning": "Recalcular raciocínio",
   "clinical.actions.saveTriageAndRefer": "Salvar triagem e encaminhar",
   "clinical.actions.savePhysicalExam": "Salvar Exame Físico",
+  "clinical.actions.confirmAiSuggestion": "Confirmar revisão",
   "clinical.messages.clearDraftConfirm":
     "Tem certeza que deseja apagar o rascunho?",
   "clinical.messages.newReportAndPlan": "Novo laudo e plano",
@@ -156,6 +157,8 @@ export const ptClinical: TranslationMap = {
   "clinical.status.revalidationPending": "Revalidação pendente",
   "clinical.status.notTested": "Não testado",
   "clinical.status.generating": "Gerando...",
+  "clinical.status.aiSuggested": "Sugerido por IA",
+  "clinical.status.professionalConfirmed": "Confirmado pelo profissional",
   "clinical.placeholders.functionalDiagnosis":
     "Descreva o diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":
@@ -174,6 +177,8 @@ export const ptClinical: TranslationMap = {
     "Notas ou rascunho complementar do laudo",
   "clinical.validation.functionalDiagnosisRequired":
     "Diagnóstico funcional é obrigatório",
+  "clinical.validation.aiSuggestionConfirmationRequired":
+    "Confirme a revisão da sugestão de IA antes de salvar.",
   "clinical.validation.shortTermRequired":
     "Informe o objetivo de curto prazo.",
   "clinical.validation.therapeuticConductRequired":
@@ -237,6 +242,7 @@ export const enClinical: TranslationMap = {
   "clinical.actions.recalculateReasoning": "Recalculate reasoning",
   "clinical.actions.saveTriageAndRefer": "Save triage and refer",
   "clinical.actions.savePhysicalExam": "Save Physical Exam",
+  "clinical.actions.confirmAiSuggestion": "Confirm review",
   "clinical.messages.clearDraftConfirm":
     "Are you sure you want to delete the draft?",
   "clinical.messages.newReportAndPlan": "New report and plan",
@@ -353,6 +359,8 @@ export const enClinical: TranslationMap = {
   "clinical.status.revalidationPending": "Revalidation pending",
   "clinical.status.notTested": "Not tested",
   "clinical.status.generating": "Generating...",
+  "clinical.status.aiSuggested": "AI suggested",
+  "clinical.status.professionalConfirmed": "Confirmed by professional",
   "clinical.placeholders.functionalDiagnosis":
     "Describe the functional diagnosis",
   "clinical.placeholders.shortTermGoals":
@@ -371,6 +379,8 @@ export const enClinical: TranslationMap = {
     "Notes or complementary report draft",
   "clinical.validation.functionalDiagnosisRequired":
     "Functional diagnosis is required",
+  "clinical.validation.aiSuggestionConfirmationRequired":
+    "Confirm AI suggestion review before saving.",
   "clinical.validation.shortTermRequired": "Provide a short-term goal.",
   "clinical.validation.therapeuticConductRequired":
     "Describe at least one therapeutic conduct.",
@@ -434,6 +444,7 @@ export const esClinical: TranslationMap = {
   "clinical.actions.recalculateReasoning": "Recalcular razonamiento",
   "clinical.actions.saveTriageAndRefer": "Guardar triaje y derivar",
   "clinical.actions.savePhysicalExam": "Guardar Examen Físico",
+  "clinical.actions.confirmAiSuggestion": "Confirmar revisión",
   "clinical.messages.clearDraftConfirm":
     "¿Seguro que deseas borrar el borrador?",
   "clinical.messages.newReportAndPlan": "Nuevo informe y plan",
@@ -551,6 +562,8 @@ export const esClinical: TranslationMap = {
   "clinical.status.revalidationPending": "Revalidación pendiente",
   "clinical.status.notTested": "No probado",
   "clinical.status.generating": "Generando...",
+  "clinical.status.aiSuggested": "Sugerido por IA",
+  "clinical.status.professionalConfirmed": "Confirmado por el profesional",
   "clinical.placeholders.functionalDiagnosis":
     "Describa el diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":
@@ -569,6 +582,8 @@ export const esClinical: TranslationMap = {
     "Notas o borrador complementario del informe",
   "clinical.validation.functionalDiagnosisRequired":
     "El diagnóstico funcional es obligatorio",
+  "clinical.validation.aiSuggestionConfirmationRequired":
+    "Confirme la revisión de la sugerencia de IA antes de guardar.",
   "clinical.validation.shortTermRequired":
     "Informe el objetivo de corto plazo.",
   "clinical.validation.therapeuticConductRequired":

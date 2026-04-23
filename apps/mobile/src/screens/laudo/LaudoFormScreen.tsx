@@ -26,7 +26,11 @@ import { useAnamneseStore } from "../../stores/anamneseStore";
 import { useAuthStore } from "../../stores/authStore";
 import { useLaudoStore } from "../../stores/laudoStore";
 import { api, getLaudoAiSuggestion } from "../../services";
-import { recordAuditAction, trackEvent } from "../../services";
+import {
+  logClinicalAiSuggestion,
+  recordAuditAction,
+  trackEvent,
+} from "../../services";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   COLORS,
@@ -191,6 +195,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     examesComLeituraIa: number;
     generatedAt?: string | null;
   } | null>(null);
+  const [aiSuggestionConfirmed, setAiSuggestionConfirmed] = useState(false);
   const aiConfidence = useMemo<"ALTA" | "MODERADA" | "BAIXA" | null>(() => {
     if (!aiSuggestionMeta) return null;
     if (
@@ -290,12 +295,31 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     try {
       const data = await getLaudoAiSuggestion(pacienteId);
       if (data) {
+        const confidence: "ALTA" | "MODERADA" | "BAIXA" =
+          data.source === "ai" && (data.examesComLeituraIa || 0) > 0
+            ? "ALTA"
+            : data.source === "ai" || (data.examesConsiderados || 0) > 0
+              ? "MODERADA"
+              : "BAIXA";
         setAiSuggestionMeta({
           source: data.source,
           examesConsiderados: data.examesConsiderados || 0,
           examesComLeituraIa: data.examesComLeituraIa || 0,
           generatedAt: data.sugestaoGeradaEm || new Date().toISOString(),
         });
+        setAiSuggestionConfirmed(false);
+        setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
+        logClinicalAiSuggestion({
+          stage: "LAUDO",
+          suggestionType: "LAUDO_DRAFT",
+          confidence,
+          reason:
+            data.source === "ai"
+              ? "Sugestão gerada por IA com base em anamnese e exames."
+              : "Sugestão gerada por regras clínicas (fallback).",
+          evidenceFields: ["anamnese", "exames"],
+          patientId: pacienteId,
+        }).catch(() => undefined);
         if ((data.examesComLeituraIa || 0) > 0) {
           const message = t("clinical.messages.aiUsedExamReadings", {
             total: data.examesComLeituraIa || 0,
@@ -488,6 +512,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           examesComLeituraIa,
           generatedAt: laudo.sugestaoGeradaEm || null,
         });
+        setAiSuggestionConfirmed(
+          laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL,
+        );
         if (examesComLeituraIa > 0) {
           setAiExamContextMessage(
             t("clinical.messages.aiUsedExamReadings", {
@@ -503,6 +530,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         } else {
           setAiExamContextMessage("");
         }
+      } else {
+        setAiSuggestionMeta(null);
+        setAiSuggestionConfirmed(true);
       }
       const loadedSnapshot = buildSnapshot(laudo);
       setLastSavedSnapshot(loadedSnapshot);
@@ -674,6 +704,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     if (duracaoSemanas.trim() && (!dur || dur < 1 || dur > 52)) {
       nextErrors.duracaoSemanas = t("clinical.validation.durationWeeksRange");
     }
+    if (aiSuggestionMeta && !aiSuggestionConfirmed) {
+      nextErrors.aiSuggestionConfirmation = t(
+        "clinical.validation.aiSuggestionConfirmationRequired",
+      );
+    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -818,6 +853,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       });
       return;
     }
+    if (aiSuggestionMeta && !aiSuggestionConfirmed) {
+      showToast({
+        message: t("clinical.validation.aiSuggestionConfirmationRequired"),
+        type: "info",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const validated = await validarLaudo(laudoId);
@@ -876,6 +918,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
 
     await performValidate();
+  };
+
+  const handleConfirmAiSuggestion = () => {
+    setAiSuggestionConfirmed(true);
+    setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
+    showToast({
+      type: "success",
+      message: t("clinical.status.professionalConfirmed"),
+    });
   };
 
   const applyTemplate = (templateKey: TemplateKey) => {
@@ -1215,37 +1266,69 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             <Text style={styles.templateHint}>{aiExamContextMessage}</Text>
           ) : null}
           {aiSuggestionMeta ? (
-            <View style={styles.aiMetaRow}>
-              <Text style={styles.aiMetaChip}>
-                Fonte: {aiSuggestionMeta.source === "ai" ? "IA" : "Regras"}
-              </Text>
-              <Text style={styles.aiMetaChip}>
-                Exames: {aiSuggestionMeta.examesConsiderados}
-              </Text>
-              <Text style={styles.aiMetaChip}>
-                Leitura IA: {aiSuggestionMeta.examesComLeituraIa}
-              </Text>
-              {aiSuggestionMeta.generatedAt ? (
-                <Text style={styles.aiMetaChip}>
-                  Gerada em:{" "}
-                  {new Date(aiSuggestionMeta.generatedAt).toLocaleString(dateLocale)}
-                </Text>
-              ) : null}
-              {aiConfidence ? (
+            <View style={styles.aiSuggestionWrap}>
+              <View style={styles.aiSuggestionStatusRow}>
                 <Text
                   style={[
                     styles.aiMetaChip,
-                    aiConfidence === "ALTA"
+                    aiSuggestionConfirmed
                       ? styles.aiMetaChipHigh
-                      : aiConfidence === "MODERADA"
-                        ? styles.aiMetaChipMedium
-                        : styles.aiMetaChipLow,
+                      : styles.aiMetaChipMedium,
                   ]}
                 >
-                  Confiança: {aiConfidence}
+                  {aiSuggestionConfirmed
+                    ? t("clinical.status.professionalConfirmed")
+                    : t("clinical.status.aiSuggested")}
                 </Text>
-              ) : null}
+                {!aiSuggestionConfirmed ? (
+                  <TouchableOpacity
+                    style={styles.aiConfirmButton}
+                    onPress={handleConfirmAiSuggestion}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.aiConfirmButtonText}>
+                      {t("clinical.actions.confirmAiSuggestion")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <View style={styles.aiMetaRow}>
+                <Text style={styles.aiMetaChip}>
+                  Fonte: {aiSuggestionMeta.source === "ai" ? "IA" : "Regras"}
+                </Text>
+                <Text style={styles.aiMetaChip}>
+                  Exames: {aiSuggestionMeta.examesConsiderados}
+                </Text>
+                <Text style={styles.aiMetaChip}>
+                  Leitura IA: {aiSuggestionMeta.examesComLeituraIa}
+                </Text>
+                {aiSuggestionMeta.generatedAt ? (
+                  <Text style={styles.aiMetaChip}>
+                    Gerada em:{" "}
+                    {new Date(aiSuggestionMeta.generatedAt).toLocaleString(dateLocale)}
+                  </Text>
+                ) : null}
+                {aiConfidence ? (
+                  <Text
+                    style={[
+                      styles.aiMetaChip,
+                      aiConfidence === "ALTA"
+                        ? styles.aiMetaChipHigh
+                        : aiConfidence === "MODERADA"
+                          ? styles.aiMetaChipMedium
+                          : styles.aiMetaChipLow,
+                    ]}
+                  >
+                    Confiança: {aiConfidence}
+                  </Text>
+                ) : null}
+              </View>
             </View>
+          ) : null}
+          {errors.aiSuggestionConfirmation ? (
+            <Text style={styles.aiConfirmError}>
+              {errors.aiSuggestionConfirmation}
+            </Text>
           ) : null}
           <View style={styles.templateRow}>
             {(["GERAL", "LOMBAR", "CERVICAL", "JOELHO"] as TemplateKey[]).map(
@@ -1952,6 +2035,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  aiSuggestionWrap: {
+    marginBottom: SPACING.xs,
+  },
+  aiSuggestionStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING.xs,
+    gap: SPACING.sm,
+  },
+  aiConfirmButton: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    backgroundColor: COLORS.white,
+  },
+  aiConfirmButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  aiConfirmError: {
+    color: COLORS.error,
+    fontSize: FONTS.sizes.xs,
     marginBottom: SPACING.sm,
   },
   aiMetaChip: {
