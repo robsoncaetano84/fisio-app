@@ -104,6 +104,7 @@ Critérios de aceite:
 - [x] Evolução registra evento de confirmação profissional (`EVOLUCAO_SOAP_CONFIRMED`) ao salvar após aplicar sugestão
 - [x] Auditoria do orquestrador em modo best-effort (falha não interrompe fluxo clínico)
 - [x] Evolução usa fallback local de sugestão SOAP (baixa confiança) quando backend está indisponível
+- [x] Evolução exige confirmação explícita do profissional após aplicar sugestão SOAP antes de salvar
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

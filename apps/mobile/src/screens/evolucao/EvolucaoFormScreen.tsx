@@ -115,6 +115,7 @@ export function EvolucaoFormScreen({
   const [evolucaoSuggestion, setEvolucaoSuggestion] =
     useState<EvolucaoSoapSuggestionResponse | null>(null);
   const [soapSuggestionApplied, setSoapSuggestionApplied] = useState(false);
+  const [soapSuggestionConfirmed, setSoapSuggestionConfirmed] = useState(false);
   const orchestratorFocusedRegions = useMemo(
     () => {
       const hints = [
@@ -354,6 +355,7 @@ export function EvolucaoFormScreen({
     setAvaliacao((prev) => prev || evolucaoSuggestion.avaliacao || "");
     setPlano((prev) => prev || evolucaoSuggestion.plano || "");
     setSoapSuggestionApplied(true);
+    setSoapSuggestionConfirmed(false);
 
     logClinicalAiSuggestion({
       patientId: pacienteId,
@@ -367,6 +369,23 @@ export function EvolucaoFormScreen({
     showToast({
       type: "success",
       message: `Sugestão SOAP aplicada (${evolucaoSuggestion.confidence.toLowerCase()}).`,
+    });
+  };
+
+  const handleConfirmSoapSuggestion = () => {
+    if (!soapSuggestionApplied || !evolucaoSuggestion) return;
+    setSoapSuggestionConfirmed(true);
+    logClinicalAiSuggestion({
+      patientId: pacienteId,
+      stage: "EVOLUCAO",
+      suggestionType: "EVOLUCAO_SOAP_REVIEWED",
+      confidence: evolucaoSuggestion.confidence,
+      reason: "Sugestão SOAP revisada e confirmada pelo profissional.",
+      evidenceFields: evolucaoSuggestion.evidenceFields,
+    }).catch(() => undefined);
+    showToast({
+      type: "success",
+      message: "Sugestão revisada e confirmada.",
     });
   };
 
@@ -527,6 +546,23 @@ export function EvolucaoFormScreen({
         stage: "EVOLUCAO",
         pacienteId,
         fields: ["checkinDificuldade"],
+      }).catch(() => undefined);
+      return;
+    }
+    if (soapSuggestionApplied && !soapSuggestionConfirmed) {
+      setErrors((prev) => ({
+        ...prev,
+        soapSuggestionConfirmation:
+          "Confirme a sugestão SOAP antes de salvar a evolução.",
+      }));
+      showToast({
+        type: "error",
+        message: "Confirme a sugestão aplicada antes de salvar.",
+      });
+      trackEvent("clinical_flow_blocked", {
+        stage: "EVOLUCAO",
+        reason: "SUGGESTION_NOT_CONFIRMED",
+        pacienteId,
       }).catch(() => undefined);
       return;
     }
@@ -736,9 +772,21 @@ export function EvolucaoFormScreen({
               </Text>
             ) : null}
             {soapSuggestionApplied ? (
-              <View style={styles.suggestionAppliedPill}>
-                <Text style={styles.suggestionAppliedPillText}>
-                  Sugestão aplicada (aguardando confirmação no salvamento)
+              <View
+                style={[
+                  styles.suggestionAppliedPill,
+                  soapSuggestionConfirmed && styles.suggestionAppliedPillConfirmed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.suggestionAppliedPillText,
+                    soapSuggestionConfirmed && styles.suggestionAppliedPillTextConfirmed,
+                  ]}
+                >
+                  {soapSuggestionConfirmed
+                    ? "Sugestão confirmada pelo profissional"
+                    : "Sugestão aplicada (revisar e confirmar)"}
                 </Text>
               </View>
             ) : null}
@@ -746,6 +794,9 @@ export function EvolucaoFormScreen({
               <Text style={styles.suggestionLowConfidenceText}>
                 Baixa confiança: revise os campos antes de confirmar.
               </Text>
+            ) : null}
+            {errors.soapSuggestionConfirmation ? (
+              <Text style={styles.fieldError}>{errors.soapSuggestionConfirmation}</Text>
             ) : null}
             <TouchableOpacity
               style={styles.suggestionApplyButton}
@@ -755,6 +806,16 @@ export function EvolucaoFormScreen({
                 Aplicar sugestão (campos vazios)
               </Text>
             </TouchableOpacity>
+            {soapSuggestionApplied && !soapSuggestionConfirmed ? (
+              <TouchableOpacity
+                style={styles.suggestionConfirmButton}
+                onPress={handleConfirmSoapSuggestion}
+              >
+                <Text style={styles.suggestionConfirmButtonText}>
+                  Confirmar sugestão revisada
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ) : null}
         {orchestratorNextAction?.blocked ? (
@@ -802,6 +863,9 @@ export function EvolucaoFormScreen({
             value={subjetivo}
             onChangeText={(text) => {
               setSubjetivo(text);
+              if (soapSuggestionApplied) {
+                setSoapSuggestionConfirmed(false);
+              }
               if (errors.subjetivo) {
                 setErrors((prev) => ({ ...prev, subjetivo: "" }));
               }
@@ -835,6 +899,9 @@ export function EvolucaoFormScreen({
             value={objetivo}
             onChangeText={(text) => {
               setObjetivo(text);
+              if (soapSuggestionApplied) {
+                setSoapSuggestionConfirmed(false);
+              }
               if (errors.objetivo) {
                 setErrors((prev) => ({ ...prev, objetivo: "" }));
               }
@@ -868,6 +935,9 @@ export function EvolucaoFormScreen({
             value={avaliacao}
             onChangeText={(text) => {
               setAvaliacao(text);
+              if (soapSuggestionApplied) {
+                setSoapSuggestionConfirmed(false);
+              }
               if (errors.avaliacao) {
                 setErrors((prev) => ({ ...prev, avaliacao: "" }));
               }
@@ -901,6 +971,9 @@ export function EvolucaoFormScreen({
             value={plano}
             onChangeText={(text) => {
               setPlano(text);
+              if (soapSuggestionApplied) {
+                setSoapSuggestionConfirmed(false);
+              }
               if (errors.plano) {
                 setErrors((prev) => ({ ...prev, plano: "" }));
               }
@@ -1215,11 +1288,33 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.xs,
     fontWeight: "700",
   },
+  suggestionAppliedPillConfirmed: {
+    backgroundColor: COLORS.primary + "14",
+    borderColor: COLORS.primary + "66",
+  },
+  suggestionAppliedPillTextConfirmed: {
+    color: COLORS.primary,
+  },
   suggestionLowConfidenceText: {
     color: COLORS.warning,
     fontSize: FONTS.sizes.xs,
     fontWeight: "600",
     marginBottom: SPACING.sm,
+  },
+  suggestionConfirmButton: {
+    alignSelf: "flex-start",
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 7,
+    backgroundColor: COLORS.primary + "10",
+    marginTop: SPACING.xs,
+  },
+  suggestionConfirmButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
   },
   contextCard: {
     backgroundColor: COLORS.primary + "10",
