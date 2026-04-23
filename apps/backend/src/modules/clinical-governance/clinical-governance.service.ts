@@ -268,6 +268,10 @@ export class ClinicalGovernanceService {
     let totalReads = 0;
     let totalApplied = 0;
     let totalConfirmed = 0;
+    const timelineMap = new Map<
+      string,
+      { reads: number; applied: number; confirmed: number }
+    >();
 
     const resolveStage = (value?: string | null): StageKey => {
       const normalized = String(value || '').trim().toUpperCase();
@@ -286,19 +290,31 @@ export class ClinicalGovernanceService {
       const isConfirmed =
         suggestionType.endsWith('_CONFIRMED') ||
         suggestionType.endsWith('_REVIEWED');
+      const dateKey = (() => {
+        const parsed = new Date((row as any).createdAt || since);
+        const safe = Number.isNaN(parsed.getTime()) ? since : parsed;
+        return safe.toISOString().slice(0, 10);
+      })();
+      const timelineBucket =
+        timelineMap.get(dateKey) || { reads: 0, applied: 0, confirmed: 0 };
 
       if (isRead) {
         totalReads += 1;
         stageCounters[stage].reads += 1;
+        timelineBucket.reads += 1;
+        timelineMap.set(dateKey, timelineBucket);
         continue;
       }
 
       totalApplied += 1;
       stageCounters[stage].applied += 1;
+      timelineBucket.applied += 1;
       if (isConfirmed) {
         totalConfirmed += 1;
         stageCounters[stage].confirmed += 1;
+        timelineBucket.confirmed += 1;
       }
+      timelineMap.set(dateKey, timelineBucket);
     }
 
     const adoptionRate = totalReads > 0 ? Number((totalApplied / totalReads).toFixed(4)) : 0;
@@ -320,6 +336,15 @@ export class ClinicalGovernanceService {
       },
     });
 
+    const timeline = Array.from(timelineMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, values]) => ({
+        date,
+        reads: values.reads,
+        applied: values.applied,
+        confirmed: values.confirmed,
+      }));
+
     return {
       windowDays: safeWindowDays,
       since,
@@ -331,6 +356,7 @@ export class ClinicalGovernanceService {
         confirmationRate,
       },
       byStage: stageCounters,
+      timeline,
     };
   }
 

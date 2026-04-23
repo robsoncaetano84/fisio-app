@@ -208,22 +208,27 @@ describe('ClinicalGovernanceService', () => {
     const mockedRows = [
       {
         action: 'orchestrator.ai_suggestion.read',
+        createdAt: '2026-04-22T10:00:00.000Z',
         metadata: { stage: 'EXAME_FISICO', suggestionType: 'CLASSIFICACAO_DOR' },
       },
       {
         action: 'orchestrator.ai_suggestion.read',
+        createdAt: '2026-04-22T10:02:00.000Z',
         metadata: { stage: 'EVOLUCAO', suggestionType: 'SOAP_SUGGESTION' },
       },
       {
         action: 'ai.suggestion.applied',
+        createdAt: '2026-04-22T10:03:00.000Z',
         metadata: { stage: 'EXAME_FISICO', suggestionType: 'CLASSIFICACAO_DOR_CONFIRMED' },
       },
       {
         action: 'ai.suggestion.applied',
+        createdAt: '2026-04-23T11:00:00.000Z',
         metadata: { stage: 'EVOLUCAO', suggestionType: 'SOAP_SUGGESTION_REVIEWED' },
       },
       {
         action: 'ai.suggestion.applied',
+        createdAt: '2026-04-23T12:00:00.000Z',
         metadata: { stage: 'LAUDO', suggestionType: 'RASCUNHO_LAUDO' },
       },
     ];
@@ -257,6 +262,10 @@ describe('ClinicalGovernanceService', () => {
       applied: 1,
       confirmed: 0,
     });
+    expect(result.timeline).toEqual([
+      { date: '2026-04-22', reads: 2, applied: 1, confirmed: 1 },
+      { date: '2026-04-23', reads: 0, applied: 2, confirmed: 1 },
+    ]);
   });
 
   it('blocks ai suggestion summary for non-admin users', async () => {

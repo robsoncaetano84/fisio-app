@@ -275,6 +275,12 @@ export type ClinicalAiSuggestionsSummaryResponse = {
       confirmed: number;
     }
   >;
+  timeline: Array<{
+    date: string;
+    reads: number;
+    applied: number;
+    confirmed: number;
+  }>;
 };
 
 export async function getCrmPipelineSummary(): Promise<CrmPipelineSummary> {

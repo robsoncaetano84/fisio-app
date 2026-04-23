@@ -983,6 +983,17 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     ],
     [govAiSummary, t],
   );
+  const governanceAiAppliedTimelineChartData = useMemo(() => {
+    const points = govAiSummary?.timeline || [];
+    if (!points.length) {
+      return [{ label: "-", value: 0, color: "#CBD5E1" }];
+    }
+    return points.slice(-7).map((point) => ({
+      label: point.date.slice(5),
+      value: point.applied,
+      color: "#0EA5E9",
+    }));
+  }, [govAiSummary]);
   const hasPhysicalExamData = useMemo(
     () => (physicalExamSummary?.laudosComExameEstruturado || 0) > 0,
     [physicalExamSummary],
@@ -2347,6 +2358,12 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                     {t("crm.governance.chartAppliedByStageTitle")}
                   </Text>
                   <BarChart items={governanceAiAppliedByStageChartData} />
+                </View>
+                <View style={styles.chartPane}>
+                  <Text style={styles.chartTitle}>
+                    {t("crm.governance.chartAppliedTimelineTitle")}
+                  </Text>
+                  <BarChart items={governanceAiAppliedTimelineChartData} />
                 </View>
                 <View style={styles.wrapRow}>
                   <TextInput
