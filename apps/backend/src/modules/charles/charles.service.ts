@@ -9,6 +9,45 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { ClinicalGovernanceService } from '../clinical-governance/clinical-governance.service';
 
 const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
+const CLINICAL_REGION_KEYS = [
+  'CERVICAL',
+  'TORACICA',
+  'LOMBAR',
+  'SACROILIACA',
+  'QUADRIL',
+  'JOELHO',
+  'TORNOZELO_PE',
+  'OMBRO',
+  'COTOVELO',
+  'PUNHO_MAO',
+] as const;
+type ClinicalRegionKey = (typeof CLINICAL_REGION_KEYS)[number];
+
+const REGION_INFERENCE_RULES: Array<{ regex: RegExp; region: ClinicalRegionKey }> = [
+  { regex: /(cerv|pescoc|cabec)/, region: 'CERVICAL' },
+  { regex: /(torac|torax)/, region: 'TORACICA' },
+  { regex: /(lomb|abdomen)/, region: 'LOMBAR' },
+  { regex: /(sacro|iliac|pelve)/, region: 'SACROILIACA' },
+  { regex: /(quadril|coxa)/, region: 'QUADRIL' },
+  { regex: /(joelho)/, region: 'JOELHO' },
+  { regex: /(tornoz|pe\b|pé)/, region: 'TORNOZELO_PE' },
+  { regex: /(ombro|braco|braço)/, region: 'OMBRO' },
+  { regex: /(cotovelo)/, region: 'COTOVELO' },
+  { regex: /(punho|mao|mão)/, region: 'PUNHO_MAO' },
+];
+
+const CHAIN_REGION_MAP: Record<ClinicalRegionKey, ClinicalRegionKey[]> = {
+  CERVICAL: ['CERVICAL', 'TORACICA', 'OMBRO', 'COTOVELO', 'PUNHO_MAO'],
+  TORACICA: ['TORACICA', 'CERVICAL', 'OMBRO', 'LOMBAR'],
+  LOMBAR: ['LOMBAR', 'SACROILIACA', 'QUADRIL', 'JOELHO', 'TORNOZELO_PE'],
+  SACROILIACA: ['SACROILIACA', 'LOMBAR', 'QUADRIL', 'JOELHO', 'TORNOZELO_PE'],
+  QUADRIL: ['QUADRIL', 'SACROILIACA', 'LOMBAR', 'JOELHO', 'TORNOZELO_PE'],
+  JOELHO: ['JOELHO', 'QUADRIL', 'SACROILIACA', 'LOMBAR', 'TORNOZELO_PE'],
+  TORNOZELO_PE: ['TORNOZELO_PE', 'JOELHO', 'QUADRIL', 'SACROILIACA', 'LOMBAR'],
+  OMBRO: ['OMBRO', 'CERVICAL', 'TORACICA', 'COTOVELO', 'PUNHO_MAO'],
+  COTOVELO: ['COTOVELO', 'OMBRO', 'PUNHO_MAO', 'CERVICAL'],
+  PUNHO_MAO: ['PUNHO_MAO', 'COTOVELO', 'OMBRO', 'CERVICAL'],
+};
 
 export type CharlesClinicalStage =
   | 'ANAMNESE'
@@ -43,6 +82,7 @@ export interface CharlesNextActionResponse {
   };
   context: {
     regioesPrioritarias: string[];
+    regioesRelacionadas: string[];
     cadeiaProvavel: string | null;
   };
   timeline: {
@@ -278,26 +318,66 @@ export class CharlesService {
 
   private buildClinicalContext(anamnese?: Anamnese | null): {
     regioesPrioritarias: string[];
+    regioesRelacionadas: string[];
     cadeiaProvavel: string | null;
   } {
-    const regioes = Array.from(
-      new Set(
-        (anamnese?.areasAfetadas || [])
-          .map((a) => String(a.regiao || '').trim())
-          .filter((r) => !!r),
-      ),
-    );
+    const regioesSet = new Set<ClinicalRegionKey>();
+    for (const area of anamnese?.areasAfetadas || []) {
+      const raw = String(area.regiao || '').trim();
+      const normalized = this.normalizeClinicalRegion(raw);
+      if (normalized) regioesSet.add(normalized);
+    }
+    const regioes = Array.from(regioesSet);
 
     const regiaoKey = regioes.join(' ').toLowerCase();
     let cadeiaProvavel: string | null = null;
-    if (/(lombar|sacro|quadril|joelho|tornozelo|pe)/.test(regiaoKey)) {
+    if (/(lombar|sacroiliaca|quadril|joelho|tornozelo_pe)/.test(regiaoKey)) {
       cadeiaProvavel = 'CADEIA_LOWER';
-    } else if (/(cervical|ombro|cotovelo|punho|mao|toracica)/.test(regiaoKey)) {
+    } else if (/(cervical|ombro|cotovelo|punho_mao|toracica)/.test(regiaoKey)) {
       cadeiaProvavel = 'CADEIA_UPPER';
     } else if (regioes.length > 0) {
       cadeiaProvavel = 'CADEIA_LOCAL';
     }
 
-    return { regioesPrioritarias: regioes, cadeiaProvavel };
+    const relacionadas = new Set<ClinicalRegionKey>();
+    for (const regiao of regioes) {
+      for (const related of CHAIN_REGION_MAP[regiao] || [regiao]) {
+        relacionadas.add(related);
+      }
+    }
+
+    return {
+      regioesPrioritarias: regioes,
+      regioesRelacionadas: Array.from(relacionadas),
+      cadeiaProvavel,
+    };
+  }
+
+  private normalizeClinicalRegion(rawRegion: string): ClinicalRegionKey | null {
+    const normalized = String(rawRegion || '')
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase();
+
+    if (!normalized) return null;
+    if ((CLINICAL_REGION_KEYS as readonly string[]).includes(normalized)) {
+      return normalized as ClinicalRegionKey;
+    }
+    if (normalized === 'SACRO' || normalized === 'ILIACO' || normalized === 'PELVIS') {
+      return 'SACROILIACA';
+    }
+    if (normalized === 'PUNHO' || normalized === 'MAO') {
+      return 'PUNHO_MAO';
+    }
+    if (normalized === 'TORNOZELO' || normalized === 'PE') {
+      return 'TORNOZELO_PE';
+    }
+
+    const lower = normalized.toLowerCase();
+    for (const rule of REGION_INFERENCE_RULES) {
+      if (rule.regex.test(lower)) return rule.region;
+    }
+    return null;
   }
 }

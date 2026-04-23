@@ -62,11 +62,14 @@ describe('CharlesService - deterministic orchestrator', () => {
         createdAt: new Date(),
         redFlags: [],
         yellowFlags: [],
-        areasAfetadas: [{ regiao: 'PUNHO' }],
+        areasAfetadas: [{ regiao: 'Punho esquerdo' }],
       },
     });
     const result = await service.getNextAction('pac-1', user);
-    expect(result.context.regioesPrioritarias).toContain('PUNHO');
+    expect(result.context.regioesPrioritarias).toContain('PUNHO_MAO');
+    expect(result.context.regioesRelacionadas).toEqual(
+      expect.arrayContaining(['PUNHO_MAO', 'COTOVELO', 'OMBRO', 'CERVICAL']),
+    );
     expect(result.context.cadeiaProvavel).toBe('CADEIA_UPPER');
   });
 

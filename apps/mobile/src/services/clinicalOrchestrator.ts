@@ -12,6 +12,7 @@ export type ClinicalOrchestratorNextActionResponse = {
   blocked: boolean;
   context: {
     regioesPrioritarias: string[];
+    regioesRelacionadas?: string[];
     cadeiaProvavel: string | null;
   };
   blockers: Array<{

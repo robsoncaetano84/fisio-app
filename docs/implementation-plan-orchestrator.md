@@ -95,6 +95,7 @@ Critérios de aceite:
 - [x] Testes de RBAC/metadata do controller de governança (`modules/clinical-governance/clinical-governance.controller.spec.ts`)
 - [x] Leitura de trilha de auditoria também auditável (`audit.logs.read`)
 - [x] `release-gates` exige os testes de governança (service + controller)
+- [x] Charles retorna contexto de regiões relacionadas por cadeia (`regioesRelacionadas`) para orientar Exame/Evolução
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

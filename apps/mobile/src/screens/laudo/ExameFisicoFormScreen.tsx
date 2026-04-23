@@ -249,8 +249,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     [latestAnamnese],
   );
   const orchestratorFocusedRegions = useMemo(() => {
+    const hints = [
+      ...(orchestratorNextAction?.context?.regioesPrioritarias || []),
+      ...(orchestratorNextAction?.context?.regioesRelacionadas || []),
+    ];
     return inferClinicalRegionsFromHints(
-      orchestratorNextAction?.context?.regioesPrioritarias || [],
+      hints,
     );
   }, [orchestratorNextAction]);
   const relevantRegions = useMemo(() => {

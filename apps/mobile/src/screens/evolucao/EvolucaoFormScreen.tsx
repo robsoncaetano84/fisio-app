@@ -110,10 +110,13 @@ export function EvolucaoFormScreen({
   const [orchestratorNextAction, setOrchestratorNextAction] =
     useState<ClinicalOrchestratorNextActionResponse | null>(null);
   const orchestratorFocusedRegions = useMemo(
-    () =>
-      inferClinicalRegionsFromHints(
-        orchestratorNextAction?.context?.regioesPrioritarias || [],
-      ),
+    () => {
+      const hints = [
+        ...(orchestratorNextAction?.context?.regioesPrioritarias || []),
+        ...(orchestratorNextAction?.context?.regioesRelacionadas || []),
+      ];
+      return inferClinicalRegionsFromHints(hints);
+    },
     [orchestratorNextAction],
   );
   const focusedRegions = useMemo(
