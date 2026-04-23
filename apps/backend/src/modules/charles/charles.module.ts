@@ -4,6 +4,7 @@ import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { PacientesModule } from '../pacientes/pacientes.module';
+import { ClinicalGovernanceModule } from '../clinical-governance/clinical-governance.module';
 import { CharlesController } from './charles.controller';
 import { CharlesService } from './charles.service';
 
@@ -11,10 +12,10 @@ import { CharlesService } from './charles.service';
   imports: [
     TypeOrmModule.forFeature([Anamnese, Evolucao, Laudo]),
     PacientesModule,
+    ClinicalGovernanceModule,
   ],
   controllers: [CharlesController],
   providers: [CharlesService],
   exports: [CharlesService],
 })
 export class CharlesModule {}
-

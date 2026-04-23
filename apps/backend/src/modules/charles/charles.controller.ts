@@ -17,6 +17,6 @@ export class CharlesController {
     @CurrentUser() usuario: Usuario,
     @Param() params: GetCharlesNextActionDto,
   ): Promise<CharlesNextActionResponse> {
-    return this.charlesService.getNextAction(params.pacienteId, usuario.id);
+    return this.charlesService.getNextAction(params.pacienteId, usuario);
   }
 }

@@ -28,6 +28,9 @@ import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entit
 import { ProfissionalPacienteVinculo } from './modules/pacientes/entities/profissional-paciente-vinculo.entity';
 import { ClinicalFlowEvent } from './modules/metrics/entities/clinical-flow-event.entity';
 import { PatientCheckClickEvent } from './modules/metrics/entities/patient-check-click-event.entity';
+import { ClinicalProtocolVersion } from './modules/clinical-governance/entities/clinical-protocol-version.entity';
+import { ConsentPurposeLog } from './modules/clinical-governance/entities/consent-purpose-log.entity';
+import { ClinicalAuditLog } from './modules/clinical-governance/entities/clinical-audit-log.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -41,6 +44,7 @@ import { CrmModule } from './modules/crm/crm.module';
 import { HealthModule } from './modules/health/health.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { CharlesModule } from './modules/charles/charles.module';
+import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical-governance.module';
 
 @Module({
   imports: [
@@ -120,6 +124,9 @@ import { CharlesModule } from './modules/charles/charles.module';
             ProfissionalPacienteVinculo,
             ClinicalFlowEvent,
             PatientCheckClickEvent,
+            ClinicalProtocolVersion,
+            ConsentPurposeLog,
+            ClinicalAuditLog,
           ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',
@@ -156,6 +163,7 @@ import { CharlesModule } from './modules/charles/charles.module';
     HealthModule,
     MetricsModule,
     CharlesModule,
+    ClinicalGovernanceModule,
   ],
   providers: [
     {

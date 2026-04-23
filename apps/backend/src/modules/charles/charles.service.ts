@@ -5,6 +5,8 @@ import { PacientesService } from '../pacientes/pacientes.service';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
+import { Usuario } from '../usuarios/entities/usuario.entity';
+import { ClinicalGovernanceService } from '../clinical-governance/clinical-governance.service';
 
 const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
 
@@ -52,6 +54,7 @@ export interface CharlesNextActionResponse {
 export class CharlesService {
   constructor(
     private readonly pacientesService: PacientesService,
+    private readonly governanceService: ClinicalGovernanceService,
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
     @InjectRepository(Evolucao)
@@ -62,9 +65,9 @@ export class CharlesService {
 
   async getNextAction(
     pacienteId: string,
-    profissionalId: string,
+    usuario: Usuario,
   ): Promise<CharlesNextActionResponse> {
-    const paciente = await this.pacientesService.findOne(pacienteId, profissionalId);
+    const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
 
     const [latestAnamnese, latestEvolucao, latestLaudo] = await Promise.all([
       this.anamneseRepository.findOne({
@@ -133,7 +136,7 @@ export class CharlesService {
       hasPlanoOuAlta,
     });
 
-    return {
+    const response: CharlesNextActionResponse = {
       orchestrator: 'CLINICAL_ORCHESTRATOR',
       mode: 'deterministic-v1',
       requiresProfessionalApproval: true,
@@ -150,6 +153,21 @@ export class CharlesService {
       stages,
       nextAction,
     };
+
+    await this.governanceService.writeAudit({
+      actor: usuario,
+      actionType: 'READ',
+      action: 'orchestrator.next_action.read',
+      resourceType: 'CLINICAL_ORCHESTRATOR',
+      resourceId: paciente.id,
+      patientId: paciente.id,
+      metadata: {
+        nextStage: response.nextAction.stage,
+        mode: response.mode,
+      },
+    });
+
+    return response;
   }
 
   private hasStructuredExame(raw?: string | null): boolean {
