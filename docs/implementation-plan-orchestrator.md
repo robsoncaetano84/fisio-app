@@ -1,0 +1,85 @@
+# Plano de Implementação - Clinical Orchestrator
+
+## Objetivo
+Implementar arquitetura híbrida (motor determinístico + IA assistiva explicável) para fluxo clínico completo com governança.
+
+## Estratégia de Branches
+1. `epic/clinical-orchestrator`
+2. `feat/protocol-versioning`
+3. `feat/consent-and-audit-lgpd`
+4. `feat/orchestrator-deterministic-engine`
+5. `feat/ai-assist-explanations`
+6. `feat/ui-suggestion-approval-flow`
+7. `feat/clinical-metrics-dashboard`
+8. `feat/feature-flags-pilot-rollout`
+9. `hardening/security-rbac-mask`
+10. `chore/tests-and-release-gates`
+
+## Sprint 1 - Protocolo e Governança Base
+Branches:
+- `feat/protocol-versioning`
+- `feat/consent-and-audit-lgpd`
+
+Critérios de aceite:
+1. Protocolo clínico com versão ativa e histórico.
+2. Consentimento por finalidade salvo e consultável.
+3. Auditoria de leitura/edição/aprovação com usuário e timestamp.
+4. Migrações sem perda de dados.
+
+## Sprint 2 - Motor Determinístico
+Branch:
+- `feat/orchestrator-deterministic-engine`
+
+Critérios de aceite:
+1. Endpoint retorna próxima ação, bloqueios e alertas.
+2. Red flag crítica bloqueia continuidade.
+3. Contexto por região/cadeia aplicado em exame/evolução.
+4. Testes unitários das regras críticas.
+
+## Sprint 3 - IA Assistiva Explicável
+Branch:
+- `feat/ai-assist-explanations`
+
+Critérios de aceite:
+1. Sugestão retorna `confidence`, `reason` e `evidenceFields`.
+2. Sem dados suficientes, não há autopreenchimento forçado.
+3. Log da sugestão com versão de protocolo.
+4. Falha/timeout da IA não interrompe fluxo clínico.
+
+## Sprint 4 - UX de Aprovação Clínica
+Branch:
+- `feat/ui-suggestion-approval-flow`
+
+Critérios de aceite:
+1. UI diferencia "Sugerido por IA" e "Confirmado por profissional".
+2. "Aplicar sugestão" opcional e auditável.
+3. Campos críticos exigem confirmação humana para persistir.
+4. Avisos de baixa confiança visíveis.
+
+## Sprint 5 - Métricas Operacionais
+Branch:
+- `feat/clinical-metrics-dashboard`
+
+Critérios de aceite:
+1. Métricas de tempo por etapa, abandono, bloqueios e conclusão.
+2. Dashboard resumido por janela temporal.
+3. Filtros por profissional/paciente/status funcionais.
+4. Performance dentro do SLA definido.
+
+## Sprint 6 - Piloto e Rollout Controlado
+Branches:
+- `feat/feature-flags-pilot-rollout`
+- `hardening/security-rbac-mask`
+- `chore/tests-and-release-gates`
+
+Critérios de aceite:
+1. Feature flags por clínica/usuário.
+2. RBAC e mascaramento de dados sensíveis validados.
+3. Checklist go/no-go aprovado.
+4. Plano de rollback testado.
+
+## Diretrizes de execução
+1. Branches pequenas e PRs incrementais.
+2. Sem decisão clínica automática final sem aprovação profissional.
+3. Explicabilidade e auditoria em todas as sugestões IA.
+4. Uso de feature flags para rollout progressivo.
