@@ -40,6 +40,7 @@ import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { HealthModule } from './modules/health/health.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
+import { CharlesModule } from './modules/charles/charles.module';
 
 @Module({
   imports: [
@@ -154,6 +155,7 @@ import { MetricsModule } from './modules/metrics/metrics.module';
     CrmModule,
     HealthModule,
     MetricsModule,
+    CharlesModule,
   ],
   providers: [
     {
