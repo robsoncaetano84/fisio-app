@@ -582,7 +582,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     if (!govProtocolName.trim() || !govProtocolVersion.trim()) {
       showToast({
         type: "error",
-        message: "Informe nome e versao do protocolo",
+        message: t("crm.governance.fillNameVersion"),
       });
       return;
     }
@@ -592,15 +592,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         name: govProtocolName.trim(),
         version: govProtocolVersion.trim(),
       });
-      showToast({ type: "success", message: "Protocolo ativado com sucesso." });
+      showToast({ type: "success", message: t("crm.governance.activateSuccess") });
       await loadGovernance();
     } catch (error) {
       const parsed = parseApiError(error);
-      showToast({ type: "error", message: parsed.message || "Falha ao ativar protocolo." });
+      showToast({
+        type: "error",
+        message: parsed.message || t("crm.governance.activateError"),
+      });
     } finally {
       setGovActivating(false);
     }
-  }, [govProtocolName, govProtocolVersion, loadGovernance, showToast]);
+  }, [govProtocolName, govProtocolVersion, loadGovernance, showToast, t]);
 
   useEffect(() => { loadMain().catch(() => undefined); }, [loadMain]);
   useEffect(() => { loadInteractions(selectedLeadId).catch(() => undefined); }, [loadInteractions, selectedLeadId]);
@@ -2222,11 +2225,14 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
 
           <View style={styles.healthKpiBlock}>
             <View style={styles.topRow}>
-              <Text style={styles.section}>Governanca clinica</Text>
+              <Text style={styles.section}>{t("crm.governance.title")}</Text>
               <Text style={styles.muted}>
                 {govActiveProtocol
-                  ? `Ativo: ${govActiveProtocol.name} v${govActiveProtocol.version}`
-                  : "Sem protocolo ativo"}
+                  ? t("crm.governance.activeProtocol", {
+                      name: govActiveProtocol.name,
+                      version: govActiveProtocol.version,
+                    })
+                  : t("crm.governance.noActiveProtocol")}
               </Text>
             </View>
             {govLoading ? (
@@ -2237,83 +2243,93 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               <>
                 <View style={styles.wrapRow}>
                   <Metric
-                    label="Historico de protocolo"
+                    label={t("crm.governance.protocolHistoryCount")}
                     value={String(govProtocolHistory.length)}
                   />
                   <Metric
-                    label="Auditoria clinica"
+                    label={t("crm.governance.auditCount")}
                     value={String(govAuditLogs.length)}
                   />
                   <Metric
-                    label="Consentimentos (usuario)"
+                    label={t("crm.governance.userConsentCount")}
                     value={String(govMyConsents?.history?.length || 0)}
                   />
                 </View>
                 <View style={styles.wrapRow}>
                   <Metric
-                    label="Sugestões IA (leituras)"
+                    label={t("crm.governance.aiReads")}
                     value={String(govAiSummary?.totals.reads || 0)}
                   />
                   <Metric
-                    label="Sugestões IA (aplicadas)"
+                    label={t("crm.governance.aiApplied")}
                     value={String(govAiSummary?.totals.applied || 0)}
                   />
                   <Metric
-                    label="Taxa de adoção IA"
+                    label={t("crm.governance.aiAdoptionRate")}
                     value={`${Math.round((govAiSummary?.totals.adoptionRate || 0) * 100)}%`}
                   />
                   <Metric
-                    label="Taxa de confirmação IA"
+                    label={t("crm.governance.aiConfirmationRate")}
                     value={`${Math.round((govAiSummary?.totals.confirmationRate || 0) * 100)}%`}
                   />
                 </View>
                 <View style={styles.wrapRow}>
                   <Metric
-                    label="IA Exame físico"
+                    label={t("crm.governance.aiPhysicalExam")}
                     value={String(govAiSummary?.byStage.EXAME_FISICO.applied || 0)}
                   />
                   <Metric
-                    label="IA Evolução"
+                    label={t("crm.governance.aiEvolution")}
                     value={String(govAiSummary?.byStage.EVOLUCAO.applied || 0)}
                   />
                   <Metric
-                    label="IA Laudo"
+                    label={t("crm.governance.aiReport")}
                     value={String(govAiSummary?.byStage.LAUDO.applied || 0)}
                   />
                   <Metric
-                    label="IA Plano"
+                    label={t("crm.governance.aiPlan")}
                     value={String(govAiSummary?.byStage.PLANO.applied || 0)}
                   />
                 </View>
                 <View style={styles.wrapRow}>
                   <TextInput
                     style={[styles.filterInput, { minWidth: 220 }]}
-                    placeholder="Nome do protocolo"
+                    placeholder={t("crm.governance.protocolNamePlaceholder")}
                     value={govProtocolName}
                     onChangeText={setGovProtocolName}
                   />
                   <TextInput
                     style={[styles.filterInput, { minWidth: 160 }]}
-                    placeholder="Versao (ex: 1.1.0)"
+                    placeholder={t("crm.governance.protocolVersionPlaceholder")}
                     value={govProtocolVersion}
                     onChangeText={setGovProtocolVersion}
                   />
                   <Action
-                    title={govActivating ? "Ativando..." : "Ativar versao"}
+                    title={
+                      govActivating
+                        ? t("crm.governance.activating")
+                        : t("crm.governance.activateVersion")
+                    }
                     onPress={() => handleActivateProtocol().catch(() => undefined)}
                     secondary={false}
                   />
                 </View>
                 <Text style={styles.disclaimerText}>
-                  Sprint 1: versionamento de protocolo, consentimentos por finalidade e trilha de auditoria.
+                  {t("crm.governance.sprint1Summary")}
                 </Text>
                 {govProtocolHistory.slice(0, 3).map((item) => (
                   <View key={item.id} style={styles.line}>
                     <Text style={styles.lineTitle}>
-                      {item.name} v{item.version} {item.isActive ? "(ativo)" : ""}
+                      {item.name} v{item.version}{" "}
+                      {item.isActive ? `(${t("crm.governance.activeTag")})` : ""}
                     </Text>
                     <Text style={styles.lineSub}>
-                      Criado em {dt(item.createdAt)} {item.activatedAt ? `| Ativado em ${dt(item.activatedAt)}` : ""}
+                      {t("crm.governance.createdAt", { date: dt(item.createdAt) })}{" "}
+                      {item.activatedAt
+                        ? `| ${t("crm.governance.activatedAt", {
+                            date: dt(item.activatedAt),
+                          })}`
+                        : ""}
                     </Text>
                   </View>
                 ))}
@@ -2323,7 +2339,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
                       [{item.actionType}] {item.action}
                     </Text>
                     <Text style={styles.lineSub}>
-                      Ator: {item.actorRole || "-"} | Paciente: {item.patientId || "-"} | {dt(item.createdAt)}
+                      {t("crm.governance.actor")}: {item.actorRole || "-"} |{" "}
+                      {t("crm.governance.patient")}: {item.patientId || "-"} |{" "}
+                      {dt(item.createdAt)}
                     </Text>
                   </View>
                 ))}

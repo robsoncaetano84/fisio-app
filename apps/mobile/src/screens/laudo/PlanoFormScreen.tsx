@@ -256,7 +256,9 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             examesComLeituraIa,
             generatedAt: laudo.sugestaoGeradaEm || null,
           });
-          setAiSuggestionConfirmed(!AI_REVIEW_REQUIRED);
+          setAiSuggestionConfirmed(
+            !AI_REVIEW_REQUIRED || laudo.status === "VALIDADO_PROFISSIONAL",
+          );
           if (examesComLeituraIa > 0) {
             setAiExamContextMessage(
               t("clinical.messages.aiUsedExamReadings", {
