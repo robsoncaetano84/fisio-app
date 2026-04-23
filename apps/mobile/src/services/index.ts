@@ -53,7 +53,9 @@ export {
 } from './physicalExamModel';
 export {
   getClinicalOrchestratorNextAction,
+  getExameFisicoDorSuggestion,
   logClinicalAiSuggestion,
+  type ExameFisicoDorSuggestionResponse,
   type LogAiSuggestionPayload,
   type ClinicalOrchestratorNextActionResponse,
 } from "./clinicalOrchestrator";

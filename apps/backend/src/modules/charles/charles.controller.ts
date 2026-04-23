@@ -3,7 +3,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
-import { CharlesNextActionResponse, CharlesService } from './charles.service';
+import {
+  CharlesExameFisicoDorSuggestionResponse,
+  CharlesNextActionResponse,
+  CharlesService,
+} from './charles.service';
 import { GetCharlesNextActionDto } from './dto/get-charles-next-action.dto';
 
 @Controller(['clinical-orchestrator', 'charles'])
@@ -18,5 +22,16 @@ export class CharlesController {
     @Param() params: GetCharlesNextActionDto,
   ): Promise<CharlesNextActionResponse> {
     return this.charlesService.getNextAction(params.pacienteId, usuario);
+  }
+
+  @Get('patients/:pacienteId/suggestions/exame-fisico/dor-classification')
+  getExameFisicoDorSuggestion(
+    @CurrentUser() usuario: Usuario,
+    @Param() params: GetCharlesNextActionDto,
+  ): Promise<CharlesExameFisicoDorSuggestionResponse> {
+    return this.charlesService.getExameFisicoDorSuggestion(
+      params.pacienteId,
+      usuario,
+    );
   }
 }

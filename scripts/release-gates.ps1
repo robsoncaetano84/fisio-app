@@ -101,6 +101,10 @@ Invoke-Step -Name "Backend Charles controller RBAC spec" -WorkingDirectory $back
   npm run test -- modules/charles/charles.controller.spec.ts
 }
 
+Invoke-Step -Name "Backend Charles service deterministic+assistive spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
+  npm run test -- modules/charles/charles.service.spec.ts
+}
+
 if (-not $SkipSmoke) {
   Invoke-Step -Name "Backend smoke health ($BaseUrl/health)" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
     powershell -ExecutionPolicy Bypass -File scripts/smoke-health.ps1 -BaseUrl $BaseUrl

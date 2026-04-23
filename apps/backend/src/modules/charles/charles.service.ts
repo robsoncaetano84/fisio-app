@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PacientesService } from '../pacientes/pacientes.service';
-import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Anamnese, TipoDor } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
@@ -103,6 +103,35 @@ export interface CharlesNextActionResponse {
   }>;
   stages: CharlesStageItem[];
   nextAction: CharlesNextAction;
+}
+
+export interface CharlesExameFisicoDorSuggestionResponse {
+  orchestrator: 'CLINICAL_ORCHESTRATOR';
+  mode: 'assistive-v1';
+  requiresProfessionalApproval: true;
+  patientId: string;
+  stage: 'EXAME_FISICO';
+  suggestionType: 'DOR_CLASSIFICATION';
+  confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
+  reason: string;
+  evidenceFields: string[];
+  dorPrincipal:
+    | 'NOCICEPTIVA'
+    | 'NEUROPATICA'
+    | 'NOCIPLASTICA'
+    | 'INFLAMATORIA'
+    | 'VISCERAL'
+    | null;
+  dorSubtipo:
+    | 'MECANICA'
+    | 'DISCAL'
+    | 'NEURAL'
+    | 'REFERIDA'
+    | 'INFLAMATORIA'
+    | 'MIOFASCIAL'
+    | 'FACETARIA'
+    | 'NAO_MECANICA'
+    | null;
 }
 
 @Injectable()
@@ -263,6 +292,47 @@ export class CharlesService {
     return response;
   }
 
+  async getExameFisicoDorSuggestion(
+    pacienteId: string,
+    usuario: Usuario,
+  ): Promise<CharlesExameFisicoDorSuggestionResponse> {
+    const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
+    const latestAnamnese = await this.anamneseRepository.findOne({
+      where: { pacienteId: paciente.id },
+      order: { createdAt: 'DESC' },
+    });
+    const suggestion = this.inferDorClassificationFromAnamnese(latestAnamnese);
+
+    await this.governanceService.writeAudit({
+      actor: usuario,
+      actionType: 'READ',
+      action: 'orchestrator.ai_suggestion.read',
+      resourceType: 'AI_SUGGESTION',
+      resourceId: 'EXAME_FISICO:DOR_CLASSIFICATION',
+      patientId: paciente.id,
+      metadata: {
+        stage: 'EXAME_FISICO',
+        suggestionType: 'DOR_CLASSIFICATION',
+        confidence: suggestion.confidence,
+        evidenceFields: suggestion.evidenceFields,
+      },
+    });
+
+    return {
+      orchestrator: 'CLINICAL_ORCHESTRATOR',
+      mode: 'assistive-v1',
+      requiresProfessionalApproval: true,
+      patientId: paciente.id,
+      stage: 'EXAME_FISICO',
+      suggestionType: 'DOR_CLASSIFICATION',
+      confidence: suggestion.confidence,
+      reason: suggestion.reason,
+      evidenceFields: suggestion.evidenceFields,
+      dorPrincipal: suggestion.principal,
+      dorSubtipo: suggestion.subtipo,
+    };
+  }
+
   private hasStructuredExame(raw?: string | null): boolean {
     const value = String(raw || '').trim();
     if (!value) return false;
@@ -391,5 +461,131 @@ export class CharlesService {
       if (rule.regex.test(lower)) return rule.region;
     }
     return null;
+  }
+
+  private inferDorClassificationFromAnamnese(anamnese?: Anamnese | null): {
+    principal: CharlesExameFisicoDorSuggestionResponse['dorPrincipal'];
+    subtipo: CharlesExameFisicoDorSuggestionResponse['dorSubtipo'];
+    confidence: CharlesExameFisicoDorSuggestionResponse['confidence'];
+    reason: string;
+    evidenceFields: string[];
+  } {
+    if (!anamnese) {
+      return {
+        principal: null,
+        subtipo: null,
+        confidence: 'BAIXA',
+        reason: 'Sem anamnese disponivel para inferencia.',
+        evidenceFields: [],
+      };
+    }
+
+    if (anamnese.tipoDor === TipoDor.NEUROPATICA) {
+      return {
+        principal: 'NEUROPATICA',
+        subtipo: 'NEURAL',
+        confidence: 'ALTA',
+        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        evidenceFields: ['tipoDor'],
+      };
+    }
+    if (anamnese.tipoDor === TipoDor.INFLAMATORIA) {
+      return {
+        principal: 'INFLAMATORIA',
+        subtipo: 'INFLAMATORIA',
+        confidence: 'ALTA',
+        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        evidenceFields: ['tipoDor'],
+      };
+    }
+    if (anamnese.tipoDor === TipoDor.MECANICA) {
+      return {
+        principal: 'NOCICEPTIVA',
+        subtipo: 'MECANICA',
+        confidence: 'ALTA',
+        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        evidenceFields: ['tipoDor'],
+      };
+    }
+    if (anamnese.tipoDor === TipoDor.MISTA) {
+      return {
+        principal: 'NOCIPLASTICA',
+        subtipo: 'MIOFASCIAL',
+        confidence: 'ALTA',
+        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        evidenceFields: ['tipoDor'],
+      };
+    }
+
+    const sintomas = String(anamnese.descricaoSintomas || '').toLowerCase();
+    const piora = String(anamnese.fatoresPiora || '').toLowerCase();
+    const alivio = String(anamnese.fatorAlivio || '').toLowerCase();
+    const sinaisCentral = String(anamnese.sinaisSensibilizacaoCentral || '').toLowerCase();
+    const hasIrradiacao =
+      anamnese.irradiacao === true ||
+      String(anamnese.localIrradiacao || '').trim().length > 0;
+    const hasInflammatoryBehavior =
+      anamnese.dorRepouso === true || anamnese.dorNoturna === true;
+
+    if (
+      hasIrradiacao ||
+      sintomas.includes('choque') ||
+      sintomas.includes('formig') ||
+      sintomas.includes('queima')
+    ) {
+      return {
+        principal: 'NEUROPATICA',
+        subtipo: 'NEURAL',
+        confidence: 'MODERADA',
+        reason: 'Sinais de irradiacao/parestesia sugerem componente neural.',
+        evidenceFields: ['irradiacao', 'localIrradiacao', 'descricaoSintomas'],
+      };
+    }
+
+    if (
+      hasInflammatoryBehavior ||
+      sintomas.includes('rigidez matinal') ||
+      sinaisCentral.includes('inflama')
+    ) {
+      return {
+        principal: 'INFLAMATORIA',
+        subtipo: 'INFLAMATORIA',
+        confidence: 'MODERADA',
+        reason: 'Padrao em repouso/noturno sugere componente inflamatorio.',
+        evidenceFields: ['dorRepouso', 'dorNoturna', 'descricaoSintomas'],
+      };
+    }
+
+    if (
+      sinaisCentral.includes('hipersens') ||
+      sintomas.includes('dor difusa') ||
+      sintomas.includes('dor generalizada')
+    ) {
+      return {
+        principal: 'NOCIPLASTICA',
+        subtipo: 'MIOFASCIAL',
+        confidence: 'MODERADA',
+        reason: 'Padrao de sensibilizacao central/dor difusa sugere nociplastia.',
+        evidenceFields: ['sinaisSensibilizacaoCentral', 'descricaoSintomas'],
+      };
+    }
+
+    if (piora.length > 0 || alivio.length > 0) {
+      return {
+        principal: 'NOCICEPTIVA',
+        subtipo: 'MECANICA',
+        confidence: 'MODERADA',
+        reason: 'Fatores de piora/alivio com movimento sugerem dor mecanica.',
+        evidenceFields: ['fatoresPiora', 'fatorAlivio'],
+      };
+    }
+
+    return {
+      principal: null,
+      subtipo: null,
+      confidence: 'BAIXA',
+      reason: 'Dados insuficientes na anamnese para sugerir classificacao com seguranca.',
+      evidenceFields: [],
+    };
   }
 }

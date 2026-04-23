@@ -14,6 +14,13 @@ describe('CharlesController', () => {
         warnings: [],
         blockers: [],
       }),
+      getExameFisicoDorSuggestion: jest.fn().mockResolvedValue({
+        stage: 'EXAME_FISICO',
+        suggestionType: 'DOR_CLASSIFICATION',
+        confidence: 'MODERADA',
+        reason: 'Sugestao de teste',
+        evidenceFields: ['tipoDor'],
+      }),
     } as unknown as jest.Mocked<CharlesService>;
 
     const controller = new CharlesController(service);
@@ -27,6 +34,20 @@ describe('CharlesController', () => {
     await controller.getNextAction(usuario, { pacienteId: 'pac-1' } as any);
 
     expect(service.getNextAction).toHaveBeenCalledWith('pac-1', usuario);
+  });
+
+  it('forwards physical exam suggestion request to service', async () => {
+    const { controller, service } = make();
+    const usuario = { id: 'usr-1', role: UserRole.USER } as any;
+
+    await controller.getExameFisicoDorSuggestion(usuario, {
+      pacienteId: 'pac-1',
+    } as any);
+
+    expect(service.getExameFisicoDorSuggestion).toHaveBeenCalledWith(
+      'pac-1',
+      usuario,
+    );
   });
 
   it('enforces admin/user role metadata on controller scope', () => {

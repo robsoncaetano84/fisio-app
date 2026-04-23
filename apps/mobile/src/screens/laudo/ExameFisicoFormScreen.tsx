@@ -13,8 +13,10 @@ import { useLaudoStore } from "../../stores/laudoStore";
 import {
   api,
   buildStructuredExameFromAnamnese,
+  type ExameFisicoDorSuggestionResponse,
   type ClinicalOrchestratorNextActionResponse,
   enrichStructuredExameWithClinicalLogic,
+  getExameFisicoDorSuggestion,
   getClinicalOrchestratorNextAction,
   logClinicalAiSuggestion,
   parseStructuredExame,
@@ -225,6 +227,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [orchestratorNextAction, setOrchestratorNextAction] =
     useState<ClinicalOrchestratorNextActionResponse | null>(null);
+  const [serverDorSuggestion, setServerDorSuggestion] =
+    useState<ExameFisicoDorSuggestionResponse | null>(null);
   const [classificationConfirmed, setClassificationConfirmed] = useState(true);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
@@ -247,6 +251,19 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const dorSuggestion: DorClassificationSuggestion = useMemo(
     () => inferDorClassificationFromAnamnese(latestAnamnese),
     [latestAnamnese],
+  );
+  const effectiveDorSuggestion = useMemo(
+    () =>
+      serverDorSuggestion
+        ? {
+            principal: serverDorSuggestion.dorPrincipal,
+            subtipo: serverDorSuggestion.dorSubtipo,
+            confidence: serverDorSuggestion.confidence,
+            reason: serverDorSuggestion.reason,
+            evidenceFields: serverDorSuggestion.evidenceFields || [],
+          }
+        : dorSuggestion,
+    [dorSuggestion, serverDorSuggestion],
   );
   const orchestratorFocusedRegions = useMemo(() => {
     const hints = [
@@ -381,6 +398,22 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       active = false;
     };
   }, [pacienteId]);
+
+  useEffect(() => {
+    let active = true;
+    getExameFisicoDorSuggestion(pacienteId)
+      .then((response) => {
+        if (!active) return;
+        setServerDorSuggestion(response);
+      })
+      .catch(() => {
+        if (!active) return;
+        setServerDorSuggestion(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pacienteId, latestAnamnese?.id]);
 
   useEffect(() => {
     if (!draftLoaded || !exam) return;
@@ -816,7 +849,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
   const handleApplyDorSuggestion = () => {
     if (!exam) return;
-    if (!dorSuggestion.principal || !dorSuggestion.subtipo) {
+    if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo) {
       showToast({
         type: "error",
         message: "Nao foi possivel sugerir classificacao de dor com os dados atuais da anamnese.",
@@ -826,22 +859,22 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     setExam({
       ...exam,
       source: "rule-based",
-      dorPrincipal: dorSuggestion.principal,
-      dorSubtipo: dorSuggestion.subtipo,
+      dorPrincipal: effectiveDorSuggestion.principal,
+      dorSubtipo: effectiveDorSuggestion.subtipo,
     });
     setClassificationConfirmed(!AI_REVIEW_REQUIRED);
     setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
     logClinicalAiSuggestion({
       stage: "EXAME_FISICO",
       suggestionType: "DOR_CLASSIFICATION",
-      confidence: dorSuggestion.confidence,
-      reason: dorSuggestion.reason,
-      evidenceFields: dorSuggestion.evidenceFields,
+      confidence: effectiveDorSuggestion.confidence,
+      reason: effectiveDorSuggestion.reason,
+      evidenceFields: effectiveDorSuggestion.evidenceFields,
       patientId: pacienteId,
     }).catch(() => undefined);
     showToast({
       type: "success",
-      message: `Sugestao aplicada (${dorSuggestion.confidence.toLowerCase()}): ${dorSuggestion.reason}`,
+      message: `Sugestao aplicada (${effectiveDorSuggestion.confidence.toLowerCase()}): ${effectiveDorSuggestion.reason}`,
     });
   };
 
@@ -852,9 +885,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     logClinicalAiSuggestion({
       stage: "EXAME_FISICO",
       suggestionType: "DOR_CLASSIFICATION_CONFIRMED",
-      confidence: dorSuggestion.confidence,
+      confidence: effectiveDorSuggestion.confidence,
       reason: "Classificação sugerida revisada e confirmada por profissional.",
-      evidenceFields: dorSuggestion.evidenceFields,
+      evidenceFields: effectiveDorSuggestion.evidenceFields,
       patientId: pacienteId,
     }).catch(() => undefined);
     showToast({
@@ -930,18 +963,18 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <View style={styles.classificationSuggestionRow}>
             <Text style={styles.classificationSuggestionText}>
               Sugestao da anamnese:{" "}
-              {dorSuggestion.principal && dorSuggestion.subtipo
-                ? `${prettyEnum(dorSuggestion.principal)} / ${prettyEnum(dorSuggestion.subtipo)} (${dorSuggestion.confidence.toLowerCase()})`
+              {effectiveDorSuggestion.principal && effectiveDorSuggestion.subtipo
+                ? `${prettyEnum(effectiveDorSuggestion.principal)} / ${prettyEnum(effectiveDorSuggestion.subtipo)} (${effectiveDorSuggestion.confidence.toLowerCase()})`
                 : "sem inferencia segura"}
             </Text>
-            {dorSuggestion.confidence === "BAIXA" ? (
+            {effectiveDorSuggestion.confidence === "BAIXA" ? (
               <Text style={styles.classificationLowConfidenceText}>
                 Baixa confiança: revise manualmente antes de aplicar.
               </Text>
             ) : null}
-            {dorSuggestion.evidenceFields.length > 0 ? (
+            {effectiveDorSuggestion.evidenceFields.length > 0 ? (
               <Text style={styles.classificationEvidenceText}>
-                Evidências: {dorSuggestion.evidenceFields.join(", ")}
+                Evidências: {effectiveDorSuggestion.evidenceFields.join(", ")}
               </Text>
             ) : null}
             <TouchableOpacity

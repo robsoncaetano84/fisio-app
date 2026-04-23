@@ -97,6 +97,7 @@ Critérios de aceite:
 - [x] `release-gates` exige os testes de governança (service + controller)
 - [x] Charles retorna contexto de regiões relacionadas por cadeia (`regioesRelacionadas`) para orientar Exame/Evolução
 - [x] Charles marca etapas como `BLOCKED` em red flag crítica e a UI usa esse status no fluxo clínico
+- [x] Endpoint assistivo de sugestão explicável para Exame Físico (`DOR_CLASSIFICATION`) com auditoria de leitura no backend
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

@@ -55,6 +55,38 @@ export type LogAiSuggestionPayload = {
   patientId?: string;
 };
 
+export type ExameFisicoDorSuggestionResponse = {
+  orchestrator: "CLINICAL_ORCHESTRATOR";
+  mode: "assistive-v1";
+  requiresProfessionalApproval: true;
+  patientId: string;
+  stage: "EXAME_FISICO";
+  suggestionType: "DOR_CLASSIFICATION";
+  confidence: "BAIXA" | "MODERADA" | "ALTA";
+  reason: string;
+  evidenceFields: string[];
+  dorPrincipal: "NOCICEPTIVA" | "NEUROPATICA" | "NOCIPLASTICA" | "INFLAMATORIA" | "VISCERAL" | null;
+  dorSubtipo:
+    | "MECANICA"
+    | "DISCAL"
+    | "NEURAL"
+    | "REFERIDA"
+    | "INFLAMATORIA"
+    | "MIOFASCIAL"
+    | "FACETARIA"
+    | "NAO_MECANICA"
+    | null;
+};
+
+export const getExameFisicoDorSuggestion = async (
+  pacienteId: string,
+): Promise<ExameFisicoDorSuggestionResponse> => {
+  const response = await api.get<ExameFisicoDorSuggestionResponse>(
+    `/clinical-orchestrator/patients/${pacienteId}/suggestions/exame-fisico/dor-classification`,
+  );
+  return response.data;
+};
+
 export const logClinicalAiSuggestion = async (
   payload: LogAiSuggestionPayload,
 ): Promise<void> => {

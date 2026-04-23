@@ -250,4 +250,29 @@ describe('CharlesService - deterministic orchestrator', () => {
       mode: 'deterministic-v1',
     });
   });
+
+  it('returns high-confidence dor classification suggestion when tipoDor is mapped', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        tipoDor: 'MECANICA',
+        descricaoSintomas: 'dor localizada em joelho',
+      },
+    });
+
+    const result = await service.getExameFisicoDorSuggestion('pac-1', user);
+    expect(result.stage).toBe('EXAME_FISICO');
+    expect(result.suggestionType).toBe('DOR_CLASSIFICATION');
+    expect(result.dorPrincipal).toBe('NOCICEPTIVA');
+    expect(result.dorSubtipo).toBe('MECANICA');
+    expect(result.confidence).toBe('ALTA');
+  });
+
+  it('returns low-confidence suggestion when there is no anamnesis', async () => {
+    const service = makeService();
+    const result = await service.getExameFisicoDorSuggestion('pac-1', user);
+    expect(result.dorPrincipal).toBeNull();
+    expect(result.dorSubtipo).toBeNull();
+    expect(result.confidence).toBe('BAIXA');
+  });
 });
