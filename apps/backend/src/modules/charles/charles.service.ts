@@ -296,7 +296,7 @@ export class CharlesService {
       nextAction,
     };
 
-    await this.governanceService.writeAudit({
+    await this.writeAuditSafe({
       actor: usuario,
       actionType: 'READ',
       action: 'orchestrator.next_action.read',
@@ -324,7 +324,7 @@ export class CharlesService {
     const suggestion = this.inferDorClassificationFromAnamnese(latestAnamnese);
     const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
-    await this.governanceService.writeAudit({
+    await this.writeAuditSafe({
       actor: usuario,
       actionType: 'READ',
       action: 'orchestrator.ai_suggestion.read',
@@ -385,7 +385,7 @@ export class CharlesService {
     });
     const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
-    await this.governanceService.writeAudit({
+    await this.writeAuditSafe({
       actor: usuario,
       actionType: 'READ',
       action: 'orchestrator.ai_suggestion.read',
@@ -433,6 +433,14 @@ export class CharlesService {
       };
     } catch {
       return null;
+    }
+  }
+
+  private async writeAuditSafe(payload: Parameters<ClinicalGovernanceService['writeAudit']>[0]): Promise<void> {
+    try {
+      await this.governanceService.writeAudit(payload);
+    } catch {
+      // Best-effort audit: falha de auditoria nao deve interromper fluxo clinico.
     }
   }
 

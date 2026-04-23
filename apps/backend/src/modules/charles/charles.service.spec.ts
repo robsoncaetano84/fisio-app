@@ -315,4 +315,69 @@ describe('CharlesService - deterministic orchestrator', () => {
     expect(result.avaliacao).toBeNull();
     expect(result.plano).toBeNull();
   });
+
+  it('does not break next-action flow when audit write fails', async () => {
+    const pacientesService = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'pac-1',
+        nomeCompleto: 'Paciente Teste',
+      }),
+    } as any;
+    const governanceService = {
+      writeAudit: jest.fn().mockRejectedValue(new Error('audit unavailable')),
+      getActiveProtocol: jest.fn().mockResolvedValue({
+        version: '1.0.0',
+        name: 'Protocolo clinico base',
+      }),
+    } as any;
+    const anamneseRepo = { findOne: jest.fn().mockResolvedValue(null) } as any;
+    const evolucaoRepo = { findOne: jest.fn().mockResolvedValue(null) } as any;
+    const laudoRepo = { findOne: jest.fn().mockResolvedValue(null) } as any;
+    const service = new CharlesService(
+      pacientesService,
+      governanceService,
+      anamneseRepo,
+      evolucaoRepo,
+      laudoRepo,
+    );
+
+    const result = await service.getNextAction('pac-1', user);
+    expect(result.nextAction.stage).toBe('ANAMNESE');
+  });
+
+  it('does not break suggestion flow when audit write fails', async () => {
+    const pacientesService = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'pac-1',
+        nomeCompleto: 'Paciente Teste',
+      }),
+    } as any;
+    const governanceService = {
+      writeAudit: jest.fn().mockRejectedValue(new Error('audit unavailable')),
+      getActiveProtocol: jest.fn().mockResolvedValue({
+        version: '1.0.0',
+        name: 'Protocolo clinico base',
+      }),
+    } as any;
+    const anamneseRepo = {
+      findOne: jest.fn().mockResolvedValue({
+        createdAt: new Date(),
+        descricaoSintomas: 'Dor em joelho ao agachar',
+        areasAfetadas: [{ regiao: 'JOELHO' }],
+      }),
+    } as any;
+    const evolucaoRepo = { findOne: jest.fn().mockResolvedValue(null) } as any;
+    const laudoRepo = { findOne: jest.fn().mockResolvedValue(null) } as any;
+    const service = new CharlesService(
+      pacientesService,
+      governanceService,
+      anamneseRepo,
+      evolucaoRepo,
+      laudoRepo,
+    );
+
+    const result = await service.getEvolucaoSoapSuggestion('pac-1', user);
+    expect(result.stage).toBe('EVOLUCAO');
+    expect(result.reason.length).toBeGreaterThan(0);
+  });
 });

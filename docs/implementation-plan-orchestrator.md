@@ -102,6 +102,8 @@ Critérios de aceite:
 - [x] Endpoint assistivo de sugestão explicável para Evolução (`EVOLUCAO_SOAP`) com auditoria de leitura no backend e aplicação opcional no app
 - [x] Sugestões assistivas passam a carregar versão/nome do protocolo ativo para rastreabilidade
 - [x] Evolução registra evento de confirmação profissional (`EVOLUCAO_SOAP_CONFIRMED`) ao salvar após aplicar sugestão
+- [x] Auditoria do orquestrador em modo best-effort (falha não interrompe fluxo clínico)
+- [x] Evolução usa fallback local de sugestão SOAP (baixa confiança) quando backend está indisponível
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

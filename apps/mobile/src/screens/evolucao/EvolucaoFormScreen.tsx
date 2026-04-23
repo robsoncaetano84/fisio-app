@@ -133,6 +133,46 @@ export function EvolucaoFormScreen({
     () => mapClinicalChainCodeToLabel(orchestratorNextAction?.context?.cadeiaProvavel),
     [orchestratorNextAction],
   );
+  const localFallbackSuggestion = useMemo<EvolucaoSoapSuggestionResponse | null>(() => {
+    if (!latestAnamnese) return null;
+    const sintomas = String(latestAnamnese.descricaoSintomas || "").trim();
+    const piora = String(latestAnamnese.fatoresPiora || "").trim();
+    const alivio = String(latestAnamnese.fatorAlivio || "").trim();
+    const areas = (latestAnamnese.areasAfetadas || [])
+      .map((item) => String(item.regiao || "").trim())
+      .filter(Boolean);
+
+    if (!sintomas && !areas.length) return null;
+
+    const regiaoTexto = areas.length ? areas.join(", ") : "região principal";
+    return {
+      orchestrator: "CLINICAL_ORCHESTRATOR",
+      mode: "assistive-v1",
+      requiresProfessionalApproval: true,
+      patientId: pacienteId,
+      stage: "EVOLUCAO",
+      suggestionType: "EVOLUCAO_SOAP",
+      confidence: "BAIXA",
+      reason:
+        "Sugestão local de contingência gerada a partir da anamnese (fallback sem backend).",
+      evidenceFields: [
+        ...(sintomas ? ["descricaoSintomas"] : []),
+        ...(areas.length ? ["areasAfetadas"] : []),
+        ...(piora ? ["fatoresPiora"] : []),
+        ...(alivio ? ["fatorAlivio"] : []),
+      ],
+      protocolVersion: null,
+      protocolName: null,
+      subjetivo: sintomas
+        ? `Paciente relata ${sintomas}${piora ? `. Piora com ${piora}` : ""}${alivio ? ` e alívio com ${alivio}` : ""}.`
+        : null,
+      objetivo: `Registrar resposta funcional e evolução dos achados objetivos na ${regiaoTexto}.`,
+      avaliacao:
+        "Evolução inicial em acompanhamento; validar resposta clínica e progressão funcional.",
+      plano:
+        "Manter conduta progressiva com reavaliação próxima e reforço de orientações domiciliares.",
+    };
+  }, [latestAnamnese, pacienteId]);
 
   const [loading, setLoading] = useState(false);
 
@@ -287,12 +327,12 @@ export function EvolucaoFormScreen({
       })
       .catch(() => {
         if (!active) return;
-        setEvolucaoSuggestion(null);
+        setEvolucaoSuggestion(localFallbackSuggestion);
       });
     return () => {
       active = false;
     };
-  }, [pacienteId]);
+  }, [pacienteId, localFallbackSuggestion]);
 
   const handleApplySoapSuggestion = () => {
     if (!evolucaoSuggestion) return;
