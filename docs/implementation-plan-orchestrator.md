@@ -88,6 +88,7 @@ Critérios de aceite:
 - [x] Testes de RBAC CRM admin (`modules/crm/crm.service.spec.ts`)
 - [x] Testes de acesso sensível CRM (`modules/crm/crm.controller.spec.ts`)
 - [x] Drill de rollback simulado (`scripts/rollback-drill.ps1`) com relatório em `logs/`
+- [x] Script de monitoramento 5xx para endpoints clínicos (`scripts/monitor-clinical-5xx.ps1`)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

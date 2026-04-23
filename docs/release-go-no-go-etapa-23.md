@@ -104,3 +104,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\rollback-drill.ps1 -TargetCom
 Observações:
 - Gera relatório em `logs/rollback-drill-YYYYMMDD-HHMMSS.md`.
 - Não executa `reset`/`push`; apenas valida o procedimento e prepara evidência.
+
+## Monitoramento de 5xx (pré-go-live)
+```powershell
+# modo sem auth (somente endpoints públicos, ex.: /health)
+powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -WindowMinutes 5 -IntervalSeconds 15
+
+# modo autenticado (inclui endpoints clínicos protegidos)
+powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -BearerToken "<TOKEN>" -WindowMinutes 5 -IntervalSeconds 15
+```
+
+Observações:
+- Gera relatório em `logs/monitor-clinical-5xx-YYYYMMDD-HHMMSS.md`.
+- Critério objetivo: `Total5xx = 0` e `TotalTransportErrors = 0` durante a janela monitorada.
