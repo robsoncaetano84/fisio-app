@@ -71,6 +71,14 @@ export interface LoginResponse {
   };
 }
 
+export interface AuthFeatureFlagsResponse {
+  speechToText: boolean;
+  requireAiSuggestionConfirmation: boolean;
+  crmAdminWeb: boolean;
+  clinicalOrchestrator: boolean;
+  generatedAt: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -89,6 +97,61 @@ export class AuthService {
 
   private normalizeLoginIdentifier(identificador: string): string {
     return (identificador || '').trim().toLowerCase();
+  }
+
+  private parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+    if (value == null || value.trim() === '') return defaultValue;
+    const normalized = value.trim().toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(normalized);
+  }
+
+  private parseFeatureFlagsByEmailConfig(): Record<string, Partial<AuthFeatureFlagsResponse>> {
+    const raw = (this.configService.get<string>('FEATURE_FLAGS_BY_EMAIL') || '').trim();
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw) as Record<string, Partial<AuthFeatureFlagsResponse>>;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  getFeatureFlagsForUser(usuario: Usuario): AuthFeatureFlagsResponse {
+    const defaults: AuthFeatureFlagsResponse = {
+      speechToText: this.parseBoolean(
+        this.configService.get<string>('ENABLE_SPEECH_TO_TEXT'),
+        true,
+      ),
+      requireAiSuggestionConfirmation: this.parseBoolean(
+        this.configService.get<string>('REQUIRE_AI_SUGGESTION_CONFIRMATION'),
+        true,
+      ),
+      crmAdminWeb: this.parseBoolean(
+        this.configService.get<string>('ENABLE_CRM_ADMIN_WEB'),
+        true,
+      ),
+      clinicalOrchestrator: this.parseBoolean(
+        this.configService.get<string>('ENABLE_CLINICAL_ORCHESTRATOR'),
+        true,
+      ),
+      generatedAt: new Date().toISOString(),
+    };
+
+    const overrides = this.parseFeatureFlagsByEmailConfig();
+    const emailKey = (usuario.email || '').trim().toLowerCase();
+    const userOverride = overrides[emailKey] || overrides['*'] || {};
+
+    const merged: AuthFeatureFlagsResponse = {
+      ...defaults,
+      ...userOverride,
+      generatedAt: new Date().toISOString(),
+    };
+
+    if (usuario.role !== UserRole.ADMIN) {
+      merged.crmAdminWeb = false;
+    }
+
+    return merged;
   }
 
   async validateUser(identificador: string, senha: string): Promise<Usuario | null> {

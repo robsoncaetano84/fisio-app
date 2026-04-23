@@ -18,6 +18,7 @@ export {
 } from "./offlineCheckinQueue";
 export { getAuditEntries, getAuditSummary, recordAuditAction, toAuditRef } from "./auditTrail";
 export { getOpsHealthSummary, recordApiMetric, recordSyncMetric } from "./opsMetrics";
+export { getRuntimeFeatureFlags } from "./featureFlags";
 export {
   getCrmAdminProfessionals,
   getCrmAdminPatients,

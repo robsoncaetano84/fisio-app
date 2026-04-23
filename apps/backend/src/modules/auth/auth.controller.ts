@@ -13,7 +13,11 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
-import { AuthService, LoginResponse } from './auth.service';
+import {
+  AuthFeatureFlagsResponse,
+  AuthService,
+  LoginResponse,
+} from './auth.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -153,7 +157,16 @@ export class AuthController {
       consentAcceptedAt: usuario.consentAcceptedAt,
       consentProfessionalLgpdRequired: usuario.consentProfessionalLgpdRequired,
       role: usuario.role,
+      featureFlags: this.authService.getFeatureFlagsForUser(usuario),
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('feature-flags')
+  async getFeatureFlags(
+    @CurrentUser() usuario: Usuario,
+  ): Promise<AuthFeatureFlagsResponse> {
+    return this.authService.getFeatureFlagsForUser(usuario);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -176,6 +189,7 @@ export class AuthController {
       consentAcceptedAt: updated.consentAcceptedAt,
       consentProfessionalLgpdRequired: updated.consentProfessionalLgpdRequired,
       role: updated.role,
+      featureFlags: this.authService.getFeatureFlagsForUser(updated),
     };
   }
 }

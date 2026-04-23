@@ -30,6 +30,7 @@ import { useToast } from "../components/ui";
 import { api } from "../services";
 import { isLikelyNetworkError, parseApiError } from "../utils/apiErrors";
 import { isMasterAdminUser } from "../utils/masterAdmin";
+import { FEATURE_FLAGS } from "../constants/featureFlags";
 
 const LEGAL_TERMS_URL =
   process.env.EXPO_PUBLIC_TERMS_URL ||
@@ -135,7 +136,9 @@ export function SettingsScreen() {
   });
 
   const canAccessAdminCrm =
-    Platform.OS === "web" && isMasterAdminUser(usuario);
+    Platform.OS === "web" &&
+    FEATURE_FLAGS.crmAdminWeb !== false &&
+    isMasterAdminUser(usuario);
   const isProfessional = usuario?.role !== UserRole.PACIENTE;
 
   useEffect(() => {

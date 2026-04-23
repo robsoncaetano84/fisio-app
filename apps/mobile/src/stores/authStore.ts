@@ -2,7 +2,8 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthState, Usuario, LoginCredentials, LoginResponse } from "../types";
 import { APP_CONFIG } from "../constants/theme";
-import { api, setOnSessionExpired, setIsLoggingOut } from "../services";
+import { api, getRuntimeFeatureFlags, setOnSessionExpired, setIsLoggingOut } from "../services";
+import { applyRuntimeFeatureFlags } from "../constants/featureFlags";
 
 interface AuthStore extends AuthState {
   pendingInviteToken: string | null;
@@ -59,6 +60,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
     await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
 
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    try {
+      const runtimeFlags = await getRuntimeFeatureFlags();
+      applyRuntimeFeatureFlags(runtimeFlags);
+    } catch {
+      // non-blocking: fallback to local defaults
+    }
 
     set({
       usuario,
@@ -80,6 +87,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       await AsyncStorage.setItem(APP_CONFIG.storage.refreshTokenKey, refreshToken);
       await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      try {
+        const runtimeFlags = await getRuntimeFeatureFlags();
+        applyRuntimeFeatureFlags(runtimeFlags);
+      } catch {
+        // non-blocking: fallback to local defaults
+      }
       set({
         usuario,
         token,
@@ -130,6 +143,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       if (token && refreshToken && userJson) {
         const usuario: Usuario = JSON.parse(userJson);
         api.defaults.headers.common.Authorization = `Bearer ${token}`;
+        try {
+          const runtimeFlags = await getRuntimeFeatureFlags();
+          applyRuntimeFeatureFlags(runtimeFlags);
+        } catch {
+          // non-blocking: fallback to local defaults
+        }
 
         set({
           usuario,
