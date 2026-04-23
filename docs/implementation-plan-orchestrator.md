@@ -98,6 +98,7 @@ Critérios de aceite:
 - [x] Charles retorna contexto de regiões relacionadas por cadeia (`regioesRelacionadas`) para orientar Exame/Evolução
 - [x] Charles marca etapas como `BLOCKED` em red flag crítica e a UI usa esse status no fluxo clínico
 - [x] Endpoint assistivo de sugestão explicável para Exame Físico (`DOR_CLASSIFICATION`) com auditoria de leitura no backend
+- [x] Fluxo de Laudo/Plano passa a consumir `confidence`, `reason` e `evidenceFields` retornados pelo backend para log explicável
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.
