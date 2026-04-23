@@ -5,6 +5,7 @@
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import {
@@ -36,6 +37,9 @@ import { LaudoStatus } from '../laudos/entities/laudo.entity';
 
 @Injectable()
 export class PacientesService {
+  private masterAdminEmailsCache: Set<string> | null = null;
+  private readonly masterByUserIdCache = new Map<string, boolean>();
+
   constructor(
     @InjectRepository(Paciente)
     private readonly pacienteRepository: Repository<Paciente>,
@@ -53,9 +57,43 @@ export class PacientesService {
     private readonly atividadeRepository: Repository<Atividade>,
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
+    private readonly configService: ConfigService,
   ) {}
 
-  private buildScopedPacientesQuery(usuarioId: string) {
+  private getMasterAdminEmails(): Set<string> {
+    if (this.masterAdminEmailsCache) return this.masterAdminEmailsCache;
+    const raw = (this.configService.get<string>('MASTER_ADMIN_EMAILS') || '').trim();
+    const emails = raw
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+    this.masterAdminEmailsCache = new Set(emails);
+    return this.masterAdminEmailsCache;
+  }
+
+  async isMasterAdminByUsuarioId(usuarioId: string): Promise<boolean> {
+    if (!usuarioId) return false;
+    if (this.masterByUserIdCache.has(usuarioId)) {
+      return this.masterByUserIdCache.get(usuarioId) === true;
+    }
+
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id: usuarioId, ativo: true },
+      select: ['id', 'email'],
+    });
+    const email = (usuario?.email || '').trim().toLowerCase();
+    const isMaster = !!email && this.getMasterAdminEmails().has(email);
+    this.masterByUserIdCache.set(usuarioId, isMaster);
+    return isMaster;
+  }
+
+  private buildScopedPacientesQuery(usuarioId: string, isMasterAdmin = false) {
+    if (isMasterAdmin) {
+      return this.pacienteRepository
+        .createQueryBuilder('p')
+        .where('p.ativo = :ativo', { ativo: true });
+    }
+
     const vinculoTable = this.vinculoRepository.metadata.tableName;
     return this.pacienteRepository
       .createQueryBuilder('p')
@@ -491,8 +529,9 @@ export class PacientesService {
   }
 
   async findAll(usuarioId: string): Promise<PacienteListItemDto[]> {
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
     const pacientes = await this.addPacienteListSelects(
-      this.buildScopedPacientesQuery(usuarioId),
+      this.buildScopedPacientesQuery(usuarioId, isMasterAdmin),
     )
       .orderBy('p.nomeCompleto', 'ASC')
       .getMany();
@@ -514,13 +553,14 @@ export class PacientesService {
     page: number,
     limit: number,
   ): Promise<PacientePagedResponseDto> {
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
     const safePage = Number.isFinite(page) ? Math.max(1, page) : 1;
     const safeLimit = Number.isFinite(limit)
       ? Math.min(100, Math.max(10, limit))
       : 30;
     const skip = (safePage - 1) * safeLimit;
 
-    const baseQuery = this.buildScopedPacientesQuery(usuarioId);
+    const baseQuery = this.buildScopedPacientesQuery(usuarioId, isMasterAdmin);
     const total = await baseQuery.clone().getCount();
     const data = await this.addPacienteListSelects(baseQuery)
       .orderBy('p.nomeCompleto', 'ASC')
@@ -547,7 +587,8 @@ export class PacientesService {
   }
 
   async findOne(id: string, usuarioId: string): Promise<Paciente> {
-    const paciente = await this.buildScopedPacientesQuery(usuarioId)
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
+    const paciente = await this.buildScopedPacientesQuery(usuarioId, isMasterAdmin)
       .andWhere('p.id = :id', { id })
       .leftJoin('p.pacienteUsuario', 'pacienteUsuario')
       .addSelect(['pacienteUsuario.id', 'pacienteUsuario.nome'])
@@ -569,7 +610,7 @@ export class PacientesService {
 
     if (updatePacienteDto.cpf && updatePacienteDto.cpf !== paciente.cpf) {
       const existingPaciente = await this.pacienteRepository.findOne({
-        where: { cpf: updatePacienteDto.cpf, usuarioId },
+        where: { cpf: updatePacienteDto.cpf, usuarioId: paciente.usuarioId },
       });
 
       if (existingPaciente) {
@@ -772,41 +813,44 @@ export class PacientesService {
   }
 
   async getAttentionMap(usuarioId: string): Promise<Record<string, number | null>> {
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
     const vinculoTable = this.vinculoRepository.metadata.tableName;
-    const rows = await this.pacienteRepository
+    const rowsQuery = this.pacienteRepository
       .createQueryBuilder('p')
       .leftJoin(
         this.evolucaoRepository.metadata.tableName,
         'e',
         'e.paciente_id = p.id',
       )
-      .leftJoin(
-        vinculoTable,
-        'vScope',
-        'vScope.paciente_id = p.id AND vScope.profissional_id = :usuarioId AND vScope.status = :vinculoStatusAtivo',
-        {
-          usuarioId,
-          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
-        },
-      )
       .andWhere('p.ativo = :ativo', { ativo: true })
-      .andWhere(
-        '(p.usuarioId = :usuarioId OR vScope.id IS NOT NULL)',
-        {
-          usuarioId,
-          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
-        },
-      )
       .select('p.id', 'pacienteId')
       .addSelect('p.createdAt', 'createdAt')
       .addSelect('MAX(e.data)', 'lastEvolucaoAt')
       .groupBy('p.id')
-      .addGroupBy('p.createdAt')
-      .getRawMany<{
-        pacienteId: string;
-        createdAt: string | null;
-        lastEvolucaoAt: string | null;
-      }>();
+      .addGroupBy('p.createdAt');
+
+    if (!isMasterAdmin) {
+      rowsQuery
+        .leftJoin(
+          vinculoTable,
+          'vScope',
+          'vScope.paciente_id = p.id AND vScope.profissional_id = :usuarioId AND vScope.status = :vinculoStatusAtivo',
+          {
+            usuarioId,
+            vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+          },
+        )
+        .andWhere('(p.usuarioId = :usuarioId OR vScope.id IS NOT NULL)', {
+          usuarioId,
+          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+        });
+    }
+
+    const rows = await rowsQuery.getRawMany<{
+      pacienteId: string;
+      createdAt: string | null;
+      lastEvolucaoAt: string | null;
+    }>();
 
     const pacienteIds = rows.map((row) => row.pacienteId);
     const latestLaudos = pacienteIds.length
@@ -878,7 +922,8 @@ export class PacientesService {
   }
 
   async getStats(usuarioId: string) {
-    const total = await this.buildScopedPacientesQuery(usuarioId).getCount();
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
+    const total = await this.buildScopedPacientesQuery(usuarioId, isMasterAdmin).getCount();
 
     return {
       totalPacientes: total,

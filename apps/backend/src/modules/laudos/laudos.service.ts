@@ -147,7 +147,10 @@ export class LaudosService {
     if (!laudo) {
       throw new NotFoundException('Laudo nao encontrado');
     }
-    if (laudo.paciente.usuarioId !== usuarioId) {
+    const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(
+      usuarioId,
+    );
+    if (!isMasterAdmin && laudo.paciente.usuarioId !== usuarioId) {
       throw new NotFoundException('Laudo nao encontrado');
     }
     return laudo;
@@ -1473,7 +1476,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
 
 
 

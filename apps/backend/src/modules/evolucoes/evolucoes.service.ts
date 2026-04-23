@@ -80,7 +80,10 @@ export class EvolucoesService {
       throw new NotFoundException('Evolucao nao encontrada');
     }
 
-    if (evolucao.paciente.usuarioId !== usuarioId) {
+    const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(
+      usuarioId,
+    );
+    if (!isMasterAdmin && evolucao.paciente.usuarioId !== usuarioId) {
       throw new NotFoundException('Evolucao nao encontrada');
     }
 
