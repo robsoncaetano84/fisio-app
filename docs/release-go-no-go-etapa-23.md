@@ -118,3 +118,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -Bas
 Observações:
 - Gera relatório em `logs/monitor-clinical-5xx-YYYYMMDD-HHMMSS.md`.
 - Critério objetivo: `Total5xx = 0` e `TotalTransportErrors = 0` durante a janela monitorada.
+
+### Token rapido para monitoramento autenticado
+```powershell
+$base = "https://fisio-backend-pax6.onrender.com/api"
+$body = @{ identificador = "<EMAIL_OU_CPF>"; senha = "<SENHA>" } | ConvertTo-Json
+$resp = Invoke-RestMethod -Method Post -Uri "$base/auth/login" -ContentType "application/json" -Body $body
+$token = $resp.token
+powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl $base -BearerToken $token -WindowMinutes 5 -IntervalSeconds 15
+```
