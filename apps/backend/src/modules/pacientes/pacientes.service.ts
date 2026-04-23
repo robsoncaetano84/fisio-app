@@ -56,18 +56,20 @@ export class PacientesService {
   ) {}
 
   private buildScopedPacientesQuery(usuarioId: string) {
-    const vinculoTable = this.vinculoRepository.metadata.tableName;
     return this.pacienteRepository
       .createQueryBuilder('p')
+      .leftJoin(
+        ProfissionalPacienteVinculo,
+        'vScope',
+        'vScope.pacienteId = p.id AND vScope.profissionalId = :usuarioId AND vScope.status = :vinculoStatusAtivo',
+        {
+          usuarioId,
+          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+      )
       .where('p.ativo = :ativo', { ativo: true })
       .andWhere(
-        `((p.usuario_id = :usuarioId AND p.paciente_usuario_id IS NULL) OR EXISTS (
-          SELECT 1
-          FROM ${vinculoTable} v
-          WHERE v.paciente_id = p.id
-            AND v.profissional_id = :usuarioId
-            AND v.status = :vinculoStatusAtivo
-        ))`,
+        '((p.usuarioId = :usuarioId AND p.pacienteUsuarioId IS NULL) OR vScope.id IS NOT NULL)',
         {
           usuarioId,
           vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
@@ -769,7 +771,6 @@ export class PacientesService {
   }
 
   async getAttentionMap(usuarioId: string): Promise<Record<string, number | null>> {
-    const vinculoTable = this.vinculoRepository.metadata.tableName;
     const rows = await this.pacienteRepository
       .createQueryBuilder('p')
       .leftJoin(
@@ -777,15 +778,18 @@ export class PacientesService {
         'e',
         'e.paciente_id = p.id',
       )
+      .leftJoin(
+        ProfissionalPacienteVinculo,
+        'vScope',
+        'vScope.pacienteId = p.id AND vScope.profissionalId = :usuarioId AND vScope.status = :vinculoStatusAtivo',
+        {
+          usuarioId,
+          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+        },
+      )
       .andWhere('p.ativo = :ativo', { ativo: true })
       .andWhere(
-        `(p.usuario_id = :usuarioId OR EXISTS (
-          SELECT 1
-          FROM ${vinculoTable} v
-          WHERE v.paciente_id = p.id
-            AND v.profissional_id = :usuarioId
-            AND v.status = :vinculoStatusAtivo
-        ))`,
+        '(p.usuarioId = :usuarioId OR vScope.id IS NOT NULL)',
         {
           usuarioId,
           vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
