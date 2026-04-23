@@ -1116,6 +1116,7 @@ export function enrichStructuredExameWithClinicalLogic(
       return { regiao: group.regiao, titulo: group.titulo, positivos, selecionados, score };
     })
     .filter((item) => item.score > 0);
+  const sortedRegionSignals = [...regionSignals].sort((a, b) => b.score - a.score);
 
   const positiveGroups = regionSignals
     .map((group) => ({
@@ -1125,13 +1126,58 @@ export function enrichStructuredExameWithClinicalLogic(
     }))
     .filter((item) => item.positivos.length > 0);
 
-  const primaryRegion =
-    regionSignals.sort((a, b) => b.score - a.score)[0]
-      ?.regiao || inferRegionFromAnamnese(anamnese);
+  const allPositiveTests = positiveGroups.flatMap((g) =>
+    g.positivos.map((t) => ({ regiao: g.regiao, nome: t.nome })),
+  );
+  const scoreByRegion = new Map(
+    regionSignals.map((item) => [item.regiao, item.score] as const),
+  );
+  const lumbarScore = scoreByRegion.get("LOMBAR") || 0;
+  const quadrilScore = scoreByRegion.get("QUADRIL") || 0;
+  const lumbarSpecificPositiveCount = allPositiveTests.filter(
+    (test) =>
+      test.regiao === "LOMBAR" &&
+      /lasegue|slump|schober|kemp|instabilidade lombar|elevacao bilateral/i.test(
+        test.nome,
+      ),
+  ).length;
+  const decisionRationale: string[] = [];
+  let primaryRegion =
+    sortedRegionSignals[0]?.regiao || inferRegionFromAnamnese(anamnese);
+  let secondaryRegion: RegionalTestGroup["regiao"] | null =
+    sortedRegionSignals.find((item) => item.regiao !== primaryRegion)?.regiao ||
+    null;
+
+  // Clinical calibration: in lumbar-vs-hip conflicts, prefer lumbar when lumbar-specific tests are strongly positive.
+  if (
+    primaryRegion === "QUADRIL" &&
+    lumbarScore > 0 &&
+    lumbarSpecificPositiveCount >= 2 &&
+    lumbarScore >= quadrilScore - 1
+  ) {
+    primaryRegion = "LOMBAR";
+    secondaryRegion = quadrilScore > 0 ? "QUADRIL" : secondaryRegion;
+    decisionRationale.push(
+      "Lombar priorizada por maior especificidade de testes positivos (Lasègue/Slump/Schober/Kemp/instabilidade).",
+    );
+  }
+  if (
+    primaryRegion === "LOMBAR" &&
+    quadrilScore > 0 &&
+    Math.abs(lumbarScore - quadrilScore) <= 2
+  ) {
+    secondaryRegion = "QUADRIL";
+    decisionRationale.push(
+      "Quadril mantido como cadeia secundária por possível compensação.",
+    );
+  }
 
   const primaryRegionLabel = primaryRegion
     ? regionLabels[primaryRegion]
     : "Regiao nao definida";
+  const secondaryRegionLabel = secondaryRegion
+    ? regionLabels[secondaryRegion]
+    : null;
   const positiveTestsSummary = positiveGroups
     .flatMap((group) =>
       group.positivos.map((test) => `${regionLabels[group.regiao]}: ${test.nome}`),
@@ -1189,9 +1235,6 @@ export function enrichStructuredExameWithClinicalLogic(
     ? String(anamnese?.historicoEsportivo || "").trim()
     : "Sem relacao esportiva clara no momento.";
 
-  const allPositiveTests = positiveGroups.flatMap((g) =>
-    g.positivos.map((t) => ({ regiao: g.regiao, nome: t.nome })),
-  );
   const structureHints = allPositiveTests
     .map((item) => {
       const hint = TEST_STRUCTURE_HINTS.find((h) => item.nome.includes(h.token));
@@ -1264,6 +1307,10 @@ export function enrichStructuredExameWithClinicalLogic(
   const originSuggestion = onsetHint
     ? `${originBase}, com ${onsetHint}.`
     : `${originBase}.`;
+  const originSuggestionWithSecondary =
+    primaryRegion === "LOMBAR" && secondaryRegion === "QUADRIL"
+      ? `${originSuggestion} Quadril com provável sobrecarga secundária.`
+      : originSuggestion;
 
   const condutaHintByRegion = primaryRegion
     ? REGION_CONDUTA_HINTS[primaryRegion]
@@ -1303,13 +1350,17 @@ export function enrichStructuredExameWithClinicalLogic(
       ),
       hipotesesSecundarias: pickText(
         preparedExam.cruzamentoFinal.hipotesesSecundarias,
-        testsPositiveCount
+        `${testsPositiveCount
           ? pendingSuggestedTestsSummary
             ? `Correlacionar positivos: ${positiveTestsSummary}. Proximos testes sugeridos: ${pendingSuggestedTestsSummary}.`
             : `Considerar correlacao com: ${positiveTestsSummary}.`
           : pendingSuggestedTestsSummary
             ? `Testes sugeridos pendentes para confirmar hipotese: ${pendingSuggestedTestsSummary}.`
-            : "Hipoteses secundarias a definir conforme testes complementares.",
+            : "Hipoteses secundarias a definir conforme testes complementares."}${
+          decisionRationale.length > 0
+            ? ` Racional: ${decisionRationale.join(" ")}`
+            : ""
+        }`,
         overwrite,
       ),
       inconsistencias: pickText(
@@ -1339,7 +1390,7 @@ export function enrichStructuredExameWithClinicalLogic(
     raciocinioClinico: {
       origemProvavelDor: pickText(
         preparedExam.raciocinioClinico.origemProvavelDor,
-        originSuggestion,
+        originSuggestionWithSecondary,
         overwrite,
       ),
       estruturaEnvolvida: pickText(
@@ -1371,12 +1422,18 @@ export function enrichStructuredExameWithClinicalLogic(
     diagnosticoFuncionalIa: {
       disfuncaoPrincipal: pickText(
         preparedExam.diagnosticoFuncionalIa.disfuncaoPrincipal,
-        `Disfuncao funcional predominante em ${primaryRegionLabel}, com foco em ${structureSuggestion.toLowerCase()}.`,
+        secondaryRegionLabel
+          ? `Disfuncao funcional predominante em ${primaryRegionLabel}, com participação de ${secondaryRegionLabel.toLowerCase()} como cadeia compensatória. Foco em ${structureSuggestion.toLowerCase()}.`
+          : `Disfuncao funcional predominante em ${primaryRegionLabel}, com foco em ${structureSuggestion.toLowerCase()}.`,
         overwrite,
       ),
       cadeiaEnvolvida: pickText(
         preparedExam.diagnosticoFuncionalIa.cadeiaEnvolvida,
-        primaryRegion ? inferChainByRegion(primaryRegion) : "Cadeia funcional global",
+        primaryRegion
+          ? secondaryRegion
+            ? `${inferChainByRegion(primaryRegion)} + ${inferChainByRegion(secondaryRegion)}`
+            : inferChainByRegion(primaryRegion)
+          : "Cadeia funcional global",
         overwrite,
       ),
       compensacoes: pickText(

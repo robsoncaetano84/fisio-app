@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  AppState,
   View,
   Text,
   StyleSheet,
@@ -448,21 +449,19 @@ export function EvolucaoFormScreen({
 
   useEffect(() => {
     if (!draftLoaded) return;
-    if (draftTimerRef.current) {
-      clearTimeout(draftTimerRef.current);
-    }
-    draftTimerRef.current = setTimeout(() => {
-      const draft = {
-        lastEditedAt: new Date().toISOString(),
-        subjetivo,
-        objetivo,
-        avaliacao,
-        plano,
-        checkinDor,
-        checkinDificuldade,
-        checkinObservacao,
-        observacoes,
-      };
+    const buildDraftPayload = () => ({
+      lastEditedAt: new Date().toISOString(),
+      subjetivo,
+      objetivo,
+      avaliacao,
+      plano,
+      checkinDor,
+      checkinDificuldade,
+      checkinObservacao,
+      observacoes,
+    });
+    const persistDraft = (reason: string) => {
+      const draft = buildDraftPayload();
       AsyncStorage.setItem(draftKey, JSON.stringify(draft))
         .then(() => {
           setLastDraftSavedAt(draft.lastEditedAt);
@@ -470,11 +469,19 @@ export function EvolucaoFormScreen({
             stage: "EVOLUCAO",
             pacienteId,
             isEditing: !!evolucaoId,
+            reason,
           }).catch(() => undefined);
         })
         .catch(() => {
           // ignore draft save errors
         });
+    };
+
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+    }
+    draftTimerRef.current = setTimeout(() => {
+      persistDraft("debounced");
     }, 800);
 
     return () => {
@@ -493,6 +500,64 @@ export function EvolucaoFormScreen({
     checkinObservacao,
     observacoes,
     draftKey,
+  ]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const buildDraftPayload = () => ({
+      lastEditedAt: new Date().toISOString(),
+      subjetivo,
+      objetivo,
+      avaliacao,
+      plano,
+      checkinDor,
+      checkinDificuldade,
+      checkinObservacao,
+      observacoes,
+    });
+    const persistDraftNow = (reason: string) => {
+      const draft = buildDraftPayload();
+      AsyncStorage.setItem(draftKey, JSON.stringify(draft))
+        .then(() => {
+          setLastDraftSavedAt(draft.lastEditedAt);
+          trackEvent("clinical_form_autosave_saved", {
+            stage: "EVOLUCAO",
+            pacienteId,
+            isEditing: !!evolucaoId,
+            reason,
+          }).catch(() => undefined);
+        })
+        .catch(() => undefined);
+    };
+
+    const appStateSub = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        persistDraftNow("app_background");
+      }
+    });
+    const beforeRemoveSub = navigation.addListener("beforeRemove", () => {
+      persistDraftNow("before_remove");
+    });
+
+    return () => {
+      appStateSub.remove();
+      beforeRemoveSub();
+      persistDraftNow("unmount");
+    };
+  }, [
+    draftLoaded,
+    subjetivo,
+    objetivo,
+    avaliacao,
+    plano,
+    checkinDor,
+    checkinDificuldade,
+    checkinObservacao,
+    observacoes,
+    draftKey,
+    pacienteId,
+    evolucaoId,
+    navigation,
   ]);
 
   const navigateAfterSave = () => {

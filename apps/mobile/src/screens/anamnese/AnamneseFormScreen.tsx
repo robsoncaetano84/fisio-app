@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
+  AppState,
   View,
   Text,
   StyleSheet,
@@ -206,6 +207,7 @@ export function AnamneseFormScreen({
     createAnamnese,
     updateAnamnese,
     getAnamneseById,
+    fetchAnamnesesByPaciente,
     fetchMyLatestAnamnese,
     createMyAnamnese,
     updateMyAnamnese,
@@ -281,6 +283,7 @@ export function AnamneseFormScreen({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeField, setActiveField] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [hasPersistedAnamnese, setHasPersistedAnamnese] = useState(false);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -478,9 +481,16 @@ export function AnamneseFormScreen({
 
     const loadExistingAnamnese = async () => {
       if (currentAnamneseId) {
-        const anamnese = getAnamneseById(currentAnamneseId);
+        let anamnese = getAnamneseById(currentAnamneseId);
+        if (!anamnese && !isSelfMode) {
+          await fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
+          anamnese = getAnamneseById(currentAnamneseId);
+        }
         if (anamnese && mounted) {
           applyAnamneseToForm(anamnese);
+          setHasPersistedAnamnese(true);
+        } else if (mounted) {
+          setHasPersistedAnamnese(false);
         }
         setDraftLoaded(true);
         return;
@@ -491,9 +501,15 @@ export function AnamneseFormScreen({
           const latest = await fetchMyLatestAnamnese();
           if (latest && mounted) {
             applyAnamneseToForm(latest);
+            setHasPersistedAnamnese(true);
+          } else if (mounted) {
+            setHasPersistedAnamnese(false);
           }
         } catch {
           // ignore latest load errors; screen remains usable for new submission
+          if (mounted) {
+            setHasPersistedAnamnese(false);
+          }
         } finally {
           if (mounted) {
             setDraftLoaded(true);
@@ -502,7 +518,29 @@ export function AnamneseFormScreen({
         return;
       }
 
-      setDraftLoaded(false);
+      try {
+        await fetchAnamnesesByPaciente(pacienteId);
+        const latest = [...useAnamneseStore.getState().anamneses]
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt || b.createdAt || 0).getTime() -
+              new Date(a.updatedAt || a.createdAt || 0).getTime(),
+          )[0];
+        if (latest && mounted) {
+          applyAnamneseToForm(latest);
+          setHasPersistedAnamnese(true);
+        } else if (mounted) {
+          setHasPersistedAnamnese(false);
+        }
+      } catch {
+        if (mounted) {
+          setHasPersistedAnamnese(false);
+        }
+      } finally {
+        if (mounted) {
+          setDraftLoaded(true);
+        }
+      }
     };
 
     loadExistingAnamnese();
@@ -510,10 +548,21 @@ export function AnamneseFormScreen({
     return () => {
       mounted = false;
     };
-  }, [currentAnamneseId, fetchMyLatestAnamnese, getAnamneseById, isSelfMode]);
+  }, [
+    currentAnamneseId,
+    fetchAnamnesesByPaciente,
+    fetchMyLatestAnamnese,
+    getAnamneseById,
+    isSelfMode,
+    pacienteId,
+  ]);
 
   useEffect(() => {
     const loadDraft = async () => {
+      if (hasPersistedAnamnese) {
+        setDraftLoaded(true);
+        return;
+      }
       try {
         const raw = await AsyncStorage.getItem(draftKey);
         if (!raw) {
@@ -622,49 +671,47 @@ export function AnamneseFormScreen({
     };
 
     loadDraft();
-  }, [currentAnamneseId, draftKey, pacienteId]);
+  }, [currentAnamneseId, draftKey, hasPersistedAnamnese, pacienteId]);
 
   useEffect(() => {
     if (!draftLoaded) return;
-    if (draftTimerRef.current) {
-      clearTimeout(draftTimerRef.current);
-    }
-    draftTimerRef.current = setTimeout(() => {
-      const draft = {
-        lastEditedAt: new Date().toISOString(),
-        motivoBusca,
-        areasAfetadas,
-        intensidadeDor,
-        descricaoSintomas,
-        tempoProblema,
-        horaIntensifica,
-        inicioProblema,
-        eventoEspecifico,
-        fatorAlivio,
-        mecanismoLesao,
-        fatoresPiora,
-        problemaAnterior,
-        quandoProblemaAnterior,
-        tratamentosAnteriores,
-        historicoFamiliar,
-        historicoEsportivo,
-        lesoesPrevias,
-        usoMedicamentos,
-        limitacoesFuncionais,
-        atividadesQuePioram,
-        metaPrincipalPaciente,
-        horasSonoMedia,
-        qualidadeSono,
-        nivelEstresse,
-        humorPredominante: humoresPredominantes.join(", "),
-        humoresPredominantes,
-        energiaDiaria,
-        atividadeFisicaRegular,
-        frequenciaAtividadeFisica,
-        apoioEmocional,
-        observacoesEstiloVida,
-        currentStep,
-      };
+    const buildDraftPayload = () => ({
+      lastEditedAt: new Date().toISOString(),
+      motivoBusca,
+      areasAfetadas,
+      intensidadeDor,
+      descricaoSintomas,
+      tempoProblema,
+      horaIntensifica,
+      inicioProblema,
+      eventoEspecifico,
+      fatorAlivio,
+      mecanismoLesao,
+      fatoresPiora,
+      problemaAnterior,
+      quandoProblemaAnterior,
+      tratamentosAnteriores,
+      historicoFamiliar,
+      historicoEsportivo,
+      lesoesPrevias,
+      usoMedicamentos,
+      limitacoesFuncionais,
+      atividadesQuePioram,
+      metaPrincipalPaciente,
+      horasSonoMedia,
+      qualidadeSono,
+      nivelEstresse,
+      humorPredominante: humoresPredominantes.join(", "),
+      humoresPredominantes,
+      energiaDiaria,
+      atividadeFisicaRegular,
+      frequenciaAtividadeFisica,
+      apoioEmocional,
+      observacoesEstiloVida,
+      currentStep,
+    });
+    const persistDraft = (reason: string) => {
+      const draft = buildDraftPayload();
       AsyncStorage.setItem(draftKey, JSON.stringify(draft))
         .then(() => {
           setLastDraftSavedAt(draft.lastEditedAt);
@@ -672,11 +719,19 @@ export function AnamneseFormScreen({
             stage: "ANAMNESE",
             pacienteId,
             isEditing: !!currentAnamneseId,
+            reason,
           }).catch(() => undefined);
         })
         .catch(() => {
           // ignore draft save errors
         });
+    };
+
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+    }
+    draftTimerRef.current = setTimeout(() => {
+      persistDraft("debounced");
     }, 800);
 
     return () => {
@@ -718,6 +773,111 @@ export function AnamneseFormScreen({
     observacoesEstiloVida,
     currentStep,
     draftKey,
+  ]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const buildDraftPayload = () => ({
+      lastEditedAt: new Date().toISOString(),
+      motivoBusca,
+      areasAfetadas,
+      intensidadeDor,
+      descricaoSintomas,
+      tempoProblema,
+      horaIntensifica,
+      inicioProblema,
+      eventoEspecifico,
+      fatorAlivio,
+      mecanismoLesao,
+      fatoresPiora,
+      problemaAnterior,
+      quandoProblemaAnterior,
+      tratamentosAnteriores,
+      historicoFamiliar,
+      historicoEsportivo,
+      lesoesPrevias,
+      usoMedicamentos,
+      limitacoesFuncionais,
+      atividadesQuePioram,
+      metaPrincipalPaciente,
+      horasSonoMedia,
+      qualidadeSono,
+      nivelEstresse,
+      humorPredominante: humoresPredominantes.join(", "),
+      humoresPredominantes,
+      energiaDiaria,
+      atividadeFisicaRegular,
+      frequenciaAtividadeFisica,
+      apoioEmocional,
+      observacoesEstiloVida,
+      currentStep,
+    });
+    const persistDraftNow = (reason: string) => {
+      const draft = buildDraftPayload();
+      AsyncStorage.setItem(draftKey, JSON.stringify(draft))
+        .then(() => {
+          setLastDraftSavedAt(draft.lastEditedAt);
+          trackEvent("clinical_form_autosave_saved", {
+            stage: "ANAMNESE",
+            pacienteId,
+            isEditing: !!currentAnamneseId,
+            reason,
+          }).catch(() => undefined);
+        })
+        .catch(() => undefined);
+    };
+
+    const appStateSub = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        persistDraftNow("app_background");
+      }
+    });
+    const beforeRemoveSub = navigation.addListener("beforeRemove", () => {
+      persistDraftNow("before_remove");
+    });
+
+    return () => {
+      appStateSub.remove();
+      beforeRemoveSub();
+      persistDraftNow("unmount");
+    };
+  }, [
+    draftLoaded,
+    motivoBusca,
+    areasAfetadas,
+    intensidadeDor,
+    descricaoSintomas,
+    tempoProblema,
+    horaIntensifica,
+    inicioProblema,
+    eventoEspecifico,
+    fatorAlivio,
+    mecanismoLesao,
+    fatoresPiora,
+    problemaAnterior,
+    quandoProblemaAnterior,
+    tratamentosAnteriores,
+    historicoFamiliar,
+    historicoEsportivo,
+    lesoesPrevias,
+    usoMedicamentos,
+    limitacoesFuncionais,
+    atividadesQuePioram,
+    metaPrincipalPaciente,
+    horasSonoMedia,
+    qualidadeSono,
+    nivelEstresse,
+    humoresPredominantes,
+    energiaDiaria,
+    atividadeFisicaRegular,
+    frequenciaAtividadeFisica,
+    apoioEmocional,
+    observacoesEstiloVida,
+    currentStep,
+    draftKey,
+    pacienteId,
+    currentAnamneseId,
+    navigation,
   ]);
 
   const toggleTratamento = (tratamento: string) => {

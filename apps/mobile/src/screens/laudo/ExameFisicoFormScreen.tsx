@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { AppState, View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
@@ -403,6 +403,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     let active = true;
 
     const load = async () => {
+      let loadedExam: ExameFisicoStructured | null = null;
       if (!paciente) {
         await fetchPacientes(true).catch(() => undefined);
       }
@@ -416,10 +417,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         setLaudoId(laudo.id);
         const structured = parseStructuredExame(laudo.exameFisico);
         if (structured) {
-          setExam(
-            enrichStructuredExameWithClinicalLogic(structured, latestAnamnese, {
+          loadedExam = enrichStructuredExameWithClinicalLogic(
+            structured,
+            latestAnamnese,
+            {
               overwrite: false,
-            }),
+            },
+          );
+          setExam(
+            loadedExam,
           );
         }
       }
@@ -431,8 +437,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             exam?: ExameFisicoStructured;
             lastEditedAt?: string;
           };
-          if (!exam && parsed.exam) {
-            setExam(parsed.exam);
+          if (!loadedExam && parsed.exam) {
+            loadedExam = enrichStructuredExameWithClinicalLogic(
+              parsed.exam,
+              latestAnamnese,
+              {
+                overwrite: false,
+              },
+            );
+            setExam(loadedExam);
           }
           if (parsed.lastEditedAt) setLastDraftSavedAt(parsed.lastEditedAt);
         }
@@ -442,7 +455,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         setDraftLoaded(true);
       }
 
-      if (!exam) {
+      if (!loadedExam) {
         await generateSuggestion(true);
       }
     };
@@ -495,7 +508,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
   useEffect(() => {
     if (!draftLoaded || !exam) return;
-    const timer = setTimeout(() => {
+    const persistDraft = (reason: string) => {
       const payload = {
         exam,
         lastEditedAt: new Date().toISOString(),
@@ -507,12 +520,53 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             stage: "EXAME_FISICO",
             pacienteId,
             isEditing: !!laudoId,
+            reason,
           }).catch(() => undefined);
         })
         .catch(() => undefined);
+    };
+
+    const timer = setTimeout(() => {
+      persistDraft("debounced");
     }, 800);
     return () => clearTimeout(timer);
-  }, [draftLoaded, draftKey, exam]);
+  }, [draftLoaded, draftKey, exam, laudoId, pacienteId]);
+
+  useEffect(() => {
+    if (!draftLoaded || !exam) return;
+    const persistDraftNow = (reason: string) => {
+      const payload = {
+        exam,
+        lastEditedAt: new Date().toISOString(),
+      };
+      AsyncStorage.setItem(draftKey, JSON.stringify(payload))
+        .then(() => {
+          setLastDraftSavedAt(payload.lastEditedAt);
+          trackEvent("clinical_form_autosave_saved", {
+            stage: "EXAME_FISICO",
+            pacienteId,
+            isEditing: !!laudoId,
+            reason,
+          }).catch(() => undefined);
+        })
+        .catch(() => undefined);
+    };
+
+    const appStateSub = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        persistDraftNow("app_background");
+      }
+    });
+    const beforeRemoveSub = navigation.addListener("beforeRemove", () => {
+      persistDraftNow("before_remove");
+    });
+
+    return () => {
+      appStateSub.remove();
+      beforeRemoveSub();
+      persistDraftNow("unmount");
+    };
+  }, [draftLoaded, draftKey, exam, laudoId, navigation, pacienteId]);
 
   useEffect(() => {
     stageOpenedAtRef.current = Date.now();
@@ -896,6 +950,27 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         isEditing: !!laudoId,
         durationMs: Math.max(0, Date.now() - stageOpenedAtRef.current),
       }).catch(() => undefined);
+      if (
+        effectiveDorSuggestion.principal &&
+        effectiveDorSuggestion.subtipo &&
+        effectiveExam.dorPrincipal &&
+        effectiveExam.dorSubtipo &&
+        (effectiveExam.dorPrincipal !== effectiveDorSuggestion.principal ||
+          effectiveExam.dorSubtipo !== effectiveDorSuggestion.subtipo)
+      ) {
+        logClinicalAiSuggestion({
+          stage: "EXAME_FISICO",
+          suggestionType: "DOR_CLASSIFICATION_DISAGREED",
+          confidence: effectiveDorSuggestion.confidence,
+          reason: `Profissional divergiu da sugestao IA. Sugerido: ${prettyEnum(
+            effectiveDorSuggestion.principal,
+          )}/${prettyEnum(effectiveDorSuggestion.subtipo)}. Selecionado: ${prettyEnum(
+            effectiveExam.dorPrincipal,
+          )}/${prettyEnum(effectiveExam.dorSubtipo)}.`,
+          evidenceFields: effectiveDorSuggestion.evidenceFields,
+          patientId: pacienteId,
+        }).catch(() => undefined);
+      }
       didSaveRef.current = true;
       navigation.goBack();
     } catch (error: unknown) {
