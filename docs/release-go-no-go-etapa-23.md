@@ -1,4 +1,4 @@
-# Release Decision - Etapa 23 (Go / No-Go)
+﻿# Release Decision - Etapa 23 (Go / No-Go)
 
 ## Escopo consolidado
 - Expansao da anamnese com campos clinicos obrigatorios.
@@ -60,7 +60,7 @@
 | Cenario B (Lombar/Neural) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-b-lombar-neural.md |
 | Cenario C (Ombro/Voleibol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-c-ombro-esportivo.md |
 | Sem 5xx recorrente (monitoramento publico) | Aprovado | logs/monitor-clinical-5xx-*.md (ultimo: PASS em 2026-04-23) |
-| Sem 5xx recorrente (monitoramento autenticado) | Pendente | executar `scripts/monitor-clinical-5xx.ps1` com `-BearerToken` |
+| Sem 5xx recorrente (monitoramento autenticado) | Pendente | executar `scripts/monitor-clinical-5xx.ps1` com `-Identifier` + `-Password` (ou `-BearerToken`) |
 
 ## Regra objetiva de decisao final
 - `GO` quando:
@@ -92,34 +92,37 @@ npm run test -- modules/crm/crm.controller.spec.ts
 powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -BaseUrl "http://localhost:3000/api"
 ```
 
-Observações:
-- O script gera um relatório em `logs/release-gates-YYYYMMDD-HHMMSS.md`.
-- Para validar sem ambiente backend em execução local: `-SkipSmoke`.
+ObservaÃ§Ãµes:
+- O script gera um relatÃ³rio em `logs/release-gates-YYYYMMDD-HHMMSS.md`.
+- Para validar sem ambiente backend em execuÃ§Ã£o local: `-SkipSmoke`.
 
-## Drill de rollback (simulado, sem mutação)
+## Drill de rollback (simulado, sem mutaÃ§Ã£o)
 ```powershell
-# valida alvo de rollback e gera plano + diff em relatório
+# valida alvo de rollback e gera plano + diff em relatÃ³rio
 powershell -ExecutionPolicy Bypass -File .\scripts\rollback-drill.ps1 -TargetCommit "HEAD~1"
 ```
 
-Observações:
-- Gera relatório em `logs/rollback-drill-YYYYMMDD-HHMMSS.md`.
-- Não executa `reset`/`push`; apenas valida o procedimento e prepara evidência.
+ObservaÃ§Ãµes:
+- Gera relatÃ³rio em `logs/rollback-drill-YYYYMMDD-HHMMSS.md`.
+- NÃ£o executa `reset`/`push`; apenas valida o procedimento e prepara evidÃªncia.
 
-## Monitoramento de 5xx (pré-go-live)
+## Monitoramento de 5xx (prÃ©-go-live)
 ```powershell
-# modo sem auth (somente endpoints públicos, ex.: /health)
+# modo sem auth (somente endpoints pÃºblicos, ex.: /health)
 powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -WindowMinutes 5 -IntervalSeconds 15
 
-# modo autenticado (inclui endpoints clínicos protegidos)
+# modo autenticado (inclui endpoints clÃ­nicos protegidos)
 powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -BearerToken "<TOKEN>" -WindowMinutes 5 -IntervalSeconds 15
+
+# modo autenticado com login automatico
+powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -Identifier "<EMAIL_OU_CPF>" -Password "<SENHA>" -WindowMinutes 5 -IntervalSeconds 15
 ```
 
-Observações:
-- Gera relatório em `logs/monitor-clinical-5xx-YYYYMMDD-HHMMSS.md`.
-- Critério objetivo: `Total5xx = 0` e `TotalTransportErrors = 0` durante a janela monitorada.
+ObservaÃ§Ãµes:
+- Gera relatÃ³rio em `logs/monitor-clinical-5xx-YYYYMMDD-HHMMSS.md`.
+- CritÃ©rio objetivo: `Total5xx = 0` e `TotalTransportErrors = 0` durante a janela monitorada.
 
-### Token rapido para monitoramento autenticado
+### Token rapido para monitoramento autenticado (alternativa)
 ```powershell
 $base = "https://fisio-backend-pax6.onrender.com/api"
 $body = @{ identificador = "<EMAIL_OU_CPF>"; senha = "<SENHA>" } | ConvertTo-Json

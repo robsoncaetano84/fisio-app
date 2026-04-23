@@ -1,6 +1,8 @@
 param(
   [string]$BaseUrl = "http://localhost:3000/api",
   [string]$BearerToken = "",
+  [string]$Identifier = "",
+  [string]$Password = "",
   [int]$WindowMinutes = 5,
   [int]$IntervalSeconds = 15,
   [string]$ReportPath
@@ -24,9 +26,29 @@ if (-not $ReportPath) {
   $ReportPath = Join-Path $logsDir "monitor-clinical-5xx-$timestamp.md"
 }
 
+$authMode = "none"
+if (-not $BearerToken -and $Identifier -and $Password) {
+  $payload = @{ identificador = $Identifier; senha = $Password } | ConvertTo-Json -Compress
+  try {
+    $loginRaw = & curl.exe -sS -X POST -H "Content-Type: application/json" -d $payload "$BaseUrl/auth/login"
+    $loginObj = $loginRaw | ConvertFrom-Json
+    if ($loginObj.token) {
+      $BearerToken = [string]$loginObj.token
+      $authMode = "credentials"
+    } else {
+      throw "Login response without token."
+    }
+  } catch {
+    throw "Failed to authenticate for monitor script: $($_.Exception.Message)"
+  }
+}
+
 $headers = @{}
 if ($BearerToken) {
   $headers["Authorization"] = "Bearer $BearerToken"
+  if ($authMode -eq "none") {
+    $authMode = "token"
+  }
 }
 
 $endpoints = @(
@@ -115,6 +137,7 @@ $lines += "- BaseUrl: $BaseUrl"
 $lines += "- WindowMinutes: $WindowMinutes"
 $lines += "- IntervalSeconds: $IntervalSeconds"
 $lines += "- AuthenticatedMode: $([bool]$BearerToken)"
+$lines += "- AuthSource: $authMode"
 $lines += "- Status: **$status**"
 $lines += "- TotalRequests: $total"
 $lines += "- Total5xx: $total5xx"
