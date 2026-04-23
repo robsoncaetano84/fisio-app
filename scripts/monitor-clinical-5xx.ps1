@@ -51,18 +51,29 @@ while ((Get-Date) -lt $endedAt) {
     $statusCode = $null
     $errorMessage = $null
     try {
-      $resp = Invoke-WebRequest -Uri $ep.Url -Method Get -Headers $headers -TimeoutSec 20
-      $statusCode = [int]$resp.StatusCode
-    } catch {
-      $ex = $_.Exception
-      $responseProp = $ex.PSObject.Properties["Response"]
-      if ($responseProp -and $responseProp.Value -and $responseProp.Value.StatusCode) {
-        $statusCode = [int]$responseProp.Value.StatusCode
+      $curlArgs = @(
+        "-sS",
+        "-o", "NUL",
+        "-w", "%{http_code}",
+        "--max-time", "20"
+      )
+
+      if ($headers.Count -gt 0 -and $ep.Auth) {
+        $curlArgs += @("-H", "Authorization: Bearer $BearerToken")
       }
-      else {
+
+      $curlArgs += $ep.Url
+      $httpCodeRaw = & curl.exe @curlArgs
+      $httpCodeText = "$httpCodeRaw".Trim()
+      if ($httpCodeText -match "^\d{3}$") {
+        $statusCode = [int]$httpCodeText
+      } else {
         $statusCode = 0
+        $errorMessage = "Invalid HTTP code from curl: $httpCodeText"
       }
-      $errorMessage = $ex.Message
+    } catch {
+      $statusCode = 0
+      $errorMessage = ($_ | Out-String).Trim()
     }
 
     $results.Add([pscustomobject]@{

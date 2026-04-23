@@ -59,7 +59,8 @@
 | Cenario A (Joelho/Futebol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-a-joelho.md |
 | Cenario B (Lombar/Neural) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-b-lombar-neural.md |
 | Cenario C (Ombro/Voleibol) | Aprovado tecnico automatizado | docs/qa-execucao-cenario-c-ombro-esportivo.md |
-| Sem 5xx recorrente (monitoramento) | Pendente | logs/monitoramento |
+| Sem 5xx recorrente (monitoramento publico) | Aprovado | logs/monitor-clinical-5xx-*.md (ultimo: PASS em 2026-04-23) |
+| Sem 5xx recorrente (monitoramento autenticado) | Pendente | executar `scripts/monitor-clinical-5xx.ps1` com `-BearerToken` |
 
 ## Regra objetiva de decisao final
 - `GO` quando:
