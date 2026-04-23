@@ -130,3 +130,10 @@ $resp = Invoke-RestMethod -Method Post -Uri "$base/auth/login" -ContentType "app
 $token = $resp.token
 powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl $base -BearerToken $token -WindowMinutes 5 -IntervalSeconds 15
 ```
+
+### Modo seguro por variaveis de ambiente
+```powershell
+$env:MONITOR_IDENTIFIER = "<EMAIL_OU_CPF>"
+$env:MONITOR_PASSWORD = "<SENHA>"
+powershell -ExecutionPolicy Bypass -File .\scripts\monitor-clinical-5xx.ps1 -BaseUrl "https://fisio-backend-pax6.onrender.com/api" -UseEnvCredentials -WindowMinutes 5 -IntervalSeconds 15
+```

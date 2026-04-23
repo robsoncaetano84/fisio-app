@@ -3,6 +3,7 @@ param(
   [string]$BearerToken = "",
   [string]$Identifier = "",
   [string]$Password = "",
+  [switch]$UseEnvCredentials,
   [int]$WindowMinutes = 5,
   [int]$IntervalSeconds = 15,
   [string]$ReportPath
@@ -24,6 +25,13 @@ if (-not (Test-Path $logsDir)) {
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 if (-not $ReportPath) {
   $ReportPath = Join-Path $logsDir "monitor-clinical-5xx-$timestamp.md"
+}
+
+$envIdentifier = if ($null -ne $env:MONITOR_IDENTIFIER) { "$env:MONITOR_IDENTIFIER".Trim() } else { "" }
+$envPassword = if ($null -ne $env:MONITOR_PASSWORD) { "$env:MONITOR_PASSWORD".Trim() } else { "" }
+if (($UseEnvCredentials -or (-not $Identifier -and -not $Password)) -and $envIdentifier -and $envPassword) {
+  if (-not $Identifier) { $Identifier = $envIdentifier }
+  if (-not $Password) { $Password = $envPassword }
 }
 
 $authMode = "none"
