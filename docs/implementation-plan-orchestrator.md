@@ -83,6 +83,7 @@ Critérios de aceite:
 - [x] Flags retornadas em `/auth/login` e `/auth/me`
 - [x] App mobile aplica flags em runtime (login + restore session)
 - [x] Gate automático de release (`scripts/release-gates.ps1`) com relatório em `logs/`
+- [x] CI com job dedicado de release gates (`.github/workflows/ci.yml`)
 - [x] Testes de RBAC CRM admin (`modules/crm/crm.service.spec.ts`)
 - [x] Drill de rollback simulado (`scripts/rollback-drill.ps1`) com relatório em `logs/`
 

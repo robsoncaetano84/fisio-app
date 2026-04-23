@@ -35,3 +35,29 @@ jobs:
           cache-dependency-path: apps/backend/package-lock.json
       - run: npm ci
       - run: npm run validate:critical:ci
+
+  release-gates:
+    runs-on: windows-latest
+    needs: [mobile, backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/mobile/package-lock.json
+            apps/backend/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+
+      - name: Run release gates (CI mode)
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\release-gates.ps1 -SkipSmoke
