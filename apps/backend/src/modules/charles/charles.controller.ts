@@ -4,6 +4,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
 import {
+  CharlesEvolucaoSoapSuggestionResponse,
   CharlesExameFisicoDorSuggestionResponse,
   CharlesNextActionResponse,
   CharlesService,
@@ -30,6 +31,17 @@ export class CharlesController {
     @Param() params: GetCharlesNextActionDto,
   ): Promise<CharlesExameFisicoDorSuggestionResponse> {
     return this.charlesService.getExameFisicoDorSuggestion(
+      params.pacienteId,
+      usuario,
+    );
+  }
+
+  @Get('patients/:pacienteId/suggestions/evolucao/soap')
+  getEvolucaoSoapSuggestion(
+    @CurrentUser() usuario: Usuario,
+    @Param() params: GetCharlesNextActionDto,
+  ): Promise<CharlesEvolucaoSoapSuggestionResponse> {
+    return this.charlesService.getEvolucaoSoapSuggestion(
       params.pacienteId,
       usuario,
     );

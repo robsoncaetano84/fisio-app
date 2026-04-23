@@ -78,11 +78,36 @@ export type ExameFisicoDorSuggestionResponse = {
     | null;
 };
 
+export type EvolucaoSoapSuggestionResponse = {
+  orchestrator: "CLINICAL_ORCHESTRATOR";
+  mode: "assistive-v1";
+  requiresProfessionalApproval: true;
+  patientId: string;
+  stage: "EVOLUCAO";
+  suggestionType: "EVOLUCAO_SOAP";
+  confidence: "BAIXA" | "MODERADA" | "ALTA";
+  reason: string;
+  evidenceFields: string[];
+  subjetivo: string | null;
+  objetivo: string | null;
+  avaliacao: string | null;
+  plano: string | null;
+};
+
 export const getExameFisicoDorSuggestion = async (
   pacienteId: string,
 ): Promise<ExameFisicoDorSuggestionResponse> => {
   const response = await api.get<ExameFisicoDorSuggestionResponse>(
     `/clinical-orchestrator/patients/${pacienteId}/suggestions/exame-fisico/dor-classification`,
+  );
+  return response.data;
+};
+
+export const getEvolucaoSoapSuggestion = async (
+  pacienteId: string,
+): Promise<EvolucaoSoapSuggestionResponse> => {
+  const response = await api.get<EvolucaoSoapSuggestionResponse>(
+    `/clinical-orchestrator/patients/${pacienteId}/suggestions/evolucao/soap`,
   );
   return response.data;
 };

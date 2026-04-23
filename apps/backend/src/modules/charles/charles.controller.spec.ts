@@ -21,6 +21,13 @@ describe('CharlesController', () => {
         reason: 'Sugestao de teste',
         evidenceFields: ['tipoDor'],
       }),
+      getEvolucaoSoapSuggestion: jest.fn().mockResolvedValue({
+        stage: 'EVOLUCAO',
+        suggestionType: 'EVOLUCAO_SOAP',
+        confidence: 'MODERADA',
+        reason: 'Sugestao SOAP',
+        evidenceFields: ['queixaPrincipal'],
+      }),
     } as unknown as jest.Mocked<CharlesService>;
 
     const controller = new CharlesController(service);
@@ -54,5 +61,19 @@ describe('CharlesController', () => {
     const roles = Reflect.getMetadata(ROLES_KEY, CharlesController);
 
     expect(roles).toEqual([UserRole.ADMIN, UserRole.USER]);
+  });
+
+  it('forwards evolution SOAP suggestion request to service', async () => {
+    const { controller, service } = make();
+    const usuario = { id: 'usr-1', role: UserRole.USER } as any;
+
+    await controller.getEvolucaoSoapSuggestion(usuario, {
+      pacienteId: 'pac-1',
+    } as any);
+
+    expect(service.getEvolucaoSoapSuggestion).toHaveBeenCalledWith(
+      'pac-1',
+      usuario,
+    );
   });
 });

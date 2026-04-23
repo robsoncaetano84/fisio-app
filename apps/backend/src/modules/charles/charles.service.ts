@@ -134,6 +134,22 @@ export interface CharlesExameFisicoDorSuggestionResponse {
     | null;
 }
 
+export interface CharlesEvolucaoSoapSuggestionResponse {
+  orchestrator: 'CLINICAL_ORCHESTRATOR';
+  mode: 'assistive-v1';
+  requiresProfessionalApproval: true;
+  patientId: string;
+  stage: 'EVOLUCAO';
+  suggestionType: 'EVOLUCAO_SOAP';
+  confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
+  reason: string;
+  evidenceFields: string[];
+  subjetivo: string | null;
+  objetivo: string | null;
+  avaliacao: string | null;
+  plano: string | null;
+}
+
 @Injectable()
 export class CharlesService {
   constructor(
@@ -330,6 +346,64 @@ export class CharlesService {
       evidenceFields: suggestion.evidenceFields,
       dorPrincipal: suggestion.principal,
       dorSubtipo: suggestion.subtipo,
+    };
+  }
+
+  async getEvolucaoSoapSuggestion(
+    pacienteId: string,
+    usuario: Usuario,
+  ): Promise<CharlesEvolucaoSoapSuggestionResponse> {
+    const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
+    const [latestAnamnese, latestEvolucao, latestLaudo] = await Promise.all([
+      this.anamneseRepository.findOne({
+        where: { pacienteId: paciente.id },
+        order: { createdAt: 'DESC' },
+      }),
+      this.evolucaoRepository.findOne({
+        where: { pacienteId: paciente.id },
+        order: { data: 'DESC' },
+      }),
+      this.laudoRepository.findOne({
+        where: { pacienteId: paciente.id },
+        order: { updatedAt: 'DESC' },
+      }),
+    ]);
+
+    const suggestion = this.inferEvolucaoSoapSuggestion({
+      anamnese: latestAnamnese,
+      evolucao: latestEvolucao,
+      laudo: latestLaudo,
+    });
+
+    await this.governanceService.writeAudit({
+      actor: usuario,
+      actionType: 'READ',
+      action: 'orchestrator.ai_suggestion.read',
+      resourceType: 'AI_SUGGESTION',
+      resourceId: 'EVOLUCAO:SOAP',
+      patientId: paciente.id,
+      metadata: {
+        stage: 'EVOLUCAO',
+        suggestionType: 'EVOLUCAO_SOAP',
+        confidence: suggestion.confidence,
+        evidenceFields: suggestion.evidenceFields,
+      },
+    });
+
+    return {
+      orchestrator: 'CLINICAL_ORCHESTRATOR',
+      mode: 'assistive-v1',
+      requiresProfessionalApproval: true,
+      patientId: paciente.id,
+      stage: 'EVOLUCAO',
+      suggestionType: 'EVOLUCAO_SOAP',
+      confidence: suggestion.confidence,
+      reason: suggestion.reason,
+      evidenceFields: suggestion.evidenceFields,
+      subjetivo: suggestion.subjetivo,
+      objetivo: suggestion.objetivo,
+      avaliacao: suggestion.avaliacao,
+      plano: suggestion.plano,
     };
   }
 
@@ -586,6 +660,85 @@ export class CharlesService {
       confidence: 'BAIXA',
       reason: 'Dados insuficientes na anamnese para sugerir classificacao com seguranca.',
       evidenceFields: [],
+    };
+  }
+
+  private inferEvolucaoSoapSuggestion(args: {
+    anamnese?: Anamnese | null;
+    evolucao?: Evolucao | null;
+    laudo?: Laudo | null;
+  }): {
+    confidence: CharlesEvolucaoSoapSuggestionResponse['confidence'];
+    reason: string;
+    evidenceFields: string[];
+    subjetivo: string | null;
+    objetivo: string | null;
+    avaliacao: string | null;
+    plano: string | null;
+  } {
+    const anamnese = args.anamnese;
+    const evolucao = args.evolucao;
+    const laudo = args.laudo;
+
+    const queixa =
+      String(anamnese?.descricaoSintomas || '').trim() ||
+      String(anamnese?.metaPrincipalPaciente || '').trim();
+    const piora = String(anamnese?.fatoresPiora || '').trim();
+    const alivio = String(anamnese?.fatorAlivio || '').trim();
+    const areas = (anamnese?.areasAfetadas || [])
+      .map((a) => String(a.regiao || '').trim())
+      .filter(Boolean);
+    const exameTemplated = this.hasStructuredExame(laudo?.exameFisico);
+    const hadPreviousEvolution = !!evolucao;
+
+    if (!queixa && !areas.length && !exameTemplated) {
+      return {
+        confidence: 'BAIXA',
+        reason:
+          'Dados insuficientes (anamnese e exame fisico) para sugerir preenchimento de evolucao.',
+        evidenceFields: [],
+        subjetivo: null,
+        objetivo: null,
+        avaliacao: null,
+        plano: null,
+      };
+    }
+
+    const regionHint = areas.length ? `regiao ${areas.join(', ')}` : 'regiao principal';
+    const dorHint = queixa ? queixa : 'queixa relatada pelo paciente';
+
+    const subjetivo = hadPreviousEvolution
+      ? 'Paciente refere evolucao em relacao a sessao anterior; validar tolerancia funcional e sintomas residuais.'
+      : `Paciente relata ${dorHint}${piora ? `. Piora com ${piora}` : ''}${alivio ? ` e alivio com ${alivio}` : ''}.`;
+
+    const objetivo = exameTemplated
+      ? `Reavaliar achados objetivos da ${regionHint}, comparar ADM/forca/testes funcionais com baseline do exame fisico.`
+      : `Registrar medidas objetivas da ${regionHint} (ADM, forca, teste funcional e dor evocada).`;
+
+    const avaliacao = hadPreviousEvolution
+      ? 'Evolucao clinica em acompanhamento; confirmar se houve ganho funcional e reducao da irritabilidade.'
+      : 'Quadro em fase inicial de evolucao; correlacionar resposta da sessao com hipotese funcional.';
+
+    const plano =
+      'Manter conduta ativa com progressao graduada, reforcar orientacoes domiciliares e agendar nova reavaliacao.';
+
+    const evidenceFields: string[] = [];
+    if (queixa) evidenceFields.push('queixaPrincipal/descricaoSintomas');
+    if (areas.length) evidenceFields.push('areasAfetadas');
+    if (piora) evidenceFields.push('fatoresPiora');
+    if (alivio) evidenceFields.push('fatorAlivio');
+    if (exameTemplated) evidenceFields.push('laudo.exameFisico');
+    if (hadPreviousEvolution) evidenceFields.push('evolucaoAnterior');
+
+    return {
+      confidence: evidenceFields.length >= 3 ? 'MODERADA' : 'BAIXA',
+      reason:
+        'Sugestao textual de evolucao (SOAP) baseada em anamnese, exame fisico e historico mais recente.',
+      evidenceFields,
+      subjetivo,
+      objetivo,
+      avaliacao,
+      plano,
     };
   }
 }

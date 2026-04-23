@@ -275,4 +275,36 @@ describe('CharlesService - deterministic orchestrator', () => {
     expect(result.dorSubtipo).toBeNull();
     expect(result.confidence).toBe('BAIXA');
   });
+
+  it('returns evolution SOAP suggestion with moderate confidence when there is clinical context', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        descricaoSintomas: 'Dor em ombro direito ao elevar braco',
+        fatoresPiora: 'acima da cabeca',
+        fatorAlivio: 'repouso',
+        areasAfetadas: [{ regiao: 'OMBRO' }],
+      },
+      laudo: {
+        exameFisico: '__EXAME_FISICO_STRUCTURED_V1__{}',
+      },
+    });
+
+    const result = await service.getEvolucaoSoapSuggestion('pac-1', user);
+    expect(result.stage).toBe('EVOLUCAO');
+    expect(result.suggestionType).toBe('EVOLUCAO_SOAP');
+    expect(result.confidence).toBe('MODERADA');
+    expect(result.subjetivo).toContain('Dor em ombro direito');
+    expect(result.objetivo).toContain('ADM');
+  });
+
+  it('returns low-confidence evolution SOAP suggestion when data is insufficient', async () => {
+    const service = makeService();
+    const result = await service.getEvolucaoSoapSuggestion('pac-1', user);
+    expect(result.confidence).toBe('BAIXA');
+    expect(result.subjetivo).toBeNull();
+    expect(result.objetivo).toBeNull();
+    expect(result.avaliacao).toBeNull();
+    expect(result.plano).toBeNull();
+  });
 });

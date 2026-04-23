@@ -19,9 +19,12 @@ import { RouteProp } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, Input, PainScale, useToast } from "../../components/ui";
 import {
+  getEvolucaoSoapSuggestion,
   getClinicalOrchestratorNextAction,
+  logClinicalAiSuggestion,
   trackEvent,
   type ClinicalOrchestratorNextActionResponse,
+  type EvolucaoSoapSuggestionResponse,
 } from "../../services";
 import { useEvolucaoStore } from "../../stores/evolucaoStore";
 import { usePacienteStore } from "../../stores/pacienteStore";
@@ -109,6 +112,8 @@ export function EvolucaoFormScreen({
   );
   const [orchestratorNextAction, setOrchestratorNextAction] =
     useState<ClinicalOrchestratorNextActionResponse | null>(null);
+  const [evolucaoSuggestion, setEvolucaoSuggestion] =
+    useState<EvolucaoSoapSuggestionResponse | null>(null);
   const orchestratorFocusedRegions = useMemo(
     () => {
       const hints = [
@@ -271,6 +276,57 @@ export function EvolucaoFormScreen({
       active = false;
     };
   }, [pacienteId]);
+
+  useEffect(() => {
+    let active = true;
+    getEvolucaoSoapSuggestion(pacienteId)
+      .then((response) => {
+        if (!active) return;
+        setEvolucaoSuggestion(response);
+      })
+      .catch(() => {
+        if (!active) return;
+        setEvolucaoSuggestion(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pacienteId]);
+
+  const handleApplySoapSuggestion = () => {
+    if (!evolucaoSuggestion) return;
+    if (
+      !evolucaoSuggestion.subjetivo &&
+      !evolucaoSuggestion.objetivo &&
+      !evolucaoSuggestion.avaliacao &&
+      !evolucaoSuggestion.plano
+    ) {
+      showToast({
+        type: "error",
+        message: "Não há sugestão aplicável com os dados atuais.",
+      });
+      return;
+    }
+
+    setSubjetivo((prev) => prev || evolucaoSuggestion.subjetivo || "");
+    setObjetivo((prev) => prev || evolucaoSuggestion.objetivo || "");
+    setAvaliacao((prev) => prev || evolucaoSuggestion.avaliacao || "");
+    setPlano((prev) => prev || evolucaoSuggestion.plano || "");
+
+    logClinicalAiSuggestion({
+      patientId: pacienteId,
+      stage: "EVOLUCAO",
+      suggestionType: "EVOLUCAO_SOAP",
+      confidence: evolucaoSuggestion.confidence,
+      reason: evolucaoSuggestion.reason,
+      evidenceFields: evolucaoSuggestion.evidenceFields,
+    }).catch(() => undefined);
+
+    showToast({
+      type: "success",
+      message: `Sugestão SOAP aplicada (${evolucaoSuggestion.confidence.toLowerCase()}).`,
+    });
+  };
 
   useEffect(() => {
     trackEvent("session_started", {
@@ -604,6 +660,30 @@ export function EvolucaoFormScreen({
             S: Subjetivo | O: Objetivo | A: Avaliação | P: Plano
           </Text>
         </View>
+        {evolucaoSuggestion ? (
+          <View style={styles.suggestionCard}>
+            <View style={styles.suggestionHeader}>
+              <Text style={styles.suggestionTitle}>Sugestão do Charles (SOAP)</Text>
+              <Text style={styles.suggestionConfidence}>
+                {evolucaoSuggestion.confidence}
+              </Text>
+            </View>
+            <Text style={styles.suggestionReason}>{evolucaoSuggestion.reason}</Text>
+            {evolucaoSuggestion.evidenceFields.length > 0 ? (
+              <Text style={styles.suggestionEvidence}>
+                Evidências: {evolucaoSuggestion.evidenceFields.join(", ")}
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={styles.suggestionApplyButton}
+              onPress={handleApplySoapSuggestion}
+            >
+              <Text style={styles.suggestionApplyButtonText}>
+                Aplicar sugestão (campos vazios)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         {orchestratorNextAction?.blocked ? (
           <View style={[styles.contextCard, styles.contextBlockedCard]}>
             <Text style={styles.contextTitle}>Atenção clínica imediata</Text>
@@ -997,6 +1077,55 @@ const styles = StyleSheet.create({
   soapSubtitle: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
+  },
+  suggestionCard: {
+    backgroundColor: COLORS.primary + "10",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "30",
+  },
+  suggestionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING.xs,
+  },
+  suggestionTitle: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  suggestionConfidence: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  suggestionReason: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+    marginBottom: SPACING.xs,
+  },
+  suggestionEvidence: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    marginBottom: SPACING.sm,
+  },
+  suggestionApplyButton: {
+    alignSelf: "flex-start",
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 7,
+    backgroundColor: COLORS.white,
+  },
+  suggestionApplyButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
   },
   contextCard: {
     backgroundColor: COLORS.primary + "10",
