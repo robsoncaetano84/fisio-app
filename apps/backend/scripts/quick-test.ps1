@@ -113,6 +113,7 @@ Write-Host "Criando anamnese..."
 $anamneseBody = @{
   pacienteId = $pacienteId
   motivoBusca = "SINTOMA_EXISTENTE"
+  mecanismoLesao = "SOBRECARGA"
   areasAfetadas = @(@{ regiao = "coluna"; lado = "direito" })
   intensidadeDor = 6
   descricaoSintomas = "Dor lombar"
@@ -121,6 +122,7 @@ $anamneseBody = @{
   inicioProblema = "GRADUAL"
   eventoEspecifico = ""
   fatorAlivio = "repouso"
+  fatoresPiora = "ficar muito tempo sentado"
   problemaAnterior = $false
   quandoProblemaAnterior = ""
   tratamentosAnteriores = @("Massagens")

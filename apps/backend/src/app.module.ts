@@ -31,6 +31,7 @@ import { PatientCheckClickEvent } from './modules/metrics/entities/patient-check
 import { ClinicalProtocolVersion } from './modules/clinical-governance/entities/clinical-protocol-version.entity';
 import { ConsentPurposeLog } from './modules/clinical-governance/entities/consent-purpose-log.entity';
 import { ClinicalAuditLog } from './modules/clinical-governance/entities/clinical-audit-log.entity';
+import { AnamneseHistorico } from './modules/anamneses/entities/anamnese-historico.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -109,6 +110,7 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
             Usuario,
             Paciente,
             Anamnese,
+            AnamneseHistorico,
             Evolucao,
             Laudo,
             LaudoAiGeneration,
