@@ -284,6 +284,9 @@ export function AnamneseFormScreen({
   const [activeField, setActiveField] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [hasPersistedAnamnese, setHasPersistedAnamnese] = useState(false);
+  const [lastPersistedSavedAt, setLastPersistedSavedAt] = useState<string | null>(
+    null,
+  );
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -389,6 +392,7 @@ export function AnamneseFormScreen({
 
   const applyAnamneseToForm = (anamnese: Anamnese) => {
     setCurrentAnamneseId(anamnese.id);
+    setLastPersistedSavedAt(anamnese.updatedAt || anamnese.createdAt || null);
     setMotivoBusca(anamnese.motivoBusca);
     setAreasAfetadas(anamnese.areasAfetadas || []);
     setIntensidadeDor(anamnese.intensidadeDor || 0);
@@ -1139,22 +1143,30 @@ export function AnamneseFormScreen({
         observacoesEstiloVida,
       };
 
+      let savedAnamnese: Anamnese | null = null;
       if (isSelfMode) {
         const { pacienteId: _, ...selfPayload } = payload;
         if (currentAnamneseId) {
-          await updateMyAnamnese(currentAnamneseId, selfPayload);
+          savedAnamnese = await updateMyAnamnese(currentAnamneseId, selfPayload);
         } else {
           const created = await createMyAnamnese(selfPayload);
           setCurrentAnamneseId(created.id);
+          savedAnamnese = created;
         }
       } else if (currentAnamneseId) {
         const { pacienteId: _, ...updatePayload } = payload;
-        await updateAnamnese(currentAnamneseId, updatePayload);
+        savedAnamnese = await updateAnamnese(currentAnamneseId, updatePayload);
       } else {
-        await createAnamnese(payload);
+        savedAnamnese = await createAnamnese(payload);
         await AsyncStorage.setItem(
           "onboarding:professional:first_anamnese_done",
           "1",
+        );
+      }
+      if (savedAnamnese) {
+        setCurrentAnamneseId(savedAnamnese.id);
+        setLastPersistedSavedAt(
+          savedAnamnese.updatedAt || savedAnamnese.createdAt || null,
         );
       }
       await AsyncStorage.removeItem(draftKey);
@@ -2349,9 +2361,14 @@ export function AnamneseFormScreen({
                 ? "Minha Anamnese"
                 : "Nova Anamnese"}
           </Text>
+          {lastPersistedSavedAt ? (
+            <Text style={styles.patientInfo}>
+              Última salva: {new Date(lastPersistedSavedAt).toLocaleString("pt-BR")}
+            </Text>
+          ) : null}
           {lastDraftSavedAt ? (
             <Text style={styles.patientInfo}>
-              Última edição: {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}
+              Rascunho local: {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}
             </Text>
           ) : null}
         </View>

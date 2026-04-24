@@ -49,11 +49,34 @@ export class AnamnesesController {
     return this.anamnesesService.findAllByPaciente(pacienteId, usuario.id);
   }
 
+  @Get('paciente/:pacienteId/historico')
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  findHistoryByPaciente(
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Query('limit') limitRaw: string | undefined,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    const limit = Number(limitRaw || 50);
+    return this.anamnesesService.findHistoryByPaciente(pacienteId, usuario.id, limit);
+  }
+
   @Get('me/latest')
   @Roles(UserRole.PACIENTE)
   @Throttle({ default: { ttl: 60, limit: 60 } })
   findMyLatest(@CurrentUser() usuario: Usuario) {
     return this.anamnesesService.findLatestByPacienteUsuario(usuario.id);
+  }
+
+  @Get('me/historico')
+  @Roles(UserRole.PACIENTE)
+  @Throttle({ default: { ttl: 60, limit: 60 } })
+  findMyHistory(
+    @Query('limit') limitRaw: string | undefined,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    const limit = Number(limitRaw || 50);
+    return this.anamnesesService.findHistoryByPacienteUsuario(usuario.id, limit);
   }
 
   @Post('me')
@@ -77,6 +100,18 @@ export class AnamnesesController {
     @CurrentUser() usuario: Usuario,
   ) {
     return this.anamnesesService.findOne(id, usuario.id);
+  }
+
+  @Get(':id/historico')
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  findHistoryByAnamnese(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw: string | undefined,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    const limit = Number(limitRaw || 20);
+    return this.anamnesesService.findHistoryByAnamnese(id, usuario.id, limit);
   }
 
   @Patch('me/:id')

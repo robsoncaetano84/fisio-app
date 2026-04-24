@@ -6,14 +6,22 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Anamnese, MotivoBusca } from './entities/anamnese.entity';
+import {
+  AnamneseHistorico,
+  AnamneseHistoricoAcao,
+  AnamneseHistoricoOrigem,
+} from './entities/anamnese-historico.entity';
 import { CreateAnamneseDto } from './dto/create-anamnese.dto';
 import { UpdateAnamneseDto } from './dto/update-anamnese.dto';
 import { PacientesService } from '../pacientes/pacientes.service';
 
 @Injectable()
-export class AnamnesesService {  constructor(
+export class AnamnesesService {
+  constructor(
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
+    @InjectRepository(AnamneseHistorico)
+    private readonly anamneseHistoricoRepository: Repository<AnamneseHistorico>,
     private readonly pacientesService: PacientesService,
   ) {}
 
@@ -24,7 +32,14 @@ export class AnamnesesService {  constructor(
     await this.pacientesService.findOne(createAnamneseDto.pacienteId, usuarioId);
     this.validateClinicalMinimum(createAnamneseDto);
     const anamnese = this.anamneseRepository.create(createAnamneseDto);
-    return this.anamneseRepository.save(anamnese);
+    const saved = await this.anamneseRepository.save(anamnese);
+    await this.registrarHistorico(
+      saved,
+      usuarioId,
+      AnamneseHistoricoAcao.CREATE,
+      AnamneseHistoricoOrigem.PROFISSIONAL,
+    );
+    return saved;
   }
 
   async createForPacienteUsuario(
@@ -41,7 +56,14 @@ export class AnamnesesService {  constructor(
       pacienteId: paciente.id,
     });
 
-    return this.anamneseRepository.save(anamnese);
+    const saved = await this.anamneseRepository.save(anamnese);
+    await this.registrarHistorico(
+      saved,
+      usuarioId,
+      AnamneseHistoricoAcao.CREATE,
+      AnamneseHistoricoOrigem.PACIENTE,
+    );
+    return saved;
   }
 
   async findAllByPaciente(
@@ -114,7 +136,14 @@ export class AnamnesesService {  constructor(
     const nextPayload = { ...anamnese, ...updateAnamneseDto };
     this.validateClinicalMinimum(nextPayload);
     Object.assign(anamnese, updateAnamneseDto);
-    return this.anamneseRepository.save(anamnese);
+    const saved = await this.anamneseRepository.save(anamnese);
+    await this.registrarHistorico(
+      saved,
+      usuarioId,
+      AnamneseHistoricoAcao.UPDATE,
+      AnamneseHistoricoOrigem.PROFISSIONAL,
+    );
+    return saved;
   }
 
   async updateByPacienteUsuario(
@@ -126,7 +155,58 @@ export class AnamnesesService {  constructor(
     const nextPayload = { ...anamnese, ...updateAnamneseDto };
     this.validateClinicalMinimum(nextPayload);
     Object.assign(anamnese, updateAnamneseDto);
-    return this.anamneseRepository.save(anamnese);
+    const saved = await this.anamneseRepository.save(anamnese);
+    await this.registrarHistorico(
+      saved,
+      usuarioId,
+      AnamneseHistoricoAcao.UPDATE,
+      AnamneseHistoricoOrigem.PACIENTE,
+    );
+    return saved;
+  }
+
+  async findHistoryByAnamnese(
+    anamneseId: string,
+    usuarioId: string,
+    limit = 20,
+  ): Promise<AnamneseHistorico[]> {
+    await this.findOne(anamneseId, usuarioId);
+    const normalizedLimit = this.normalizeLimit(limit, 20, 100);
+    return this.anamneseHistoricoRepository.find({
+      where: { anamneseId },
+      order: { revisao: 'DESC' },
+      take: normalizedLimit,
+    });
+  }
+
+  async findHistoryByPaciente(
+    pacienteId: string,
+    usuarioId: string,
+    limit = 50,
+  ): Promise<AnamneseHistorico[]> {
+    await this.pacientesService.findOne(pacienteId, usuarioId);
+    const normalizedLimit = this.normalizeLimit(limit, 50, 200);
+    return this.anamneseHistoricoRepository.find({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+      take: normalizedLimit,
+    });
+  }
+
+  async findHistoryByPacienteUsuario(
+    usuarioId: string,
+    limit = 50,
+  ): Promise<AnamneseHistorico[]> {
+    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
+      usuarioId,
+    );
+    const normalizedLimit = this.normalizeLimit(limit, 50, 200);
+
+    return this.anamneseHistoricoRepository.find({
+      where: { pacienteId: paciente.id },
+      order: { createdAt: 'DESC' },
+      take: normalizedLimit,
+    });
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {
@@ -151,7 +231,58 @@ export class AnamnesesService {  constructor(
       );
     }
   }
+
+  private async registrarHistorico(
+    anamnese: Anamnese,
+    usuarioId: string | null,
+    acao: AnamneseHistoricoAcao,
+    origem: AnamneseHistoricoOrigem,
+  ): Promise<void> {
+    const ultimo = await this.anamneseHistoricoRepository.findOne({
+      where: { anamneseId: anamnese.id },
+      order: { revisao: 'DESC' },
+      select: ['id', 'revisao'],
+    });
+
+    const payload = this.buildSnapshotPayload(anamnese);
+
+    const historico = this.anamneseHistoricoRepository.create({
+      anamneseId: anamnese.id,
+      pacienteId: anamnese.pacienteId,
+      revisao: (ultimo?.revisao || 0) + 1,
+      acao,
+      origem,
+      alteradoPorUsuarioId: usuarioId || null,
+      payload,
+    });
+
+    await this.anamneseHistoricoRepository.save(historico);
+  }
+
+  private buildSnapshotPayload(anamnese: Anamnese): Record<string, unknown> {
+    const {
+      id,
+      pacienteId,
+      createdAt,
+      updatedAt,
+      ...campos
+    } = anamnese as unknown as Record<string, unknown>;
+
+    return {
+      anamneseId: id,
+      pacienteId,
+      createdAt,
+      updatedAt,
+      campos,
+    };
+  }
+
+  private normalizeLimit(value: number, fallback: number, max: number): number {
+    if (!Number.isFinite(value)) return fallback;
+    const integer = Math.floor(value);
+    if (integer < 1) return 1;
+    if (integer > max) return max;
+    return integer;
+  }
 }
-
-
 

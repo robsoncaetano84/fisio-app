@@ -34,14 +34,26 @@ let AnamnesesController = class AnamnesesController {
     findAllByPaciente(pacienteId, usuario) {
         return this.anamnesesService.findAllByPaciente(pacienteId, usuario.id);
     }
+    findHistoryByPaciente(pacienteId, limitRaw, usuario) {
+        const limit = Number(limitRaw || 50);
+        return this.anamnesesService.findHistoryByPaciente(pacienteId, usuario.id, limit);
+    }
     findMyLatest(usuario) {
         return this.anamnesesService.findLatestByPacienteUsuario(usuario.id);
+    }
+    findMyHistory(limitRaw, usuario) {
+        const limit = Number(limitRaw || 50);
+        return this.anamnesesService.findHistoryByPacienteUsuario(usuario.id, limit);
     }
     createMy(createMyAnamneseDto, usuario) {
         return this.anamnesesService.createForPacienteUsuario(createMyAnamneseDto, usuario.id);
     }
     findOne(id, usuario) {
         return this.anamnesesService.findOne(id, usuario.id);
+    }
+    findHistoryByAnamnese(id, limitRaw, usuario) {
+        const limit = Number(limitRaw || 20);
+        return this.anamnesesService.findHistoryByAnamnese(id, usuario.id, limit);
     }
     updateMy(id, updateAnamneseDto, usuario) {
         return this.anamnesesService.updateByPacienteUsuario(id, updateAnamneseDto, usuario.id);
@@ -76,6 +88,17 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AnamnesesController.prototype, "findAllByPaciente", null);
 __decorate([
+    (0, common_1.Get)('paciente/:pacienteId/historico'),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    __param(0, (0, common_1.Param)('pacienteId', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], AnamnesesController.prototype, "findHistoryByPaciente", null);
+__decorate([
     (0, common_1.Get)('me/latest'),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 60 } }),
@@ -84,6 +107,16 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario]),
     __metadata("design:returntype", void 0)
 ], AnamnesesController.prototype, "findMyLatest", null);
+__decorate([
+    (0, common_1.Get)('me/historico'),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 60 } }),
+    __param(0, (0, common_1.Query)('limit')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], AnamnesesController.prototype, "findMyHistory", null);
 __decorate([
     (0, common_1.Post)('me'),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
@@ -105,6 +138,17 @@ __decorate([
     __metadata("design:paramtypes", [String, usuario_entity_1.Usuario]),
     __metadata("design:returntype", void 0)
 ], AnamnesesController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Get)(':id/historico'),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], AnamnesesController.prototype, "findHistoryByAnamnese", null);
 __decorate([
     (0, common_1.Patch)('me/:id'),
     (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.PACIENTE),
