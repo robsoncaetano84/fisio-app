@@ -781,9 +781,18 @@ export function PacienteDetailsScreen({
     }
   };
 
-  const anamnesesFiltradas = anamneses
-    .filter((a) => a.pacienteId === pacienteId)
-    .slice(0, 2);
+  const anamnesesDoPaciente = useMemo(
+    () =>
+      anamneses
+        .filter((a) => a.pacienteId === pacienteId)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.createdAt || 0).getTime() -
+            new Date(a.updatedAt || a.createdAt || 0).getTime(),
+        ),
+    [anamneses, pacienteId],
+  );
+  const anamnesesFiltradas = anamnesesDoPaciente.slice(0, 2);
   const evolucoesDoPaciente = useMemo(
     () =>
       evolucoes
@@ -796,6 +805,8 @@ export function PacienteDetailsScreen({
     [evolucoes, pacienteId],
   );
   const evolucoesFiltradas = evolucoesDoPaciente.slice(0, 2);
+  const latestAnamneseId = anamnesesDoPaciente[0]?.id;
+  const latestEvolucaoId = evolucoesDoPaciente[0]?.id;
   const hasAnamnese = anamneses.some((a) => a.pacienteId === pacienteId);
   const hasExameFisico = !!String(laudoSnapshot?.exameFisico || "").trim();
   const hasEvolucao = evolucoesDoPaciente.length > 0;
@@ -894,7 +905,10 @@ export function PacienteDetailsScreen({
       stage: "ANAMNESE",
       pacienteId,
     }).catch(() => undefined);
-    navigation.navigate("AnamneseForm", { pacienteId: paciente.id });
+    navigation.navigate("AnamneseForm", {
+      pacienteId: paciente.id,
+      ...(latestAnamneseId ? { anamneseId: latestAnamneseId } : {}),
+    });
   };
 
   const handleOpenExameFisico = () => {
@@ -949,7 +963,10 @@ export function PacienteDetailsScreen({
       stage: "EVOLUCAO",
       pacienteId,
     }).catch(() => undefined);
-    navigation.navigate("EvolucaoForm", { pacienteId: paciente.id });
+    navigation.navigate("EvolucaoForm", {
+      pacienteId: paciente.id,
+      ...(latestEvolucaoId ? { evolucaoId: latestEvolucaoId } : {}),
+    });
   };
 
   const handleOpenLaudo = () => {
@@ -2275,24 +2292,6 @@ export function PacienteDetailsScreen({
             }
             fullWidth
             icon={<Ionicons name="analytics-outline" size={20} color={COLORS.white} />}
-            style={{ marginTop: SPACING.sm }}
-          />
-          <Button
-            title={t("nav.anamnesisHistory")}
-            onPress={() =>
-              navigation.navigate("AnamneseList", { pacienteId: paciente.id })
-            }
-            fullWidth
-            icon={<Ionicons name="time-outline" size={20} color={COLORS.white} />}
-            style={{ marginTop: SPACING.sm }}
-          />
-          <Button
-            title={t("nav.evolutionHistory")}
-            onPress={() =>
-              navigation.navigate("EvolucaoList", { pacienteId: paciente.id })
-            }
-            fullWidth
-            icon={<Ionicons name="time-outline" size={20} color={COLORS.white} />}
             style={{ marginTop: SPACING.sm }}
           />
         </View>

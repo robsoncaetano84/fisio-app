@@ -2355,13 +2355,24 @@ export function AnamneseFormScreen({
             </Text>
           ) : null}
         </View>
-        <TouchableOpacity
-          style={styles.draftButton}
-          onPress={handleClearDraft}
-        >
-          <Ionicons name="trash-outline" size={18} color={COLORS.white} />
-          <Text style={styles.draftButtonText}>Limpar rascunho</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {currentAnamneseId ? (
+            <TouchableOpacity
+              style={styles.newVersionButton}
+              onPress={() => navigation.navigate("AnamneseForm", { pacienteId })}
+            >
+              <Ionicons name="add-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.newVersionButtonText}>Nova</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.draftButton}
+            onPress={handleClearDraft}
+          >
+            <Ionicons name="trash-outline" size={18} color={COLORS.white} />
+            <Text style={styles.draftButtonText}>Limpar rascunho</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.stepsContainer}>
@@ -2499,8 +2510,29 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
   },
-  draftButton: {
+  headerActions: {
     marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  newVersionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.xs,
+  },
+  newVersionButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "600",
+  },
+  draftButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.error,

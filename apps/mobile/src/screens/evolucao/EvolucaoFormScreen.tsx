@@ -788,13 +788,24 @@ export function EvolucaoFormScreen({
             <Text style={styles.dateText}>Última edição: {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}</Text>
           ) : null}
         </View>
-        <TouchableOpacity
-          style={styles.draftButton}
-          onPress={handleClearDraft}
-        >
-          <Ionicons name="trash-outline" size={18} color={COLORS.white} />
-          <Text style={styles.draftButtonText}>Limpar rascunho</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {evolucaoId ? (
+            <TouchableOpacity
+              style={styles.newVersionButton}
+              onPress={() => navigation.navigate("EvolucaoForm", { pacienteId })}
+            >
+              <Ionicons name="add-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.newVersionButtonText}>Nova</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.draftButton}
+            onPress={handleClearDraft}
+          >
+            <Ionicons name="trash-outline" size={18} color={COLORS.white} />
+            <Text style={styles.draftButtonText}>Limpar rascunho</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {VOICE_ENABLED && isRecording && (
@@ -1236,6 +1247,28 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
     textTransform: "capitalize",
+  },
+  headerActions: {
+    marginLeft: SPACING.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  newVersionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.xs,
+  },
+  newVersionButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "600",
   },
   voiceBanner: {
     flexDirection: "row",
