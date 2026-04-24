@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, Input, useToast } from "../../components/ui";
+import { useSpeechToText } from "../../hooks/useSpeechToText";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
 import { useLaudoStore } from "../../stores/laudoStore";
@@ -52,6 +53,7 @@ type ExameFisicoFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ExameFisicoForm">;
   route: RouteProp<RootStackParamList, "ExameFisicoForm">;
 };
+type IconName = keyof typeof Ionicons.glyphMap;
 
 const DOR_PRINCIPAL_OPTIONS: DorClassificacaoPrincipal[] = [
   "NOCICEPTIVA",
@@ -368,6 +370,7 @@ const sanitizeExamForForm = (
 export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScreenProps) {
   const { t } = useLanguage();
   const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
+  const VOICE_ENABLED = FEATURE_FLAGS.speechToText;
   const { pacienteId } = route.params;
   const { showToast } = useToast();
   const { getPacienteById, fetchPacientes } = usePacienteStore();
@@ -383,6 +386,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [bootstrapping, setBootstrapping] = useState(true);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [activeField, setActiveField] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [orchestratorNextAction, setOrchestratorNextAction] =
@@ -390,6 +394,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [serverDorSuggestion, setServerDorSuggestion] =
     useState<ExameFisicoDorSuggestionResponse | null>(null);
   const [classificationConfirmed, setClassificationConfirmed] = useState(true);
+  const autoDorSuggestionAppliedRef = useRef(false);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
 
@@ -431,6 +436,44 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           },
     [dorSuggestion, serverDorSuggestion],
   );
+
+  const appendFieldValue = (currentValue: string, incomingText: string) => {
+    const left = String(currentValue || "").trim();
+    const right = String(incomingText || "").trim();
+    if (!left) return right;
+    if (!right) return left;
+    return `${left} ${right}`.trim();
+  };
+
+  useEffect(() => {
+    if (!exam) return;
+    if (autoDorSuggestionAppliedRef.current) return;
+    if (exam.dorPrincipal || exam.dorSubtipo) return;
+    if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo) return;
+
+    autoDorSuggestionAppliedRef.current = true;
+    setExam((prev) =>
+      prev
+        ? {
+            ...prev,
+            source: "rule-based",
+            dorPrincipal: effectiveDorSuggestion.principal,
+            dorSubtipo: effectiveDorSuggestion.subtipo,
+          }
+        : prev,
+    );
+    setClassificationConfirmed(!AI_REVIEW_REQUIRED);
+    setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+
+    logClinicalAiSuggestion({
+      stage: "EXAME_FISICO",
+      suggestionType: "DOR_CLASSIFICATION_AUTO",
+      confidence: effectiveDorSuggestion.confidence,
+      reason: `${effectiveDorSuggestion.reason} (aplicação automática inicial)`,
+      evidenceFields: effectiveDorSuggestion.evidenceFields,
+      patientId: pacienteId,
+    }).catch(() => undefined);
+  }, [AI_REVIEW_REQUIRED, effectiveDorSuggestion, exam, pacienteId]);
   const orchestratorFocusedRegions = useMemo(() => {
     const hints = [
       ...(orchestratorNextAction?.context?.regioesPrioritarias || []),
@@ -744,6 +787,64 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       },
     });
   };
+
+  const { isRecording, partial, start, stop } = useSpeechToText({
+    enabled: VOICE_ENABLED,
+    onResult: (text) => {
+      if (!exam || !activeField) return;
+      const currentValue = activeField
+        .split(".")
+        .reduce<any>((acc, segment) => (acc ? acc[segment] : ""), exam);
+      setField(activeField, appendFieldValue(String(currentValue || ""), text));
+    },
+    onError: (message) => {
+      showToast({ type: "error", message });
+      setActiveField(null);
+    },
+  });
+
+  const getMicIcon = (field: string): IconName =>
+    isRecording && activeField === field ? "mic-off-outline" : "mic-outline";
+
+  const toggleVoice = async (field: string) => {
+    if (!VOICE_ENABLED) return;
+    try {
+      if (isRecording && activeField === field) {
+        await stop();
+        setActiveField(null);
+        return;
+      }
+      if (isRecording) {
+        await stop();
+      }
+      setActiveField(field);
+      await start("pt-BR");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível iniciar o reconhecimento de voz.";
+      showToast({ type: "error", message });
+      setActiveField(null);
+    }
+  };
+
+  const getVoiceInputProps = (
+    field: string,
+  ): {
+    rightIcon?: IconName;
+    onRightIconPress?: () => void;
+    hint?: string;
+  } =>
+    VOICE_ENABLED
+      ? {
+          rightIcon: getMicIcon(field),
+          onRightIconPress: () => {
+            void toggleVoice(field);
+          },
+          hint: activeField === field && isRecording ? partial : undefined,
+        }
+      : {};
 
   const toggleRedFlag = (key: RedFlagKey, positive: boolean) => {
     if (!exam) return;
@@ -1279,6 +1380,14 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {VOICE_ENABLED && activeField && isRecording ? (
+          <View style={styles.voiceBanner}>
+            <Ionicons name="mic-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.voiceBannerText}>
+              Gravando... {partial ? `"${partial}"` : ""}
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.section}>
           <Text style={styles.title}>Exame físico orientado por decisão</Text>
           <Text style={styles.subtitle}>
@@ -1455,6 +1564,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 placeholder="Descreva sinais e motivo do encaminhamento"
                 multiline
                 numberOfLines={4}
+                {...getVoiceInputProps("redFlags.referralReason")}
                 error={errors.referralReason}
               />
             </View>
@@ -1467,17 +1577,20 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             label={observacaoPosturaInput.label}
             value={observacaoPosturaInput.value}
             onChangeText={(v) => setField("observacao.postura", v)}
+            {...getVoiceInputProps("observacao.postura")}
           />
           <Input
             label={observacaoAssimetriaInput.label}
             value={observacaoAssimetriaInput.value}
             onChangeText={(v) => setField("observacao.assimetria", v)}
+            {...getVoiceInputProps("observacao.assimetria")}
           />
           <Input label="Proteção" value={exam.observacao.protecao} onChangeText={(v) => setField("observacao.protecao", v)} />
           <Input
             label={observacaoPadraoInput.label}
             value={observacaoPadraoInput.value}
             onChangeText={(v) => setField("observacao.padraoMovimento", v)}
+            {...getVoiceInputProps("observacao.padraoMovimento")}
           />
           <Input label="Edema" value={exam.observacao.edema} onChangeText={(v) => setField("observacao.edema", v)} />
           <Input label="Atrofia muscular" value={exam.observacao.atrofiaMuscular} onChangeText={(v) => setField("observacao.atrofiaMuscular", v)} />
@@ -1487,21 +1600,25 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             label={movimentoAtivoInput.label}
             value={movimentoAtivoInput.value}
             onChangeText={(v) => setField("movimento.ativo", v)}
+            {...getVoiceInputProps("movimento.ativo")}
           />
           <Input
             label={movimentoPassivoInput.label}
             value={movimentoPassivoInput.value}
             onChangeText={(v) => setField("movimento.passivo", v)}
+            {...getVoiceInputProps("movimento.passivo")}
           />
           <Input
             label={movimentoResistidoInput.label}
             value={movimentoResistidoInput.value}
             onChangeText={(v) => setField("movimento.resistido", v)}
+            {...getVoiceInputProps("movimento.resistido")}
           />
           <Input
             label={movimentoReproduzDorInput.label}
             value={movimentoReproduzDorInput.value}
             onChangeText={(v) => setField("movimento.reproduzDor", v)}
+            {...getVoiceInputProps("movimento.reproduzDor")}
             error={errors.movimentoReproduzDor}
           />
           <Input
@@ -1531,27 +1648,32 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             label={palpacaoPontosDolorososInput.label}
             value={palpacaoPontosDolorososInput.value}
             onChangeText={(v) => setField("palpacao.pontosDolorosos", v)}
+            {...getVoiceInputProps("palpacao.pontosDolorosos")}
             placeholder="Descreva os pontos dolorosos identificados"
           />
           <Input
             label={palpacaoMuscularInput.label}
             value={palpacaoMuscularInput.value}
             onChangeText={(v) => setField("palpacao.muscular", v)}
+            {...getVoiceInputProps("palpacao.muscular")}
           />
           <Input
             label={palpacaoArticularInput.label}
             value={palpacaoArticularInput.value}
             onChangeText={(v) => setField("palpacao.articular", v)}
+            {...getVoiceInputProps("palpacao.articular")}
           />
           <Input
             label={palpacaoPontosGatilhoInput.label}
             value={palpacaoPontosGatilhoInput.value}
             onChangeText={(v) => setField("palpacao.pontosGatilho", v)}
+            {...getVoiceInputProps("palpacao.pontosGatilho")}
           />
           <Input
             label={palpacaoDinamicaInput.label}
             value={palpacaoDinamicaInput.value}
             onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)}
+            {...getVoiceInputProps("palpacao.dinamicaVertebral")}
           />
           <Input label="Temperatura local" value={exam.palpacao.temperatura} onChangeText={(v) => setField("palpacao.temperatura", v)} />
           <Input
@@ -1857,6 +1979,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("cruzamentoFinal.hipotesesSecundarias", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("cruzamentoFinal.hipotesesSecundarias")}
           />
           <Input
             label="Inconsistências"
@@ -1864,6 +1987,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("cruzamentoFinal.inconsistencias", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("cruzamentoFinal.inconsistencias")}
           />
           <Input
             label="Direção de conduta"
@@ -1871,6 +1995,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("cruzamentoFinal.condutaDirecionada", v)}
             multiline
             numberOfLines={4}
+            {...getVoiceInputProps("cruzamentoFinal.condutaDirecionada")}
             error={errors.conduta}
           />
 
@@ -1908,6 +2033,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("raciocinioClinico.origemProvavelDor", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("raciocinioClinico.origemProvavelDor")}
           />
           <Input
             label="Estrutura envolvida"
@@ -1949,6 +2075,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             }
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("raciocinioClinico.fatorBiomecanicoAssociado")}
           />
           <Input
             label="Relação com esporte"
@@ -1956,6 +2083,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("raciocinioClinico.relacaoComEsporte", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("raciocinioClinico.relacaoComEsporte")}
           />
         </View>
 
@@ -1969,6 +2097,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             }
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("diagnosticoFuncionalIa.disfuncaoPrincipal")}
           />
           <Input
             label="Cadeia envolvida"
@@ -2004,6 +2133,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("diagnosticoFuncionalIa.compensacoes", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("diagnosticoFuncionalIa.compensacoes")}
           />
         </View>
 
@@ -2015,6 +2145,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("condutaIa.tecnicaManualIndicada", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("condutaIa.tecnicaManualIndicada")}
           />
           <View style={styles.optionsRow}>
             {CONDUTA_PRESETS.tecnicaManual.map((item) => (
@@ -2045,6 +2176,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("condutaIa.ajusteArticular", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("condutaIa.ajusteArticular")}
           />
           <View style={styles.optionsRow}>
             {CONDUTA_PRESETS.ajusteArticular.map((item) => (
@@ -2074,6 +2206,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("condutaIa.exercicioCorretivo", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("condutaIa.exercicioCorretivo")}
           />
           <View style={styles.optionsRow}>
             {CONDUTA_PRESETS.exercicio.map((item) => (
@@ -2104,6 +2237,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("condutaIa.liberacaoMiofascial", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("condutaIa.liberacaoMiofascial")}
           />
           <View style={styles.optionsRow}>
             {CONDUTA_PRESETS.miofascial.map((item) => (
@@ -2134,6 +2268,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("condutaIa.progressaoEsportiva", v)}
             multiline
             numberOfLines={3}
+            {...getVoiceInputProps("condutaIa.progressaoEsportiva")}
           />
           <View style={styles.optionsRow}>
             {CONDUTA_PRESETS.progressao.map((item) => (
@@ -2317,6 +2452,24 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.base,
     paddingBottom: 120,
+  },
+  voiceBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary + "12",
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  voiceBannerText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
   },
   section: {
     backgroundColor: COLORS.white,

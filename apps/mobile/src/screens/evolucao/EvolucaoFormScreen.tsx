@@ -65,6 +65,96 @@ type DificuldadeExecucao = "FACIL" | "MEDIO" | "DIFICIL";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
+const REGION_EVOLUTION_TEMPLATES: Record<
+  string,
+  {
+    objetivo: string;
+    avaliacao: string;
+    plano: string;
+  }
+> = {
+  CERVICAL: {
+    objetivo:
+      "Cervical: melhora de mobilidade segmentar e menor dor em rotações/inclinações cervicais.",
+    avaliacao:
+      "Evolução compatível com redução de irritabilidade cervical e melhor controle cervicoescapular.",
+    plano:
+      "Manter progressão de mobilidade cervical, estabilidade escapular e higiene postural.",
+  },
+  TORACICA: {
+    objetivo:
+      "Torácica: ganho de mobilidade torácica e melhor dissociação tronco-cintura escapular.",
+    avaliacao:
+      "Resposta funcional favorável em cadeia torácica, com menor compensação cervical/lombar.",
+    plano:
+      "Progredir mobilidade torácica e integração respiratória com controle de tronco.",
+  },
+  LOMBAR: {
+    objetivo:
+      "Lombar: melhora da tolerância a flexão/extensão e redução da dor em tarefas de carga.",
+    avaliacao:
+      "Evolução positiva do controle lombo-pélvico, com menor resposta dolorosa mecânica.",
+    plano:
+      "Progredir estabilidade lombo-pélvica, fortalecimento funcional e educação de carga.",
+  },
+  SACROILIACA: {
+    objetivo:
+      "Sacroilíaca: menor dor provocada em transições e melhor controle de pelve durante marcha.",
+    avaliacao:
+      "Boa evolução da estabilidade pélvica e redução de sobrecarga na cadeia posterior.",
+    plano:
+      "Manter estratégias de estabilidade de pelve e progressão de exercícios de dissociação.",
+  },
+  QUADRIL: {
+    objetivo:
+      "Quadril: ganho de ADM e melhora no controle de rotação/flexão sem dor significativa.",
+    avaliacao:
+      "Evolução consistente da função do quadril com redução de compensações adjacentes.",
+    plano:
+      "Progredir força de abdutores/extensores e controle neuromuscular em cadeia inferior.",
+  },
+  JOELHO: {
+    objetivo:
+      "Joelho: melhora do alinhamento dinâmico e menor dor em agachamento/subida de escadas.",
+    avaliacao:
+      "Resposta satisfatória em controle femorotibial e redução de sintomas em carga funcional.",
+    plano:
+      "Manter progressão de força, controle de valgo dinâmico e retorno gradual às demandas.",
+  },
+  TORNOZELO_PE: {
+    objetivo:
+      "Tornozelo/Pé: melhora de mobilidade e apoio, com menor dor na fase de propulsão.",
+    avaliacao:
+      "Evolução funcional do padrão de apoio e absorção de carga na cadeia distal.",
+    plano:
+      "Progredir mobilidade, fortalecimento intrínseco e treino de estabilidade funcional.",
+  },
+  OMBRO: {
+    objetivo:
+      "Ombro: melhora de ADM e controle escapuloumeral com menor dor nos arcos funcionais.",
+    avaliacao:
+      "Boa resposta clínica do complexo do ombro, com redução de irritabilidade mecânica.",
+    plano:
+      "Progredir estabilidade escapular, força do manguito e controle em tarefas acima da cabeça.",
+  },
+  COTOVELO: {
+    objetivo:
+      "Cotovelo: melhora de tolerância a carga e redução de dor em preensão e extensão resistida.",
+    avaliacao:
+      "Evolução favorável do segmento com menor sensibilidade em demanda repetitiva.",
+    plano:
+      "Progredir carga gradual, controle de punho-cotovelo e educação de volume de esforço.",
+  },
+  PUNHO_MAO: {
+    objetivo:
+      "Punho/Mão: melhora de função de preensão e movimentos finos com menor dor local.",
+    avaliacao:
+      "Evolução compatível com redução de sintomas periféricos e melhor capacidade funcional manual.",
+    plano:
+      "Manter progressão de mobilidade, força funcional e estratégias de proteção em sobrecarga.",
+  },
+};
+
 function FormSection({
   title,
   subtitle,
@@ -207,6 +297,20 @@ export function EvolucaoFormScreen({
     value: string,
   ) => {
     setter((prev) => (prev ? `${prev} ${value}` : value));
+  };
+
+  const appendLineIfMissing = (
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    value: string,
+  ) => {
+    const next = String(value || "").trim();
+    if (!next) return;
+    setter((prev) => {
+      const current = String(prev || "").trim();
+      if (!current) return next;
+      if (current.toLowerCase().includes(next.toLowerCase())) return prev;
+      return `${prev}\n${next}`;
+    });
   };
 
   const { isRecording, partial, start, stop } = useSpeechToText({
@@ -410,6 +514,21 @@ export function EvolucaoFormScreen({
     showToast({
       type: "success",
       message: "Sugestão revisada e confirmada.",
+    });
+  };
+
+  const applyRegionTemplate = (regionCode: string) => {
+    const template = REGION_EVOLUTION_TEMPLATES[regionCode];
+    if (!template) return;
+    appendLineIfMissing(setObjetivo, template.objetivo);
+    appendLineIfMissing(setAvaliacao, template.avaliacao);
+    appendLineIfMissing(setPlano, template.plano);
+    if (soapSuggestionApplied) {
+      setSoapSuggestionConfirmed(false);
+    }
+    showToast({
+      type: "success",
+      message: `Modelo aplicado para ${CLINICAL_REGION_LABELS[regionCode as keyof typeof CLINICAL_REGION_LABELS] || regionCode}.`,
     });
   };
 
@@ -960,6 +1079,31 @@ export function EvolucaoFormScreen({
             >
               <Text style={styles.contextActionText}>Inserir foco no Objetivo</Text>
             </TouchableOpacity>
+            <Text style={styles.regionTemplateTitle}>Apoio por região (queixa + cadeia)</Text>
+            <View style={styles.regionTemplateBlockList}>
+              {focusedRegions.map((region) => {
+                const template = REGION_EVOLUTION_TEMPLATES[region];
+                if (!template) return null;
+                return (
+                  <View key={region} style={styles.regionTemplateBlock}>
+                    <View style={styles.regionTemplateBlockHeader}>
+                      <Text style={styles.regionTemplateBlockTitle}>
+                        {CLINICAL_REGION_LABELS[region]}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.regionTemplateApplyButton}
+                        onPress={() => applyRegionTemplate(region)}
+                      >
+                        <Text style={styles.regionTemplateApplyButtonText}>Aplicar</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.regionTemplateBlockText}>O: {template.objetivo}</Text>
+                    <Text style={styles.regionTemplateBlockText}>A: {template.avaliacao}</Text>
+                    <Text style={styles.regionTemplateBlockText}>P: {template.plano}</Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         ) : null}
 
@@ -1484,6 +1628,56 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONTS.sizes.xs,
     fontWeight: "700",
+  },
+  regionTemplateTitle: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  regionTemplateBlockList: {
+    gap: SPACING.xs,
+  },
+  regionTemplateBlock: {
+    borderWidth: 1,
+    borderColor: COLORS.primary + "22",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.white,
+  },
+  regionTemplateBlockHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  regionTemplateBlockTitle: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  regionTemplateApplyButton: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
+    backgroundColor: COLORS.primary + "10",
+  },
+  regionTemplateApplyButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  regionTemplateBlockText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+    marginBottom: 2,
   },
   section: {
     backgroundColor: COLORS.white,

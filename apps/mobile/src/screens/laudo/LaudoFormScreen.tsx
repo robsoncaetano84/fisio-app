@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Button, Input, useToast } from "../../components/ui";
+import { useSpeechToText } from "../../hooks/useSpeechToText";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
 import { useAuthStore } from "../../stores/authStore";
@@ -159,6 +160,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const { pacienteId } = route.params;
   const { t, language } = useLanguage();
   const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
+  const VOICE_ENABLED = FEATURE_FLAGS.speechToText;
   const dateLocale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
@@ -234,6 +236,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   >([]);
   const [referenceSuggestions, setReferenceSuggestions] =
     useState<LaudoReferenceSuggestionResponse | null>(null);
+  const [activeField, setActiveField] = useState<string | null>(null);
   const [consultedReferenceIds, setConsultedReferenceIds] = useState<string[]>(
     [],
   );
@@ -254,6 +257,78 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     const safePath = path.startsWith("/") ? path : `/${path}`;
     return `${downloadBaseUrl}${safePath}`;
   };
+
+  const appendText = (
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    value: string,
+  ) => {
+    setter((prev) => (prev ? `${prev} ${value}` : value));
+  };
+
+  const { isRecording, partial, start, stop } = useSpeechToText({
+    enabled: VOICE_ENABLED,
+    onResult: (text) => {
+      switch (activeField) {
+        case "diagnosticoFuncional":
+          appendText(setDiagnosticoFuncional, text);
+          break;
+        case "objetivosCurtoPrazo":
+          appendText(setObjetivosCurtoPrazo, text);
+          break;
+        case "objetivosMedioPrazo":
+          appendText(setObjetivosMedioPrazo, text);
+          break;
+        case "condutas":
+          appendText(setCondutas, text);
+          break;
+        case "planoTratamentoIA":
+          appendText(setPlanoTratamentoIA, text);
+          break;
+        case "criteriosAlta":
+          appendText(setCriteriosAlta, text);
+          break;
+        case "observacoes":
+          appendText(setObservacoes, text);
+          break;
+        case "rascunhoProfissional":
+          appendText(setRascunhoProfissional, text);
+          break;
+        default:
+          break;
+      }
+    },
+    onError: (message) => {
+      showToast({ type: "error", message });
+      setActiveField(null);
+    },
+  });
+
+  const getMicIcon = (field: string) =>
+    isRecording && activeField === field ? "mic-off-outline" : "mic-outline";
+
+  const toggleVoice = async (field: string) => {
+    if (!VOICE_ENABLED) return;
+    try {
+      if (isRecording && activeField === field) {
+        await stop();
+        setActiveField(null);
+        return;
+      }
+      if (isRecording) {
+        await stop();
+      }
+      setActiveField(field);
+      await start("pt-BR");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível iniciar o reconhecimento de voz.";
+      showToast({ type: "error", message });
+      setActiveField(null);
+    }
+  };
+
   const shouldAutoFill = useMemo(() => {
     return (
       !diagnosticoFuncional.trim() &&
@@ -1271,6 +1346,14 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {VOICE_ENABLED && isRecording ? (
+          <View style={styles.voiceBanner}>
+            <Ionicons name="mic" size={14} color={COLORS.white} />
+            <Text style={styles.voiceBannerText}>
+              Gravando... {partial ? `"${partial}"` : ""}
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             {t("clinical.sections.clinicalTemplate")}
@@ -1393,6 +1476,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 100, textAlignVertical: "top" }}
             showCount
             maxLength={2000}
+            rightIcon={VOICE_ENABLED ? getMicIcon("diagnosticoFuncional") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("diagnosticoFuncional") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "diagnosticoFuncional" && isRecording
+                ? partial
+                : undefined
+            }
           />
         </View>
 
@@ -1411,6 +1503,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
+            rightIcon={VOICE_ENABLED ? getMicIcon("objetivosCurtoPrazo") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("objetivosCurtoPrazo") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "objetivosCurtoPrazo" && isRecording
+                ? partial
+                : undefined
+            }
           />
           <Input
             label={t("clinical.labels.mediumTerm")}
@@ -1422,6 +1523,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
+            rightIcon={VOICE_ENABLED ? getMicIcon("objetivosMedioPrazo") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("objetivosMedioPrazo") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "objetivosMedioPrazo" && isRecording
+                ? partial
+                : undefined
+            }
           />
         </View>
 
@@ -1467,6 +1577,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 100, textAlignVertical: "top" }}
             showCount
             maxLength={2000}
+            rightIcon={VOICE_ENABLED ? getMicIcon("condutas") : undefined}
+            onRightIconPress={VOICE_ENABLED ? () => toggleVoice("condutas") : undefined}
+            hint={
+              VOICE_ENABLED && activeField === "condutas" && isRecording
+                ? partial
+                : undefined
+            }
           />
           <Input
             label={t("clinical.labels.aiTreatmentPlan")}
@@ -1478,6 +1595,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 120, textAlignVertical: "top" }}
             showCount
             maxLength={3000}
+            rightIcon={VOICE_ENABLED ? getMicIcon("planoTratamentoIA") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("planoTratamentoIA") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "planoTratamentoIA" && isRecording
+                ? partial
+                : undefined
+            }
           />
           <Input
             label={t("clinical.labels.dischargeCriteria")}
@@ -1489,6 +1615,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
+            rightIcon={VOICE_ENABLED ? getMicIcon("criteriosAlta") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("criteriosAlta") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "criteriosAlta" && isRecording
+                ? partial
+                : undefined
+            }
           />
           <Input
             label={t("clinical.labels.observations")}
@@ -1500,6 +1635,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
+            rightIcon={VOICE_ENABLED ? getMicIcon("observacoes") : undefined}
+            onRightIconPress={VOICE_ENABLED ? () => toggleVoice("observacoes") : undefined}
+            hint={
+              VOICE_ENABLED && activeField === "observacoes" && isRecording
+                ? partial
+                : undefined
+            }
           />
         </View>
 
@@ -1519,6 +1661,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 110, textAlignVertical: "top" }}
             showCount
             maxLength={2000}
+            rightIcon={VOICE_ENABLED ? getMicIcon("rascunhoProfissional") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("rascunhoProfissional") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "rascunhoProfissional" && isRecording
+                ? partial
+                : undefined
+            }
           />
         </View>
 
@@ -1943,6 +2094,24 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
+  },
+  voiceBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary + "12",
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  voiceBannerText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
   },
   scientificValidationBar: {
     marginHorizontal: SPACING.base,
