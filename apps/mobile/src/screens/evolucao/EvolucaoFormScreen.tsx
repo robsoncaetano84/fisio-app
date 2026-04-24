@@ -90,7 +90,7 @@ export function EvolucaoFormScreen({
   const { t } = useLanguage();
   const VOICE_ENABLED = FEATURE_FLAGS.speechToText;
   const { pacienteId, evolucaoId } = route.params;
-  const { getPacienteById } = usePacienteStore();
+  const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
   const { createEvolucao, updateEvolucao, getEvolucaoById } =
     useEvolucaoStore();
@@ -177,6 +177,7 @@ export function EvolucaoFormScreen({
   }, [latestAnamnese, pacienteId]);
 
   const [loading, setLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   const [subjetivo, setSubjetivo] = useState("");
   const [objetivo, setObjetivo] = useState("");
@@ -284,6 +285,28 @@ export function EvolucaoFormScreen({
     setCheckinObservacao(evolucao.checkinObservacao || "");
     setObservacoes(evolucao.observacoes || "");
   }, [evolucaoId]);
+
+  useEffect(() => {
+    let active = true;
+
+    const bootstrapPaciente = async () => {
+      try {
+        if (!paciente) {
+          await fetchPacientes(true);
+        }
+      } catch {
+        // ignore bootstrap errors; not-found fallback handles final state
+      } finally {
+        if (active) setBootstrapping(false);
+      }
+    };
+
+    bootstrapPaciente();
+
+    return () => {
+      active = false;
+    };
+  }, [fetchPacientes, paciente]);
 
   useEffect(() => {
     stageOpenedAtRef.current = Date.now();
@@ -754,6 +777,16 @@ export function EvolucaoFormScreen({
       ],
     );
   };
+
+  if (bootstrapping) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text>Carregando evolução...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!paciente) {
     return (
