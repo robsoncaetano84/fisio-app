@@ -228,6 +228,25 @@ const EXAM_FIELD_SUGGESTION_LABELS: Record<string, string> = {
   "cadeiaCinetica.pe": "Avaliar apoio plantar e estratégia de propulsão",
 };
 
+const isNoInfoText = (value?: string | null) => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+  return (
+    normalized === "nao informado" ||
+    normalized === "não informado" ||
+    normalized === "nao definida" ||
+    normalized === "não definida" ||
+    normalized === "n/a"
+  );
+};
+
+const normalizeNoInfoText = (value?: string | null) => {
+  const parsed = String(value || "").trim();
+  if (!parsed) return "";
+  return isNoInfoText(parsed) ? "" : parsed;
+};
+
 const resolveInputSuggestionPresentation = (
   fieldKey: string,
   baseLabel: string,
@@ -264,18 +283,86 @@ const buildHipomobilidadeSummary = (segmentar: {
   iliacoDireito?: string;
   iliacoEsquerdo?: string;
 }) => {
-  const safe = (value?: string) => {
-    const text = String(value || "").trim();
-    return text || "Nao informado";
+  const pairs: Array<[string, string]> = [
+    ["Cervical", normalizeNoInfoText(segmentar.cervical)],
+    ["Toracica", normalizeNoInfoText(segmentar.toracica)],
+    ["Lombar", normalizeNoInfoText(segmentar.lombar)],
+    ["Sacro", normalizeNoInfoText(segmentar.sacro)],
+    ["Iliaco D", normalizeNoInfoText(segmentar.iliacoDireito)],
+    ["Iliaco E", normalizeNoInfoText(segmentar.iliacoEsquerdo)],
+  ];
+  const filled = pairs
+    .filter(([, value]) => value.length > 0)
+    .map(([label, value]) => `${label}: ${value}`);
+  return filled.join(" | ");
+};
+
+const sanitizeExamForForm = (
+  source: ExameFisicoStructured,
+): ExameFisicoStructured => {
+  const hipomobilidadeSegmentar = {
+    cervical: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.cervical),
+    toracica: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.toracica),
+    lombar: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.lombar),
+    sacro: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.sacro),
+    iliacoDireito: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.iliacoDireito),
+    iliacoEsquerdo: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.iliacoEsquerdo),
   };
-  return [
-    `Cervical: ${safe(segmentar.cervical)}`,
-    `Toracica: ${safe(segmentar.toracica)}`,
-    `Lombar: ${safe(segmentar.lombar)}`,
-    `Sacro: ${safe(segmentar.sacro)}`,
-    `Iliaco D: ${safe(segmentar.iliacoDireito)}`,
-    `Iliaco E: ${safe(segmentar.iliacoEsquerdo)}`,
-  ].join(" | ");
+
+  return {
+    ...source,
+    observacao: {
+      ...source.observacao,
+      edema: normalizeNoInfoText(source.observacao.edema),
+      atrofiaMuscular: normalizeNoInfoText(source.observacao.atrofiaMuscular),
+      marcha: normalizeNoInfoText(source.observacao.marcha),
+    },
+    movimento: {
+      ...source.movimento,
+      qualidadeMovimento: normalizeNoInfoText(source.movimento.qualidadeMovimento),
+      compensacoes: normalizeNoInfoText(source.movimento.compensacoes),
+      dorNoMovimento: normalizeNoInfoText(source.movimento.dorNoMovimento),
+    },
+    palpacao: {
+      ...source.palpacao,
+      pontosDolorosos: normalizeNoInfoText(source.palpacao.pontosDolorosos),
+      temperatura: normalizeNoInfoText(source.palpacao.temperatura),
+      tonusMuscular: normalizeNoInfoText(source.palpacao.tonusMuscular),
+      estruturasEspecificas: normalizeNoInfoText(source.palpacao.estruturasEspecificas),
+      hipomobilidadeArticular: buildHipomobilidadeSummary(hipomobilidadeSegmentar),
+      hipomobilidadeSegmentar,
+    },
+    neurologico: {
+      ...source.neurologico,
+      forca: normalizeNoInfoText(source.neurologico.forca),
+      sensibilidade: normalizeNoInfoText(source.neurologico.sensibilidade),
+      reflexos: normalizeNoInfoText(source.neurologico.reflexos),
+      dermatomos: normalizeNoInfoText(source.neurologico.dermatomos),
+      miotomos: normalizeNoInfoText(source.neurologico.miotomos),
+    },
+    raciocinioClinico: {
+      ...source.raciocinioClinico,
+      origemProvavelDor: normalizeNoInfoText(source.raciocinioClinico.origemProvavelDor),
+      estruturaEnvolvida: normalizeNoInfoText(source.raciocinioClinico.estruturaEnvolvida),
+      tipoLesao: normalizeNoInfoText(source.raciocinioClinico.tipoLesao),
+      fatorBiomecanicoAssociado: normalizeNoInfoText(source.raciocinioClinico.fatorBiomecanicoAssociado),
+      relacaoComEsporte: normalizeNoInfoText(source.raciocinioClinico.relacaoComEsporte),
+    },
+    diagnosticoFuncionalIa: {
+      ...source.diagnosticoFuncionalIa,
+      disfuncaoPrincipal: normalizeNoInfoText(source.diagnosticoFuncionalIa.disfuncaoPrincipal),
+      cadeiaEnvolvida: normalizeNoInfoText(source.diagnosticoFuncionalIa.cadeiaEnvolvida),
+      compensacoes: normalizeNoInfoText(source.diagnosticoFuncionalIa.compensacoes),
+    },
+    condutaIa: {
+      ...source.condutaIa,
+      tecnicaManualIndicada: normalizeNoInfoText(source.condutaIa.tecnicaManualIndicada),
+      ajusteArticular: normalizeNoInfoText(source.condutaIa.ajusteArticular),
+      exercicioCorretivo: normalizeNoInfoText(source.condutaIa.exercicioCorretivo),
+      liberacaoMiofascial: normalizeNoInfoText(source.condutaIa.liberacaoMiofascial),
+      progressaoEsportiva: normalizeNoInfoText(source.condutaIa.progressaoEsportiva),
+    },
+  };
 };
 
 export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScreenProps) {
@@ -392,7 +479,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         latest,
         { overwrite: true },
       );
-      setExam((prev) => (force || !prev ? next : prev));
+      setExam((prev) =>
+        force || !prev ? sanitizeExamForForm(next) : prev,
+      );
       setErrors({});
     } finally {
       setGenerating(false);
@@ -425,7 +514,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             },
           );
           setExam(
-            loadedExam,
+            sanitizeExamForForm(loadedExam),
           );
         }
       }
@@ -445,7 +534,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 overwrite: false,
               },
             );
-            setExam(loadedExam);
+            setExam(sanitizeExamForForm(loadedExam));
           }
           if (parsed.lastEditedAt) setLastDraftSavedAt(parsed.lastEditedAt);
         }
@@ -1422,6 +1511,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             label={palpacaoPontosDolorososInput.label}
             value={palpacaoPontosDolorososInput.value}
             onChangeText={(v) => setField("palpacao.pontosDolorosos", v)}
+            placeholder="Descreva os pontos dolorosos identificados"
           />
           <Input
             label={palpacaoMuscularInput.label}
@@ -1444,8 +1534,18 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)}
           />
           <Input label="Temperatura local" value={exam.palpacao.temperatura} onChangeText={(v) => setField("palpacao.temperatura", v)} />
-          <Input label="Tônus muscular" value={exam.palpacao.tonusMuscular} onChangeText={(v) => setField("palpacao.tonusMuscular", v)} />
-          <Input label="Estruturas específicas" value={exam.palpacao.estruturasEspecificas} onChangeText={(v) => setField("palpacao.estruturasEspecificas", v)} />
+          <Input
+            label="Tônus muscular"
+            value={exam.palpacao.tonusMuscular}
+            onChangeText={(v) => setField("palpacao.tonusMuscular", v)}
+            placeholder="Descreva o tônus muscular observado"
+          />
+          <Input
+            label="Estruturas específicas"
+            value={exam.palpacao.estruturasEspecificas}
+            onChangeText={(v) => setField("palpacao.estruturasEspecificas", v)}
+            placeholder="Descreva as estruturas específicas avaliadas"
+          />
           <Input
             label="Hipomobilidade cervical (C1-C7)"
             value={exam.palpacao.hipomobilidadeSegmentar.cervical}
@@ -1492,6 +1592,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             editable={false}
             multiline
             numberOfLines={3}
+            placeholder="Será montado automaticamente conforme os segmentos preenchidos"
           />
         </View>
 
