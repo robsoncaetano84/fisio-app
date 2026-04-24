@@ -66,6 +66,24 @@ describe('CharlesService - deterministic orchestrator', () => {
     );
   });
 
+  it('does not block flow when redFlags contains only SEM_RED_FLAG_CRITICA marker', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        redFlags: ['SEM_RED_FLAG_CRITICA'],
+        yellowFlags: [],
+        areasAfetadas: [{ regiao: 'LOMBAR' }],
+      },
+    });
+
+    const result = await service.getNextAction('pac-1', user);
+    expect(result.blocked).toBe(false);
+    expect(result.blockers.some((b) => b.code === 'RED_FLAG_CRITICA')).toBe(false);
+    expect(result.stages.find((s) => s.stage === 'EXAME_FISICO')?.status).toBe(
+      'PENDING',
+    );
+  });
+
   it('returns context with region and probable chain from anamnesis areas', async () => {
     const service = makeService({
       anamnese: {

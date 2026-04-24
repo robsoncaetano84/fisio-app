@@ -197,7 +197,7 @@ export class CharlesService {
     const hasEvolucao = !!latestEvolucao;
     const laudoValidado = latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL;
     const hasPlanoOuAlta = !!String(latestLaudo?.criteriosAlta || '').trim();
-    const hasCriticalRedFlag = !!(latestAnamnese?.redFlags || []).length;
+    const hasCriticalRedFlag = this.hasCriticalRedFlag(latestAnamnese?.redFlags);
     const context = this.buildClinicalContext(latestAnamnese);
     const blockers: CharlesNextActionResponse['blockers'] = [];
     const alerts: CharlesNextActionResponse['alerts'] = [];
@@ -515,6 +515,32 @@ export class CharlesService {
       guidance:
         'Manter monitoramento por check-ins e reavaliacao conforme necessidade.',
     };
+  }
+
+  private hasCriticalRedFlag(redFlags?: unknown): boolean {
+    if (!Array.isArray(redFlags) || redFlags.length === 0) return false;
+
+    const ignored = new Set([
+      'SEM_RED_FLAG_CRITICA',
+      'NO_RED_FLAG',
+      'NONE',
+      'NENHUMA',
+      'NAO',
+      'NÃO',
+      'NAO_INFORMADO',
+      'NÃO_INFORMADO',
+    ]);
+
+    return redFlags.some((item) => {
+      const raw = String(item || '').trim();
+      if (!raw) return false;
+      const normalized = raw
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '_')
+        .toUpperCase();
+      return !ignored.has(normalized);
+    });
   }
 
   private buildClinicalContext(anamnese?: Anamnese | null): {
