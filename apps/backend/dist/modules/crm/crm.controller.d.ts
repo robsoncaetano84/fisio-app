@@ -25,7 +25,7 @@ export declare class CrmController {
             value: number;
         }>;
     }>;
-    getClinicalDashboardSummary(usuario: Usuario, windowDays?: string, semEvolucaoDias?: string): Promise<{
+    getClinicalDashboardSummary(usuario: Usuario, windowDays?: string, semEvolucaoDias?: string, professionalId?: string, patientId?: string, status?: string): Promise<{
         pipeline: {
             novoPaciente: number;
             aguardandoVinculo: number;
@@ -51,6 +51,7 @@ export declare class CrmController {
             blockedTotal: number;
             completedTotal?: undefined;
         };
+        filtros?: undefined;
     } | {
         pipeline: {
             novoPaciente: number;
@@ -76,6 +77,11 @@ export declare class CrmController {
             };
             completedTotal: number;
             blockedTotal: number;
+        };
+        filtros: {
+            professionalId: string | null;
+            patientId: string | null;
+            status: string | null;
         };
     }>;
     listAdminProfissionais(usuario: Usuario, q?: string, ativo?: string, especialidade?: string, includeSensitive?: string, sensitiveReason?: string): Promise<{

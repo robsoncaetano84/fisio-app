@@ -506,7 +506,18 @@ let CrmService = class CrmService {
         const activityWindowMs = windowDays * 24 * 60 * 60 * 1000;
         const semEvolucaoWindowMs = semEvolucaoDias * 24 * 60 * 60 * 1000;
         const inactiveClosedWindowMs = 30 * 24 * 60 * 60 * 1000;
-        const pacientes = await this.pacienteRepository.find({ where: { ativo: true } });
+        const professionalId = String(params?.professionalId || '').trim() || undefined;
+        const patientId = String(params?.patientId || '').trim() || undefined;
+        const statusFilter = String(params?.status || '')
+            .trim()
+            .toUpperCase();
+        const pacientes = await this.pacienteRepository.find({
+            where: {
+                ativo: true,
+                ...(professionalId ? { usuarioId: professionalId } : {}),
+                ...(patientId ? { id: patientId } : {}),
+            },
+        });
         const pacienteIds = pacientes.map((p) => p.id);
         if (!pacienteIds.length) {
             return {
@@ -610,12 +621,27 @@ let CrmService = class CrmService {
             const hasAltaDocumento = lastLaudo?.status === laudo_entity_1.LaudoStatus.VALIDADO_PROFISSIONAL &&
                 !!lastLaudo.criteriosAlta;
             const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;
+            const aguardandoVinculoPaciente = !paciente.pacienteUsuarioId ||
+                paciente.vinculoStatus === paciente_entity_2.PacienteVinculoStatus.SEM_VINCULO ||
+                paciente.vinculoStatus === paciente_entity_2.PacienteVinculoStatus.CONVITE_ENVIADO;
+            if (statusFilter && statusFilter !== 'ALL' && statusFilter !== 'TODOS') {
+                const matchesStatus = (statusFilter === 'NOVO_PACIENTE' &&
+                    !hasAnamnese &&
+                    now - createdAtMs <= activityWindowMs) ||
+                    (statusFilter === 'AGUARDANDO_VINCULO' && aguardandoVinculoPaciente) ||
+                    (statusFilter === 'ANAMNESE_PENDENTE' && !hasAnamnese) ||
+                    (statusFilter === 'EM_TRATAMENTO' &&
+                        hasAnamnese &&
+                        !tratamentoConcluido) ||
+                    (statusFilter === 'ALTA' && tratamentoConcluido);
+                if (!matchesStatus) {
+                    continue;
+                }
+            }
             if (!hasAnamnese && now - createdAtMs <= activityWindowMs) {
                 novoPaciente += 1;
             }
-            if (!paciente.pacienteUsuarioId ||
-                paciente.vinculoStatus === paciente_entity_2.PacienteVinculoStatus.SEM_VINCULO ||
-                paciente.vinculoStatus === paciente_entity_2.PacienteVinculoStatus.CONVITE_ENVIADO) {
+            if (aguardandoVinculoPaciente) {
                 aguardandoVinculo += 1;
             }
             if (!hasAnamnese) {
@@ -661,6 +687,8 @@ let CrmService = class CrmService {
             .where('e.occurredAt >= :since', {
             since: new Date(now - activityWindowMs),
         })
+            .andWhere(professionalId ? 'e.professionalId = :professionalId' : '1=1', professionalId ? { professionalId } : {})
+            .andWhere(patientId ? 'e.patientId = :patientId' : '1=1', patientId ? { patientId } : {})
             .groupBy('e.stage')
             .getRawMany();
         const tempoMedioPorEtapaMs = {
@@ -702,6 +730,11 @@ let CrmService = class CrmService {
                 tempoMedioPorEtapaMs,
                 completedTotal,
                 blockedTotal,
+            },
+            filtros: {
+                professionalId: professionalId || null,
+                patientId: patientId || null,
+                status: statusFilter || null,
             },
         };
     }

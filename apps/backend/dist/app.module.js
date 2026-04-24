@@ -65,6 +65,9 @@ const paciente_exame_entity_1 = require("./modules/pacientes/entities/paciente-e
 const profissional_paciente_vinculo_entity_1 = require("./modules/pacientes/entities/profissional-paciente-vinculo.entity");
 const clinical_flow_event_entity_1 = require("./modules/metrics/entities/clinical-flow-event.entity");
 const patient_check_click_event_entity_1 = require("./modules/metrics/entities/patient-check-click-event.entity");
+const clinical_protocol_version_entity_1 = require("./modules/clinical-governance/entities/clinical-protocol-version.entity");
+const consent_purpose_log_entity_1 = require("./modules/clinical-governance/entities/consent-purpose-log.entity");
+const clinical_audit_log_entity_1 = require("./modules/clinical-governance/entities/clinical-audit-log.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
 const usuarios_module_1 = require("./modules/usuarios/usuarios.module");
 const pacientes_module_1 = require("./modules/pacientes/pacientes.module");
@@ -76,6 +79,8 @@ const notificacoes_module_1 = require("./modules/notificacoes/notificacoes.modul
 const crm_module_1 = require("./modules/crm/crm.module");
 const health_module_1 = require("./modules/health/health.module");
 const metrics_module_1 = require("./modules/metrics/metrics.module");
+const charles_module_1 = require("./modules/charles/charles.module");
+const clinical_governance_module_1 = require("./modules/clinical-governance/clinical-governance.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -153,6 +158,9 @@ exports.AppModule = AppModule = __decorate([
                             profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo,
                             clinical_flow_event_entity_1.ClinicalFlowEvent,
                             patient_check_click_event_entity_1.PatientCheckClickEvent,
+                            clinical_protocol_version_entity_1.ClinicalProtocolVersion,
+                            consent_purpose_log_entity_1.ConsentPurposeLog,
+                            clinical_audit_log_entity_1.ClinicalAuditLog,
                         ],
                         migrations: [__dirname + '/migrations/*{.ts,.js}'],
                         synchronize: configService.get('NODE_ENV') === 'development',
@@ -185,6 +193,8 @@ exports.AppModule = AppModule = __decorate([
             crm_module_1.CrmModule,
             health_module_1.HealthModule,
             metrics_module_1.MetricsModule,
+            charles_module_1.CharlesModule,
+            clinical_governance_module_1.ClinicalGovernanceModule,
         ],
         providers: [
             {

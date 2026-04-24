@@ -33,14 +33,27 @@ let MetricsController = class MetricsController {
     trackPatientCheckClick(usuario, dto) {
         return this.metricsService.trackPatientCheckClick(usuario.id, dto);
     }
-    getClinicalFlowSummary(usuario, windowDays) {
-        return this.metricsService.getClinicalFlowSummary(usuario.id, windowDays);
+    getClinicalFlowSummary(usuario, windowDays, professionalId, patientId, stage, status) {
+        return this.metricsService.getClinicalFlowSummary(usuario.id, usuario.role, windowDays, {
+            professionalId,
+            patientId,
+            stage,
+            status,
+        });
     }
-    getPatientCheckEngagementSummary(usuario, windowDays) {
-        return this.metricsService.getPatientCheckEngagementSummary(usuario.id, windowDays);
+    getPatientCheckEngagementSummary(usuario, windowDays, professionalId, patientId, status) {
+        return this.metricsService.getPatientCheckEngagementSummary(usuario.id, usuario.role, windowDays, {
+            professionalId,
+            patientId,
+            status,
+        });
     }
-    getPhysicalExamTestsSummary(usuario, windowDays) {
-        return this.metricsService.getPhysicalExamTestsSummary(usuario.id, windowDays);
+    getPhysicalExamTestsSummary(usuario, windowDays, professionalId, patientId, status) {
+        return this.metricsService.getPhysicalExamTestsSummary(usuario.id, usuario.role, windowDays, {
+            professionalId,
+            patientId,
+            status,
+        });
     }
 };
 exports.MetricsController = MetricsController;
@@ -69,8 +82,12 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('windowDays', new common_1.DefaultValuePipe(7), common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Query)('professionalId')),
+    __param(3, (0, common_1.Query)('patientId')),
+    __param(4, (0, common_1.Query)('stage')),
+    __param(5, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], MetricsController.prototype, "getClinicalFlowSummary", null);
 __decorate([
@@ -78,8 +95,11 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('windowDays', new common_1.DefaultValuePipe(7), common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Query)('professionalId')),
+    __param(3, (0, common_1.Query)('patientId')),
+    __param(4, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number, String, String, String]),
     __metadata("design:returntype", void 0)
 ], MetricsController.prototype, "getPatientCheckEngagementSummary", null);
 __decorate([
@@ -87,8 +107,11 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('windowDays', new common_1.DefaultValuePipe(30), common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Query)('professionalId')),
+    __param(3, (0, common_1.Query)('patientId')),
+    __param(4, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, Number, String, String, String]),
     __metadata("design:returntype", void 0)
 ], MetricsController.prototype, "getPhysicalExamTestsSummary", null);
 exports.MetricsController = MetricsController = __decorate([

@@ -55,6 +55,9 @@ export declare class LaudosService {
         examesConsiderados: number;
         examesComLeituraIa: number;
         sugestaoGeradaEm: string;
+        confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
+        reason: string;
+        evidenceFields: string[];
     } & Partial<CreateLaudoDto>>;
     private calculateAge;
     private extractJsonObject;

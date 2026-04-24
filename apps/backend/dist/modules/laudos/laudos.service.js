@@ -113,7 +113,8 @@ let LaudosService = class LaudosService {
         if (!laudo) {
             throw new common_1.NotFoundException('Laudo nao encontrado');
         }
-        if (laudo.paciente.usuarioId !== usuarioId) {
+        const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
+        if (!isMasterAdmin && laudo.paciente.usuarioId !== usuarioId) {
             throw new common_1.NotFoundException('Laudo nao encontrado');
         }
         return laudo;
@@ -433,12 +434,29 @@ let LaudosService = class LaudosService {
         const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
         const examesConsiderados = exames.length;
         const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
+        const confidence = source === 'ai' && examesComLeituraIa > 0
+            ? 'ALTA'
+            : source === 'ai' || examesConsiderados > 0
+                ? 'MODERADA'
+                : 'BAIXA';
+        const reason = source === 'ai'
+            ? 'Sugestao de plano gerada por IA com base no historico clinico.'
+            : 'Sugestao de plano gerada por regras clinicas (fallback).';
+        const evidenceFields = [
+            'anamnese',
+            ...(evolucoes.length > 0 ? ['evolucoes'] : []),
+            ...(exameFisicoResumo ? ['exameFisico'] : []),
+            ...(examesConsiderados > 0 ? ['exames'] : []),
+        ];
         const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
         return {
             source,
             examesConsiderados,
             examesComLeituraIa,
             sugestaoGeradaEm: new Date().toISOString(),
+            confidence,
+            reason,
+            evidenceFields,
             diagnosticoFuncional: aiSuggestion.diagnosticoFuncional ??
                 `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo ??

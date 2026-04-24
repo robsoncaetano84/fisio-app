@@ -252,6 +252,9 @@ export declare class CrmService {
     getClinicalDashboardSummary(params?: {
         windowDays?: number;
         semEvolucaoDias?: number;
+        professionalId?: string;
+        patientId?: string;
+        status?: string;
     }): Promise<{
         pipeline: {
             novoPaciente: number;
@@ -278,6 +281,7 @@ export declare class CrmService {
             blockedTotal: number;
             completedTotal?: undefined;
         };
+        filtros?: undefined;
     } | {
         pipeline: {
             novoPaciente: number;
@@ -303,6 +307,11 @@ export declare class CrmService {
             };
             completedTotal: number;
             blockedTotal: number;
+        };
+        filtros: {
+            professionalId: string | null;
+            patientId: string | null;
+            status: string | null;
         };
     }>;
     listLeads(params?: {

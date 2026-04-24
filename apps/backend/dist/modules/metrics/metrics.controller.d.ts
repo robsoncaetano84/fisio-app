@@ -11,7 +11,7 @@ export declare class MetricsController {
     trackPatientCheckClick(usuario: Usuario, dto: CreatePatientCheckClickDto): Promise<{
         ok: true;
     }>;
-    getClinicalFlowSummary(usuario: Usuario, windowDays: number): Promise<{
+    getClinicalFlowSummary(usuario: Usuario, windowDays: number, professionalId?: string, patientId?: string, stage?: string, status?: string): Promise<{
         windowDays: number;
         opened: number;
         completed: number;
@@ -24,14 +24,25 @@ export declare class MetricsController {
             count: number;
         }[];
         trackedStages: import("./entities/clinical-flow-event.entity").ClinicalFlowStage[];
+        filters: {
+            professionalId: string | null;
+            patientId: string | null;
+            stage: import("./entities/clinical-flow-event.entity").ClinicalFlowStage | null;
+            status: import("./entities/clinical-flow-event.entity").ClinicalFlowEventType | null;
+        };
     }>;
-    getPatientCheckEngagementSummary(usuario: Usuario, windowDays: number): Promise<{
+    getPatientCheckEngagementSummary(usuario: Usuario, windowDays: number, professionalId?: string, patientId?: string, status?: string): Promise<{
         windowDays: number;
         checkClicks: number;
         checkinsSubmitted: number;
         conversionRate: number;
+        filters: {
+            professionalId: string | null;
+            patientId: string | null;
+            status: string | null;
+        };
     }>;
-    getPhysicalExamTestsSummary(usuario: Usuario, windowDays: number): Promise<{
+    getPhysicalExamTestsSummary(usuario: Usuario, windowDays: number, professionalId?: string, patientId?: string, status?: string): Promise<{
         windowDays: number;
         laudosAnalisados: number;
         laudosComExameEstruturado: number;
@@ -53,5 +64,10 @@ export declare class MetricsController {
             perfil: string;
             count: number;
         }[];
+        filters: {
+            professionalId: string | null;
+            patientId: string | null;
+            status: string | null;
+        };
     }>;
 }

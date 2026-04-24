@@ -98,7 +98,11 @@ let AuthController = class AuthController {
             consentAcceptedAt: usuario.consentAcceptedAt,
             consentProfessionalLgpdRequired: usuario.consentProfessionalLgpdRequired,
             role: usuario.role,
+            featureFlags: this.authService.getFeatureFlagsForUser(usuario),
         };
+    }
+    async getFeatureFlags(usuario) {
+        return this.authService.getFeatureFlagsForUser(usuario);
     }
     async updateMe(usuario, dto) {
         const updated = await this.usuariosService.updateMe(usuario.id, dto);
@@ -118,6 +122,7 @@ let AuthController = class AuthController {
             consentAcceptedAt: updated.consentAcceptedAt,
             consentProfessionalLgpdRequired: updated.consentProfessionalLgpdRequired,
             role: updated.role,
+            featureFlags: this.authService.getFeatureFlagsForUser(updated),
         };
     }
 };
@@ -218,6 +223,14 @@ __decorate([
     __metadata("design:paramtypes", [usuario_entity_1.Usuario]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "me", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('feature-flags'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getFeatureFlags", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Patch)('me'),

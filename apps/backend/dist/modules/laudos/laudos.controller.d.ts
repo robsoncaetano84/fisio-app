@@ -19,6 +19,9 @@ export declare class LaudosController {
         examesConsiderados: number;
         examesComLeituraIa: number;
         sugestaoGeradaEm: string;
+        confidence: "BAIXA" | "MODERADA" | "ALTA";
+        reason: string;
+        evidenceFields: string[];
     } & Partial<CreateLaudoDto>>;
     getSuggestedReferences(pacienteId: string, usuario: Usuario): Promise<{
         profile: "GERAL" | "LOMBAR" | "CERVICAL" | "JOELHO";

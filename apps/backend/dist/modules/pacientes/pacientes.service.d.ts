@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { Paciente } from './entities/paciente.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
@@ -20,7 +21,12 @@ export declare class PacientesService {
     private readonly vinculoRepository;
     private readonly atividadeRepository;
     private readonly anamneseRepository;
-    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>, atividadeRepository: Repository<Atividade>, anamneseRepository: Repository<Anamnese>);
+    private readonly configService;
+    private masterAdminEmailsCache;
+    private readonly masterByUserIdCache;
+    constructor(pacienteRepository: Repository<Paciente>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, usuarioRepository: Repository<Usuario>, pacienteExameRepository: Repository<PacienteExame>, vinculoRepository: Repository<ProfissionalPacienteVinculo>, atividadeRepository: Repository<Atividade>, anamneseRepository: Repository<Anamnese>, configService: ConfigService);
+    private getMasterAdminEmails;
+    isMasterAdminByUsuarioId(usuarioId: string): Promise<boolean>;
     private buildScopedPacientesQuery;
     private resolveInitialVinculoStatus;
     private mapOrigemToVinculo;

@@ -47,6 +47,45 @@ let AuthService = AuthService_1 = class AuthService {
     normalizeLoginIdentifier(identificador) {
         return (identificador || '').trim().toLowerCase();
     }
+    parseBoolean(value, defaultValue) {
+        if (value == null || value.trim() === '')
+            return defaultValue;
+        const normalized = value.trim().toLowerCase();
+        return ['1', 'true', 'yes', 'on'].includes(normalized);
+    }
+    parseFeatureFlagsByEmailConfig() {
+        const raw = (this.configService.get('FEATURE_FLAGS_BY_EMAIL') || '').trim();
+        if (!raw)
+            return {};
+        try {
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        }
+        catch {
+            return {};
+        }
+    }
+    getFeatureFlagsForUser(usuario) {
+        const defaults = {
+            speechToText: this.parseBoolean(this.configService.get('ENABLE_SPEECH_TO_TEXT'), true),
+            requireAiSuggestionConfirmation: this.parseBoolean(this.configService.get('REQUIRE_AI_SUGGESTION_CONFIRMATION'), true),
+            crmAdminWeb: this.parseBoolean(this.configService.get('ENABLE_CRM_ADMIN_WEB'), true),
+            clinicalOrchestrator: this.parseBoolean(this.configService.get('ENABLE_CLINICAL_ORCHESTRATOR'), true),
+            generatedAt: new Date().toISOString(),
+        };
+        const overrides = this.parseFeatureFlagsByEmailConfig();
+        const emailKey = (usuario.email || '').trim().toLowerCase();
+        const userOverride = overrides[emailKey] || overrides['*'] || {};
+        const merged = {
+            ...defaults,
+            ...userOverride,
+            generatedAt: new Date().toISOString(),
+        };
+        if (usuario.role !== usuario_entity_1.UserRole.ADMIN) {
+            merged.crmAdminWeb = false;
+        }
+        return merged;
+    }
     async validateUser(identificador, senha) {
         const normalized = this.normalizeLoginIdentifier(identificador);
         let usuario = null;
@@ -116,6 +155,7 @@ let AuthService = AuthService_1 = class AuthService {
         return {
             token: this.signAccessToken(payload),
             refreshToken: this.signRefreshToken(payload),
+            featureFlags: this.getFeatureFlagsForUser(usuario),
             usuario: {
                 id: usuario.id,
                 nome: usuario.nome,

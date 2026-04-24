@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import { AuthService, LoginResponse } from './auth.service';
+import { AuthFeatureFlagsResponse, AuthService, LoginResponse } from './auth.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -69,7 +69,9 @@ export declare class AuthController {
         consentAcceptedAt: Date | null;
         consentProfessionalLgpdRequired: boolean;
         role: UserRole;
+        featureFlags: AuthFeatureFlagsResponse;
     }>;
+    getFeatureFlags(usuario: Usuario): Promise<AuthFeatureFlagsResponse>;
     updateMe(usuario: Usuario, dto: UpdateMeDto): Promise<{
         id: string;
         nome: string;
@@ -86,5 +88,6 @@ export declare class AuthController {
         consentAcceptedAt: Date | null;
         consentProfessionalLgpdRequired: boolean;
         role: UserRole;
+        featureFlags: AuthFeatureFlagsResponse;
     }>;
 }

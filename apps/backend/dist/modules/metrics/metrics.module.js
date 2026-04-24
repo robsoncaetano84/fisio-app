@@ -9,8 +9,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MetricsModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
+const atividade_entity_1 = require("../atividades/entities/atividade.entity");
 const atividade_checkin_entity_1 = require("../atividades/entities/atividade-checkin.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
+const paciente_entity_1 = require("../pacientes/entities/paciente.entity");
 const metrics_controller_1 = require("./metrics.controller");
 const metrics_service_1 = require("./metrics.service");
 const clinical_flow_event_entity_1 = require("./entities/clinical-flow-event.entity");
@@ -26,6 +29,9 @@ exports.MetricsModule = MetricsModule = __decorate([
                 patient_check_click_event_entity_1.PatientCheckClickEvent,
                 atividade_checkin_entity_1.AtividadeCheckin,
                 laudo_entity_1.Laudo,
+                paciente_entity_1.Paciente,
+                anamnese_entity_1.Anamnese,
+                atividade_entity_1.Atividade,
             ]),
         ],
         controllers: [metrics_controller_1.MetricsController],

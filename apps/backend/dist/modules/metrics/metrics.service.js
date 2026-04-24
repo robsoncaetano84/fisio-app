@@ -16,22 +16,38 @@ exports.MetricsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
+const atividade_entity_1 = require("../atividades/entities/atividade.entity");
 const atividade_checkin_entity_1 = require("../atividades/entities/atividade-checkin.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
+const paciente_entity_1 = require("../pacientes/entities/paciente.entity");
+const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 const clinical_flow_event_entity_1 = require("./entities/clinical-flow-event.entity");
 const patient_check_click_event_entity_1 = require("./entities/patient-check-click-event.entity");
 const STAGES = ['ANAMNESE', 'EXAME_FISICO', 'EVOLUCAO'];
 const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
+const STATUS_TO_EVENT_TYPE = {
+    OPENED: 'STAGE_OPENED',
+    COMPLETED: 'STAGE_COMPLETED',
+    ABANDONED: 'STAGE_ABANDONED',
+    BLOCKED: 'STAGE_BLOCKED',
+};
 let MetricsService = class MetricsService {
     clinicalFlowRepo;
     patientCheckClickRepo;
     atividadeCheckinRepo;
     laudoRepo;
-    constructor(clinicalFlowRepo, patientCheckClickRepo, atividadeCheckinRepo, laudoRepo) {
+    pacienteRepo;
+    anamneseRepo;
+    atividadeRepo;
+    constructor(clinicalFlowRepo, patientCheckClickRepo, atividadeCheckinRepo, laudoRepo, pacienteRepo, anamneseRepo, atividadeRepo) {
         this.clinicalFlowRepo = clinicalFlowRepo;
         this.patientCheckClickRepo = patientCheckClickRepo;
         this.atividadeCheckinRepo = atividadeCheckinRepo;
         this.laudoRepo = laudoRepo;
+        this.pacienteRepo = pacienteRepo;
+        this.anamneseRepo = anamneseRepo;
+        this.atividadeRepo = atividadeRepo;
     }
     async trackClinicalFlowEvent(professionalId, dto) {
         const blockedReason = dto.eventType === 'STAGE_BLOCKED' && dto.blockedReason
@@ -48,14 +64,31 @@ let MetricsService = class MetricsService {
         await this.clinicalFlowRepo.save(created);
         return { ok: true };
     }
-    async getClinicalFlowSummary(professionalId, windowDays = 7) {
+    async getClinicalFlowSummary(actorId, actorRole, windowDays = 7, filters) {
         const days = Number.isFinite(windowDays)
-            ? Math.max(1, Math.floor(windowDays))
+            ? Math.min(90, Math.max(1, Math.floor(windowDays)))
             : 7;
         const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        const scopedProfessionalId = this.resolveScopedProfessionalId(actorId, actorRole, filters?.professionalId);
+        const normalizedStatus = String(filters?.status || '')
+            .trim()
+            .toUpperCase();
+        const scopedEventType = normalizedStatus && normalizedStatus !== 'ALL'
+            ? STATUS_TO_EVENT_TYPE[normalizedStatus]
+            : undefined;
+        const normalizedStage = String(filters?.stage || '')
+            .trim()
+            .toUpperCase();
+        const scopedStage = normalizedStage && normalizedStage !== 'ALL'
+            ? normalizedStage
+            : undefined;
+        const patientId = String(filters?.patientId || '').trim() || undefined;
         const entries = await this.clinicalFlowRepo.find({
             where: {
-                professionalId,
+                professionalId: scopedProfessionalId,
+                ...(patientId ? { patientId } : {}),
+                ...(scopedEventType ? { eventType: scopedEventType } : {}),
+                ...(scopedStage ? { stage: scopedStage } : {}),
                 occurredAt: (0, typeorm_2.MoreThanOrEqual)(since),
             },
             order: { occurredAt: 'DESC' },
@@ -120,6 +153,12 @@ let MetricsService = class MetricsService {
             avgDurationMsByStage,
             topBlockedReasons,
             trackedStages: STAGES,
+            filters: {
+                professionalId: scopedProfessionalId || null,
+                patientId: patientId || null,
+                stage: scopedStage || null,
+                status: scopedEventType || null,
+            },
         };
     }
     async trackPatientCheckClick(professionalId, dto) {
@@ -132,21 +171,53 @@ let MetricsService = class MetricsService {
         await this.patientCheckClickRepo.save(created);
         return { ok: true };
     }
-    async getPatientCheckEngagementSummary(professionalId, windowDays = 7) {
+    async getPatientCheckEngagementSummary(actorId, actorRole, windowDays = 7, filters) {
         const days = Number.isFinite(windowDays)
-            ? Math.max(1, Math.floor(windowDays))
+            ? Math.min(90, Math.max(1, Math.floor(windowDays)))
             : 7;
         const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        const scopedProfessionalId = this.resolveScopedProfessionalId(actorId, actorRole, filters?.professionalId);
+        const patientId = String(filters?.patientId || '').trim() || undefined;
+        const status = String(filters?.status || '').trim().toUpperCase() || undefined;
+        const scopedPatientIds = await this.resolveScopedPatientIds({
+            scopedProfessionalId,
+            patientId,
+            status,
+            windowDays: days,
+        });
+        if (status && scopedPatientIds && scopedPatientIds.length === 0) {
+            return {
+                windowDays: days,
+                checkClicks: 0,
+                checkinsSubmitted: 0,
+                conversionRate: 0,
+                filters: {
+                    professionalId: scopedProfessionalId || null,
+                    patientId: patientId || null,
+                    status,
+                },
+            };
+        }
         const [checkClicks, checkinsSubmitted] = await Promise.all([
             this.patientCheckClickRepo.count({
                 where: {
-                    professionalId,
+                    professionalId: scopedProfessionalId,
+                    ...(scopedPatientIds
+                        ? { patientId: (0, typeorm_2.In)(scopedPatientIds) }
+                        : patientId
+                            ? { patientId }
+                            : {}),
                     occurredAt: (0, typeorm_2.MoreThanOrEqual)(since),
                 },
             }),
             this.atividadeCheckinRepo.count({
                 where: {
-                    usuarioId: professionalId,
+                    usuarioId: scopedProfessionalId,
+                    ...(scopedPatientIds
+                        ? { pacienteId: (0, typeorm_2.In)(scopedPatientIds) }
+                        : patientId
+                            ? { pacienteId: patientId }
+                            : {}),
                     createdAt: (0, typeorm_2.MoreThanOrEqual)(since),
                 },
             }),
@@ -157,22 +228,64 @@ let MetricsService = class MetricsService {
             checkClicks,
             checkinsSubmitted,
             conversionRate,
+            filters: {
+                professionalId: scopedProfessionalId || null,
+                patientId: patientId || null,
+                status: status || null,
+            },
         };
     }
-    async getPhysicalExamTestsSummary(professionalId, windowDays = 30) {
+    async getPhysicalExamTestsSummary(actorId, actorRole, windowDays = 30, filters) {
         const days = Number.isFinite(windowDays)
-            ? Math.max(1, Math.floor(windowDays))
+            ? Math.min(180, Math.max(1, Math.floor(windowDays)))
             : 30;
         const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-        const laudos = await this.laudoRepo
+        const scopedProfessionalId = this.resolveScopedProfessionalId(actorId, actorRole, filters?.professionalId);
+        const patientId = String(filters?.patientId || '').trim() || undefined;
+        const status = String(filters?.status || '').trim().toUpperCase() || undefined;
+        const scopedPatientIds = await this.resolveScopedPatientIds({
+            scopedProfessionalId,
+            patientId,
+            status,
+            windowDays: days,
+        });
+        if (status && scopedPatientIds && scopedPatientIds.length === 0) {
+            return {
+                windowDays: days,
+                laudosAnalisados: 0,
+                laudosComExameEstruturado: 0,
+                totalAvaliados: 0,
+                totalPositivos: 0,
+                taxaPositividadeGeral: 0,
+                porRegiao: [],
+                topTestesPositivos: [],
+                perfisScoring: [],
+                filters: {
+                    professionalId: scopedProfessionalId || null,
+                    patientId: patientId || null,
+                    status: status || null,
+                },
+            };
+        }
+        const qb = this.laudoRepo
             .createQueryBuilder('laudo')
             .innerJoin('laudo.paciente', 'paciente')
-            .where('paciente.usuario_id = :professionalId', { professionalId })
             .andWhere('laudo.updatedAt >= :since', { since })
             .andWhere('laudo.exame_fisico IS NOT NULL')
             .orderBy('laudo.updatedAt', 'DESC')
-            .take(2000)
-            .getMany();
+            .take(2000);
+        if (scopedProfessionalId) {
+            qb.andWhere('paciente.usuario_id = :professionalId', {
+                professionalId: scopedProfessionalId,
+            });
+        }
+        if (patientId) {
+            qb.andWhere('paciente.id = :patientId', { patientId });
+        }
+        if (scopedPatientIds) {
+            qb.andWhere('paciente.id IN (:...patientIds)', { patientIds: scopedPatientIds });
+        }
+        const laudos = await qb.getMany();
         const regionStats = new Map();
         const topTests = new Map();
         const profileDist = new Map();
@@ -239,7 +352,90 @@ let MetricsService = class MetricsService {
             porRegiao,
             topTestesPositivos,
             perfisScoring,
+            filters: {
+                professionalId: scopedProfessionalId || null,
+                patientId: patientId || null,
+                status: status || null,
+            },
         };
+    }
+    resolveScopedProfessionalId(actorId, actorRole, requestedProfessionalId) {
+        const normalized = String(requestedProfessionalId || '').trim();
+        if (actorRole === usuario_entity_1.UserRole.ADMIN) {
+            return normalized || undefined;
+        }
+        return actorId;
+    }
+    async resolveScopedPatientIds(params) {
+        const { scopedProfessionalId, patientId, status, windowDays } = params;
+        if (patientId)
+            return [patientId];
+        if (!status || status === 'ALL' || status === 'TODOS')
+            return undefined;
+        const pacientes = await this.pacienteRepo.find({
+            where: {
+                ativo: true,
+                ...(scopedProfessionalId ? { usuarioId: scopedProfessionalId } : {}),
+            },
+            select: [
+                'id',
+                'createdAt',
+                'pacienteUsuarioId',
+                'vinculoStatus',
+            ],
+        });
+        if (!pacientes.length)
+            return [];
+        const pacienteIds = pacientes.map((p) => p.id);
+        const anamneses = await this.anamneseRepo.find({
+            where: { pacienteId: (0, typeorm_2.In)(pacienteIds) },
+            select: ['pacienteId'],
+        });
+        const hasAnamnese = new Set(anamneses.map((x) => x.pacienteId));
+        const laudos = await this.laudoRepo
+            .createQueryBuilder('l')
+            .where('l.pacienteId IN (:...pacienteIds)', { pacienteIds })
+            .orderBy('l.pacienteId', 'ASC')
+            .addOrderBy('l.updatedAt', 'DESC')
+            .getMany();
+        const latestLaudoByPaciente = new Map();
+        laudos.forEach((item) => {
+            if (!latestLaudoByPaciente.has(item.pacienteId)) {
+                latestLaudoByPaciente.set(item.pacienteId, item);
+            }
+        });
+        const atividadesAtivas = await this.atividadeRepo
+            .createQueryBuilder('a')
+            .select('a.pacienteId', 'pacienteId')
+            .where('a.ativo = :ativo', { ativo: true })
+            .andWhere('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
+            .groupBy('a.pacienteId')
+            .getRawMany();
+        const hasActiveActivity = new Set(atividadesAtivas.map((r) => r.pacienteId));
+        const now = Date.now();
+        const activityWindowMs = Math.max(1, windowDays) * 24 * 60 * 60 * 1000;
+        const filteredIds = [];
+        for (const paciente of pacientes) {
+            const hasAnamnesePaciente = hasAnamnese.has(paciente.id);
+            const lastLaudo = latestLaudoByPaciente.get(paciente.id);
+            const hasAltaDocumento = lastLaudo?.status === laudo_entity_1.LaudoStatus.VALIDADO_PROFISSIONAL &&
+                !!lastLaudo.criteriosAlta;
+            const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity.has(paciente.id);
+            const aguardandoVinculo = !paciente.pacienteUsuarioId ||
+                paciente.vinculoStatus === paciente_entity_1.PacienteVinculoStatus.SEM_VINCULO ||
+                paciente.vinculoStatus === paciente_entity_1.PacienteVinculoStatus.CONVITE_ENVIADO;
+            const isNovoPaciente = !hasAnamnesePaciente &&
+                now - new Date(paciente.createdAt).getTime() <= activityWindowMs;
+            const matchesStatus = (status === 'NOVO_PACIENTE' && isNovoPaciente) ||
+                (status === 'AGUARDANDO_VINCULO' && aguardandoVinculo) ||
+                (status === 'ANAMNESE_PENDENTE' && !hasAnamnesePaciente) ||
+                (status === 'EM_TRATAMENTO' && hasAnamnesePaciente && !tratamentoConcluido) ||
+                (status === 'ALTA' && tratamentoConcluido);
+            if (matchesStatus) {
+                filteredIds.push(paciente.id);
+            }
+        }
+        return filteredIds;
     }
     parseStructuredExame(rawValue) {
         const raw = String(rawValue || '').trim();
@@ -263,7 +459,13 @@ exports.MetricsService = MetricsService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(patient_check_click_event_entity_1.PatientCheckClickEvent)),
     __param(2, (0, typeorm_1.InjectRepository)(atividade_checkin_entity_1.AtividadeCheckin)),
     __param(3, (0, typeorm_1.InjectRepository)(laudo_entity_1.Laudo)),
+    __param(4, (0, typeorm_1.InjectRepository)(paciente_entity_1.Paciente)),
+    __param(5, (0, typeorm_1.InjectRepository)(anamnese_entity_1.Anamnese)),
+    __param(6, (0, typeorm_1.InjectRepository)(atividade_entity_1.Atividade)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])

@@ -18,6 +18,7 @@ export interface JwtPayload {
 export interface LoginResponse {
     token: string;
     refreshToken: string;
+    featureFlags: AuthFeatureFlagsResponse;
     usuario: {
         id: string;
         nome: string;
@@ -36,6 +37,13 @@ export interface LoginResponse {
         role: UserRole;
     };
 }
+export interface AuthFeatureFlagsResponse {
+    speechToText: boolean;
+    requireAiSuggestionConfirmation: boolean;
+    crmAdminWeb: boolean;
+    clinicalOrchestrator: boolean;
+    generatedAt: string;
+}
 export declare class AuthService {
     private readonly usuariosService;
     private readonly jwtService;
@@ -47,6 +55,9 @@ export declare class AuthService {
     private readonly logger;
     constructor(usuariosService: UsuariosService, jwtService: JwtService, configService: ConfigService, authLogsService: AuthLogsService, lockoutService: LockoutService, pacienteRepository: Repository<Paciente>, vinculoRepository: Repository<ProfissionalPacienteVinculo>);
     private normalizeLoginIdentifier;
+    private parseBoolean;
+    private parseFeatureFlagsByEmailConfig;
+    getFeatureFlagsForUser(usuario: Usuario): AuthFeatureFlagsResponse;
     validateUser(identificador: string, senha: string): Promise<Usuario | null>;
     private signAccessToken;
     private signRefreshToken;

@@ -61,6 +61,21 @@ __decorate([
 ], ClinicalFlowEvent.prototype, "createdAt", void 0);
 exports.ClinicalFlowEvent = ClinicalFlowEvent = __decorate([
     (0, typeorm_1.Entity)('clinical_flow_events'),
-    (0, typeorm_1.Index)('idx_clinical_flow_events_prof_occurred_at', ['professionalId', 'occurredAt'])
+    (0, typeorm_1.Index)('idx_clinical_flow_events_prof_occurred_at', ['professionalId', 'occurredAt']),
+    (0, typeorm_1.Index)('idx_clinical_flow_events_prof_patient_occurred_at', [
+        'professionalId',
+        'patientId',
+        'occurredAt',
+    ]),
+    (0, typeorm_1.Index)('idx_clinical_flow_events_prof_stage_occurred_at', [
+        'professionalId',
+        'stage',
+        'occurredAt',
+    ]),
+    (0, typeorm_1.Index)('idx_clinical_flow_events_prof_event_occurred_at', [
+        'professionalId',
+        'eventType',
+        'occurredAt',
+    ])
 ], ClinicalFlowEvent);
 //# sourceMappingURL=clinical-flow-event.entity.js.map

@@ -88,15 +88,21 @@ let CrmController = CrmController_1 = class CrmController {
         this.auditAdminAccess(usuario, 'pipeline_summary');
         return this.crmService.getPipelineSummary();
     }
-    async getClinicalDashboardSummary(usuario, windowDays, semEvolucaoDias) {
+    async getClinicalDashboardSummary(usuario, windowDays, semEvolucaoDias, professionalId, patientId, status) {
         this.requirePermission(usuario, 'dashboard.read');
         this.auditAdminAccess(usuario, 'clinical_dashboard_summary', {
             windowDays,
             semEvolucaoDias,
+            professionalId,
+            patientId,
+            status,
         });
         return this.crmService.getClinicalDashboardSummary({
             windowDays: windowDays ? Number(windowDays) : 7,
             semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
+            professionalId,
+            patientId,
+            status,
         });
     }
     async listAdminProfissionais(usuario, q, ativo, especialidade, includeSensitive, sensitiveReason) {
@@ -470,8 +476,11 @@ __decorate([
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('windowDays')),
     __param(2, (0, common_1.Query)('semEvolucaoDias')),
+    __param(3, (0, common_1.Query)('professionalId')),
+    __param(4, (0, common_1.Query)('patientId')),
+    __param(5, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "getClinicalDashboardSummary", null);
 __decorate([

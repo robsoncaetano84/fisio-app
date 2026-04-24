@@ -62,7 +62,8 @@ let AnamnesesService = class AnamnesesService {
         if (!anamnese) {
             throw new common_1.NotFoundException('Anamnese não encontrada');
         }
-        if (anamnese.paciente.usuarioId !== usuarioId) {
+        const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
+        if (!isMasterAdmin && anamnese.paciente.usuarioId !== usuarioId) {
             throw new common_1.NotFoundException('Anamnese não encontrada');
         }
         return anamnese;

@@ -68,7 +68,8 @@ let EvolucoesService = class EvolucoesService {
         if (!evolucao) {
             throw new common_1.NotFoundException('Evolucao nao encontrada');
         }
-        if (evolucao.paciente.usuarioId !== usuarioId) {
+        const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
+        if (!isMasterAdmin && evolucao.paciente.usuarioId !== usuarioId) {
             throw new common_1.NotFoundException('Evolucao nao encontrada');
         }
         return evolucao;
