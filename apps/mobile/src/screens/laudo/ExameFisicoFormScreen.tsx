@@ -380,6 +380,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
@@ -547,9 +548,18 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       if (!loadedExam) {
         await generateSuggestion(true);
       }
+      if (active) {
+        setBootstrapping(false);
+      }
     };
 
-    load().catch(() => undefined);
+    load()
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setBootstrapping(false);
+        }
+      });
     return () => {
       active = false;
     };
@@ -1142,6 +1152,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     if (!hasAttemptedSave || !exam) return;
     validateForm();
   }, [hasAttemptedSave, exam, classificationConfirmed]);
+
+  if (bootstrapping) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Carregando exame físico...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!paciente || !exam) {
     return (
