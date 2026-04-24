@@ -87,6 +87,8 @@ describe('CharlesService - deterministic orchestrator', () => {
     const service = makeService();
     const result = await service.getNextAction('pac-1', user);
     expect(result.blocked).toBe(false);
+    expect(result.protocolVersion).toBe('1.0.0');
+    expect(result.protocolName).toBe('Protocolo clinico base');
     expect(result.nextAction.stage).toBe('ANAMNESE');
   });
 
@@ -256,7 +258,34 @@ describe('CharlesService - deterministic orchestrator', () => {
     expect(payload.metadata).toMatchObject({
       nextStage: 'ANAMNESE',
       mode: 'deterministic-v1',
+      protocolVersion: '1.0.0',
+      protocolName: 'Protocolo clinico base',
     });
+  });
+
+  it('keeps next action available even when active protocol cannot be read', async () => {
+    const pacientesService = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'pac-1',
+        nomeCompleto: 'Paciente Teste',
+      }),
+    } as any;
+    const governanceService = {
+      writeAudit: jest.fn().mockResolvedValue(undefined),
+      getActiveProtocol: jest.fn().mockRejectedValue(new Error('service down')),
+    } as any;
+    const service = new CharlesService(
+      pacientesService,
+      governanceService,
+      { findOne: jest.fn().mockResolvedValue(null) } as any,
+      { findOne: jest.fn().mockResolvedValue(null) } as any,
+      { findOne: jest.fn().mockResolvedValue(null) } as any,
+    );
+
+    const result = await service.getNextAction('pac-1', user);
+    expect(result.nextAction.stage).toBe('ANAMNESE');
+    expect(result.protocolVersion).toBeNull();
+    expect(result.protocolName).toBeNull();
   });
 
   it('returns high-confidence dor classification suggestion when tipoDor is mapped', async () => {

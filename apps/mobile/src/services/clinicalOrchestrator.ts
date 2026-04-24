@@ -9,6 +9,8 @@ export type ClinicalOrchestratorSeverity =
 export type ClinicalOrchestratorNextActionResponse = {
   orchestrator: "CLINICAL_ORCHESTRATOR";
   mode: string;
+  protocolVersion: string | null;
+  protocolName: string | null;
   blocked: boolean;
   context: {
     regioesPrioritarias: string[];

@@ -73,7 +73,7 @@ let CharlesService = class CharlesService {
     }
     async getNextAction(pacienteId, usuario) {
         const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
-        const [latestAnamnese, latestEvolucao, latestLaudo] = await Promise.all([
+        const [latestAnamnese, latestEvolucao, latestLaudo, activeProtocol] = await Promise.all([
             this.anamneseRepository.findOne({
                 where: { pacienteId: paciente.id },
                 order: { createdAt: 'DESC' },
@@ -86,6 +86,7 @@ let CharlesService = class CharlesService {
                 where: { pacienteId: paciente.id },
                 order: { updatedAt: 'DESC' },
             }),
+            this.getActiveProtocolSafe(usuario),
         ]);
         const hasAnamnese = !!latestAnamnese;
         const hasExameFisico = this.hasStructuredExame(latestLaudo?.exameFisico);
@@ -170,6 +171,8 @@ let CharlesService = class CharlesService {
             orchestrator: 'CLINICAL_ORCHESTRATOR',
             mode: 'deterministic-v1',
             requiresProfessionalApproval: true,
+            protocolVersion: activeProtocol?.version || null,
+            protocolName: activeProtocol?.name || null,
             blocked: blockers.length > 0,
             paciente: {
                 id: paciente.id,
@@ -197,6 +200,8 @@ let CharlesService = class CharlesService {
             metadata: {
                 nextStage: response.nextAction.stage,
                 mode: response.mode,
+                protocolVersion: response.protocolVersion,
+                protocolName: response.protocolName,
             },
         });
         return response;

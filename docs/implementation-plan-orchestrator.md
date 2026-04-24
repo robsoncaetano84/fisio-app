@@ -112,6 +112,8 @@ Critérios de aceite:
 - [x] Resumo de IA aceita filtros por profissional/paciente e exibe filtros ativos no CRM Admin
 - [x] Sprint 4 (UX de aprovação clínica) atendida: sugestão vs confirmação visível, aplicação opcional auditável e confirmação humana exigida em campos críticos
 - [x] Release gates executado localmente com decisão GO (relatório: `logs/release-gates-20260423-150802.md`)
+- [x] Decisão determinística (`next-action`) também expõe `protocolVersion` e `protocolName` para rastreabilidade ponta a ponta
+- [x] Checklist operacional de fechamento em 1 dia documentado (`docs/checklist-fechamento-orchestrator-1dia.md`)
 
 ## Diretrizes de execução
 1. Branches pequenas e PRs incrementais.

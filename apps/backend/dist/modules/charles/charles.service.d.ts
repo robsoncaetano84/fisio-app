@@ -21,6 +21,8 @@ export interface CharlesNextActionResponse {
     orchestrator: 'CLINICAL_ORCHESTRATOR';
     mode: 'deterministic-v1';
     requiresProfessionalApproval: true;
+    protocolVersion: string | null;
+    protocolName: string | null;
     blocked: boolean;
     paciente: {
         id: string;
