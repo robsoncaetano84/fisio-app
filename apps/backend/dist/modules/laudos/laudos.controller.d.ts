@@ -48,6 +48,7 @@ export declare class LaudosController {
         }[];
     }>;
     findOne(id: string, usuario: Usuario): Promise<import("./entities/laudo.entity").Laudo>;
+    findExameFisicoHistory(id: string, limitRaw: string | undefined, usuario: Usuario): Promise<import("./entities/laudo-exame-historico.entity").LaudoExameHistorico[]>;
     pdfLaudo(id: string, req: Request, token: string | undefined, consultedRefs: string | undefined, res: Response): Promise<void>;
     findMyLatest(usuario: Usuario): Promise<import("./entities/laudo.entity").Laudo>;
     myPdfLaudo(req: Request, token: string | undefined, res: Response): Promise<void>;

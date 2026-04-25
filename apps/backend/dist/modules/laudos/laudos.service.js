@@ -30,12 +30,14 @@ const laudo_patch_util_1 = require("./laudo-patch.util");
 const usuarios_service_1 = require("../usuarios/usuarios.service");
 const paciente_exame_entity_1 = require("../pacientes/entities/paciente-exame.entity");
 const exame_storage_1 = require("../pacientes/exame-storage");
+const laudo_exame_historico_entity_1 = require("./entities/laudo-exame-historico.entity");
 let LaudosService = class LaudosService {
     laudoRepository;
     anamneseRepository;
     evolucaoRepository;
     laudoAiGenerationRepository;
     pacienteExameRepository;
+    laudoExameHistoricoRepository;
     pacientesService;
     usuariosService;
     isTruthyEnv(value) {
@@ -48,12 +50,13 @@ let LaudosService = class LaudosService {
             return true;
         return this.isTruthyEnv(raw);
     }
-    constructor(laudoRepository, anamneseRepository, evolucaoRepository, laudoAiGenerationRepository, pacienteExameRepository, pacientesService, usuariosService) {
+    constructor(laudoRepository, anamneseRepository, evolucaoRepository, laudoAiGenerationRepository, pacienteExameRepository, laudoExameHistoricoRepository, pacientesService, usuariosService) {
         this.laudoRepository = laudoRepository;
         this.anamneseRepository = anamneseRepository;
         this.evolucaoRepository = evolucaoRepository;
         this.laudoAiGenerationRepository = laudoAiGenerationRepository;
         this.pacienteExameRepository = pacienteExameRepository;
+        this.laudoExameHistoricoRepository = laudoExameHistoricoRepository;
         this.pacientesService = pacientesService;
         this.usuariosService = usuariosService;
     }
@@ -92,7 +95,9 @@ let LaudosService = class LaudosService {
             validadoEm: null,
             sugestaoGeradaEm: hasSuggestionMeta ? new Date() : null,
         });
-        return this.laudoRepository.save(laudo);
+        const saved = await this.laudoRepository.save(laudo);
+        await this.registrarHistoricoExameFisico(saved, usuarioId, laudo_exame_historico_entity_1.LaudoExameHistoricoAcao.CREATE, laudo_exame_historico_entity_1.LaudoExameHistoricoOrigem.PROFISSIONAL);
+        return saved;
     }
     async findByPaciente(pacienteId, usuarioId, autoGenerate = false) {
         await this.pacientesService.findOne(pacienteId, usuarioId);
@@ -132,8 +137,18 @@ let LaudosService = class LaudosService {
         }
         return laudo;
     }
+    async findExameFisicoHistory(laudoId, usuarioId, limit = 20) {
+        await this.findOne(laudoId, usuarioId);
+        const normalizedLimit = this.normalizeLimit(limit, 20, 100);
+        return this.laudoExameHistoricoRepository.find({
+            where: { laudoId },
+            order: { revisao: 'DESC' },
+            take: normalizedLimit,
+        });
+    }
     async update(id, updateLaudoDto, usuarioId) {
         const laudo = await this.findOne(id, usuarioId);
+        const exameFisicoAntes = String(laudo.exameFisico || '').trim();
         this.validateStructuredExameInput(updateLaudoDto.exameFisico);
         const hasSuggestionMetaUpdate = updateLaudoDto.sugestaoSource ||
             typeof updateLaudoDto.examesConsiderados === 'number' ||
@@ -145,7 +160,15 @@ let LaudosService = class LaudosService {
         laudo.status = laudo_entity_2.LaudoStatus.RASCUNHO_IA;
         laudo.validadoPorUsuarioId = null;
         laudo.validadoEm = null;
-        return this.laudoRepository.save(laudo);
+        const saved = await this.laudoRepository.save(laudo);
+        const exameFisicoDepois = String(saved.exameFisico || '').trim();
+        const exameFisicoMudou = typeof updateLaudoDto.exameFisico === 'string' &&
+            exameFisicoDepois.length > 0 &&
+            exameFisicoDepois !== exameFisicoAntes;
+        if (exameFisicoMudou) {
+            await this.registrarHistoricoExameFisico(saved, usuarioId, laudo_exame_historico_entity_1.LaudoExameHistoricoAcao.UPDATE, laudo_exame_historico_entity_1.LaudoExameHistoricoOrigem.PROFISSIONAL);
+        }
+        return saved;
     }
     async remove(id, usuarioId) {
         const laudo = await this.findOne(id, usuarioId);
@@ -814,6 +837,44 @@ ${JSON.stringify(input, null, 2)}
         const short = normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
         return ` Baseado no exame fisico: ${short}`;
     }
+    async registrarHistoricoExameFisico(laudo, usuarioId, acao, origem) {
+        const exame = String(laudo.exameFisico || '').trim();
+        if (!exame)
+            return;
+        const ultimo = await this.laudoExameHistoricoRepository.findOne({
+            where: { laudoId: laudo.id },
+            order: { revisao: 'DESC' },
+            select: ['id', 'revisao'],
+        });
+        const payload = {
+            laudoId: laudo.id,
+            pacienteId: laudo.pacienteId,
+            exameFisico: laudo.exameFisico,
+            status: laudo.status,
+            updatedAt: laudo.updatedAt,
+            createdAt: laudo.createdAt,
+        };
+        const historico = this.laudoExameHistoricoRepository.create({
+            laudoId: laudo.id,
+            pacienteId: laudo.pacienteId,
+            revisao: (ultimo?.revisao || 0) + 1,
+            acao,
+            origem,
+            alteradoPorUsuarioId: usuarioId || null,
+            payload,
+        });
+        await this.laudoExameHistoricoRepository.save(historico);
+    }
+    normalizeLimit(value, fallback, max) {
+        if (!Number.isFinite(value))
+            return fallback;
+        const integer = Math.floor(value);
+        if (integer < 1)
+            return 1;
+        if (integer > max)
+            return max;
+        return integer;
+    }
     structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
     formatExameFisicoForDisplay(value) {
         const parsed = this.parseStructuredExame(value);
@@ -1170,7 +1231,9 @@ exports.LaudosService = LaudosService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(evolucao_entity_1.Evolucao)),
     __param(3, (0, typeorm_1.InjectRepository)(laudo_ai_generation_entity_1.LaudoAiGeneration)),
     __param(4, (0, typeorm_1.InjectRepository)(paciente_exame_entity_1.PacienteExame)),
+    __param(5, (0, typeorm_1.InjectRepository)(laudo_exame_historico_entity_1.LaudoExameHistorico)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

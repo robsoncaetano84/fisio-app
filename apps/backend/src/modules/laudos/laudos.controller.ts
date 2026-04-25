@@ -128,6 +128,18 @@ export class LaudosController {
     return this.laudosService.findOne(id, usuario.id);
   }
 
+  @Get(':id/exame-fisico-historico')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  findExameFisicoHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw: string | undefined,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    const limit = Number(limitRaw || 20);
+    return this.laudosService.findExameFisicoHistory(id, usuario.id, limit);
+  }
+
   @Get(':id/pdf-laudo')
   @Throttle({ default: { ttl: 60, limit: 30 } })
   async pdfLaudo(
@@ -252,5 +264,4 @@ export class LaudosController {
     return this.laudosService.remove(id, usuario.id);
   }
 }
-
 

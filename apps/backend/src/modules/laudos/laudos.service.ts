@@ -22,6 +22,11 @@ import { sanitizePartialUpdate } from './laudo-patch.util';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
 import { readExameFile } from '../pacientes/exame-storage';
+import {
+  LaudoExameHistorico,
+  LaudoExameHistoricoAcao,
+  LaudoExameHistoricoOrigem,
+} from './entities/laudo-exame-historico.entity';
 
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 
@@ -69,6 +74,8 @@ export class LaudosService {
     private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
     @InjectRepository(PacienteExame)
     private readonly pacienteExameRepository: Repository<PacienteExame>,
+    @InjectRepository(LaudoExameHistorico)
+    private readonly laudoExameHistoricoRepository: Repository<LaudoExameHistorico>,
     private readonly pacientesService: PacientesService,
     private readonly usuariosService: UsuariosService,
   ) {}
@@ -119,7 +126,14 @@ export class LaudosService {
       validadoEm: null,
       sugestaoGeradaEm: hasSuggestionMeta ? new Date() : null,
     });
-    return this.laudoRepository.save(laudo);
+    const saved = await this.laudoRepository.save(laudo);
+    await this.registrarHistoricoExameFisico(
+      saved,
+      usuarioId,
+      LaudoExameHistoricoAcao.CREATE,
+      LaudoExameHistoricoOrigem.PROFISSIONAL,
+    );
+    return saved;
   }
 
   async findByPaciente(
@@ -172,12 +186,27 @@ export class LaudosService {
     return laudo;
   }
 
+  async findExameFisicoHistory(
+    laudoId: string,
+    usuarioId: string,
+    limit = 20,
+  ): Promise<LaudoExameHistorico[]> {
+    await this.findOne(laudoId, usuarioId);
+    const normalizedLimit = this.normalizeLimit(limit, 20, 100);
+    return this.laudoExameHistoricoRepository.find({
+      where: { laudoId },
+      order: { revisao: 'DESC' },
+      take: normalizedLimit,
+    });
+  }
+
   async update(
     id: string,
     updateLaudoDto: UpdateLaudoDto,
     usuarioId: string,
   ): Promise<Laudo> {
     const laudo = await this.findOne(id, usuarioId);
+    const exameFisicoAntes = String(laudo.exameFisico || '').trim();
     this.validateStructuredExameInput(updateLaudoDto.exameFisico);
     const hasSuggestionMetaUpdate =
       updateLaudoDto.sugestaoSource ||
@@ -191,7 +220,21 @@ export class LaudosService {
     laudo.status = LaudoStatus.RASCUNHO_IA;
     laudo.validadoPorUsuarioId = null;
     laudo.validadoEm = null;
-    return this.laudoRepository.save(laudo);
+    const saved = await this.laudoRepository.save(laudo);
+    const exameFisicoDepois = String(saved.exameFisico || '').trim();
+    const exameFisicoMudou =
+      typeof updateLaudoDto.exameFisico === 'string' &&
+      exameFisicoDepois.length > 0 &&
+      exameFisicoDepois !== exameFisicoAntes;
+    if (exameFisicoMudou) {
+      await this.registrarHistoricoExameFisico(
+        saved,
+        usuarioId,
+        LaudoExameHistoricoAcao.UPDATE,
+        LaudoExameHistoricoOrigem.PROFISSIONAL,
+      );
+    }
+    return saved;
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {
@@ -1085,6 +1128,51 @@ ${JSON.stringify(input, null, 2)}
     const short = normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
     return ` Baseado no exame fisico: ${short}`;
   }
+
+  private async registrarHistoricoExameFisico(
+    laudo: Laudo,
+    usuarioId: string | null,
+    acao: LaudoExameHistoricoAcao,
+    origem: LaudoExameHistoricoOrigem,
+  ): Promise<void> {
+    const exame = String(laudo.exameFisico || '').trim();
+    if (!exame) return;
+
+    const ultimo = await this.laudoExameHistoricoRepository.findOne({
+      where: { laudoId: laudo.id },
+      order: { revisao: 'DESC' },
+      select: ['id', 'revisao'],
+    });
+
+    const payload = {
+      laudoId: laudo.id,
+      pacienteId: laudo.pacienteId,
+      exameFisico: laudo.exameFisico,
+      status: laudo.status,
+      updatedAt: laudo.updatedAt,
+      createdAt: laudo.createdAt,
+    };
+
+    const historico = this.laudoExameHistoricoRepository.create({
+      laudoId: laudo.id,
+      pacienteId: laudo.pacienteId,
+      revisao: (ultimo?.revisao || 0) + 1,
+      acao,
+      origem,
+      alteradoPorUsuarioId: usuarioId || null,
+      payload,
+    });
+
+    await this.laudoExameHistoricoRepository.save(historico);
+  }
+
+  private normalizeLimit(value: number, fallback: number, max: number): number {
+    if (!Number.isFinite(value)) return fallback;
+    const integer = Math.floor(value);
+    if (integer < 1) return 1;
+    if (integer > max) return max;
+    return integer;
+  }
   private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
 
   private formatExameFisicoForDisplay(value?: string | null): string {
@@ -1476,7 +1564,6 @@ ${JSON.stringify(input, null, 2)}
     };
   }
 }
-
 
 
 

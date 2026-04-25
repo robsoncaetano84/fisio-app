@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // E VO LU CO ES.S ER VI CE
 // ==========================================
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evolucao } from './entities/evolucao.entity';
@@ -95,33 +95,11 @@ export class EvolucoesService {
     updateEvolucaoDto: UpdateEvolucaoDto,
     usuarioId: string,
   ): Promise<Evolucao> {
-    const evolucao = await this.findOne(id, usuarioId);
-
-    if (updateEvolucaoDto.data) {
-      evolucao.data = new Date(updateEvolucaoDto.data);
-    }
-
-    const normalized = this.normalizeFields(updateEvolucaoDto);
-    if (normalized.subjetivo !== null) evolucao.subjetivo = normalized.subjetivo;
-    if (normalized.objetivo !== null) evolucao.objetivo = normalized.objetivo;
-    if (normalized.avaliacao !== null) evolucao.avaliacao = normalized.avaliacao;
-    if (normalized.plano !== null) evolucao.plano = normalized.plano;
-
-    Object.assign(evolucao, {
-      checkinDor: updateEvolucaoDto.checkinDor ?? evolucao.checkinDor,
-      checkinDificuldade:
-        updateEvolucaoDto.checkinDificuldade ?? evolucao.checkinDificuldade,
-      checkinObservacao:
-        updateEvolucaoDto.checkinObservacao ?? evolucao.checkinObservacao,
-      dorStatus: updateEvolucaoDto.dorStatus ?? evolucao.dorStatus,
-      funcaoStatus: updateEvolucaoDto.funcaoStatus ?? evolucao.funcaoStatus,
-      adesaoStatus: updateEvolucaoDto.adesaoStatus ?? evolucao.adesaoStatus,
-      statusEvolucao: updateEvolucaoDto.statusEvolucao ?? evolucao.statusEvolucao,
-      condutaStatus: updateEvolucaoDto.condutaStatus ?? evolucao.condutaStatus,
-      observacoes: updateEvolucaoDto.observacoes ?? evolucao.observacoes,
-    });
-
-    return this.evolucaoRepository.save(evolucao);
+    void updateEvolucaoDto;
+    await this.findOne(id, usuarioId);
+    throw new BadRequestException(
+      'Evolucao registrada nao pode ser editada. Crie uma nova evolucao para registrar a proxima sessao.',
+    );
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {

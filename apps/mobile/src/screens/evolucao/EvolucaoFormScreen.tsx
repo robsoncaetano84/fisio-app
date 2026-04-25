@@ -182,8 +182,7 @@ export function EvolucaoFormScreen({
   const { pacienteId, evolucaoId } = route.params;
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
-  const { createEvolucao, updateEvolucao, getEvolucaoById } =
-    useEvolucaoStore();
+  const { createEvolucao, getEvolucaoById } = useEvolucaoStore();
   const { showToast } = useToast();
   const paciente = getPacienteById(pacienteId);
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
@@ -790,20 +789,12 @@ export function EvolucaoFormScreen({
         observacoes,
       };
 
-      let savedEvolucaoId = evolucaoId || "";
-
-      if (evolucaoId) {
-        const { pacienteId: _, ...updatePayload } = payload;
-        const updated = await updateEvolucao(evolucaoId, updatePayload);
-        savedEvolucaoId = updated.id;
-      } else {
-        const created = await createEvolucao(payload);
-        savedEvolucaoId = created.id;
-        await AsyncStorage.setItem(
-          "onboarding:professional:first_evolucao_done",
-          "1",
-        );
-      }
+      const created = await createEvolucao(payload);
+      const savedEvolucaoId = created.id;
+      await AsyncStorage.setItem(
+        "onboarding:professional:first_evolucao_done",
+        "1",
+      );
       await AsyncStorage.removeItem(draftKey);
       setLastDraftSavedAt(null);
 
@@ -837,7 +828,9 @@ export function EvolucaoFormScreen({
           : []),
       ]);
       showToast({
-        message: "Evolução salva com sucesso.",
+        message: evolucaoId
+          ? "Nova evolução registrada. A sessão anterior foi preservada."
+          : "Evolução salva com sucesso.",
         type: "success",
       });
       didSaveRef.current = true;

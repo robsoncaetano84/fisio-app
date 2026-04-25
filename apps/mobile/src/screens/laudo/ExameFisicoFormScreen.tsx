@@ -1,7 +1,8 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { AppState, View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { AppState, View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
@@ -54,6 +55,20 @@ type ExameFisicoFormScreenProps = {
   route: RouteProp<RootStackParamList, "ExameFisicoForm">;
 };
 type IconName = keyof typeof Ionicons.glyphMap;
+
+interface PacienteExameItem {
+  id: string;
+  pacienteId: string;
+  nomeOriginal: string;
+  mimeType: string;
+  tamanhoBytes: number;
+  tipoExame?: string | null;
+  observacao?: string | null;
+  dataExame?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  downloadUrl: string;
+}
 
 const DOR_PRINCIPAL_OPTIONS: DorClassificacaoPrincipal[] = [
   "NOCICEPTIVA",
@@ -394,6 +409,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [serverDorSuggestion, setServerDorSuggestion] =
     useState<ExameFisicoDorSuggestionResponse | null>(null);
   const [classificationConfirmed, setClassificationConfirmed] = useState(true);
+  const [posturePhotosCount, setPosturePhotosCount] = useState(0);
+  const [loadingPosturePhotos, setLoadingPosturePhotos] = useState(false);
+  const [uploadingPosturePhoto, setUploadingPosturePhoto] = useState(false);
   const autoDorSuggestionAppliedRef = useRef(false);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
@@ -474,6 +492,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       patientId: pacienteId,
     }).catch(() => undefined);
   }, [AI_REVIEW_REQUIRED, effectiveDorSuggestion, exam, pacienteId]);
+
+  useEffect(() => {
+    loadPosturePhotosCount().catch(() => undefined);
+  }, [pacienteId]);
+
   const orchestratorFocusedRegions = useMemo(() => {
     const hints = [
       ...(orchestratorNextAction?.context?.regioesPrioritarias || []),
@@ -511,6 +534,90 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     );
     return { tested, total, pending: Math.max(total - tested, 0) };
   }, [visibleRegionalGroups]);
+
+  const loadPosturePhotosCount = async () => {
+    setLoadingPosturePhotos(true);
+    try {
+      const response = await api.get<PacienteExameItem[]>(`/pacientes/${pacienteId}/exames`);
+      const total = response.data.filter(
+        (item) => String(item.tipoExame || "").toUpperCase() === "FOTO_POSTURAL",
+      ).length;
+      setPosturePhotosCount(total);
+    } catch {
+      setPosturePhotosCount(0);
+    } finally {
+      setLoadingPosturePhotos(false);
+    }
+  };
+
+  const handleUploadPosturePhoto = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        multiple: false,
+        type: ["image/*"],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const file = result.assets[0];
+      if (!file?.uri || !file?.name) {
+        showToast({ type: "error", message: "Arquivo invalido." });
+        return;
+      }
+
+      const lowerName = file.name.toLowerCase();
+      const inferredMime =
+        file.mimeType ||
+        (lowerName.endsWith(".png")
+          ? "image/png"
+          : lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")
+            ? "image/jpeg"
+            : lowerName.endsWith(".webp")
+              ? "image/webp"
+              : "application/octet-stream");
+      if (!inferredMime.startsWith("image/")) {
+        showToast({ type: "error", message: "Envie apenas imagem (png, jpg, webp)." });
+        return;
+      }
+
+      const formData = new FormData();
+      if (Platform.OS === "web") {
+        const webAsset = file as DocumentPicker.DocumentPickerAsset & { file?: File };
+        if (webAsset.file) {
+          formData.append("file", webAsset.file, file.name);
+        } else {
+          const blob = await fetch(file.uri).then((res) => res.blob());
+          formData.append("file", blob, file.name);
+        }
+      } else {
+        formData.append("file", {
+          uri: file.uri,
+          name: file.name,
+          type: inferredMime,
+        } as unknown as Blob);
+      }
+
+      formData.append("tipoExame", "FOTO_POSTURAL");
+      formData.append("observacao", "Foto postural para comparacao clinica");
+
+      setUploadingPosturePhoto(true);
+      await api.post(`/pacientes/${pacienteId}/exames`, formData, {
+        timeout: 120000,
+        headers:
+          Platform.OS === "web"
+            ? undefined
+            : {
+                "Content-Type": "multipart/form-data",
+              },
+      });
+      showToast({ type: "success", message: "Foto postural enviada com sucesso." });
+      await loadPosturePhotosCount();
+    } catch {
+      showToast({ type: "error", message: "Nao foi possivel enviar a foto postural." });
+    } finally {
+      setUploadingPosturePhoto(false);
+    }
+  };
 
   const generateSuggestion = async (force = false) => {
     if (generating) return;
@@ -2377,6 +2484,30 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.blockTitle}>Fotos posturais (etapa 1)</Text>
+          <Text style={styles.subtitle}>
+            Capture e vincule fotos para analise comparativa de postura e simetria.
+          </Text>
+          <View style={styles.photoRow}>
+            <Text style={styles.photoCountText}>
+              {loadingPosturePhotos
+                ? "Carregando fotos..."
+                : `${posturePhotosCount} foto(s) postural(is) vinculada(s)`}
+            </Text>
+            <TouchableOpacity
+              style={[styles.actionChip, uploadingPosturePhoto && styles.actionChipDisabled]}
+              onPress={() => handleUploadPosturePhoto()}
+              disabled={uploadingPosturePhoto}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.actionChipText}>
+                {uploadingPosturePhoto ? "Enviando..." : "Enviar foto postural"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.blockTitle}>{t("clinical.sections.clinicalPreview")}</Text>
           <Input value={renderStructuredExameToText(exam)} multiline numberOfLines={12} editable={false} style={{ height: 300, textAlignVertical: "top" }} />
           <View style={styles.actionsRow}>
@@ -2618,10 +2749,22 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     backgroundColor: COLORS.primary + "15",
   },
+  actionChipDisabled: {
+    opacity: 0.55,
+  },
   actionChipText: {
     color: COLORS.primary,
     fontWeight: "600",
     fontSize: FONTS.sizes.xs,
+  },
+  photoRow: {
+    marginTop: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  photoCountText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "600",
   },
   footer: {
     paddingHorizontal: SPACING.base,

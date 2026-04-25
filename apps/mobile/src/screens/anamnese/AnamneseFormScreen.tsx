@@ -205,12 +205,10 @@ export function AnamneseFormScreen({
   const { getPacienteById } = usePacienteStore();
   const {
     createAnamnese,
-    updateAnamnese,
     getAnamneseById,
     fetchAnamnesesByPaciente,
     fetchMyLatestAnamnese,
     createMyAnamnese,
-    updateMyAnamnese,
   } = useAnamneseStore();
   const { showToast } = useToast();
   const paciente = isSelfMode
@@ -1146,18 +1144,13 @@ export function AnamneseFormScreen({
       let savedAnamnese: Anamnese | null = null;
       if (isSelfMode) {
         const { pacienteId: _, ...selfPayload } = payload;
-        if (currentAnamneseId) {
-          savedAnamnese = await updateMyAnamnese(currentAnamneseId, selfPayload);
-        } else {
-          const created = await createMyAnamnese(selfPayload);
-          setCurrentAnamneseId(created.id);
-          savedAnamnese = created;
-        }
-      } else if (currentAnamneseId) {
-        const { pacienteId: _, ...updatePayload } = payload;
-        savedAnamnese = await updateAnamnese(currentAnamneseId, updatePayload);
+        const created = await createMyAnamnese(selfPayload);
+        setCurrentAnamneseId(created.id);
+        savedAnamnese = created;
       } else {
-        savedAnamnese = await createAnamnese(payload);
+        const created = await createAnamnese(payload);
+        savedAnamnese = created;
+        setCurrentAnamneseId(created.id);
         await AsyncStorage.setItem(
           "onboarding:professional:first_anamnese_done",
           "1",
@@ -1172,7 +1165,9 @@ export function AnamneseFormScreen({
       await AsyncStorage.removeItem(draftKey);
       setLastDraftSavedAt(null);
       showToast({
-        message: "Anamnese salva com sucesso.",
+        message: currentAnamneseId
+          ? "Nova anamnese registrada. A anterior foi preservada no histórico."
+          : "Anamnese salva com sucesso.",
         type: "success",
       });
       trackEvent("session_completed", {

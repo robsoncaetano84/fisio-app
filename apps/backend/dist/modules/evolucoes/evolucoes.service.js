@@ -75,31 +75,9 @@ let EvolucoesService = class EvolucoesService {
         return evolucao;
     }
     async update(id, updateEvolucaoDto, usuarioId) {
-        const evolucao = await this.findOne(id, usuarioId);
-        if (updateEvolucaoDto.data) {
-            evolucao.data = new Date(updateEvolucaoDto.data);
-        }
-        const normalized = this.normalizeFields(updateEvolucaoDto);
-        if (normalized.subjetivo !== null)
-            evolucao.subjetivo = normalized.subjetivo;
-        if (normalized.objetivo !== null)
-            evolucao.objetivo = normalized.objetivo;
-        if (normalized.avaliacao !== null)
-            evolucao.avaliacao = normalized.avaliacao;
-        if (normalized.plano !== null)
-            evolucao.plano = normalized.plano;
-        Object.assign(evolucao, {
-            checkinDor: updateEvolucaoDto.checkinDor ?? evolucao.checkinDor,
-            checkinDificuldade: updateEvolucaoDto.checkinDificuldade ?? evolucao.checkinDificuldade,
-            checkinObservacao: updateEvolucaoDto.checkinObservacao ?? evolucao.checkinObservacao,
-            dorStatus: updateEvolucaoDto.dorStatus ?? evolucao.dorStatus,
-            funcaoStatus: updateEvolucaoDto.funcaoStatus ?? evolucao.funcaoStatus,
-            adesaoStatus: updateEvolucaoDto.adesaoStatus ?? evolucao.adesaoStatus,
-            statusEvolucao: updateEvolucaoDto.statusEvolucao ?? evolucao.statusEvolucao,
-            condutaStatus: updateEvolucaoDto.condutaStatus ?? evolucao.condutaStatus,
-            observacoes: updateEvolucaoDto.observacoes ?? evolucao.observacoes,
-        });
-        return this.evolucaoRepository.save(evolucao);
+        void updateEvolucaoDto;
+        await this.findOne(id, usuarioId);
+        throw new common_1.BadRequestException('Evolucao registrada nao pode ser editada. Crie uma nova evolucao para registrar a proxima sessao.');
     }
     async remove(id, usuarioId) {
         const evolucao = await this.findOne(id, usuarioId);

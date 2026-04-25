@@ -86,22 +86,14 @@ let AnamnesesService = class AnamnesesService {
         return anamnese;
     }
     async update(id, updateAnamneseDto, usuarioId) {
-        const anamnese = await this.findOne(id, usuarioId);
-        const nextPayload = { ...anamnese, ...updateAnamneseDto };
-        this.validateClinicalMinimum(nextPayload);
-        Object.assign(anamnese, updateAnamneseDto);
-        const saved = await this.anamneseRepository.save(anamnese);
-        await this.registrarHistorico(saved, usuarioId, anamnese_historico_entity_1.AnamneseHistoricoAcao.UPDATE, anamnese_historico_entity_1.AnamneseHistoricoOrigem.PROFISSIONAL);
-        return saved;
+        void updateAnamneseDto;
+        await this.findOne(id, usuarioId);
+        throw new common_1.BadRequestException('Anamnese finalizada nao pode ser editada. Registre uma nova anamnese para nova coleta clinica.');
     }
     async updateByPacienteUsuario(id, updateAnamneseDto, usuarioId) {
-        const anamnese = await this.findOneByPacienteUsuario(id, usuarioId);
-        const nextPayload = { ...anamnese, ...updateAnamneseDto };
-        this.validateClinicalMinimum(nextPayload);
-        Object.assign(anamnese, updateAnamneseDto);
-        const saved = await this.anamneseRepository.save(anamnese);
-        await this.registrarHistorico(saved, usuarioId, anamnese_historico_entity_1.AnamneseHistoricoAcao.UPDATE, anamnese_historico_entity_1.AnamneseHistoricoOrigem.PACIENTE);
-        return saved;
+        void updateAnamneseDto;
+        await this.findOneByPacienteUsuario(id, usuarioId);
+        throw new common_1.BadRequestException('Anamnese finalizada nao pode ser editada. Registre uma nova anamnese para nova coleta clinica.');
     }
     async findHistoryByAnamnese(anamneseId, usuarioId, limit = 20) {
         await this.findOne(anamneseId, usuarioId);

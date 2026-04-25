@@ -13,6 +13,7 @@ import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { UsuariosModule } from '../usuarios/usuarios.module';
 import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
+import { LaudoExameHistorico } from './entities/laudo-exame-historico.entity';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
       Anamnese,
       Evolucao,
       PacienteExame,
+      LaudoExameHistorico,
     ]),
     PacientesModule,
     UsuariosModule,

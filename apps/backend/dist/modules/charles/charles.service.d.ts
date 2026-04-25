@@ -98,6 +98,7 @@ export declare class CharlesService {
     private writeAuditSafe;
     private hasStructuredExame;
     private resolveNextAction;
+    private hasCriticalRedFlag;
     private buildClinicalContext;
     private normalizeClinicalRegion;
     private inferDorClassificationFromAnamnese;

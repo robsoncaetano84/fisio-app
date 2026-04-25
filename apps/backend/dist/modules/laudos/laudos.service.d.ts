@@ -8,6 +8,7 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
+import { LaudoExameHistorico } from './entities/laudo-exame-historico.entity';
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 type LaudoReferenceItem = {
     id: string;
@@ -32,16 +33,18 @@ export declare class LaudosService {
     private readonly evolucaoRepository;
     private readonly laudoAiGenerationRepository;
     private readonly pacienteExameRepository;
+    private readonly laudoExameHistoricoRepository;
     private readonly pacientesService;
     private readonly usuariosService;
     private isTruthyEnv;
     private shouldUseExamAi;
-    constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacienteExameRepository: Repository<PacienteExame>, pacientesService: PacientesService, usuariosService: UsuariosService);
+    constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacienteExameRepository: Repository<PacienteExame>, laudoExameHistoricoRepository: Repository<LaudoExameHistorico>, pacientesService: PacientesService, usuariosService: UsuariosService);
     getSuggestedReferences(pacienteId: string, usuarioId: string): Promise<LaudoReferenceSuggestionResponse>;
     create(createLaudoDto: CreateLaudoDto, usuarioId: string): Promise<Laudo>;
     findByPaciente(pacienteId: string, usuarioId: string, autoGenerate?: boolean): Promise<Laudo | null>;
     findOne(id: string, usuarioId: string): Promise<Laudo>;
     findLatestByPacienteUsuario(usuarioId: string): Promise<Laudo>;
+    findExameFisicoHistory(laudoId: string, usuarioId: string, limit?: number): Promise<LaudoExameHistorico[]>;
     update(id: string, updateLaudoDto: UpdateLaudoDto, usuarioId: string): Promise<Laudo>;
     remove(id: string, usuarioId: string): Promise<void>;
     validarLaudo(id: string, usuarioId: string): Promise<Laudo>;
@@ -70,6 +73,8 @@ export declare class LaudosService {
     private buildAiInput;
     private buildExamCorrelationSuffix;
     private buildExameFisicoHint;
+    private registrarHistoricoExameFisico;
+    private normalizeLimit;
     private readonly structuredExamePrefix;
     private formatExameFisicoForDisplay;
     private parseStructuredExame;

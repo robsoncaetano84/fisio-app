@@ -72,6 +72,10 @@ let LaudosController = class LaudosController {
     findOne(id, usuario) {
         return this.laudosService.findOne(id, usuario.id);
     }
+    findExameFisicoHistory(id, limitRaw, usuario) {
+        const limit = Number(limitRaw || 20);
+        return this.laudosService.findExameFisicoHistory(id, usuario.id, limit);
+    }
     async pdfLaudo(id, req, token, consultedRefs, res) {
         const usuarioId = this.resolveUsuarioIdFromRequest(req, token);
         const pdf = await this.laudosService.buildPdfBuffer(id, usuarioId, 'laudo', {
@@ -187,6 +191,17 @@ __decorate([
     __metadata("design:paramtypes", [String, usuario_entity_1.Usuario]),
     __metadata("design:returntype", void 0)
 ], LaudosController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Get)(':id/exame-fisico-historico'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], LaudosController.prototype, "findExameFisicoHistory", null);
 __decorate([
     (0, common_1.Get)(':id/pdf-laudo'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 30 } }),
