@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A NA MN ES ES.C ON TR OL LE R
+// ANAMNESES.CONTROLLER
 // ==========================================
 import {
   Controller,
@@ -58,7 +58,11 @@ export class AnamnesesController {
     @CurrentUser() usuario: Usuario,
   ) {
     const limit = Number(limitRaw || 50);
-    return this.anamnesesService.findHistoryByPaciente(pacienteId, usuario.id, limit);
+    return this.anamnesesService.findHistoryByPaciente(
+      pacienteId,
+      usuario.id,
+      limit,
+    );
   }
 
   @Get('me/latest')
@@ -76,7 +80,10 @@ export class AnamnesesController {
     @CurrentUser() usuario: Usuario,
   ) {
     const limit = Number(limitRaw || 50);
-    return this.anamnesesService.findHistoryByPacienteUsuario(usuario.id, limit);
+    return this.anamnesesService.findHistoryByPacienteUsuario(
+      usuario.id,
+      limit,
+    );
   }
 
   @Post('me')

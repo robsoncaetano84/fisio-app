@@ -20,6 +20,7 @@ const create_evolucao_dto_1 = require("./dto/create-evolucao.dto");
 const update_evolucao_dto_1 = require("./dto/update-evolucao.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 let EvolucoesController = class EvolucoesController {
     evolucoesService;
@@ -94,6 +95,7 @@ __decorate([
 exports.EvolucoesController = EvolucoesController = __decorate([
     (0, common_1.Controller)('evolucoes'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER),
     __metadata("design:paramtypes", [evolucoes_service_1.EvolucoesService])
 ], EvolucoesController);
 //# sourceMappingURL=evolucoes.controller.js.map

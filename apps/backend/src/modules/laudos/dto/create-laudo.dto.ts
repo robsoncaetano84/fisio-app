@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E L AU DO.D TO
+// CREATE L AU DO.DTO
 // ==========================================
 import {
   IsNotEmpty,
@@ -81,5 +81,3 @@ export class CreateLaudoDto {
   @Min(0)
   examesComLeituraIa?: number;
 }
-
-

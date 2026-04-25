@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A TI VI DA DE S.C ON TR OL LE R
+// ATIVIDADES.CONTROLLER
 // ==========================================
 import {
   Body,
@@ -31,7 +31,6 @@ import { AtividadesService } from './atividades.service';
 export class AtividadesController {
   constructor(private readonly atividadesService: AtividadesService) {}
 
-  
   @Post('sugestao-ia')
   @Throttle({ default: { ttl: 60, limit: 20 } })
   @Roles(UserRole.ADMIN, UserRole.USER)
@@ -114,7 +113,10 @@ export class AtividadesController {
     @Query('pacienteId', ParseUUIDPipe) pacienteId: string,
     @CurrentUser() usuario: Usuario,
   ) {
-    return this.atividadesService.findCheckinsByPaciente(pacienteId, usuario.id);
+    return this.atividadesService.findCheckinsByPaciente(
+      pacienteId,
+      usuario.id,
+    );
   }
 
   @Get('updates')
@@ -150,7 +152,9 @@ export class AtividadesController {
     @Param('id', ParseUUIDPipe) atividadeId: string,
     @CurrentUser() usuario: Usuario,
   ) {
-    return this.atividadesService.findCheckinsByAtividade(atividadeId, usuario.id);
+    return this.atividadesService.findCheckinsByAtividade(
+      atividadeId,
+      usuario.id,
+    );
   }
 }
-

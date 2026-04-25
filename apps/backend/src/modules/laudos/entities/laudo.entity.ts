@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// L AU DO.E NT IT Y
+// L AU DO.ENTITY
 // ==========================================
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -66,7 +66,12 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'criterios_alta', type: 'text', nullable: true })
   criteriosAlta: string | null;
 
-  @Column({ name: 'sugestao_source', type: 'varchar', length: 20, nullable: true })
+  @Column({
+    name: 'sugestao_source',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
   sugestaoSource: 'ai' | 'rules' | null;
 
   @Column({ name: 'exames_considerados', type: 'int', nullable: true })
@@ -78,5 +83,3 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'sugestao_gerada_em', type: 'timestamp', nullable: true })
   sugestaoGeradaEm: Date | null;
 }
-
-

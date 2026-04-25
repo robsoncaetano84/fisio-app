@@ -19,7 +19,10 @@ let AnamnesesModule = class AnamnesesModule {
 exports.AnamnesesModule = AnamnesesModule;
 exports.AnamnesesModule = AnamnesesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([anamnese_entity_1.Anamnese, anamnese_historico_entity_1.AnamneseHistorico]), pacientes_module_1.PacientesModule],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([anamnese_entity_1.Anamnese, anamnese_historico_entity_1.AnamneseHistorico]),
+            pacientes_module_1.PacientesModule,
+        ],
         controllers: [anamneses_controller_1.AnamnesesController],
         providers: [anamneses_service_1.AnamnesesService],
         exports: [anamneses_service_1.AnamnesesService],

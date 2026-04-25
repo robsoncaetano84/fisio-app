@@ -612,7 +612,8 @@ __decorate([
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, create_crm_lead_dto_1.CreateCrmLeadDto]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario,
+        create_crm_lead_dto_1.CreateCrmLeadDto]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "createLead", null);
 __decorate([
@@ -662,7 +663,8 @@ __decorate([
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [usuario_entity_1.Usuario, create_crm_task_dto_1.CreateCrmTaskDto]),
+    __metadata("design:paramtypes", [usuario_entity_1.Usuario,
+        create_crm_task_dto_1.CreateCrmTaskDto]),
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "createTask", null);
 __decorate([

@@ -111,7 +111,12 @@ __decorate([
     __metadata("design:type", Object)
 ], Laudo.prototype, "criteriosAlta", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'sugestao_source', type: 'varchar', length: 20, nullable: true }),
+    (0, typeorm_1.Column)({
+        name: 'sugestao_source',
+        type: 'varchar',
+        length: 20,
+        nullable: true,
+    }),
     __metadata("design:type", Object)
 ], Laudo.prototype, "sugestaoSource", void 0);
 __decorate([

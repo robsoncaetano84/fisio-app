@@ -66,6 +66,8 @@ const persistExameFile = async (params) => {
                 caminhoArquivo: `supabase://${config.bucket}/${params.objectKey}`,
             };
         }
+        const payload = await response.text().catch(() => '');
+        throw new common_1.BadGatewayException(`Falha ao enviar arquivo para o storage: ${response.status} ${payload}`);
     }
     ensureLocalUploadsDir();
     const localFileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${(0, path_1.extname)(params.objectKey) || '.bin'}`;

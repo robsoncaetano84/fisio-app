@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// U PD AT E C RM L EA D.D TO
+// UPDATE C RM L EA D.DTO
 // ==========================================
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateCrmLeadDto } from './create-crm-lead.dto';

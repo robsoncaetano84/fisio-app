@@ -321,6 +321,16 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     return `${downloadBaseUrl}${safePath}`;
   };
 
+  const openPdfBlobOnWeb = (blob: Blob, webPopup?: Window | null) => {
+    const blobUrl = URL.createObjectURL(blob);
+    if (webPopup && !webPopup.closed) {
+      webPopup.location.href = blobUrl;
+    } else if (typeof window !== "undefined") {
+      window.open(blobUrl, "_blank");
+    }
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  };
+
   const loadExames = useCallback(
     async (targetPacienteId: string) => {
       setIsLoadingExames(true);
@@ -761,14 +771,11 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       const endpoint =
         type === "laudo" ? "/laudos/self/pdf-laudo" : "/laudos/self/pdf-plano";
       if (Platform.OS === "web") {
-        const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
-        const tokenValue = authHeader.replace(/^Bearer\s+/i, "").trim();
-        const finalUrl = `${absoluteUrl}?token=${encodeURIComponent(tokenValue)}`;
-        if (webPopup && !webPopup.closed) {
-          webPopup.location.href = finalUrl;
-        } else if (typeof window !== "undefined") {
-          window.open(finalUrl, "_blank");
-        }
+        const response = await api.get<Blob>(endpoint, {
+          responseType: "blob",
+          headers: { Authorization: authHeader },
+        });
+        openPdfBlobOnWeb(response.data, webPopup);
       } else {
         const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
         const localPathBase =

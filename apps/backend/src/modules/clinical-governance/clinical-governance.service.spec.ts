@@ -169,7 +169,7 @@ describe('ClinicalGovernanceService', () => {
       source: 'web',
     });
 
-    const savedUser = txUserRepo.save.mock.calls.at(-1)[0];
+    const savedUser = txUserRepo.save.mock.calls.at(-1)![0];
     expect(savedUser.consentTermsRequired).toBe(true);
     expect(savedUser.consentPrivacyRequired).toBe(true);
     expect(savedUser.consentAcceptedAt).toBeInstanceOf(Date);

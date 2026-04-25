@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// G EN ER AT E L AU DO.D TO
+// G EN ER AT E L AU DO.DTO
 // ==========================================
 import { IsNotEmpty, IsUUID } from 'class-validator';
 

@@ -1,9 +1,16 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E C RM T AS K.D TO
+// CREATE C RM T AS K.DTO
 // ==========================================
 import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import { CrmTaskStatus } from '../entities/crm-task.entity';
 
 export class CreateCrmTaskDto {

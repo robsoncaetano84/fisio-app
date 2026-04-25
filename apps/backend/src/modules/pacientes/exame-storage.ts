@@ -83,6 +83,11 @@ export const persistExameFile = async (params: {
         caminhoArquivo: `supabase://${config.bucket}/${params.objectKey}`,
       };
     }
+
+    const payload = await response.text().catch(() => '');
+    throw new BadGatewayException(
+      `Falha ao enviar arquivo para o storage: ${response.status} ${payload}`,
+    );
   }
 
   ensureLocalUploadsDir();

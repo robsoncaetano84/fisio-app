@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A TI VI DA DE S.M OD UL E
+// ATIVIDADES.MODULE
 // ==========================================
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,7 +15,13 @@ import { NotificacoesModule } from '../notificacoes/notificacoes.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Atividade, AtividadeCheckin, AtividadeAiGeneration, Paciente, Anamnese]),
+    TypeOrmModule.forFeature([
+      Atividade,
+      AtividadeCheckin,
+      AtividadeAiGeneration,
+      Paciente,
+      Anamnese,
+    ]),
     NotificacoesModule,
   ],
   controllers: [AtividadesController],
@@ -23,6 +29,3 @@ import { NotificacoesModule } from '../notificacoes/notificacoes.module';
   exports: [AtividadesService],
 })
 export class AtividadesModule {}
-
-
-

@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// R EG IS TR O P AC IE NT E P OR C ON VI TE.D TO
+// R EG IS TR O P AC IE NT E P OR C ON VI TE.DTO
 // ==========================================
 import {
   IsBoolean,
@@ -46,4 +46,3 @@ export class RegistroPacientePorConviteDto {
   @IsBoolean()
   consentAiOptional: boolean;
 }
-

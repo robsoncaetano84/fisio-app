@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E U SU AR IO.D TO
+// CREATE U SU AR IO.DTO
 // ==========================================
 import {
   IsBoolean,
@@ -69,11 +69,16 @@ export class CreateUsuarioDto {
   @Equals(true, { message: 'Aceite da politica de privacidade e obrigatorio' })
   consentPrivacyRequired?: boolean;
 
-  @ValidateIf((o) => o.role === UserRole.PACIENTE && o.consentResearchOptional !== undefined)
+  @ValidateIf(
+    (o) =>
+      o.role === UserRole.PACIENTE && o.consentResearchOptional !== undefined,
+  )
   @IsBoolean()
   consentResearchOptional?: boolean;
 
-  @ValidateIf((o) => o.role === UserRole.PACIENTE && o.consentAiOptional !== undefined)
+  @ValidateIf(
+    (o) => o.role === UserRole.PACIENTE && o.consentAiOptional !== undefined,
+  )
   @IsBoolean()
   consentAiOptional?: boolean;
 

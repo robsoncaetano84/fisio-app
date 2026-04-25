@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E A TI VI DA DE.D TO
+// CREATE A TI VI DA DE.D TO
 // ==========================================
 import { Type } from 'class-transformer';
 import {

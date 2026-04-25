@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C UR RE NT U SE R.D EC OR AT OR
+// CURRENT USER.DECORATOR
 // ==========================================
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Usuario } from '../../usuarios/entities/usuario.entity';

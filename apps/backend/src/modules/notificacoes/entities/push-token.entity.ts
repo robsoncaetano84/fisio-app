@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// P US H T OK EN.E NT IT Y
+// P US H T OK EN.ENTITY
 // ==========================================
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -32,4 +32,3 @@ export class PushToken extends BaseEntity {
   @Column({ name: 'ultimo_envio_em', type: 'timestamp', nullable: true })
   ultimoEnvioEm: Date | null;
 }
-

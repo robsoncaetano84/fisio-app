@@ -1,8 +1,14 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// R EG IS TE R P US H T OK EN.D TO
+// R EG IS TE R P US H T OK EN.DTO
 // ==========================================
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class RegisterPushTokenDto {
   @IsString()
@@ -20,4 +26,3 @@ export class RegisterPushTokenDto {
   @MaxLength(40)
   appVersion?: string;
 }
-

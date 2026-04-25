@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A UT H.M OD UL E
+// A UT H.MODULE
 // ==========================================
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
@@ -27,8 +27,10 @@ import { ProfissionalPacienteVinculo } from '../pacientes/entities/profissional-
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const secret =
-          configService.get<string>('JWT_SECRET') || 'default-secret';
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET nao configurado');
+        }
         const expiresInRaw =
           configService.get<string>('JWT_EXPIRES_IN') || '7d';
         const expiresIn: number | StringValue = /^\\d+$/.test(expiresInRaw)
@@ -48,6 +50,3 @@ import { ProfissionalPacienteVinculo } from '../pacientes/entities/profissional-
   exports: [AuthService],
 })
 export class AuthModule {}
-
-
-

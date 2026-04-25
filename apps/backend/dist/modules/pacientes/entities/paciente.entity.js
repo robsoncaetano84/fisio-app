@@ -165,7 +165,12 @@ __decorate([
     __metadata("design:type", Object)
 ], Paciente.prototype, "pacienteUsuario", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'paciente_usuario_id', type: 'uuid', nullable: true, unique: true }),
+    (0, typeorm_1.Column)({
+        name: 'paciente_usuario_id',
+        type: 'uuid',
+        nullable: true,
+        unique: true,
+    }),
     __metadata("design:type", Object)
 ], Paciente.prototype, "pacienteUsuarioId", void 0);
 __decorate([
@@ -185,7 +190,11 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Paciente.prototype, "anamneseSolicitacaoPendente", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'anamnese_solicitacao_em', type: 'timestamp', nullable: true }),
+    (0, typeorm_1.Column)({
+        name: 'anamnese_solicitacao_em',
+        type: 'timestamp',
+        nullable: true,
+    }),
     __metadata("design:type", Object)
 ], Paciente.prototype, "anamneseSolicitacaoEm", void 0);
 __decorate([

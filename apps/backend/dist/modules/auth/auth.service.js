@@ -292,7 +292,9 @@ let AuthService = AuthService_1 = class AuthService {
         };
     }
     getInviteSecret() {
-        const inviteSecret = this.configService.get('INVITE_SECRET')?.trim();
+        const inviteSecret = this.configService
+            .get('INVITE_SECRET')
+            ?.trim();
         if (!inviteSecret) {
             throw new common_1.InternalServerErrorException('INVITE_SECRET nao configurado no ambiente');
         }
@@ -314,7 +316,9 @@ let AuthService = AuthService_1 = class AuthService {
         catch {
             throw new common_1.BadRequestException('Convite invalido ou expirado');
         }
-        if (!payload?.sub || !payload?.pacienteId || payload.type !== 'PACIENTE_INVITE') {
+        if (!payload?.sub ||
+            !payload?.pacienteId ||
+            payload.type !== 'PACIENTE_INVITE') {
             throw new common_1.BadRequestException('Convite invalido');
         }
         const profissional = await this.usuariosService.findById(payload.sub);
@@ -358,7 +362,8 @@ let AuthService = AuthService_1 = class AuthService {
             if (pacienteLocked.pacienteUsuarioId) {
                 if (pacienteLocked.pacienteUsuarioId === pacienteUsuario.id) {
                     pacienteLocked.vinculoStatus =
-                        pacienteLocked.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
+                        pacienteLocked.cadastroOrigem ===
+                            paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
                             ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
                             : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
                     if (!pacienteLocked.conviteAceitoEm) {
@@ -395,7 +400,8 @@ let AuthService = AuthService_1 = class AuthService {
                     if (!vinculoExistente.contatoEmail && pacienteLocked.contatoEmail) {
                         vinculoExistente.contatoEmail = pacienteLocked.contatoEmail;
                     }
-                    if (!vinculoExistente.contatoWhatsapp && pacienteLocked.contatoWhatsapp) {
+                    if (!vinculoExistente.contatoWhatsapp &&
+                        pacienteLocked.contatoWhatsapp) {
                         vinculoExistente.contatoWhatsapp = pacienteLocked.contatoWhatsapp;
                     }
                     pacienteDestino = await pacienteRepo.save(vinculoExistente);
@@ -418,7 +424,8 @@ let AuthService = AuthService_1 = class AuthService {
                     }
                     pacienteLocked.pacienteUsuarioId = pacienteUsuario.id;
                     pacienteLocked.vinculoStatus =
-                        pacienteLocked.cadastroOrigem === paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
+                        pacienteLocked.cadastroOrigem ===
+                            paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO
                             ? paciente_entity_1.PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
                             : paciente_entity_1.PacienteVinculoStatus.VINCULADO;
                     pacienteLocked.conviteAceitoEm = new Date();
@@ -458,7 +465,8 @@ let AuthService = AuthService_1 = class AuthService {
         return !normalized || normalized === 'paciente convite rapido';
     }
     async syncQuickInvitePacienteDados(pacienteParaVinculo, pacienteUsuario) {
-        if (pacienteParaVinculo.cadastroOrigem !== paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
+        if (pacienteParaVinculo.cadastroOrigem !==
+            paciente_entity_1.PacienteCadastroOrigem.CONVITE_RAPIDO) {
             return;
         }
         let changed = false;
@@ -467,7 +475,9 @@ let AuthService = AuthService_1 = class AuthService {
             changed = true;
         }
         const emailUsuario = (pacienteUsuario.email || '').trim().toLowerCase();
-        if (emailUsuario && (!pacienteParaVinculo.contatoEmail || !pacienteParaVinculo.contatoEmail.trim())) {
+        if (emailUsuario &&
+            (!pacienteParaVinculo.contatoEmail ||
+                !pacienteParaVinculo.contatoEmail.trim())) {
             pacienteParaVinculo.contatoEmail = emailUsuario;
             changed = true;
         }

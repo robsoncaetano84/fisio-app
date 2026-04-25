@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E C RM I NT ER AC TI ON.D TO
+// CREATE C RM I NT ER AC TI ON.DTO
 // ==========================================
 import { Type } from 'class-transformer';
 import {

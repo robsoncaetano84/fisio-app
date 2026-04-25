@@ -1,8 +1,15 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E C RM L EA D.D TO
+// CREATE C RM L EA D.DTO
 // ==========================================
-import { IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CrmLeadChannel, CrmLeadStage } from '../entities/crm-lead.entity';
 

@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E P AC IE NT E.D TO
+// CREATE P AC IE NT E.DTO
 // ==========================================
 import {
   IsNotEmpty,

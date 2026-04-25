@@ -34,7 +34,10 @@ exports.AuthModule = AuthModule = __decorate([
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => {
-                    const secret = configService.get('JWT_SECRET') || 'default-secret';
+                    const secret = configService.get('JWT_SECRET');
+                    if (!secret) {
+                        throw new Error('JWT_SECRET nao configurado');
+                    }
                     const expiresInRaw = configService.get('JWT_EXPIRES_IN') || '7d';
                     const expiresIn = /^\\d+$/.test(expiresInRaw)
                         ? Number(expiresInRaw)

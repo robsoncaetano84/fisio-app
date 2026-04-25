@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A PP.C ON TR OL LE R.S PE C
+// A PP.CONTROLLER.S PE C
 // ==========================================
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';

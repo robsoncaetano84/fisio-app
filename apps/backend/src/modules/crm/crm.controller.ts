@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RM.C ON TR OL LE R
+// C RM.CONTROLLER
 // ==========================================
 import {
   BadRequestException,
@@ -56,7 +56,8 @@ export class CrmController {
       this.auditAdminAccess(usuario, `${action}_success`, metadata);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'erro_desconhecido';
+      const message =
+        error instanceof Error ? error.message : 'erro_desconhecido';
       this.auditAdminAccess(usuario, `${action}_error`, {
         ...(metadata || {}),
         errorMessage: message,
@@ -149,7 +150,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'admin_profissionais_list', {
       q,
       ativo,
@@ -178,7 +183,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'admin_profissionais_paged', {
       q,
       ativo,
@@ -211,7 +220,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'admin_pacientes_list', {
       q,
       ativo,
@@ -246,7 +259,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'admin_pacientes_paged', {
       q,
       ativo,
@@ -280,7 +297,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.write');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     return this.runAudited({
       usuario,
       action: 'admin_profissional_update',
@@ -306,7 +327,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.write');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     return this.runAudited({
       usuario,
       action: 'admin_paciente_update',
@@ -332,7 +357,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'leads_list', {
       q,
       stage,
@@ -384,7 +413,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'leads_paged', {
       q,
       stage,
@@ -411,7 +444,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'lead_detail', {
       id,
       includeSensitive: includeSensitiveBool,
@@ -423,7 +460,10 @@ export class CrmController {
   }
 
   @Post('leads')
-  async createLead(@CurrentUser() usuario: Usuario, @Body() dto: CreateCrmLeadDto) {
+  async createLead(
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: CreateCrmLeadDto,
+  ) {
     this.requirePermission(usuario, 'crm.write');
     return this.runAudited({
       usuario,
@@ -471,7 +511,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'tasks_list', {
       status,
       includeSensitive: includeSensitiveBool,
@@ -498,7 +542,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'tasks_paged', {
       status,
       leadId,
@@ -519,7 +567,10 @@ export class CrmController {
   }
 
   @Post('tasks')
-  async createTask(@CurrentUser() usuario: Usuario, @Body() dto: CreateCrmTaskDto) {
+  async createTask(
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: CreateCrmTaskDto,
+  ) {
     this.requirePermission(usuario, 'crm.write');
     return this.runAudited({
       usuario,
@@ -566,7 +617,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'interactions_list', {
       leadId,
       includeSensitive: includeSensitiveBool,
@@ -590,7 +645,11 @@ export class CrmController {
   ) {
     this.requirePermission(usuario, 'crm.read');
     const includeSensitiveBool = parseBoolQuery(includeSensitive);
-    this.validateSensitiveReason(usuario, includeSensitiveBool, sensitiveReason);
+    this.validateSensitiveReason(
+      usuario,
+      includeSensitiveBool,
+      sensitiveReason,
+    );
     this.auditAdminAccess(usuario, 'interactions_paged', {
       leadId,
       tipo,
@@ -639,7 +698,10 @@ export class CrmController {
   }
 
   @Delete('interactions/:id')
-  async deleteInteraction(@CurrentUser() usuario: Usuario, @Param('id') id: string) {
+  async deleteInteraction(
+    @CurrentUser() usuario: Usuario,
+    @Param('id') id: string,
+  ) {
     this.requirePermission(usuario, 'crm.write');
     return this.runAudited({
       usuario,

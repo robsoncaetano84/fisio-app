@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// R OL ES.D EC OR AT OR
+// ROLES.DECORATOR
 // ==========================================
 import { SetMetadata } from '@nestjs/common';
 import { UserRole } from '../../usuarios/entities/usuario.entity';

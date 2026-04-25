@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// N OT IF IC AC OE S.S ER VI CE
+// N OT IF IC AC OE S.SERVICE
 // ==========================================
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,7 +23,10 @@ export class NotificacoesService {
     private readonly pushTokenRepository: Repository<PushToken>,
   ) {}
 
-  async registerToken(usuarioId: string, dto: RegisterPushTokenDto): Promise<PushToken> {
+  async registerToken(
+    usuarioId: string,
+    dto: RegisterPushTokenDto,
+  ): Promise<PushToken> {
     const token = dto.expoPushToken.trim();
 
     const existing = await this.pushTokenRepository.findOne({
@@ -109,7 +112,11 @@ export class NotificacoesService {
       };
 
       const invalidTokens = tokens
-        .filter((_, index) => responseJson.data?.[index]?.details?.error === 'DeviceNotRegistered')
+        .filter(
+          (_, index) =>
+            responseJson.data?.[index]?.details?.error ===
+            'DeviceNotRegistered',
+        )
         .map((item) => item.expoPushToken);
 
       if (invalidTokens.length) {
@@ -124,9 +131,9 @@ export class NotificacoesService {
         { ultimoEnvioEm: new Date() },
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'erro desconhecido';
+      const message =
+        error instanceof Error ? error.message : 'erro desconhecido';
       this.logger.warn(`Falha de rede ao enviar push: ${message}`);
     }
   }
 }
-

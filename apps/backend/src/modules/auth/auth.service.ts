@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A UT H.S ER VI CE
+// A UT H.SERVICE
 // ==========================================
 import {
   BadRequestException,
@@ -100,17 +100,28 @@ export class AuthService {
     return (identificador || '').trim().toLowerCase();
   }
 
-  private parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+  private parseBoolean(
+    value: string | undefined,
+    defaultValue: boolean,
+  ): boolean {
     if (value == null || value.trim() === '') return defaultValue;
     const normalized = value.trim().toLowerCase();
     return ['1', 'true', 'yes', 'on'].includes(normalized);
   }
 
-  private parseFeatureFlagsByEmailConfig(): Record<string, Partial<AuthFeatureFlagsResponse>> {
-    const raw = (this.configService.get<string>('FEATURE_FLAGS_BY_EMAIL') || '').trim();
+  private parseFeatureFlagsByEmailConfig(): Record<
+    string,
+    Partial<AuthFeatureFlagsResponse>
+  > {
+    const raw = (
+      this.configService.get<string>('FEATURE_FLAGS_BY_EMAIL') || ''
+    ).trim();
     if (!raw) return {};
     try {
-      const parsed = JSON.parse(raw) as Record<string, Partial<AuthFeatureFlagsResponse>>;
+      const parsed = JSON.parse(raw) as Record<
+        string,
+        Partial<AuthFeatureFlagsResponse>
+      >;
       return parsed && typeof parsed === 'object' ? parsed : {};
     } catch {
       return {};
@@ -155,7 +166,10 @@ export class AuthService {
     return merged;
   }
 
-  async validateUser(identificador: string, senha: string): Promise<Usuario | null> {
+  async validateUser(
+    identificador: string,
+    senha: string,
+  ): Promise<Usuario | null> {
     const normalized = this.normalizeLoginIdentifier(identificador);
 
     let usuario: Usuario | null = null;
@@ -188,7 +202,9 @@ export class AuthService {
 
         if (distinctUsuarioIds.length === 1) {
           try {
-            usuario = await this.usuariosService.findById(distinctUsuarioIds[0]);
+            usuario = await this.usuariosService.findById(
+              distinctUsuarioIds[0],
+            );
           } catch {
             usuario = null;
           }
@@ -324,7 +340,9 @@ export class AuthService {
     }
 
     await this.lockoutService.reset(normalizedIdentifier);
-    this.logger.log(`Login ok para ${usuario.email} (ip=${meta?.ip ?? 'unknown'})`);
+    this.logger.log(
+      `Login ok para ${usuario.email} (ip=${meta?.ip ?? 'unknown'})`,
+    );
     this.logger.log(
       JSON.stringify({
         event: 'login',
@@ -414,7 +432,9 @@ export class AuthService {
   }
 
   private getInviteSecret(): string {
-    const inviteSecret = this.configService.get<string>('INVITE_SECRET')?.trim();
+    const inviteSecret = this.configService
+      .get<string>('INVITE_SECRET')
+      ?.trim();
     if (!inviteSecret) {
       throw new InternalServerErrorException(
         'INVITE_SECRET nao configurado no ambiente',
@@ -422,7 +442,6 @@ export class AuthService {
     }
     return inviteSecret;
   }
-
 
   private mapPacienteOrigemToVinculoOrigem(
     paciente: Paciente,
@@ -445,7 +464,11 @@ export class AuthService {
       throw new BadRequestException('Convite invalido ou expirado');
     }
 
-    if (!payload?.sub || !payload?.pacienteId || payload.type !== 'PACIENTE_INVITE') {
+    if (
+      !payload?.sub ||
+      !payload?.pacienteId ||
+      payload.type !== 'PACIENTE_INVITE'
+    ) {
       throw new BadRequestException('Convite invalido');
     }
 
@@ -476,7 +499,8 @@ export class AuthService {
   async obterDadosConvitePaciente(
     conviteToken: string,
   ): Promise<{ nome: string; email: string }> {
-    const { pacienteParaVinculo } = await this.resolveInviteContext(conviteToken);
+    const { pacienteParaVinculo } =
+      await this.resolveInviteContext(conviteToken);
     return {
       nome: (pacienteParaVinculo.nomeCompleto || '').trim(),
       email: (pacienteParaVinculo.contatoEmail || '').trim().toLowerCase(),
@@ -506,7 +530,8 @@ export class AuthService {
       if (pacienteLocked.pacienteUsuarioId) {
         if (pacienteLocked.pacienteUsuarioId === pacienteUsuario.id) {
           pacienteLocked.vinculoStatus =
-            pacienteLocked.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
+            pacienteLocked.cadastroOrigem ===
+            PacienteCadastroOrigem.CONVITE_RAPIDO
               ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
               : PacienteVinculoStatus.VINCULADO;
           if (!pacienteLocked.conviteAceitoEm) {
@@ -550,7 +575,10 @@ export class AuthService {
           if (!vinculoExistente.contatoEmail && pacienteLocked.contatoEmail) {
             vinculoExistente.contatoEmail = pacienteLocked.contatoEmail;
           }
-          if (!vinculoExistente.contatoWhatsapp && pacienteLocked.contatoWhatsapp) {
+          if (
+            !vinculoExistente.contatoWhatsapp &&
+            pacienteLocked.contatoWhatsapp
+          ) {
             vinculoExistente.contatoWhatsapp = pacienteLocked.contatoWhatsapp;
           }
 
@@ -580,7 +608,8 @@ export class AuthService {
 
           pacienteLocked.pacienteUsuarioId = pacienteUsuario.id;
           pacienteLocked.vinculoStatus =
-            pacienteLocked.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO
+            pacienteLocked.cadastroOrigem ===
+            PacienteCadastroOrigem.CONVITE_RAPIDO
               ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
               : PacienteVinculoStatus.VINCULADO;
           pacienteLocked.conviteAceitoEm = new Date();
@@ -638,7 +667,10 @@ export class AuthService {
     pacienteParaVinculo: Paciente,
     pacienteUsuario: Usuario,
   ): Promise<void> {
-    if (pacienteParaVinculo.cadastroOrigem !== PacienteCadastroOrigem.CONVITE_RAPIDO) {
+    if (
+      pacienteParaVinculo.cadastroOrigem !==
+      PacienteCadastroOrigem.CONVITE_RAPIDO
+    ) {
       return;
     }
 
@@ -650,7 +682,11 @@ export class AuthService {
     }
 
     const emailUsuario = (pacienteUsuario.email || '').trim().toLowerCase();
-    if (emailUsuario && (!pacienteParaVinculo.contatoEmail || !pacienteParaVinculo.contatoEmail.trim())) {
+    if (
+      emailUsuario &&
+      (!pacienteParaVinculo.contatoEmail ||
+        !pacienteParaVinculo.contatoEmail.trim())
+    ) {
       pacienteParaVinculo.contatoEmail = emailUsuario;
       changed = true;
     }
@@ -667,7 +703,9 @@ export class AuthService {
       const exists = await this.pacienteRepository.findOne({ where: { cpf } });
       if (!exists) return cpf;
     }
-    throw new BadRequestException('Nao foi possivel gerar CPF temporario para convite rapido');
+    throw new BadRequestException(
+      'Nao foi possivel gerar CPF temporario para convite rapido',
+    );
   }
 
   async gerarConviteRapidoPaciente(
@@ -690,7 +728,9 @@ export class AuthService {
     const email = dto.email?.trim().toLowerCase() || '';
 
     if (!whatsappDigits && !email) {
-      throw new BadRequestException('Informe WhatsApp ou e-mail para envio do convite');
+      throw new BadRequestException(
+        'Informe WhatsApp ou e-mail para envio do convite',
+      );
     }
 
     const cpfTemporario = await this.generateUniquePacienteCpf();
@@ -800,12 +840,13 @@ export class AuthService {
     profissionalId: string;
   }> {
     if (pacienteUsuario.role !== UserRole.PACIENTE || !pacienteUsuario.ativo) {
-      throw new ForbiddenException('Apenas pacientes autenticados podem aceitar o convite');
+      throw new ForbiddenException(
+        'Apenas pacientes autenticados podem aceitar o convite',
+      );
     }
 
-    const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(
-      conviteToken,
-    );
+    const { profissional, pacienteParaVinculo } =
+      await this.resolveInviteContext(conviteToken);
 
     const pacienteVinculado = await this.vincularPacienteUsuarioAoCadastro(
       pacienteParaVinculo,
@@ -829,12 +870,12 @@ export class AuthService {
       profissionalId: string;
     }
   > {
-    const { profissional, pacienteParaVinculo } = await this.resolveInviteContext(
-      dto.conviteToken,
-    );
+    const { profissional, pacienteParaVinculo } =
+      await this.resolveInviteContext(dto.conviteToken);
 
     const normalizedEmail = dto.email.trim().toLowerCase();
-    const existingUser = await this.usuariosService.findByEmail(normalizedEmail);
+    const existingUser =
+      await this.usuariosService.findByEmail(normalizedEmail);
 
     if (existingUser) {
       if (existingUser.role !== UserRole.PACIENTE) {
@@ -877,27 +918,3 @@ export class AuthService {
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

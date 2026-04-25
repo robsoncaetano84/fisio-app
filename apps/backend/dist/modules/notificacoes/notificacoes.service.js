@@ -86,7 +86,8 @@ let NotificacoesService = NotificacoesService_1 = class NotificacoesService {
             }
             const responseJson = (await response.json());
             const invalidTokens = tokens
-                .filter((_, index) => responseJson.data?.[index]?.details?.error === 'DeviceNotRegistered')
+                .filter((_, index) => responseJson.data?.[index]?.details?.error ===
+                'DeviceNotRegistered')
                 .map((item) => item.expoPushToken);
             if (invalidTokens.length) {
                 await this.pushTokenRepository.update({ expoPushToken: (0, typeorm_2.In)(invalidTokens) }, { ativo: false });

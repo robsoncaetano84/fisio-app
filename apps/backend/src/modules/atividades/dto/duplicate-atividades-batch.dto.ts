@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// D UP LI CA TE A TI VI DA DE S B AT CH.D TO
+// DUPLICATE ATIVIDADES BATCH.DTO
 // ==========================================
 import { Type } from 'class-transformer';
 import {
@@ -28,4 +28,3 @@ export class DuplicateAtividadesBatchDto {
   @Max(7)
   diaPrescricao?: number;
 }
-

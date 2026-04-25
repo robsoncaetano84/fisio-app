@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// 1771776000000 C RE AT EC RM TA BL ES
+// 1771776000000 CREATEC RM TA BL ES
 // ==========================================
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
@@ -114,8 +114,12 @@ export class CreateCrmTables1771776000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_interactions_occurred_at"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_interactions_lead_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_crm_interactions_occurred_at"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_crm_interactions_lead_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_tasks_due_at"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_tasks_status"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_leads_updated_at"`);

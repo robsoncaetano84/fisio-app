@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// P AC IE NT E U SU AR IO Q UE RY.D TO
+// P AC IE NT E U SU AR IO Q UE RY.DTO
 // ==========================================
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 

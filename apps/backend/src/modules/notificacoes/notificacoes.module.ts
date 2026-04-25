@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// N OT IF IC AC OE S.M OD UL E
+// N OT IF IC AC OE S.MODULE
 // ==========================================
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,4 +15,3 @@ import { NotificacoesController } from './notificacoes.controller';
   exports: [NotificacoesService],
 })
 export class NotificacoesModule {}
-

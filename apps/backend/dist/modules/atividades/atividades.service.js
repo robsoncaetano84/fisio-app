@@ -139,14 +139,23 @@ let AtividadesService = class AtividadesService {
         if (!atividade) {
             throw new common_1.NotFoundException('Atividade nao encontrada');
         }
-        const hasClinicalChange = (typeof dto.titulo === 'string' && dto.titulo.trim() !== atividade.titulo) ||
-            (typeof dto.descricao === 'string' && (dto.descricao.trim() || null) !== atividade.descricao) ||
+        const hasClinicalChange = (typeof dto.titulo === 'string' &&
+            dto.titulo.trim() !== atividade.titulo) ||
+            (typeof dto.descricao === 'string' &&
+                (dto.descricao.trim() || null) !== atividade.descricao) ||
             (typeof dto.dataLimite === 'string' &&
-                (dto.dataLimite ? new Date(dto.dataLimite).toISOString().slice(0, 10) : null) !==
-                    (atividade.dataLimite ? new Date(atividade.dataLimite).toISOString().slice(0, 10) : null)) ||
-            (typeof dto.diaPrescricao === 'number' && dto.diaPrescricao !== atividade.diaPrescricao) ||
-            (typeof dto.ordemNoDia === 'number' && dto.ordemNoDia !== atividade.ordemNoDia) ||
-            (typeof dto.repetirSemanal === 'boolean' && dto.repetirSemanal !== atividade.repetirSemanal);
+                (dto.dataLimite
+                    ? new Date(dto.dataLimite).toISOString().slice(0, 10)
+                    : null) !==
+                    (atividade.dataLimite
+                        ? new Date(atividade.dataLimite).toISOString().slice(0, 10)
+                        : null)) ||
+            (typeof dto.diaPrescricao === 'number' &&
+                dto.diaPrescricao !== atividade.diaPrescricao) ||
+            (typeof dto.ordemNoDia === 'number' &&
+                dto.ordemNoDia !== atividade.ordemNoDia) ||
+            (typeof dto.repetirSemanal === 'boolean' &&
+                dto.repetirSemanal !== atividade.repetirSemanal);
         if (dto.pacienteId && dto.pacienteId !== atividade.pacienteId) {
             const paciente = await this.pacienteRepository.findOne({
                 where: { id: dto.pacienteId, usuarioId, ativo: true },
@@ -176,8 +185,12 @@ let AtividadesService = class AtividadesService {
         }
         if (typeof dto.aceiteProfissional === 'boolean') {
             atividade.aceiteProfissional = dto.aceiteProfissional;
-            atividade.aceiteProfissionalPorUsuarioId = dto.aceiteProfissional ? usuarioId : null;
-            atividade.aceiteProfissionalEm = dto.aceiteProfissional ? new Date() : null;
+            atividade.aceiteProfissionalPorUsuarioId = dto.aceiteProfissional
+                ? usuarioId
+                : null;
+            atividade.aceiteProfissionalEm = dto.aceiteProfissional
+                ? new Date()
+                : null;
         }
         else if (hasClinicalChange) {
             atividade.aceiteProfissional = false;
@@ -217,7 +230,9 @@ let AtividadesService = class AtividadesService {
         const latestMap = new Map(latestRows.map((row) => [
             row.atividadeId,
             {
-                ultimoCheckinEm: row.ultimoCheckinEm ? new Date(row.ultimoCheckinEm) : null,
+                ultimoCheckinEm: row.ultimoCheckinEm
+                    ? new Date(row.ultimoCheckinEm)
+                    : null,
                 ultimoCheckinConcluiu: typeof row.ultimoCheckinConcluiu === 'boolean'
                     ? row.ultimoCheckinConcluiu
                     : null,
@@ -259,14 +274,20 @@ let AtividadesService = class AtividadesService {
             pacienteId: paciente.id,
             usuarioId: atividade.usuarioId,
             concluiu: dto.concluiu,
-            dorAntes: typeof dto.dorAntes === 'number' ? Math.max(0, Math.min(10, dto.dorAntes)) : null,
-            dorDepois: typeof dto.dorDepois === 'number' ? Math.max(0, Math.min(10, dto.dorDepois)) : null,
+            dorAntes: typeof dto.dorAntes === 'number'
+                ? Math.max(0, Math.min(10, dto.dorAntes))
+                : null,
+            dorDepois: typeof dto.dorDepois === 'number'
+                ? Math.max(0, Math.min(10, dto.dorDepois))
+                : null,
             dificuldade: dto.dificuldade ?? null,
             tempoMinutos: typeof dto.tempoMinutos === 'number'
                 ? Math.max(1, Math.min(300, dto.tempoMinutos))
                 : null,
-            melhoriaSessao: dto.concluiu ? dto.melhoriaSessao ?? null : null,
-            melhoriaDescricao: dto.concluiu ? dto.melhoriaDescricao?.trim() || null : null,
+            melhoriaSessao: dto.concluiu ? (dto.melhoriaSessao ?? null) : null,
+            melhoriaDescricao: dto.concluiu
+                ? dto.melhoriaDescricao?.trim() || null
+                : null,
             motivoNaoExecucao: dto.motivoNaoExecucao?.trim() || null,
             feedbackLivre: dto.feedbackLivre?.trim() || null,
         });
@@ -342,7 +363,9 @@ let AtividadesService = class AtividadesService {
             .andWhere('atividade.ativo = :ativoAtividade', { ativoAtividade: true })
             .andWhere('paciente.ativo = :ativoPaciente', { ativoPaciente: true });
         if (sinceDate) {
-            qb.andWhere('checkin.created_at > :since', { since: sinceDate.toISOString() });
+            qb.andWhere('checkin.created_at > :since', {
+                since: sinceDate.toISOString(),
+            });
         }
         const rows = await qb
             .orderBy('checkin.created_at', 'DESC')

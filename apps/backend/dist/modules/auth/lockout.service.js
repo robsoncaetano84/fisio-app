@@ -36,7 +36,7 @@ let LockoutService = class LockoutService {
         return `lockout:${email.toLowerCase()}`;
     }
     lockoutWindowMs() {
-        return (this.configService.get('LOCKOUT_WINDOW_MIN') ?? 15) * 60_000;
+        return ((this.configService.get('LOCKOUT_WINDOW_MIN') ?? 15) * 60_000);
     }
     lockoutDurationMs() {
         return ((this.configService.get('LOCKOUT_DURATION_MIN') ?? 30) * 60_000);

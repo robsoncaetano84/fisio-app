@@ -10,6 +10,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GlobalHttpExceptionFilter = void 0;
 const common_1 = require("@nestjs/common");
 const sentry_1 = require("../observability/sentry");
+function redactSensitiveUrl(value) {
+    return value.replace(/([?&](?:token|refreshToken|conviteToken|convite)=)[^&]*/gi, '$1[REDACTED]');
+}
 let GlobalHttpExceptionFilter = GlobalHttpExceptionFilter_1 = class GlobalHttpExceptionFilter {
     logger = new common_1.Logger(GlobalHttpExceptionFilter_1.name);
     catch(exception, host) {
@@ -17,7 +20,7 @@ let GlobalHttpExceptionFilter = GlobalHttpExceptionFilter_1 = class GlobalHttpEx
         const response = ctx.getResponse();
         const request = ctx.getRequest();
         const requestId = request?.requestId ?? null;
-        const path = request?.originalUrl || request?.url || '';
+        const path = redactSensitiveUrl(request?.originalUrl || request?.url || '');
         const method = request?.method || '';
         let status = common_1.HttpStatus.INTERNAL_SERVER_ERROR;
         let error = 'Internal Server Error';

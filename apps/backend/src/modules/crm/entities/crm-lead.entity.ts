@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RM L EA D.E NT IT Y
+// C RM L EA D.ENTITY
 // ==========================================
 import { Column, Entity, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -36,13 +36,24 @@ export class CrmLead extends BaseEntity {
   @Column({ type: 'enum', enum: CrmLeadStage, default: CrmLeadStage.NOVO })
   stage: CrmLeadStage;
 
-  @Column({ type: 'varchar', name: 'responsavel_nome', length: 180, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'responsavel_nome',
+    length: 180,
+    nullable: true,
+  })
   responsavelNome: string | null;
 
   @Column({ name: 'responsavel_usuario_id', type: 'uuid', nullable: true })
   responsavelUsuarioId: string | null;
 
-  @Column({ name: 'valor_potencial', type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({
+    name: 'valor_potencial',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
   valorPotencial: string;
 
   @Column({ type: 'text', nullable: true })

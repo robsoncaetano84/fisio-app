@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RE AT E A NA MN ES E.D TO
+// CREATE ANAMNESE.DTO
 // ==========================================
 import {
   IsNotEmpty,

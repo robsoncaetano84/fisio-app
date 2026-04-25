@@ -1,8 +1,12 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// E VO LU CO ES.S ER VI CE
+// E VO LU CO ES.SERVICE
 // ==========================================
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evolucao } from './entities/evolucao.entity';
@@ -80,9 +84,8 @@ export class EvolucoesService {
       throw new NotFoundException('Evolucao nao encontrada');
     }
 
-    const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(
-      usuarioId,
-    );
+    const isMasterAdmin =
+      await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
     if (!isMasterAdmin && evolucao.paciente.usuarioId !== usuarioId) {
       throw new NotFoundException('Evolucao nao encontrada');
     }

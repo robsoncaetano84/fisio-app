@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// U SU AR IO.E NT IT Y
+// U SU AR IO.ENTITY
 // ==========================================
 import { Entity, Column, OneToMany } from 'typeorm';
 import { Exclude } from 'class-transformer';

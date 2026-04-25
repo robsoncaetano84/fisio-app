@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// E VO LU CO ES.C ON TR OL LE R
+// E VO LU CO ES.CONTROLLER
 // ==========================================
 import {
   Controller,
@@ -20,10 +20,12 @@ import { CreateEvolucaoDto } from './dto/create-evolucao.dto';
 import { UpdateEvolucaoDto } from './dto/update-evolucao.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Usuario } from '../usuarios/entities/usuario.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 
 @Controller('evolucoes')
 @UseGuards(JwtAuthGuard)
+@Roles(UserRole.ADMIN, UserRole.USER)
 export class EvolucoesController {
   constructor(private readonly evolucoesService: EvolucoesService) {}
 

@@ -11,6 +11,7 @@ describe('LaudosService - structured exame validation and parsing', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
   const prefix = '__EXAME_FISICO_STRUCTURED_V1__';

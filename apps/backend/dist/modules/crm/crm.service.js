@@ -170,7 +170,10 @@ let CrmService = class CrmService {
         const email = (usuario.email || '').trim().toLowerCase();
         const direct = permissionMap.get(email);
         const wildcard = permissionMap.get('*');
-        const merged = new Set([...(wildcard || []), ...(direct || [])]);
+        const merged = new Set([
+            ...(wildcard || []),
+            ...(direct || []),
+        ]);
         if (!merged.has(permission)) {
             throw new common_1.ForbiddenException('Permissão insuficiente para esta operação administrativa');
         }
@@ -194,7 +197,7 @@ let CrmService = class CrmService {
             .orderBy('l.createdAt', 'DESC');
         const q = (params?.q || '').trim().toLowerCase();
         if (q) {
-            qb.andWhere('(LOWER(l.actorEmail) LIKE :q OR LOWER(l.action) LIKE :q OR LOWER(COALESCE(l.sensitiveReason, \'\')) LIKE :q)', { q: `%${q}%` });
+            qb.andWhere("(LOWER(l.actorEmail) LIKE :q OR LOWER(l.action) LIKE :q OR LOWER(COALESCE(l.sensitiveReason, '')) LIKE :q)", { q: `%${q}%` });
         }
         if (params?.action) {
             qb.andWhere('l.action = :action', { action: params.action });
@@ -260,7 +263,8 @@ let CrmService = class CrmService {
             .filter((prof) => {
             if (typeof params?.ativo === 'boolean' && prof.ativo !== params.ativo)
                 return false;
-            if (especialidade && !(prof.especialidade || '').toLowerCase().includes(especialidade)) {
+            if (especialidade &&
+                !(prof.especialidade || '').toLowerCase().includes(especialidade)) {
                 return false;
             }
             if (!q)
@@ -274,7 +278,9 @@ let CrmService = class CrmService {
             return {
                 id: prof.id,
                 nome: prof.nome,
-                email: params?.includeSensitive ? prof.email : this.maskEmail(prof.email),
+                email: params?.includeSensitive
+                    ? prof.email
+                    : this.maskEmail(prof.email),
                 registroProf: prof.registroProf || null,
                 especialidade: prof.especialidade || null,
                 ativo: prof.ativo,
@@ -311,7 +317,9 @@ let CrmService = class CrmService {
             .leftJoinAndSelect('paciente.pacienteUsuario', 'pacienteUsuario')
             .orderBy('paciente.nomeCompleto', 'ASC');
         if (typeof params?.ativo === 'boolean') {
-            qb.andWhere('paciente.ativo = :ativoFilter', { ativoFilter: params.ativo });
+            qb.andWhere('paciente.ativo = :ativoFilter', {
+                ativoFilter: params.ativo,
+            });
         }
         if (typeof params?.vinculadoUsuarioPaciente === 'boolean') {
             if (params.vinculadoUsuarioPaciente) {
@@ -358,9 +366,12 @@ let CrmService = class CrmService {
                     qualidadeSono: lastAnamnese.qualidadeSono ?? null,
                     humorPredominante: lastAnamnese.humorPredominante || null,
                     vulnerabilidade: (lastAnamnese.nivelEstresse ?? 0) >= 8 ||
-                        (typeof lastAnamnese.energiaDiaria === 'number' && lastAnamnese.energiaDiaria <= 3) ||
-                        (typeof lastAnamnese.apoioEmocional === 'number' && lastAnamnese.apoioEmocional <= 3) ||
-                        (typeof lastAnamnese.qualidadeSono === 'number' && lastAnamnese.qualidadeSono <= 3),
+                        (typeof lastAnamnese.energiaDiaria === 'number' &&
+                            lastAnamnese.energiaDiaria <= 3) ||
+                        (typeof lastAnamnese.apoioEmocional === 'number' &&
+                            lastAnamnese.apoioEmocional <= 3) ||
+                        (typeof lastAnamnese.qualidadeSono === 'number' &&
+                            lastAnamnese.qualidadeSono <= 3),
                     updatedAt: lastAnamnese.createdAt,
                 }
                 : null;
@@ -468,7 +479,9 @@ let CrmService = class CrmService {
                 : '';
         }
         if (dto.contatoEmail !== undefined) {
-            paciente.contatoEmail = dto.contatoEmail ? dto.contatoEmail.trim().toLowerCase() : '';
+            paciente.contatoEmail = dto.contatoEmail
+                ? dto.contatoEmail.trim().toLowerCase()
+                : '';
         }
         if (dto.enderecoCidade !== undefined) {
             paciente.enderecoCidade = dto.enderecoCidade.trim() || '';
@@ -628,7 +641,8 @@ let CrmService = class CrmService {
                 const matchesStatus = (statusFilter === 'NOVO_PACIENTE' &&
                     !hasAnamnese &&
                     now - createdAtMs <= activityWindowMs) ||
-                    (statusFilter === 'AGUARDANDO_VINCULO' && aguardandoVinculoPaciente) ||
+                    (statusFilter === 'AGUARDANDO_VINCULO' &&
+                        aguardandoVinculoPaciente) ||
                     (statusFilter === 'ANAMNESE_PENDENTE' && !hasAnamnese) ||
                     (statusFilter === 'EM_TRATAMENTO' &&
                         hasAnamnese &&
@@ -654,7 +668,9 @@ let CrmService = class CrmService {
                 alta += 1;
             }
             const lastCheckinRaw = checkinByPaciente.get(paciente.id);
-            const lastCheckinMs = lastCheckinRaw ? new Date(lastCheckinRaw).getTime() : NaN;
+            const lastCheckinMs = lastCheckinRaw
+                ? new Date(lastCheckinRaw).getTime()
+                : NaN;
             const lastClinicalEventMs = Math.max(Number.isNaN(lastCheckinMs) ? -1 : lastCheckinMs, Number.isNaN(lastEvolucaoMs) ? -1 : lastEvolucaoMs, Number.isNaN(lastLaudoUpdatedMs) ? -1 : lastLaudoUpdatedMs);
             const inativoEncerrado = tratamentoConcluido &&
                 lastClinicalEventMs > 0 &&
@@ -668,7 +684,8 @@ let CrmService = class CrmService {
                     semCheckin += 1;
                 }
             }
-            if (Number.isNaN(lastEvolucaoMs) || now - lastEvolucaoMs > semEvolucaoWindowMs) {
+            if (Number.isNaN(lastEvolucaoMs) ||
+                now - lastEvolucaoMs > semEvolucaoWindowMs) {
                 semEvolucao += 1;
                 pacientesEmAtencao += 1;
             }
@@ -707,8 +724,12 @@ let CrmService = class CrmService {
             completedTotal += Number(row.completed || 0);
             blockedTotal += Number(row.blocked || 0);
         });
-        const abandonoRate = openedTotal > 0 ? Number(((abandonedTotal / openedTotal) * 100).toFixed(1)) : 0;
-        const conclusaoPlanoRate = pacienteIds.length > 0 ? Number(((alta / pacienteIds.length) * 100).toFixed(1)) : 0;
+        const abandonoRate = openedTotal > 0
+            ? Number(((abandonedTotal / openedTotal) * 100).toFixed(1))
+            : 0;
+        const conclusaoPlanoRate = pacienteIds.length > 0
+            ? Number(((alta / pacienteIds.length) * 100).toFixed(1))
+            : 0;
         return {
             pipeline: {
                 novoPaciente,
@@ -758,7 +779,9 @@ let CrmService = class CrmService {
         };
     }
     async getLeadById(id, params) {
-        const lead = await this.crmLeadRepository.findOne({ where: { id, ativo: true } });
+        const lead = await this.crmLeadRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!lead)
             throw new common_1.NotFoundException('Lead não encontrado');
         return this.mapLead(lead, { includeSensitive: params?.includeSensitive });
@@ -780,7 +803,9 @@ let CrmService = class CrmService {
         });
     }
     async updateLead(id, dto) {
-        const lead = await this.crmLeadRepository.findOne({ where: { id, ativo: true } });
+        const lead = await this.crmLeadRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!lead)
             throw new common_1.NotFoundException('Lead não encontrado');
         if (dto.nome !== undefined)
@@ -802,7 +827,9 @@ let CrmService = class CrmService {
         });
     }
     async deleteLead(id) {
-        const lead = await this.crmLeadRepository.findOne({ where: { id, ativo: true } });
+        const lead = await this.crmLeadRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!lead)
             throw new common_1.NotFoundException('Lead não encontrado');
         lead.ativo = false;
@@ -846,7 +873,9 @@ let CrmService = class CrmService {
         });
     }
     async updateTask(id, dto) {
-        const task = await this.crmTaskRepository.findOne({ where: { id, ativo: true } });
+        const task = await this.crmTaskRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!task)
             throw new common_1.NotFoundException('Tarefa CRM não encontrada');
         if (dto.titulo !== undefined)
@@ -866,7 +895,9 @@ let CrmService = class CrmService {
         });
     }
     async deleteTask(id) {
-        const task = await this.crmTaskRepository.findOne({ where: { id, ativo: true } });
+        const task = await this.crmTaskRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!task)
             throw new common_1.NotFoundException('Tarefa CRM não encontrada');
         task.ativo = false;
@@ -886,7 +917,9 @@ let CrmService = class CrmService {
             .take(limit)
             .getManyAndCount();
         return {
-            items: items.map((item) => this.mapInteraction(item, { includeSensitive: params?.includeSensitive })),
+            items: items.map((item) => this.mapInteraction(item, {
+                includeSensitive: params?.includeSensitive,
+            })),
             total,
             page,
             limit,
@@ -910,7 +943,9 @@ let CrmService = class CrmService {
         });
     }
     async updateInteraction(id, dto) {
-        const item = await this.crmInteractionRepository.findOne({ where: { id, ativo: true } });
+        const item = await this.crmInteractionRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!item)
             throw new common_1.NotFoundException('Interação CRM não encontrada');
         if (dto.leadId !== undefined) {
@@ -932,7 +967,9 @@ let CrmService = class CrmService {
         });
     }
     async deleteInteraction(id) {
-        const item = await this.crmInteractionRepository.findOne({ where: { id, ativo: true } });
+        const item = await this.crmInteractionRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!item)
             throw new common_1.NotFoundException('Interação CRM não encontrada');
         item.ativo = false;
@@ -1030,7 +1067,9 @@ let CrmService = class CrmService {
         };
     }
     async ensureLeadExists(id) {
-        const lead = await this.crmLeadRepository.findOne({ where: { id, ativo: true } });
+        const lead = await this.crmLeadRepository.findOne({
+            where: { id, ativo: true },
+        });
         if (!lead)
             throw new common_1.NotFoundException('Lead não encontrado');
     }

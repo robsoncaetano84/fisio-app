@@ -30,6 +30,7 @@ const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const current_user_decorator_1 = require("./decorators/current-user.decorator");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 const roles_decorator_1 = require("./decorators/roles.decorator");
+const public_decorator_1 = require("./decorators/public.decorator");
 let AuthController = class AuthController {
     authService;
     usuariosService;
@@ -128,6 +129,7 @@ let AuthController = class AuthController {
 };
 exports.AuthController = AuthController;
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Post)('login'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 5 } }),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -138,6 +140,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Post)('refresh'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 10 } }),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -147,6 +150,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "refresh", null);
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Post)('forgot-password'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 5 } }),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -156,6 +160,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "forgotPassword", null);
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Post)('registro'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 3 } }),
     __param(0, (0, common_1.Body)()),
@@ -188,6 +193,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "gerarConviteRapidoPaciente", null);
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Post)('registro-paciente-convite'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 10 } }),
     __param(0, (0, common_1.Body)()),
@@ -196,6 +202,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "registroPacientePorConvite", null);
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Get)('paciente-convite-dados'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
     __param(0, (0, common_1.Query)('conviteToken')),

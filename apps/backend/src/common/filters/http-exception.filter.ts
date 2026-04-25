@@ -23,6 +23,13 @@ type ErrorResponseBody = {
   requestId: string | null;
 };
 
+function redactSensitiveUrl(value: string): string {
+  return value.replace(
+    /([?&](?:token|refreshToken|conviteToken|convite)=)[^&]*/gi,
+    '$1[REDACTED]',
+  );
+}
+
 @Catch()
 export class GlobalHttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalHttpExceptionFilter.name);
@@ -38,7 +45,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
     >();
 
     const requestId = request?.requestId ?? null;
-    const path = request?.originalUrl || request?.url || '';
+    const path = redactSensitiveUrl(request?.originalUrl || request?.url || '');
     const method = request?.method || '';
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;

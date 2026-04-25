@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RM T AS K.E NT IT Y
+// C RM T AS K.ENTITY
 // ==========================================
 import { Column, Entity, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -23,7 +23,12 @@ export class CrmTask extends BaseEntity {
   @Column({ name: 'lead_id', type: 'uuid', nullable: true })
   leadId: string | null;
 
-  @Column({ type: 'varchar', name: 'responsavel_nome', length: 180, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'responsavel_nome',
+    length: 180,
+    nullable: true,
+  })
   responsavelNome: string | null;
 
   @Column({ name: 'responsavel_usuario_id', type: 'uuid', nullable: true })
@@ -32,7 +37,11 @@ export class CrmTask extends BaseEntity {
   @Column({ name: 'due_at', type: 'timestamp', nullable: true })
   dueAt: Date | null;
 
-  @Column({ type: 'enum', enum: CrmTaskStatus, default: CrmTaskStatus.PENDENTE })
+  @Column({
+    type: 'enum',
+    enum: CrmTaskStatus,
+    default: CrmTaskStatus.PENDENTE,
+  })
   status: CrmTaskStatus;
 
   @Column({ default: true })

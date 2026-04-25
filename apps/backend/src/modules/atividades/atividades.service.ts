@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A TI VI DA DE S.S ER VI CE
+// ATIVIDADES.SERVICE
 // ==========================================
 import {
   BadRequestException,
@@ -57,21 +57,24 @@ export class AtividadesService {
       titulo: dto.titulo.trim(),
       descricao: dto.descricao?.trim() || null,
       dataLimite: dto.dataLimite ? new Date(dto.dataLimite) : null,
-      diaPrescricao: typeof dto.diaPrescricao === 'number' ? dto.diaPrescricao : null,
+      diaPrescricao:
+        typeof dto.diaPrescricao === 'number' ? dto.diaPrescricao : null,
       ordemNoDia: typeof dto.ordemNoDia === 'number' ? dto.ordemNoDia : null,
       repetirSemanal: dto.repetirSemanal ?? true,
       aceiteProfissional: dto.aceiteProfissional === true,
       aceiteProfissionalPorUsuarioId:
         dto.aceiteProfissional === true ? usuarioId : null,
-      aceiteProfissionalEm:
-        dto.aceiteProfissional === true ? new Date() : null,
+      aceiteProfissionalEm: dto.aceiteProfissional === true ? new Date() : null,
       ativo: true,
     });
 
     return this.atividadeRepository.save(atividade);
   }
 
-  async findByPaciente(pacienteId: string, usuarioId: string): Promise<Atividade[]> {
+  async findByPaciente(
+    pacienteId: string,
+    usuarioId: string,
+  ): Promise<Atividade[]> {
     const paciente = await this.pacienteRepository.findOne({
       where: { id: pacienteId, usuarioId, ativo: true },
     });
@@ -177,14 +180,23 @@ export class AtividadesService {
     }
 
     const hasClinicalChange =
-      (typeof dto.titulo === 'string' && dto.titulo.trim() !== atividade.titulo) ||
-      (typeof dto.descricao === 'string' && (dto.descricao.trim() || null) !== atividade.descricao) ||
+      (typeof dto.titulo === 'string' &&
+        dto.titulo.trim() !== atividade.titulo) ||
+      (typeof dto.descricao === 'string' &&
+        (dto.descricao.trim() || null) !== atividade.descricao) ||
       (typeof dto.dataLimite === 'string' &&
-        (dto.dataLimite ? new Date(dto.dataLimite).toISOString().slice(0, 10) : null) !==
-          (atividade.dataLimite ? new Date(atividade.dataLimite).toISOString().slice(0, 10) : null)) ||
-      (typeof dto.diaPrescricao === 'number' && dto.diaPrescricao !== atividade.diaPrescricao) ||
-      (typeof dto.ordemNoDia === 'number' && dto.ordemNoDia !== atividade.ordemNoDia) ||
-      (typeof dto.repetirSemanal === 'boolean' && dto.repetirSemanal !== atividade.repetirSemanal);
+        (dto.dataLimite
+          ? new Date(dto.dataLimite).toISOString().slice(0, 10)
+          : null) !==
+          (atividade.dataLimite
+            ? new Date(atividade.dataLimite).toISOString().slice(0, 10)
+            : null)) ||
+      (typeof dto.diaPrescricao === 'number' &&
+        dto.diaPrescricao !== atividade.diaPrescricao) ||
+      (typeof dto.ordemNoDia === 'number' &&
+        dto.ordemNoDia !== atividade.ordemNoDia) ||
+      (typeof dto.repetirSemanal === 'boolean' &&
+        dto.repetirSemanal !== atividade.repetirSemanal);
 
     if (dto.pacienteId && dto.pacienteId !== atividade.pacienteId) {
       const paciente = await this.pacienteRepository.findOne({
@@ -217,8 +229,12 @@ export class AtividadesService {
 
     if (typeof dto.aceiteProfissional === 'boolean') {
       atividade.aceiteProfissional = dto.aceiteProfissional;
-      atividade.aceiteProfissionalPorUsuarioId = dto.aceiteProfissional ? usuarioId : null;
-      atividade.aceiteProfissionalEm = dto.aceiteProfissional ? new Date() : null;
+      atividade.aceiteProfissionalPorUsuarioId = dto.aceiteProfissional
+        ? usuarioId
+        : null;
+      atividade.aceiteProfissionalEm = dto.aceiteProfissional
+        ? new Date()
+        : null;
     } else if (hasClinicalChange) {
       atividade.aceiteProfissional = false;
       atividade.aceiteProfissionalPorUsuarioId = null;
@@ -228,9 +244,7 @@ export class AtividadesService {
     return this.atividadeRepository.save(atividade);
   }
 
-  async findMinhasAtividades(
-    usuario: Usuario,
-  ): Promise<
+  async findMinhasAtividades(usuario: Usuario): Promise<
     Array<
       Atividade & {
         ultimoCheckinEm: Date | null;
@@ -282,7 +296,9 @@ export class AtividadesService {
       latestRows.map((row) => [
         row.atividadeId,
         {
-          ultimoCheckinEm: row.ultimoCheckinEm ? new Date(row.ultimoCheckinEm) : null,
+          ultimoCheckinEm: row.ultimoCheckinEm
+            ? new Date(row.ultimoCheckinEm)
+            : null,
           ultimoCheckinConcluiu:
             typeof row.ultimoCheckinConcluiu === 'boolean'
               ? row.ultimoCheckinConcluiu
@@ -342,16 +358,22 @@ export class AtividadesService {
       usuarioId: atividade.usuarioId,
       concluiu: dto.concluiu,
       dorAntes:
-        typeof dto.dorAntes === 'number' ? Math.max(0, Math.min(10, dto.dorAntes)) : null,
+        typeof dto.dorAntes === 'number'
+          ? Math.max(0, Math.min(10, dto.dorAntes))
+          : null,
       dorDepois:
-        typeof dto.dorDepois === 'number' ? Math.max(0, Math.min(10, dto.dorDepois)) : null,
+        typeof dto.dorDepois === 'number'
+          ? Math.max(0, Math.min(10, dto.dorDepois))
+          : null,
       dificuldade: dto.dificuldade ?? null,
       tempoMinutos:
         typeof dto.tempoMinutos === 'number'
           ? Math.max(1, Math.min(300, dto.tempoMinutos))
           : null,
-      melhoriaSessao: dto.concluiu ? dto.melhoriaSessao ?? null : null,
-      melhoriaDescricao: dto.concluiu ? dto.melhoriaDescricao?.trim() || null : null,
+      melhoriaSessao: dto.concluiu ? (dto.melhoriaSessao ?? null) : null,
+      melhoriaDescricao: dto.concluiu
+        ? dto.melhoriaDescricao?.trim() || null
+        : null,
       motivoNaoExecucao: dto.motivoNaoExecucao?.trim() || null,
       feedbackLivre: dto.feedbackLivre?.trim() || null,
     });
@@ -493,7 +515,9 @@ export class AtividadesService {
       .andWhere('paciente.ativo = :ativoPaciente', { ativoPaciente: true });
 
     if (sinceDate) {
-      qb.andWhere('checkin.created_at > :since', { since: sinceDate.toISOString() });
+      qb.andWhere('checkin.created_at > :since', {
+        since: sinceDate.toISOString(),
+      });
     }
 
     const rows = await qb
@@ -638,7 +662,12 @@ export class AtividadesService {
   private buildRuleSuggestion(
     dto: GenerateAtividadeAiDto,
     anamnese: Anamnese | null,
-  ): { titulo: string; descricao: string; referencias: string[]; source: 'rules' } {
+  ): {
+    titulo: string;
+    descricao: string;
+    referencias: string[];
+    source: 'rules';
+  } {
     const objetivo = anamnese?.metaPrincipalPaciente?.trim();
     const limitacoes = anamnese?.limitacoesFuncionais?.trim();
     const piora = anamnese?.atividadesQuePioram?.trim();
@@ -662,7 +691,10 @@ export class AtividadesService {
         .filter(Boolean)
         .join(' ')
         .slice(0, 1000);
-    const descricao = this.appendReferencesToDescricao(descricaoBase, referencias);
+    const descricao = this.appendReferencesToDescricao(
+      descricaoBase,
+      referencias,
+    );
 
     return {
       titulo: titulo.slice(0, 140),
@@ -776,7 +808,8 @@ ${JSON.stringify(input, null, 2)}
 
   private normalizeReferences(referencias?: string[]): string[] {
     const allowed = new Set(this.getDefaultBibliographicReferences());
-    if (!referencias?.length) return this.getDefaultBibliographicReferences().slice(0, 2);
+    if (!referencias?.length)
+      return this.getDefaultBibliographicReferences().slice(0, 2);
 
     const unique = Array.from(
       new Set(
@@ -786,17 +819,18 @@ ${JSON.stringify(input, null, 2)}
       ),
     );
 
-    if (!unique.length) return this.getDefaultBibliographicReferences().slice(0, 2);
+    if (!unique.length)
+      return this.getDefaultBibliographicReferences().slice(0, 2);
     return unique.slice(0, 4);
   }
 
-  private appendReferencesToDescricao(descricao: string, referencias: string[]): string {
+  private appendReferencesToDescricao(
+    descricao: string,
+    referencias: string[],
+  ): string {
     const base = (descricao || '').trim();
     if (!referencias.length) return base.slice(0, 1000);
     const blocoReferencias = ` Referencias: ${referencias.join(' | ')}`;
     return `${base}${blocoReferencias}`.slice(0, 1000);
   }
 }
-
-
-

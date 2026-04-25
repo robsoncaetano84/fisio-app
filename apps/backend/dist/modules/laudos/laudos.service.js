@@ -41,7 +41,9 @@ let LaudosService = class LaudosService {
     pacientesService;
     usuariosService;
     isTruthyEnv(value) {
-        const normalized = String(value || '').trim().toLowerCase();
+        const normalized = String(value || '')
+            .trim()
+            .toLowerCase();
         return ['1', 'true', 'yes', 'on'].includes(normalized);
     }
     shouldUseExamAi() {
@@ -208,11 +210,11 @@ let LaudosService = class LaudosService {
         doc.restore();
         doc.rect(35, 35, 525, 75).fill('#14532D');
         doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
+        doc.fontSize(10).fillColor('#DCFCE7').text('Documento clinico', 50, 82);
         doc
-            .fontSize(10)
-            .fillColor('#DCFCE7')
-            .text('Documento clinico', 50, 82);
-        doc.fillColor('#111827').fontSize(17).text(tipo === 'laudo' ? 'Laudo do Paciente' : 'Plano de Tratamento', 50, 130);
+            .fillColor('#111827')
+            .fontSize(17)
+            .text(tipo === 'laudo' ? 'Laudo do Paciente' : 'Plano de Tratamento', 50, 130);
         doc
             .lineWidth(0.5)
             .strokeColor('#E5E7EB')
@@ -242,7 +244,8 @@ let LaudosService = class LaudosService {
             this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
             this.addSection(doc, 'Frequencia e Duracao', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-            this.addSection(doc, 'Observacao', laudo.observacoes || 'Documento para uso clinico profissional. Reavaliar periodicamente.');
+            this.addSection(doc, 'Observacao', laudo.observacoes ||
+                'Documento para uso clinico profissional. Reavaliar periodicamente.');
         }
         else {
             this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
@@ -250,7 +253,8 @@ let LaudosService = class LaudosService {
             this.addSection(doc, 'Frequencia Sugerida', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`);
             this.addSection(doc, 'Duracao Sugerida', `${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-            this.addSection(doc, 'Observacao', laudo.observacoes || 'Plano sujeito a ajuste pelo profissional responsavel.');
+            this.addSection(doc, 'Observacao', laudo.observacoes ||
+                'Plano sujeito a ajuste pelo profissional responsavel.');
         }
         doc.end();
         return done;
@@ -315,7 +319,8 @@ let LaudosService = class LaudosService {
             this.addSection(doc, 'Objetivos de Medio Prazo', laudo.objetivosMedioPrazo);
             this.addSection(doc, 'Frequencia e Duracao', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-            this.addSection(doc, 'Observacao', laudo.observacoes || 'Documento para uso clinico profissional. Reavaliar periodicamente.');
+            this.addSection(doc, 'Observacao', laudo.observacoes ||
+                'Documento para uso clinico profissional. Reavaliar periodicamente.');
         }
         else {
             this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
@@ -323,7 +328,8 @@ let LaudosService = class LaudosService {
             this.addSection(doc, 'Frequencia Sugerida', `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`);
             this.addSection(doc, 'Duracao Sugerida', `${laudo.duracaoSemanas ?? '-'} semana(s)`);
             this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-            this.addSection(doc, 'Observacao', laudo.observacoes || 'Plano sujeito a ajuste pelo profissional responsavel.');
+            this.addSection(doc, 'Observacao', laudo.observacoes ||
+                'Plano sujeito a ajuste pelo profissional responsavel.');
         }
         doc.end();
         return done;
@@ -419,42 +425,42 @@ let LaudosService = class LaudosService {
                 nomeCompleto: paciente.nomeCompleto,
                 idade: this.calculateAge(paciente.dataNascimento),
                 sexo: paciente.sexo,
-                profissao: paciente.profissao ?? "",
+                profissao: paciente.profissao ?? '',
             },
             anamnese: anamneses[0]
                 ? {
                     motivoBusca: anamneses[0].motivoBusca,
                     areasAfetadas: anamneses[0].areasAfetadas,
                     intensidadeDor: anamneses[0].intensidadeDor,
-                    descricaoSintomas: anamneses[0].descricaoSintomas ?? "",
-                    tempoProblema: anamneses[0].tempoProblema ?? "",
-                    inicioProblema: anamneses[0].inicioProblema ?? "",
-                    fatorAlivio: anamneses[0].fatorAlivio ?? "",
-                    fatoresPiora: anamneses[0].fatoresPiora ?? "",
-                    mecanismoLesao: anamneses[0].mecanismoLesao ?? "",
-                    historicoEsportivo: anamneses[0].historicoEsportivo ?? "",
-                    lesoesPrevias: anamneses[0].lesoesPrevias ?? "",
-                    usoMedicamentos: anamneses[0].usoMedicamentos ?? "",
+                    descricaoSintomas: anamneses[0].descricaoSintomas ?? '',
+                    tempoProblema: anamneses[0].tempoProblema ?? '',
+                    inicioProblema: anamneses[0].inicioProblema ?? '',
+                    fatorAlivio: anamneses[0].fatorAlivio ?? '',
+                    fatoresPiora: anamneses[0].fatoresPiora ?? '',
+                    mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
+                    historicoEsportivo: anamneses[0].historicoEsportivo ?? '',
+                    lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
+                    usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
                 }
                 : null,
             evolucoes: evolucoes.map((e) => ({
                 data: e.data,
-                avaliacaoClinica: e.avaliacao ?? "",
-                planoSessao: e.plano ?? "",
-                observacoes: e.observacoes ?? "",
+                avaliacaoClinica: e.avaliacao ?? '',
+                planoSessao: e.plano ?? '',
+                observacoes: e.observacoes ?? '',
             })),
             exameFisicoResumo,
             exames: exames.map((exame) => ({
                 nomeOriginal: exame.nomeOriginal,
-                tipoExame: exame.tipoExame ?? "",
+                tipoExame: exame.tipoExame ?? '',
                 dataExame: exame.dataExame ?? null,
                 mimeType: exame.mimeType,
-                observacao: exame.observacao ?? "",
+                observacao: exame.observacao ?? '',
                 uploadedAt: exame.uploadedAt,
                 aiInterpretacao: exame.aiInterpretacao,
             })),
         });
-        const source = Object.keys(aiSuggestion).length ? "ai" : "rules";
+        const source = Object.keys(aiSuggestion).length ? 'ai' : 'rules';
         const examesConsiderados = exames.length;
         const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
         const confidence = source === 'ai' && examesComLeituraIa > 0
@@ -483,9 +489,9 @@ let LaudosService = class LaudosService {
             diagnosticoFuncional: aiSuggestion.diagnosticoFuncional ??
                 `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo ??
-                "Reduzir dor percebida e melhorar controle motor inicial.",
+                'Reduzir dor percebida e melhorar controle motor inicial.',
             objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo ??
-                "Restabelecer funcao global e autonomia nas atividades diarias.",
+                'Restabelecer funcao global e autonomia nas atividades diarias.',
             frequenciaSemanal: aiSuggestion.frequenciaSemanal ?? 2,
             duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
             condutas: aiSuggestion.condutas ??
@@ -493,7 +499,7 @@ let LaudosService = class LaudosService {
             planoTratamentoIA: aiSuggestion.planoTratamentoIA ??
                 `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
             criteriosAlta: aiSuggestion.criteriosAlta ??
-                "Dor controlada, funcao satisfatoria e independencia para autocuidado.",
+                'Dor controlada, funcao satisfatoria e independencia para autocuidado.',
         };
     }
     calculateAge(dataNascimento) {
@@ -673,7 +679,9 @@ ${input.observacao || 'Sem observacao adicional.'}
         if (!apiKey) {
             return {};
         }
-        const model = (process.env.OPENAI_LAUDO_MODEL || process.env.OPENAI_MODEL || 'gpt-5-mini').trim();
+        const model = (process.env.OPENAI_LAUDO_MODEL ||
+            process.env.OPENAI_MODEL ||
+            'gpt-5-mini').trim();
         const systemPrompt = 'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes. Priorize seguranca clinica e rastreabilidade da decisao.';
         const userPrompt = `
 Retorne SOMENTE JSON valido com as chaves:
@@ -895,51 +903,80 @@ ${JSON.stringify(input, null, 2)}
             'Subtipo clinico: ' + String(parsed.dorSubtipo || 'Nao informado'),
             '',
             'Inspecao/observacao',
-            'Postura global: ' + String(parsed.observacao?.postura || 'Nao informado'),
-            'Assimetrias: ' + String(parsed.observacao?.assimetria || 'Nao informado'),
+            'Postura global: ' +
+                String(parsed.observacao?.postura || 'Nao informado'),
+            'Assimetrias: ' +
+                String(parsed.observacao?.assimetria || 'Nao informado'),
             'Edema: ' + String(parsed.observacao?.edema || 'Nao informado'),
-            'Atrofia muscular: ' + String(parsed.observacao?.atrofiaMuscular || 'Nao informado'),
-            'Alteracoes de marcha: ' + String(parsed.observacao?.marcha || 'Nao informado'),
-            'Padrao de movimento observado: ' + String(parsed.observacao?.padraoMovimento || 'Nao informado'),
+            'Atrofia muscular: ' +
+                String(parsed.observacao?.atrofiaMuscular || 'Nao informado'),
+            'Alteracoes de marcha: ' +
+                String(parsed.observacao?.marcha || 'Nao informado'),
+            'Padrao de movimento observado: ' +
+                String(parsed.observacao?.padraoMovimento || 'Nao informado'),
             '',
             'Padrao de dor',
             'Dor local: ' + String(parsed.padraoDor?.local || 'Nao informado'),
-            'Dor irradiada: ' + String(parsed.padraoDor?.irradiada || 'Nao informado'),
-            'Comportamento da dor: ' + String(parsed.padraoDor?.comportamento || 'Nao informado'),
+            'Dor irradiada: ' +
+                String(parsed.padraoDor?.irradiada || 'Nao informado'),
+            'Comportamento da dor: ' +
+                String(parsed.padraoDor?.comportamento || 'Nao informado'),
             '',
             'Movimento (chave)',
             'Ativo: ' + String(parsed.movimento?.ativo || 'Nao informado'),
             'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
             'Resistido: ' + String(parsed.movimento?.resistido || 'Nao informado'),
-            'Reproduz dor: ' + String(parsed.movimento?.reproduzDor || 'Nao informado'),
-            'Qualidade do movimento: ' + String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
-            'Compensacoes: ' + String(parsed.movimento?.compensacoes || 'Nao informado'),
-            'Dor no movimento: ' + String(parsed.movimento?.dorNoMovimento || 'Nao informado'),
+            'Reproduz dor: ' +
+                String(parsed.movimento?.reproduzDor || 'Nao informado'),
+            'Qualidade do movimento: ' +
+                String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
+            'Compensacoes: ' +
+                String(parsed.movimento?.compensacoes || 'Nao informado'),
+            'Dor no movimento: ' +
+                String(parsed.movimento?.dorNoMovimento || 'Nao informado'),
             '',
             'Palpacao',
             'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
             'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),
-            'Pontos gatilho: ' + String(parsed.palpacao?.pontosGatilho || 'Nao informado'),
-            'Palpacao dinamica vertebral: ' + String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
-            'Pontos dolorosos: ' + String(parsed.palpacao?.pontosDolorosos || 'Nao informado'),
+            'Pontos gatilho: ' +
+                String(parsed.palpacao?.pontosGatilho || 'Nao informado'),
+            'Palpacao dinamica vertebral: ' +
+                String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
+            'Pontos dolorosos: ' +
+                String(parsed.palpacao?.pontosDolorosos || 'Nao informado'),
             'Temperatura: ' + String(parsed.palpacao?.temperatura || 'Nao informado'),
-            'Tonus muscular: ' + String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
-            'Estruturas especificas: ' + String(parsed.palpacao?.estruturasEspecificas || 'Nao informado'),
-            'Hipomobilidade articular: ' + String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
-            'Hipomobilidade segmentar - Cervical: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.cervical || 'Nao informado'),
-            'Hipomobilidade segmentar - Toracica: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.toracica || 'Nao informado'),
-            'Hipomobilidade segmentar - Lombar: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.lombar || 'Nao informado'),
-            'Hipomobilidade segmentar - Sacro: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.sacro || 'Nao informado'),
-            'Hipomobilidade segmentar - Iliaco D: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito || 'Nao informado'),
-            'Hipomobilidade segmentar - Iliaco E: ' + String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo || 'Nao informado'),
+            'Tonus muscular: ' +
+                String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
+            'Estruturas especificas: ' +
+                String(parsed.palpacao?.estruturasEspecificas || 'Nao informado'),
+            'Hipomobilidade articular: ' +
+                String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
+            'Hipomobilidade segmentar - Cervical: ' +
+                String(parsed.palpacao?.hipomobilidadeSegmentar?.cervical || 'Nao informado'),
+            'Hipomobilidade segmentar - Toracica: ' +
+                String(parsed.palpacao?.hipomobilidadeSegmentar?.toracica || 'Nao informado'),
+            'Hipomobilidade segmentar - Lombar: ' +
+                String(parsed.palpacao?.hipomobilidadeSegmentar?.lombar || 'Nao informado'),
+            'Hipomobilidade segmentar - Sacro: ' +
+                String(parsed.palpacao?.hipomobilidadeSegmentar?.sacro || 'Nao informado'),
+            'Hipomobilidade segmentar - Iliaco D: ' +
+                String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito ||
+                    'Nao informado'),
+            'Hipomobilidade segmentar - Iliaco E: ' +
+                String(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo ||
+                    'Nao informado'),
             '',
             'Testes funcionais',
-            'Agachamento: ' + String(parsed.testesFuncionais?.agachamento || 'Nao informado'),
-            'Agachamento unilateral: ' + String(parsed.testesFuncionais?.agachamentoUnilateral || 'Nao informado'),
+            'Agachamento: ' +
+                String(parsed.testesFuncionais?.agachamento || 'Nao informado'),
+            'Agachamento unilateral: ' +
+                String(parsed.testesFuncionais?.agachamentoUnilateral || 'Nao informado'),
             'Salto: ' + String(parsed.testesFuncionais?.salto || 'Nao informado'),
             'Corrida: ' + String(parsed.testesFuncionais?.corrida || 'Nao informado'),
-            'Estabilidade: ' + String(parsed.testesFuncionais?.estabilidade || 'Nao informado'),
-            'Controle motor: ' + String(parsed.testesFuncionais?.controleMotor || 'Nao informado'),
+            'Estabilidade: ' +
+                String(parsed.testesFuncionais?.estabilidade || 'Nao informado'),
+            'Controle motor: ' +
+                String(parsed.testesFuncionais?.controleMotor || 'Nao informado'),
             '',
             'Testes',
             'Biomecanicos: ' + String(parsed.testes?.biomecanicos || 'Nao informado'),
@@ -949,9 +986,11 @@ ${JSON.stringify(input, null, 2)}
             '',
             'Neurologico detalhado',
             'Forca: ' + String(parsed.neurologico?.forca || 'Nao informado'),
-            'Sensibilidade: ' + String(parsed.neurologico?.sensibilidade || 'Nao informado'),
+            'Sensibilidade: ' +
+                String(parsed.neurologico?.sensibilidade || 'Nao informado'),
             'Reflexos: ' + String(parsed.neurologico?.reflexos || 'Nao informado'),
-            'Dermatomos: ' + String(parsed.neurologico?.dermatomos || 'Nao informado'),
+            'Dermatomos: ' +
+                String(parsed.neurologico?.dermatomos || 'Nao informado'),
             'Miotomos: ' + String(parsed.neurologico?.miotomos || 'Nao informado'),
             '',
             'Avaliacao por regioes',
@@ -976,33 +1015,55 @@ ${JSON.stringify(input, null, 2)}
             }),
             '',
             'Cruzamento final',
-            'Hipotese principal: ' + String(parsed.cruzamentoFinal?.hipotesePrincipal || 'Nao informado'),
-            'Hipoteses secundarias: ' + String(parsed.cruzamentoFinal?.hipotesesSecundarias || 'Nao informado'),
-            'Inconsistencias: ' + String(parsed.cruzamentoFinal?.inconsistencias || 'Nao informado'),
-            'Direcao de conduta: ' + String(parsed.cruzamentoFinal?.condutaDirecionada || 'Nao informado'),
-            'Prioridade: ' + String(parsed.cruzamentoFinal?.prioridade || 'Nao informado'),
-            'Confianca da hipotese: ' + String(parsed.cruzamentoFinal?.confiancaHipotese || 'Nao informado'),
-            'Score de evidencia: ' + String(parsed.cruzamentoFinal?.scoreEvidencia ?? 'Nao informado'),
-            'Perfil de scoring: ' + String(parsed.cruzamentoFinal?.perfilScoring || 'Nao informado'),
+            'Hipotese principal: ' +
+                String(parsed.cruzamentoFinal?.hipotesePrincipal || 'Nao informado'),
+            'Hipoteses secundarias: ' +
+                String(parsed.cruzamentoFinal?.hipotesesSecundarias || 'Nao informado'),
+            'Inconsistencias: ' +
+                String(parsed.cruzamentoFinal?.inconsistencias || 'Nao informado'),
+            'Direcao de conduta: ' +
+                String(parsed.cruzamentoFinal?.condutaDirecionada || 'Nao informado'),
+            'Prioridade: ' +
+                String(parsed.cruzamentoFinal?.prioridade || 'Nao informado'),
+            'Confianca da hipotese: ' +
+                String(parsed.cruzamentoFinal?.confiancaHipotese || 'Nao informado'),
+            'Score de evidencia: ' +
+                String(parsed.cruzamentoFinal?.scoreEvidencia ?? 'Nao informado'),
+            'Perfil de scoring: ' +
+                String(parsed.cruzamentoFinal?.perfilScoring || 'Nao informado'),
             '',
             'Raciocinio clinico',
-            'Origem provavel da dor: ' + String(parsed.raciocinioClinico?.origemProvavelDor || 'Nao informado'),
-            'Estrutura envolvida: ' + String(parsed.raciocinioClinico?.estruturaEnvolvida || 'Nao informado'),
-            'Tipo de lesao: ' + String(parsed.raciocinioClinico?.tipoLesao || 'Nao informado'),
-            'Fator biomecanico associado: ' + String(parsed.raciocinioClinico?.fatorBiomecanicoAssociado || 'Nao informado'),
-            'Relacao com esporte: ' + String(parsed.raciocinioClinico?.relacaoComEsporte || 'Nao informado'),
+            'Origem provavel da dor: ' +
+                String(parsed.raciocinioClinico?.origemProvavelDor || 'Nao informado'),
+            'Estrutura envolvida: ' +
+                String(parsed.raciocinioClinico?.estruturaEnvolvida || 'Nao informado'),
+            'Tipo de lesao: ' +
+                String(parsed.raciocinioClinico?.tipoLesao || 'Nao informado'),
+            'Fator biomecanico associado: ' +
+                String(parsed.raciocinioClinico?.fatorBiomecanicoAssociado ||
+                    'Nao informado'),
+            'Relacao com esporte: ' +
+                String(parsed.raciocinioClinico?.relacaoComEsporte || 'Nao informado'),
             '',
             'Diagnostico funcional',
-            'Disfuncao principal: ' + String(parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal || 'Nao informado'),
-            'Cadeia envolvida: ' + String(parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || 'Nao informado'),
-            'Compensacoes: ' + String(parsed.diagnosticoFuncionalIa?.compensacoes || 'Nao informado'),
+            'Disfuncao principal: ' +
+                String(parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal || 'Nao informado'),
+            'Cadeia envolvida: ' +
+                String(parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || 'Nao informado'),
+            'Compensacoes: ' +
+                String(parsed.diagnosticoFuncionalIa?.compensacoes || 'Nao informado'),
             '',
             'Conduta direcionada',
-            'Tecnica manual indicada: ' + String(parsed.condutaIa?.tecnicaManualIndicada || 'Nao informado'),
-            'Ajuste articular: ' + String(parsed.condutaIa?.ajusteArticular || 'Nao informado'),
-            'Exercicio corretivo: ' + String(parsed.condutaIa?.exercicioCorretivo || 'Nao informado'),
-            'Liberacao miofascial: ' + String(parsed.condutaIa?.liberacaoMiofascial || 'Nao informado'),
-            'Progressao esportiva: ' + String(parsed.condutaIa?.progressaoEsportiva || 'Nao informado'),
+            'Tecnica manual indicada: ' +
+                String(parsed.condutaIa?.tecnicaManualIndicada || 'Nao informado'),
+            'Ajuste articular: ' +
+                String(parsed.condutaIa?.ajusteArticular || 'Nao informado'),
+            'Exercicio corretivo: ' +
+                String(parsed.condutaIa?.exercicioCorretivo || 'Nao informado'),
+            'Liberacao miofascial: ' +
+                String(parsed.condutaIa?.liberacaoMiofascial || 'Nao informado'),
+            'Progressao esportiva: ' +
+                String(parsed.condutaIa?.progressaoEsportiva || 'Nao informado'),
             '',
             'Red flags positivas',
             rfPositivas || 'Nenhuma red flag positiva',
@@ -1010,7 +1071,8 @@ ${JSON.stringify(input, null, 2)}
                 ? 'ALERTA: red flag critica detectada; encaminhamento imediato recomendado.'
                 : 'Sem red flag critica na triagem.',
             parsed.redFlags?.referralDestination
-                ? 'Destino encaminhamento: ' + String(parsed.redFlags.referralDestination)
+                ? 'Destino encaminhamento: ' +
+                    String(parsed.redFlags.referralDestination)
                 : '',
             parsed.redFlags?.referralReason
                 ? 'Justificativa: ' + String(parsed.redFlags.referralReason)
@@ -1049,7 +1111,10 @@ ${JSON.stringify(input, null, 2)}
     addSection(doc, title, value) {
         doc.fontSize(12).fillColor('#1b5e40').text(title);
         doc.moveDown(0.2);
-        doc.fontSize(11).fillColor('#111').text(value?.trim() ? value : 'Nao informado', {
+        doc
+            .fontSize(11)
+            .fillColor('#111')
+            .text(value?.trim() ? value : 'Nao informado', {
             align: 'left',
         });
         doc.moveDown(0.8);

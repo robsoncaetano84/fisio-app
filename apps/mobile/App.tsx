@@ -65,8 +65,8 @@ function writeCrmSessionFlag(enabled: boolean) {
 }
 
 function WebCrmEntry() {
-  const [email, setEmail] = useState("master@teste.com");
-  const [senha, setSenha] = useState("@Teste1234");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
   const [bootstrapped, setBootstrapped] = useState(false);
   const { isAuthenticated, isLoading, usuario, login, logout, loadStoredAuth, setLoading } =

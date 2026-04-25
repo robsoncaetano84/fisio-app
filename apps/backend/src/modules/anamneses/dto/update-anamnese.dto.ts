@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// U PD AT E A NA MN ES E.D TO
+// UPDATE ANAMNESE.DTO
 // ==========================================
 import {
   IsOptional,

@@ -23,7 +23,6 @@ function createService(config: ConfigMap): CrmService {
     null as any,
     null as any,
     null as any,
-    null as any,
   );
 }
 
@@ -112,4 +111,3 @@ describe('CrmService permissions', () => {
     ).toThrow(ForbiddenException);
   });
 });
-

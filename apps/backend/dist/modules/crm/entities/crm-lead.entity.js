@@ -56,7 +56,12 @@ __decorate([
     __metadata("design:type", String)
 ], CrmLead.prototype, "stage", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', name: 'responsavel_nome', length: 180, nullable: true }),
+    (0, typeorm_1.Column)({
+        type: 'varchar',
+        name: 'responsavel_nome',
+        length: 180,
+        nullable: true,
+    }),
     __metadata("design:type", Object)
 ], CrmLead.prototype, "responsavelNome", void 0);
 __decorate([
@@ -64,7 +69,13 @@ __decorate([
     __metadata("design:type", Object)
 ], CrmLead.prototype, "responsavelUsuarioId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'valor_potencial', type: 'decimal', precision: 12, scale: 2, default: 0 }),
+    (0, typeorm_1.Column)({
+        name: 'valor_potencial',
+        type: 'decimal',
+        precision: 12,
+        scale: 2,
+        default: 0,
+    }),
     __metadata("design:type", String)
 ], CrmLead.prototype, "valorPotencial", void 0);
 __decorate([

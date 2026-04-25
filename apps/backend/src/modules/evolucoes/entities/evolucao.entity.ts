@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// E VO LU CA O.E NT IT Y
+// E VO LU CA O.ENTITY
 // ==========================================
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -119,4 +119,3 @@ export class Evolucao extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   observacoes: string;
 }
-

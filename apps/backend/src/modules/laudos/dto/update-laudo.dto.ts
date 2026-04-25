@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// U PD AT E L AU DO.D TO
+// UPDATE L AU DO.DTO
 // ==========================================
 import { IsOptional, IsString, IsInt, IsIn, Min, Max } from 'class-validator';
 
@@ -68,5 +68,3 @@ export class UpdateLaudoDto {
   @Min(0)
   examesComLeituraIa?: number;
 }
-
-

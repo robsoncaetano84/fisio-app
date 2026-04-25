@@ -18,7 +18,10 @@ const usuarios_service_1 = require("../../usuarios/usuarios.service");
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     usuariosService;
     constructor(configService, usuariosService) {
-        const secret = configService.get('JWT_SECRET') || 'default-secret';
+        const secret = configService.get('JWT_SECRET');
+        if (!secret) {
+            throw new Error('JWT_SECRET nao configurado');
+        }
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,

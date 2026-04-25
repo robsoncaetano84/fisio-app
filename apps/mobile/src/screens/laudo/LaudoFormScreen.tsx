@@ -258,6 +258,16 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     return `${downloadBaseUrl}${safePath}`;
   };
 
+  const openPdfBlobOnWeb = (blob: Blob, webPopup?: Window | null) => {
+    const blobUrl = URL.createObjectURL(blob);
+    if (webPopup && !webPopup.closed) {
+      webPopup.location.href = blobUrl;
+    } else if (typeof window !== "undefined") {
+      window.open(blobUrl, "_blank");
+    }
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  };
+
   const appendText = (
     setter: React.Dispatch<React.SetStateAction<string>>,
     value: string,
@@ -1127,20 +1137,12 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     );
 
     if (Platform.OS === "web") {
-      const tokenValue = authHeader.replace(/^Bearer\s+/i, "").trim();
-      const queryParams = new URLSearchParams();
-      queryParams.set("token", tokenValue);
-      if (params?.consultedRefs) {
-        queryParams.set("consultedRefs", params.consultedRefs);
-      }
-      const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
-      const finalUrl = `${absoluteUrl}?${queryParams.toString()}`;
-
-      if (webPopup && !webPopup.closed) {
-        webPopup.location.href = finalUrl;
-      } else if (typeof window !== "undefined") {
-        window.open(finalUrl, "_blank");
-      }
+      const response = await api.get<Blob>(endpoint, {
+        params,
+        responseType: "blob",
+        headers: { Authorization: authHeader },
+      });
+      openPdfBlobOnWeb(response.data, webPopup);
       return;
     }
 

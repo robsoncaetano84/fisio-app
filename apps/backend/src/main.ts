@@ -20,6 +20,13 @@ function parseBooleanEnv(
   return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
 }
 
+function redactSensitiveUrl(value: string): string {
+  return value.replace(
+    /([?&](?:token|refreshToken|conviteToken|convite)=)[^&]*/gi,
+    '$1[REDACTED]',
+  );
+}
+
 async function bootstrap() {
   const bootstrapLogger = new Logger('Bootstrap');
   initSentry();
@@ -92,7 +99,7 @@ async function bootstrap() {
 
     res.on('finish', () => {
       const durationMs = Date.now() - startedAt;
-      const path = req.originalUrl || req.url;
+      const path = redactSensitiveUrl(req.originalUrl || req.url);
       const message = `${req.method} ${path} -> ${res.statusCode} ${durationMs}ms (requestId=${requestId})`;
 
       if (res.statusCode >= 500) {
@@ -127,4 +134,3 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
-

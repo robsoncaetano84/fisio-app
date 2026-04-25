@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// L OC KO UT.S ER VI CE
+// L OC KO UT.SERVICE
 // ==========================================
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -33,7 +33,9 @@ export class LockoutService {
   }
 
   private lockoutWindowMs() {
-    return (this.configService.get<number>('LOCKOUT_WINDOW_MIN') ?? 15) * 60_000;
+    return (
+      (this.configService.get<number>('LOCKOUT_WINDOW_MIN') ?? 15) * 60_000
+    );
   }
 
   private lockoutDurationMs() {
@@ -54,10 +56,7 @@ export class LockoutService {
     return this.inMemory.get(email) ?? null;
   }
 
-  private async setRecord(
-    email: string,
-    record: LockoutRecord,
-  ): Promise<void> {
+  private async setRecord(email: string, record: LockoutRecord): Promise<void> {
     if (this.useRedis && this.redis) {
       const ttlMs = Math.max(this.lockoutWindowMs(), this.lockoutDurationMs());
       const ttlSeconds = Math.ceil(ttlMs / 1000);

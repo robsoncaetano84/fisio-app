@@ -1,14 +1,16 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A PP.C ON TR OL LE R
+// A PP.CONTROLLER
 // ==========================================
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import { Public } from './modules/auth/decorators/public.decorator';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Public()
   @Get()
   getHello(): string {
     return this.appService.getHello();

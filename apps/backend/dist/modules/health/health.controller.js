@@ -14,6 +14,7 @@ const common_1 = require("@nestjs/common");
 const health_service_1 = require("./health.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const public_decorator_1 = require("../auth/decorators/public.decorator");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 let HealthController = class HealthController {
     healthService;
@@ -33,6 +34,7 @@ let HealthController = class HealthController {
 };
 exports.HealthController = HealthController;
 __decorate([
+    (0, public_decorator_1.Public)(),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),

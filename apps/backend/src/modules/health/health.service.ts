@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// H EA LT H.S ER VI CE
+// H EA LT H.SERVICE
 // ==========================================
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';

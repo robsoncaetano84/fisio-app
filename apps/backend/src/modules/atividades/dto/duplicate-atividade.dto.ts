@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// D UP LI CA TE A TI VI DA DE.D TO
+// DUPLICATE ATIVIDADE.DTO
 // ==========================================
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
@@ -13,4 +13,3 @@ export class DuplicateAtividadeDto {
   @Max(7)
   diaPrescricao?: number;
 }
-

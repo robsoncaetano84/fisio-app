@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// U PD AT E A TI VI DA DE.D TO
+// UPDATE ATIVIDADE.DTO
 // ==========================================
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateAtividadeDto } from './create-atividade.dto';
@@ -11,4 +11,3 @@ export class UpdateAtividadeDto extends PartialType(CreateAtividadeDto) {
   @IsUUID()
   pacienteId?: string;
 }
-

@@ -46,6 +46,7 @@ const core_1 = require("@nestjs/core");
 const throttler_1 = require("@nestjs/throttler");
 const typeorm_1 = require("@nestjs/typeorm");
 const Joi = __importStar(require("joi"));
+const jwt_auth_guard_1 = require("./modules/auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("./modules/auth/guards/roles.guard");
 const usuario_entity_1 = require("./modules/usuarios/entities/usuario.entity");
 const paciente_entity_1 = require("./modules/pacientes/entities/paciente.entity");
@@ -202,6 +203,10 @@ exports.AppModule = AppModule = __decorate([
             {
                 provide: core_1.APP_GUARD,
                 useClass: throttler_1.ThrottlerGuard,
+            },
+            {
+                provide: core_1.APP_GUARD,
+                useClass: jwt_auth_guard_1.JwtAuthGuard,
             },
             {
                 provide: core_1.APP_GUARD,

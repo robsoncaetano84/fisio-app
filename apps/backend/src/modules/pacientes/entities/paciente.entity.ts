@@ -1,6 +1,6 @@
 ﻿// ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// P AC IE NT E.E NT IT Y
+// P AC IE NT E.ENTITY
 // ==========================================
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -109,7 +109,12 @@ export class Paciente extends BaseEntity {
   @JoinColumn({ name: 'paciente_usuario_id' })
   pacienteUsuario: Usuario | null;
 
-  @Column({ name: 'paciente_usuario_id', type: 'uuid', nullable: true, unique: true })
+  @Column({
+    name: 'paciente_usuario_id',
+    type: 'uuid',
+    nullable: true,
+    unique: true,
+  })
   pacienteUsuarioId: string | null;
 
   @Column({
@@ -126,7 +131,11 @@ export class Paciente extends BaseEntity {
   })
   anamneseSolicitacaoPendente: boolean;
 
-  @Column({ name: 'anamnese_solicitacao_em', type: 'timestamp', nullable: true })
+  @Column({
+    name: 'anamnese_solicitacao_em',
+    type: 'timestamp',
+    nullable: true,
+  })
   anamneseSolicitacaoEm: Date | null;
 
   @Column({
@@ -158,5 +167,3 @@ export class Paciente extends BaseEntity {
   @Column({ name: 'convite_aceito_em', type: 'timestamp', nullable: true })
   conviteAceitoEm: Date | null;
 }
-
-

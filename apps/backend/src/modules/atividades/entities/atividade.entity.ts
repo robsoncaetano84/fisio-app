@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// A TI VI DA DE.E NT IT Y
+// ATIVIDADE.ENTITY
 // ==========================================
 import {
   Entity,
@@ -39,7 +39,11 @@ export class Atividade extends BaseEntity {
   @Column({ name: 'aceite_profissional', type: 'boolean', default: false })
   aceiteProfissional: boolean;
 
-  @Column({ name: 'aceite_profissional_por_usuario_id', type: 'uuid', nullable: true })
+  @Column({
+    name: 'aceite_profissional_por_usuario_id',
+    type: 'uuid',
+    nullable: true,
+  })
   aceiteProfissionalPorUsuarioId: string | null;
 
   @Column({ name: 'aceite_profissional_em', type: 'timestamp', nullable: true })

@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// H EA LT H.C ON TR OL LE R
+// H EA LT H.CONTROLLER
 // ==========================================
 import {
   Controller,
@@ -11,12 +11,14 @@ import {
 import { HealthService } from './health.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '../usuarios/entities/usuario.entity';
 
 @Controller('health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
+  @Public()
   @Get()
   async getHealth() {
     const payload = await this.healthService.check();

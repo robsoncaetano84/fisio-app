@@ -41,7 +41,12 @@ __decorate([
     __metadata("design:type", Object)
 ], CrmTask.prototype, "leadId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', name: 'responsavel_nome', length: 180, nullable: true }),
+    (0, typeorm_1.Column)({
+        type: 'varchar',
+        name: 'responsavel_nome',
+        length: 180,
+        nullable: true,
+    }),
     __metadata("design:type", Object)
 ], CrmTask.prototype, "responsavelNome", void 0);
 __decorate([
@@ -53,7 +58,11 @@ __decorate([
     __metadata("design:type", Object)
 ], CrmTask.prototype, "dueAt", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'enum', enum: CrmTaskStatus, default: CrmTaskStatus.PENDENTE }),
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: CrmTaskStatus,
+        default: CrmTaskStatus.PENDENTE,
+    }),
     __metadata("design:type", String)
 ], CrmTask.prototype, "status", void 0);
 __decorate([

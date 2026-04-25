@@ -32,6 +32,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { Roles } from './decorators/roles.decorator';
+import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -40,6 +41,7 @@ export class AuthController {
     private readonly usuariosService: UsuariosService,
   ) {}
 
+  @Public()
   @Post('login')
   @Throttle({ default: { ttl: 60, limit: 5 } })
   @HttpCode(HttpStatus.OK)
@@ -56,6 +58,7 @@ export class AuthController {
     });
   }
 
+  @Public()
   @Post('refresh')
   @Throttle({ default: { ttl: 60, limit: 10 } })
   @HttpCode(HttpStatus.OK)
@@ -63,6 +66,7 @@ export class AuthController {
     return this.authService.refresh(refreshDto.refreshToken);
   }
 
+  @Public()
   @Post('forgot-password')
   @Throttle({ default: { ttl: 60, limit: 5 } })
   @HttpCode(HttpStatus.OK)
@@ -70,6 +74,7 @@ export class AuthController {
     return this.authService.requestPasswordReset(dto.email);
   }
 
+  @Public()
   @Post('registro')
   @Throttle({ default: { ttl: 60, limit: 3 } })
   async registro(@Body() createUsuarioDto: CreateUsuarioDto) {
@@ -110,6 +115,7 @@ export class AuthController {
     return this.authService.gerarConviteRapidoPaciente(usuario, body);
   }
 
+  @Public()
   @Post('registro-paciente-convite')
   @Throttle({ default: { ttl: 60, limit: 10 } })
   async registroPacientePorConvite(
@@ -118,6 +124,7 @@ export class AuthController {
     return this.authService.registrarPacientePorConvite(dto);
   }
 
+  @Public()
   @Get('paciente-convite-dados')
   @Throttle({ default: { ttl: 60, limit: 20 } })
   async obterDadosConvitePaciente(@Query('conviteToken') conviteToken?: string) {

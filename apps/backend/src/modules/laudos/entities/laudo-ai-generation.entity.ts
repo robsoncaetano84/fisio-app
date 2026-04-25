@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// L AU DO A I G EN ER AT IO N.E NT IT Y
+// L AU DO A I G EN ER AT IO N.ENTITY
 // ==========================================
 import { Entity, Column, Unique } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';

@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// C RM I NT ER AC TI ON.E NT IT Y
+// C RM I NT ER AC TI ON.ENTITY
 // ==========================================
 import { Column, Entity, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -31,7 +31,12 @@ export class CrmInteraction extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   detalhes: string | null;
 
-  @Column({ type: 'varchar', name: 'responsavel_nome', length: 180, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'responsavel_nome',
+    length: 180,
+    nullable: true,
+  })
   responsavelNome: string | null;
 
   @Column({ name: 'responsavel_usuario_id', type: 'uuid', nullable: true })

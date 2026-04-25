@@ -54,7 +54,7 @@ export declare class LaudosService {
     buildPdfBufferByPacienteUsuario(usuarioId: string, tipo: 'laudo' | 'plano'): Promise<Buffer>;
     generateAndSaveByPaciente(pacienteId: string, usuarioId: string): Promise<Laudo>;
     generateSuggestionPreview(pacienteId: string, usuarioId: string): Promise<{
-        source: "ai" | "rules";
+        source: 'ai' | 'rules';
         examesConsiderados: number;
         examesComLeituraIa: number;
         sugestaoGeradaEm: string;

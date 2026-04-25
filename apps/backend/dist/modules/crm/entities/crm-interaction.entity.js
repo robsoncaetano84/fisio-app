@@ -50,7 +50,12 @@ __decorate([
     __metadata("design:type", Object)
 ], CrmInteraction.prototype, "detalhes", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', name: 'responsavel_nome', length: 180, nullable: true }),
+    (0, typeorm_1.Column)({
+        type: 'varchar',
+        name: 'responsavel_nome',
+        length: 180,
+        nullable: true,
+    }),
     __metadata("design:type", Object)
 ], CrmInteraction.prototype, "responsavelNome", void 0);
 __decorate([

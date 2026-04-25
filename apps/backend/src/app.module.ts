@@ -9,6 +9,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as Joi from 'joi';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { Usuario } from './modules/usuarios/entities/usuario.entity';
 import { Paciente } from './modules/pacientes/entities/paciente.entity';
@@ -171,6 +172,10 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
     {
       provide: APP_GUARD,

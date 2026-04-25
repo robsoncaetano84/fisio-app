@@ -49,6 +49,9 @@ function parseBooleanEnv(value, defaultValue = false) {
         return defaultValue;
     return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
 }
+function redactSensitiveUrl(value) {
+    return value.replace(/([?&](?:token|refreshToken|conviteToken|convite)=)[^&]*/gi, '$1[REDACTED]');
+}
 async function bootstrap() {
     const bootstrapLogger = new common_1.Logger('Bootstrap');
     (0, sentry_1.initSentry)();
@@ -105,7 +108,7 @@ async function bootstrap() {
         res.setHeader('X-Request-Id', requestId);
         res.on('finish', () => {
             const durationMs = Date.now() - startedAt;
-            const path = req.originalUrl || req.url;
+            const path = redactSensitiveUrl(req.originalUrl || req.url);
             const message = `${req.method} ${path} -> ${res.statusCode} ${durationMs}ms (requestId=${requestId})`;
             if (res.statusCode >= 500) {
                 bootstrapLogger.error(message);

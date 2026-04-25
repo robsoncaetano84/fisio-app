@@ -1,6 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// N OT IF IC AC OE S.C ON TR OL LE R
+// N OT IF IC AC OE S.CONTROLLER
 // ==========================================
 import { Body, Controller, Delete, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -44,4 +44,3 @@ export class NotificacoesController {
     return { success: true };
   }
 }
-
