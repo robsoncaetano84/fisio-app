@@ -14,6 +14,7 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { UsuariosModule } from '../usuarios/usuarios.module';
 import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
 import { LaudoExameHistorico } from './entities/laudo-exame-historico.entity';
+import { LaudoExameFisico } from './entities/laudo-exame-fisico.entity';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { LaudoExameHistorico } from './entities/laudo-exame-historico.entity';
       Evolucao,
       PacienteExame,
       LaudoExameHistorico,
+      LaudoExameFisico,
     ]),
     PacientesModule,
     UsuariosModule,

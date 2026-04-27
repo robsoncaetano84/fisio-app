@@ -19,6 +19,7 @@ const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const usuarios_module_1 = require("../usuarios/usuarios.module");
 const paciente_exame_entity_1 = require("../pacientes/entities/paciente-exame.entity");
 const laudo_exame_historico_entity_1 = require("./entities/laudo-exame-historico.entity");
+const laudo_exame_fisico_entity_1 = require("./entities/laudo-exame-fisico.entity");
 let LaudosModule = class LaudosModule {
 };
 exports.LaudosModule = LaudosModule;
@@ -32,6 +33,7 @@ exports.LaudosModule = LaudosModule = __decorate([
                 evolucao_entity_1.Evolucao,
                 paciente_exame_entity_1.PacienteExame,
                 laudo_exame_historico_entity_1.LaudoExameHistorico,
+                laudo_exame_fisico_entity_1.LaudoExameFisico,
             ]),
             pacientes_module_1.PacientesModule,
             usuarios_module_1.UsuariosModule,

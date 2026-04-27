@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import { LaudosService } from './laudos.service';
 import { CreateLaudoDto } from './dto/create-laudo.dto';
 import { UpdateLaudoDto } from './dto/update-laudo.dto';
+import { CreateExameFisicoDto } from './dto/create-exame-fisico.dto';
 import { GenerateLaudoDto } from './dto/generate-laudo.dto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 export declare class LaudosController {
@@ -43,6 +44,8 @@ export declare class LaudosController {
             rationale: string;
         }[];
     }>;
+    findExameFisicoByPaciente(pacienteId: string, usuario: Usuario): Promise<import("./entities/laudo-exame-fisico.entity").LaudoExameFisico | null>;
+    createExameFisico(createExameFisicoDto: CreateExameFisicoDto, usuario: Usuario): Promise<import("./entities/laudo-exame-fisico.entity").LaudoExameFisico>;
     myPdfLaudo(usuario: Usuario, res: Response): Promise<void>;
     myPdfPlano(usuario: Usuario, res: Response): Promise<void>;
     findMyLatest(usuario: Usuario): Promise<import("./entities/laudo.entity").Laudo>;

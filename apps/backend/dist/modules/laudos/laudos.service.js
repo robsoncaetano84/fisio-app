@@ -31,6 +31,7 @@ const usuarios_service_1 = require("../usuarios/usuarios.service");
 const paciente_exame_entity_1 = require("../pacientes/entities/paciente-exame.entity");
 const exame_storage_1 = require("../pacientes/exame-storage");
 const laudo_exame_historico_entity_1 = require("./entities/laudo-exame-historico.entity");
+const laudo_exame_fisico_entity_1 = require("./entities/laudo-exame-fisico.entity");
 let LaudosService = class LaudosService {
     laudoRepository;
     anamneseRepository;
@@ -38,6 +39,7 @@ let LaudosService = class LaudosService {
     laudoAiGenerationRepository;
     pacienteExameRepository;
     laudoExameHistoricoRepository;
+    laudoExameFisicoRepository;
     pacientesService;
     usuariosService;
     isTruthyEnv(value) {
@@ -52,13 +54,14 @@ let LaudosService = class LaudosService {
             return true;
         return this.isTruthyEnv(raw);
     }
-    constructor(laudoRepository, anamneseRepository, evolucaoRepository, laudoAiGenerationRepository, pacienteExameRepository, laudoExameHistoricoRepository, pacientesService, usuariosService) {
+    constructor(laudoRepository, anamneseRepository, evolucaoRepository, laudoAiGenerationRepository, pacienteExameRepository, laudoExameHistoricoRepository, laudoExameFisicoRepository, pacientesService, usuariosService) {
         this.laudoRepository = laudoRepository;
         this.anamneseRepository = anamneseRepository;
         this.evolucaoRepository = evolucaoRepository;
         this.laudoAiGenerationRepository = laudoAiGenerationRepository;
         this.pacienteExameRepository = pacienteExameRepository;
         this.laudoExameHistoricoRepository = laudoExameHistoricoRepository;
+        this.laudoExameFisicoRepository = laudoExameFisicoRepository;
         this.pacientesService = pacientesService;
         this.usuariosService = usuariosService;
     }
@@ -87,6 +90,14 @@ let LaudosService = class LaudosService {
         if (existing) {
             throw new common_1.BadRequestException('Ja existe laudo para este paciente');
         }
+        const existingExameFisico = createLaudoDto.exameFisico?.trim()
+            ? await this.findExameFisicoByPacienteId(createLaudoDto.pacienteId)
+            : null;
+        if (existingExameFisico &&
+            String(existingExameFisico.exameFisico || '').trim() !==
+                String(createLaudoDto.exameFisico || '').trim()) {
+            throw new common_1.BadRequestException('Exame fisico registrado nao pode ser editado. Ele documenta o estado inicial do paciente na avaliacao.');
+        }
         const hasSuggestionMeta = createLaudoDto.sugestaoSource ||
             typeof createLaudoDto.examesConsiderados === 'number' ||
             typeof createLaudoDto.examesComLeituraIa === 'number';
@@ -98,8 +109,54 @@ let LaudosService = class LaudosService {
             sugestaoGeradaEm: hasSuggestionMeta ? new Date() : null,
         });
         const saved = await this.laudoRepository.save(laudo);
-        await this.registrarHistoricoExameFisico(saved, usuarioId, laudo_exame_historico_entity_1.LaudoExameHistoricoAcao.CREATE, laudo_exame_historico_entity_1.LaudoExameHistoricoOrigem.PROFISSIONAL);
+        if (createLaudoDto.exameFisico?.trim()) {
+            await this.registrarExameFisicoInicial(saved, {
+                pacienteId: createLaudoDto.pacienteId,
+                exameFisico: createLaudoDto.exameFisico,
+                diagnosticoFuncional: createLaudoDto.diagnosticoFuncional,
+                condutas: createLaudoDto.condutas,
+            }, usuarioId);
+        }
         return saved;
+    }
+    async createExameFisico(createExameFisicoDto, usuarioId) {
+        await this.pacientesService.findOne(createExameFisicoDto.pacienteId, usuarioId);
+        this.validateStructuredExameInput(createExameFisicoDto.exameFisico);
+        const existing = await this.findExameFisicoByPacienteId(createExameFisicoDto.pacienteId);
+        if (existing) {
+            throw new common_1.BadRequestException('Exame fisico ja registrado para este paciente. O registro inicial nao pode ser editado.');
+        }
+        let laudo = await this.laudoRepository.findOne({
+            where: { pacienteId: createExameFisicoDto.pacienteId },
+            order: { createdAt: 'DESC' },
+        });
+        if (!laudo) {
+            laudo = this.laudoRepository.create({
+                pacienteId: createExameFisicoDto.pacienteId,
+                diagnosticoFuncional: createExameFisicoDto.diagnosticoFuncional ||
+                    'Diagnostico funcional em elaboracao.',
+                condutas: createExameFisicoDto.condutas || 'Conduta terapeutica em elaboracao.',
+                exameFisico: createExameFisicoDto.exameFisico,
+                status: laudo_entity_2.LaudoStatus.RASCUNHO_IA,
+                validadoPorUsuarioId: null,
+                validadoEm: null,
+            });
+            laudo = await this.laudoRepository.save(laudo);
+        }
+        else {
+            laudo.exameFisico = createExameFisicoDto.exameFisico;
+            if (createExameFisicoDto.diagnosticoFuncional) {
+                laudo.diagnosticoFuncional = createExameFisicoDto.diagnosticoFuncional;
+            }
+            if (createExameFisicoDto.condutas) {
+                laudo.condutas = createExameFisicoDto.condutas;
+            }
+            laudo.status = laudo_entity_2.LaudoStatus.RASCUNHO_IA;
+            laudo.validadoPorUsuarioId = null;
+            laudo.validadoEm = null;
+            laudo = await this.laudoRepository.save(laudo);
+        }
+        return this.registrarExameFisicoInicial(laudo, createExameFisicoDto, usuarioId);
     }
     async findByPaciente(pacienteId, usuarioId, autoGenerate = false) {
         await this.pacientesService.findOne(pacienteId, usuarioId);
@@ -108,9 +165,9 @@ let LaudosService = class LaudosService {
             order: { createdAt: 'DESC' },
         });
         if (existing || !autoGenerate) {
-            return existing;
+            return existing ? this.hydrateLaudoExameFisico(existing) : null;
         }
-        return this.generateAndSaveByPaciente(pacienteId, usuarioId);
+        return this.hydrateLaudoExameFisico(await this.generateAndSaveByPaciente(pacienteId, usuarioId));
     }
     async findOne(id, usuarioId) {
         const laudo = await this.laudoRepository.findOne({
@@ -124,7 +181,7 @@ let LaudosService = class LaudosService {
         if (!isMasterAdmin && laudo.paciente.usuarioId !== usuarioId) {
             throw new common_1.NotFoundException('Laudo nao encontrado');
         }
-        return laudo;
+        return this.hydrateLaudoExameFisico(laudo);
     }
     async findLatestByPacienteUsuario(usuarioId) {
         const laudo = await this.laudoRepository
@@ -137,7 +194,11 @@ let LaudosService = class LaudosService {
         if (!laudo) {
             throw new common_1.NotFoundException('Laudo nao encontrado para este paciente');
         }
-        return laudo;
+        return this.hydrateLaudoExameFisico(laudo);
+    }
+    async findExameFisicoByPaciente(pacienteId, usuarioId) {
+        await this.pacientesService.findOne(pacienteId, usuarioId);
+        return this.findExameFisicoByPacienteId(pacienteId);
     }
     async findExameFisicoHistory(laudoId, usuarioId, limit = 20) {
         await this.findOne(laudoId, usuarioId);
@@ -150,12 +211,34 @@ let LaudosService = class LaudosService {
     }
     async update(id, updateLaudoDto, usuarioId) {
         const laudo = await this.findOne(id, usuarioId);
+        const { exameFisico, ...patchSemExameFisico } = updateLaudoDto;
+        let exameFisicoInicialRegistrado = false;
         const exameFisicoAntes = String(laudo.exameFisico || '').trim();
-        this.validateStructuredExameInput(updateLaudoDto.exameFisico);
+        const exameFisicoRecebido = String(exameFisico || '').trim();
+        if (typeof exameFisico === 'string') {
+            this.validateStructuredExameInput(exameFisico);
+            const exameRegistrado = await this.findExameFisicoByPacienteId(laudo.pacienteId);
+            if (exameRegistrado &&
+                exameFisicoRecebido !== String(exameRegistrado.exameFisico || '').trim()) {
+                throw new common_1.BadRequestException('Exame fisico registrado nao pode ser editado. Ele documenta o estado inicial do paciente na avaliacao.');
+            }
+            if (!exameRegistrado && exameFisicoRecebido) {
+                await this.registrarExameFisicoInicial(laudo, {
+                    pacienteId: laudo.pacienteId,
+                    exameFisico,
+                    diagnosticoFuncional: updateLaudoDto.diagnosticoFuncional,
+                    condutas: updateLaudoDto.condutas,
+                }, usuarioId);
+                exameFisicoInicialRegistrado = true;
+            }
+        }
         const hasSuggestionMetaUpdate = updateLaudoDto.sugestaoSource ||
             typeof updateLaudoDto.examesConsiderados === 'number' ||
             typeof updateLaudoDto.examesComLeituraIa === 'number';
-        Object.assign(laudo, (0, laudo_patch_util_1.sanitizePartialUpdate)(updateLaudoDto));
+        Object.assign(laudo, (0, laudo_patch_util_1.sanitizePartialUpdate)(patchSemExameFisico));
+        if (typeof exameFisico === 'string' && exameFisicoRecebido) {
+            laudo.exameFisico = exameFisico;
+        }
         if (hasSuggestionMetaUpdate) {
             laudo.sugestaoGeradaEm = new Date();
         }
@@ -164,7 +247,8 @@ let LaudosService = class LaudosService {
         laudo.validadoEm = null;
         const saved = await this.laudoRepository.save(laudo);
         const exameFisicoDepois = String(saved.exameFisico || '').trim();
-        const exameFisicoMudou = typeof updateLaudoDto.exameFisico === 'string' &&
+        const exameFisicoMudou = !exameFisicoInicialRegistrado &&
+            typeof updateLaudoDto.exameFisico === 'string' &&
             exameFisicoDepois.length > 0 &&
             exameFisicoDepois !== exameFisicoAntes;
         if (exameFisicoMudou) {
@@ -821,8 +905,10 @@ ${JSON.stringify(input, null, 2)}
             order: { updatedAt: 'DESC' },
         });
         const examesInterpretados = await this.buildExamInsights(exames);
-        const exameFisicoResumo = latestLaudo?.exameFisico
-            ? this.formatExameFisicoForDisplay(latestLaudo.exameFisico)
+        const exameFisico = await this.findExameFisicoByPacienteId(pacienteId);
+        const rawExameFisico = exameFisico?.exameFisico || latestLaudo?.exameFisico;
+        const exameFisicoResumo = rawExameFisico
+            ? this.formatExameFisicoForDisplay(rawExameFisico)
             : null;
         return {
             paciente,
@@ -872,6 +958,41 @@ ${JSON.stringify(input, null, 2)}
             payload,
         });
         await this.laudoExameHistoricoRepository.save(historico);
+    }
+    async registrarExameFisicoInicial(laudo, input, usuarioId) {
+        const exame = String(input.exameFisico || '').trim();
+        if (!exame) {
+            throw new common_1.BadRequestException('Exame fisico e obrigatorio.');
+        }
+        const existing = await this.findExameFisicoByPacienteId(input.pacienteId);
+        if (existing)
+            return existing;
+        const created = this.laudoExameFisicoRepository.create({
+            pacienteId: input.pacienteId,
+            laudoId: laudo.id,
+            exameFisico: input.exameFisico,
+            diagnosticoFuncional: input.diagnosticoFuncional || null,
+            condutas: input.condutas || null,
+            registradoPorUsuarioId: usuarioId,
+        });
+        const saved = await this.laudoExameFisicoRepository.save(created);
+        laudo.exameFisico = input.exameFisico;
+        await this.laudoRepository.save(laudo);
+        await this.registrarHistoricoExameFisico(laudo, usuarioId, laudo_exame_historico_entity_1.LaudoExameHistoricoAcao.CREATE, laudo_exame_historico_entity_1.LaudoExameHistoricoOrigem.PROFISSIONAL);
+        return saved;
+    }
+    async findExameFisicoByPacienteId(pacienteId) {
+        return this.laudoExameFisicoRepository.findOne({
+            where: { pacienteId },
+            order: { createdAt: 'DESC' },
+        });
+    }
+    async hydrateLaudoExameFisico(laudo) {
+        const exame = await this.findExameFisicoByPacienteId(laudo.pacienteId);
+        if (exame?.exameFisico) {
+            laudo.exameFisico = exame.exameFisico;
+        }
+        return laudo;
     }
     normalizeLimit(value, fallback, max) {
         if (!Number.isFinite(value))
@@ -1297,7 +1418,9 @@ exports.LaudosService = LaudosService = __decorate([
     __param(3, (0, typeorm_1.InjectRepository)(laudo_ai_generation_entity_1.LaudoAiGeneration)),
     __param(4, (0, typeorm_1.InjectRepository)(paciente_exame_entity_1.PacienteExame)),
     __param(5, (0, typeorm_1.InjectRepository)(laudo_exame_historico_entity_1.LaudoExameHistorico)),
+    __param(6, (0, typeorm_1.InjectRepository)(laudo_exame_fisico_entity_1.LaudoExameFisico)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

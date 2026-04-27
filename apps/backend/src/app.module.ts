@@ -33,6 +33,7 @@ import { ClinicalProtocolVersion } from './modules/clinical-governance/entities/
 import { ConsentPurposeLog } from './modules/clinical-governance/entities/consent-purpose-log.entity';
 import { ClinicalAuditLog } from './modules/clinical-governance/entities/clinical-audit-log.entity';
 import { AnamneseHistorico } from './modules/anamneses/entities/anamnese-historico.entity';
+import { LaudoExameFisico } from './modules/laudos/entities/laudo-exame-fisico.entity';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -112,6 +113,7 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
             Paciente,
             Anamnese,
             AnamneseHistorico,
+            LaudoExameFisico,
             Evolucao,
             Laudo,
             LaudoAiGeneration,

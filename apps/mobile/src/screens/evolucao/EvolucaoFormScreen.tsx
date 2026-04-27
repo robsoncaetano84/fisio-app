@@ -1362,7 +1362,7 @@ export function EvolucaoFormScreen({
             style={styles.cancelButton}
           />
           <Button
-            title={evolucaoId ? "Salvar Alterações" : "Salvar"}
+            title={evolucaoId ? "Registrar nova evolução" : "Salvar"}
             onPress={handleSave}
             loading={loading}
             style={styles.saveButton}

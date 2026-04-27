@@ -223,6 +223,7 @@ export function AnamneseFormScreen({
   const [currentAnamneseId, setCurrentAnamneseId] = useState<
     string | undefined
   >(anamneseId);
+  const isViewingRecordedAnamnese = !!currentAnamneseId;
 
   const [motivoBusca, setMotivoBusca] = useState<MotivoBusca | null>(null);
   const [areasAfetadas, setAreasAfetadas] = useState<AreaAfetada[]>([]);
@@ -2351,7 +2352,7 @@ export function AnamneseFormScreen({
           <Text style={styles.patientName}>{paciente?.nomeCompleto}</Text>
           <Text style={styles.patientInfo}>
             {currentAnamneseId
-              ? "Editar Anamnese"
+              ? "Visualizar Anamnese"
               : isSelfMode
                 ? "Minha Anamnese"
                 : "Nova Anamnese"}
@@ -2377,13 +2378,15 @@ export function AnamneseFormScreen({
               <Text style={styles.newVersionButtonText}>Nova</Text>
             </TouchableOpacity>
           ) : null}
-          <TouchableOpacity
-            style={styles.draftButton}
-            onPress={handleClearDraft}
-          >
-            <Ionicons name="trash-outline" size={18} color={COLORS.white} />
-            <Text style={styles.draftButtonText}>Limpar rascunho</Text>
-          </TouchableOpacity>
+          {!isViewingRecordedAnamnese ? (
+            <TouchableOpacity
+              style={styles.draftButton}
+              onPress={handleClearDraft}
+            >
+              <Ionicons name="trash-outline" size={18} color={COLORS.white} />
+              <Text style={styles.draftButtonText}>Limpar rascunho</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
@@ -2469,9 +2472,16 @@ export function AnamneseFormScreen({
               currentStep === 0 && styles.navButtonFull,
             ]}
           />
+        ) : isViewingRecordedAnamnese ? (
+          <Button
+            title="Voltar"
+            onPress={() => navigation.goBack()}
+            variant="outline"
+            style={styles.navButton}
+          />
         ) : (
           <Button
-            title={anamneseId ? "Salvar Alterações" : "Salvar"}
+            title="Salvar"
             onPress={handleSave}
             loading={loading}
             style={styles.navButton}

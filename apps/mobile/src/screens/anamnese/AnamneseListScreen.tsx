@@ -10,7 +10,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -37,24 +36,22 @@ type AnamneseListScreenProps = {
 const AnamneseCard = React.memo(function AnamneseCard({
   anamnese,
   onPress,
-  onLongPress,
 }: {
   anamnese: Anamnese;
   onPress: () => void;
-  onLongPress: () => void;
 }) {
-
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
-      onLongPress={onLongPress}
       activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
         <View style={styles.dateContainer}>
           <Ionicons name="calendar-outline" size={16} color={COLORS.primary} />
-          <Text style={styles.dateText}>{anamnese.createdAtFormatada || anamnese.createdAt}</Text>
+          <Text style={styles.dateText}>
+            {anamnese.createdAtFormatada || anamnese.createdAt}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={COLORS.gray400} />
       </View>
@@ -64,14 +61,14 @@ const AnamneseCard = React.memo(function AnamneseCard({
         <Text style={styles.cardValue}>{anamnese.motivoBusca}</Text>
       </View>
 
-      {anamnese.descricaoSintomas && (
+      {anamnese.descricaoSintomas ? (
         <View style={styles.cardSection}>
           <Text style={styles.cardLabel}>Sintomas:</Text>
           <Text style={styles.cardValue} numberOfLines={2}>
             {anamnese.descricaoSintomas}
           </Text>
         </View>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 });
@@ -82,12 +79,8 @@ export function AnamneseListScreen({
 }: AnamneseListScreenProps) {
   const { pacienteId } = route.params;
   const { getPacienteById } = usePacienteStore();
-  const {
-    anamneses,
-    isLoading,
-    fetchAnamnesesByPaciente,
-    deleteAnamnese,
-} = useAnamneseStore();
+  const { anamneses, isLoading, fetchAnamnesesByPaciente } =
+    useAnamneseStore();
   const { showToast } = useToast();
 
   const paciente = getPacienteById(pacienteId);
@@ -98,26 +91,12 @@ export function AnamneseListScreen({
 
   useEffect(() => {
     fetchAnamnesesByPaciente(pacienteId).catch(() => {
-      showToast({ message: "Não foi possível concluir a operação", type: "error" });
+      showToast({
+        message: "Nao foi possivel concluir a operacao",
+        type: "error",
+      });
     });
-  }, [pacienteId]);
-
-  const handleDelete = useCallback((anamneseId: string) => {
-    Alert.alert("Excluir", "Deseja excluir esta anamnese?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Excluir",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteAnamnese(anamneseId);
-          } catch (error) {
-            showToast({ message: "Não foi possível concluir a operação", type: "error" });
-          }
-        },
-      },
-    ]);
-  }, [deleteAnamnese]);
+  }, [fetchAnamnesesByPaciente, pacienteId, showToast]);
 
   const renderAnamnese = useCallback(
     ({ item }: { item: Anamnese }) => (
@@ -129,10 +108,9 @@ export function AnamneseListScreen({
             anamneseId: item.id,
           })
         }
-        onLongPress={() => handleDelete(item.id)}
       />
     ),
-    [handleDelete, navigation, pacienteId],
+    [navigation, pacienteId],
   );
 
   const renderEmptyList = () => (
@@ -154,7 +132,7 @@ export function AnamneseListScreen({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text>Paciente não encontrado</Text>
+          <Text>Paciente nao encontrado</Text>
           <Button title="Voltar" onPress={() => navigation.goBack()} />
         </View>
       </SafeAreaView>
@@ -194,7 +172,7 @@ export function AnamneseListScreen({
         />
       )}
 
-      {anamnesesFiltradas.length > 0 && (
+      {anamnesesFiltradas.length > 0 ? (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate("AnamneseForm", { pacienteId })}
@@ -202,7 +180,7 @@ export function AnamneseListScreen({
         >
           <Ionicons name="add" size={28} color={COLORS.white} />
         </TouchableOpacity>
-      )}
+      ) : null}
     </SafeAreaView>
   );
 }

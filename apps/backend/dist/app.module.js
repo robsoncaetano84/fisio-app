@@ -70,6 +70,7 @@ const clinical_protocol_version_entity_1 = require("./modules/clinical-governanc
 const consent_purpose_log_entity_1 = require("./modules/clinical-governance/entities/consent-purpose-log.entity");
 const clinical_audit_log_entity_1 = require("./modules/clinical-governance/entities/clinical-audit-log.entity");
 const anamnese_historico_entity_1 = require("./modules/anamneses/entities/anamnese-historico.entity");
+const laudo_exame_fisico_entity_1 = require("./modules/laudos/entities/laudo-exame-fisico.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
 const usuarios_module_1 = require("./modules/usuarios/usuarios.module");
 const pacientes_module_1 = require("./modules/pacientes/pacientes.module");
@@ -146,6 +147,7 @@ exports.AppModule = AppModule = __decorate([
                             paciente_entity_1.Paciente,
                             anamnese_entity_1.Anamnese,
                             anamnese_historico_entity_1.AnamneseHistorico,
+                            laudo_exame_fisico_entity_1.LaudoExameFisico,
                             evolucao_entity_1.Evolucao,
                             laudo_entity_1.Laudo,
                             laudo_ai_generation_entity_1.LaudoAiGeneration,

@@ -106,7 +106,9 @@ export class EvolucoesService {
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {
-    const evolucao = await this.findOne(id, usuarioId);
-    await this.evolucaoRepository.remove(evolucao);
+    await this.findOne(id, usuarioId);
+    throw new BadRequestException(
+      'Evolucao registrada nao pode ser excluida. Crie uma nova evolucao para documentar a proxima sessao.',
+    );
   }
 }

@@ -123,8 +123,8 @@ let AnamnesesService = class AnamnesesService {
         });
     }
     async remove(id, usuarioId) {
-        const anamnese = await this.findOne(id, usuarioId);
-        await this.anamneseRepository.remove(anamnese);
+        await this.findOne(id, usuarioId);
+        throw new common_1.BadRequestException('Anamnese registrada nao pode ser excluida. Ela representa o estado inicial do paciente na chegada a clinica.');
     }
     validateClinicalMinimum(payload) {
         if (payload.motivoBusca !== anamnese_entity_1.MotivoBusca.SINTOMA_EXISTENTE)

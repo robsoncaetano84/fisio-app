@@ -80,8 +80,8 @@ let EvolucoesService = class EvolucoesService {
         throw new common_1.BadRequestException('Evolucao registrada nao pode ser editada. Crie uma nova evolucao para registrar a proxima sessao.');
     }
     async remove(id, usuarioId) {
-        const evolucao = await this.findOne(id, usuarioId);
-        await this.evolucaoRepository.remove(evolucao);
+        await this.findOne(id, usuarioId);
+        throw new common_1.BadRequestException('Evolucao registrada nao pode ser excluida. Crie uma nova evolucao para documentar a proxima sessao.');
     }
 };
 exports.EvolucoesService = EvolucoesService;

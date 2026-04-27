@@ -390,7 +390,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const { showToast } = useToast();
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
-  const { fetchLaudoByPaciente, createLaudo } = useLaudoStore();
+  const { fetchLaudoByPaciente } = useLaudoStore();
 
   const paciente = getPacienteById(pacienteId);
   const [laudoId, setLaudoId] = useState<string | null>(null);
@@ -399,6 +399,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [generating, setGenerating] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [recordedExamLocked, setRecordedExamLocked] = useState(false);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeField, setActiveField] = useState<string | null>(null);
@@ -657,6 +658,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         setLaudoId(laudo.id);
         const structured = parseStructuredExame(laudo.exameFisico);
         if (structured) {
+          setRecordedExamLocked(true);
           loadedExam = enrichStructuredExameWithClinicalLogic(
             structured,
             latestAnamnese,
@@ -1173,6 +1175,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   };
 
   const handleSave = async () => {
+    if (recordedExamLocked) {
+      showToast({
+        type: "info",
+        message: "Exame fisico registrado nao pode ser editado.",
+      });
+      navigation.goBack();
+      return;
+    }
+
     setHasAttemptedSave(true);
     if (!hasAnamnese) {
       trackEvent("clinical_flow_blocked", { stage: "EXAME_FISICO", reason: "MISSING_ANAMNESE", pacienteId }).catch(() => undefined);
@@ -1223,21 +1234,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         .join("\n");
       const condutas = condutaParts || "Conduta terapêutica em elaboração.";
 
-      if (laudoId) {
-        await api.patch(`/laudos/${laudoId}`, {
-          exameFisico: exameSerialized,
-          diagnosticoFuncional: diagnostico,
-          condutas,
-        });
-      } else {
-        const created = await createLaudo({
-          pacienteId,
-          diagnosticoFuncional: diagnostico,
-          condutas,
-          exameFisico: exameSerialized,
-        });
-        setLaudoId(created.id);
-      }
+      await api.post("/laudos/exame-fisico", {
+        pacienteId,
+        exameFisico: exameSerialized,
+        diagnosticoFuncional: diagnostico,
+        condutas,
+      });
 
       await AsyncStorage.removeItem(draftKey).catch(() => undefined);
       setLastDraftSavedAt(null);
@@ -2562,7 +2564,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       <View style={styles.footer}>
         <Button
           title={
-            exam.redFlags.criticalTriggered
+            recordedExamLocked
+              ? "Voltar"
+              : exam.redFlags.criticalTriggered
               ? t("clinical.actions.saveTriageAndRefer")
               : t("clinical.actions.savePhysicalExam")
           }

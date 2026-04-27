@@ -840,7 +840,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         frequenciaSemanal: toOptionalNumber(frequenciaSemanal),
         duracaoSemanas: toOptionalNumber(duracaoSemanas),
         condutas: condutas.trim(),
-        exameFisico: exameFisico.trim() || undefined,
         planoTratamentoIA: planoTratamentoIA.trim() || undefined,
         rascunhoProfissional: rascunhoProfissional.trim() || undefined,
         observacoes: observacoes.trim() || undefined,

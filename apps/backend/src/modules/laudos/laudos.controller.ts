@@ -20,6 +20,7 @@ import type { Response } from 'express';
 import { LaudosService } from './laudos.service';
 import { CreateLaudoDto } from './dto/create-laudo.dto';
 import { UpdateLaudoDto } from './dto/update-laudo.dto';
+import { CreateExameFisicoDto } from './dto/create-exame-fisico.dto';
 import { GenerateLaudoDto } from './dto/generate-laudo.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -87,6 +88,27 @@ export class LaudosController {
     @CurrentUser() usuario: Usuario,
   ) {
     return this.laudosService.getSuggestedReferences(pacienteId, usuario.id);
+  }
+
+  @Get('exame-fisico')
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  findExameFisicoByPaciente(
+    @Query('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.laudosService.findExameFisicoByPaciente(pacienteId, usuario.id);
+  }
+
+  @Post('exame-fisico')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  createExameFisico(
+    @Body() createExameFisicoDto: CreateExameFisicoDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.laudosService.createExameFisico(
+      createExameFisicoDto,
+      usuario.id,
+    );
   }
 
   @Get('self/pdf-laudo')

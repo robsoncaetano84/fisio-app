@@ -196,8 +196,10 @@ export class AnamnesesService {
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {
-    const anamnese = await this.findOne(id, usuarioId);
-    await this.anamneseRepository.remove(anamnese);
+    await this.findOne(id, usuarioId);
+    throw new BadRequestException(
+      'Anamnese registrada nao pode ser excluida. Ela representa o estado inicial do paciente na chegada a clinica.',
+    );
   }
 
   private validateClinicalMinimum(

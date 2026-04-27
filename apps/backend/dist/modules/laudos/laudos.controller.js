@@ -18,6 +18,7 @@ const throttler_1 = require("@nestjs/throttler");
 const laudos_service_1 = require("./laudos.service");
 const create_laudo_dto_1 = require("./dto/create-laudo.dto");
 const update_laudo_dto_1 = require("./dto/update-laudo.dto");
+const create_exame_fisico_dto_1 = require("./dto/create-exame-fisico.dto");
 const generate_laudo_dto_1 = require("./dto/generate-laudo.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
@@ -43,6 +44,12 @@ let LaudosController = class LaudosController {
     }
     getSuggestedReferences(pacienteId, usuario) {
         return this.laudosService.getSuggestedReferences(pacienteId, usuario.id);
+    }
+    findExameFisicoByPaciente(pacienteId, usuario) {
+        return this.laudosService.findExameFisicoByPaciente(pacienteId, usuario.id);
+    }
+    createExameFisico(createExameFisicoDto, usuario) {
+        return this.laudosService.createExameFisico(createExameFisicoDto, usuario.id);
     }
     async myPdfLaudo(usuario, res) {
         const pdf = await this.laudosService.buildPdfBufferByPacienteUsuario(usuario.id, 'laudo');
@@ -148,6 +155,25 @@ __decorate([
     __metadata("design:paramtypes", [String, usuario_entity_1.Usuario]),
     __metadata("design:returntype", void 0)
 ], LaudosController.prototype, "getSuggestedReferences", null);
+__decorate([
+    (0, common_1.Get)('exame-fisico'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    __param(0, (0, common_1.Query)('pacienteId', common_1.ParseUUIDPipe)),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], LaudosController.prototype, "findExameFisicoByPaciente", null);
+__decorate([
+    (0, common_1.Post)('exame-fisico'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_exame_fisico_dto_1.CreateExameFisicoDto,
+        usuario_entity_1.Usuario]),
+    __metadata("design:returntype", void 0)
+], LaudosController.prototype, "createExameFisico", null);
 __decorate([
     (0, common_1.Get)('self/pdf-laudo'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 30 } }),
