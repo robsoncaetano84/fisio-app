@@ -662,28 +662,231 @@ export class CharlesService {
       };
     }
 
-    const sintomas = String(anamnese.descricaoSintomas || '').toLowerCase();
-    const piora = String(anamnese.fatoresPiora || '').toLowerCase();
-    const alivio = String(anamnese.fatorAlivio || '').toLowerCase();
-    const sinaisCentral = String(anamnese.sinaisSensibilizacaoCentral || '').toLowerCase();
+    const normalizeText = (value?: string | null) =>
+      String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    const hasAny = (value: string, tokens: string[]) =>
+      tokens.some((token) => value.includes(token));
+    const sintomas = normalizeText(anamnese.descricaoSintomas);
+    const piora = normalizeText(anamnese.fatoresPiora);
+    const atividadesPiora = normalizeText(anamnese.atividadesQuePioram);
+    const alivio = normalizeText(anamnese.fatorAlivio);
+    const sinaisCentral = normalizeText(anamnese.sinaisSensibilizacaoCentral);
+    const evento = normalizeText(anamnese.eventoEspecifico);
+    const lesoesPrevias = normalizeText(anamnese.lesoesPrevias);
+    const sono = normalizeText(anamnese.horasSonoMedia);
+    const observacoesEstiloVida = normalizeText(anamnese.observacoesEstiloVida);
+    const yellowFlags = (anamnese.yellowFlags || [])
+      .map((flag) => normalizeText(flag))
+      .join(' ');
+    const affectedAreas = anamnese.areasAfetadas || [];
     const hasIrradiacao =
       anamnese.irradiacao === true ||
       String(anamnese.localIrradiacao || '').trim().length > 0;
     const hasInflammatoryBehavior =
       anamnese.dorRepouso === true || anamnese.dorNoturna === true;
 
+    const nociceptiveEvidence: string[] = [];
+    const neuropathicEvidence: string[] = [];
+    const nociplasticEvidence: string[] = [];
+
     if (
-      hasIrradiacao ||
-      sintomas.includes('choque') ||
-      sintomas.includes('formig') ||
-      sintomas.includes('queima')
+      affectedAreas.length === 1 ||
+      hasAny(sintomas, ['localiz', 'pontual', 'exatamente onde', 'apontar'])
     ) {
+      nociceptiveEvidence.push('dor localizada');
+    }
+    if (
+      hasAny(`${piora} ${atividadesPiora}`, [
+        'moviment',
+        'esforc',
+        'carga',
+        'agach',
+        'correr',
+        'saltar',
+        'subir escada',
+        'levantar peso',
+      ])
+    ) {
+      nociceptiveEvidence.push('piora com movimento/esforco');
+    }
+    if (hasAny(alivio, ['repous', 'descans', 'parar', 'sem carga'])) {
+      nociceptiveEvidence.push('melhora com repouso');
+    }
+    if (
+      String(anamnese.inicioProblema) === 'APOS_EVENTO' ||
+      String(anamnese.mecanismoLesao) === 'TRAUMA' ||
+      String(anamnese.mecanismoLesao) === 'SOBRECARGA' ||
+      hasAny(`${evento} ${lesoesPrevias}`, [
+        'trauma',
+        'queda',
+        'torcao',
+        'lesao',
+        'esforc',
+        'sobrecarga',
+      ])
+    ) {
+      nociceptiveEvidence.push('inicio apos esforco/lesao');
+    }
+    if (hasAny(sintomas, ['apert', 'pressao', 'palpac', 'toque reproduz'])) {
+      nociceptiveEvidence.push('dor reproduzida por pressao/palpacao');
+    }
+
+    if (hasIrradiacao) {
+      neuropathicEvidence.push('dor irradiada');
+    }
+    if (
+      hasAny(`${sintomas} ${piora}`, [
+        'choque',
+        'formig',
+        'queima',
+        'dorm',
+        'parestes',
+        'agulhada',
+      ])
+    ) {
+      neuropathicEvidence.push('choque/formigamento/queimacao/dormencia');
+    }
+    if (
+      hasAny(`${sintomas} ${piora}`, [
+        'desce',
+        'sobe',
+        'corre',
+        'irradia',
+        'braco',
+        'perna',
+      ])
+    ) {
+      neuropathicEvidence.push('trajeto neural referido');
+    }
+    if (
+      hasAny(`${piora} ${atividadesPiora}`, [
+        'sentar',
+        'dobrar',
+        'virar',
+        'flexao',
+        'extensao',
+        'postura',
+      ])
+    ) {
+      neuropathicEvidence.push('piora com posicoes especificas');
+    }
+
+    if (
+      affectedAreas.length > 1 ||
+      hasAny(`${sintomas} ${sinaisCentral}`, [
+        'dor difusa',
+        'dor generalizada',
+        'varias regioes',
+        'muda de lugar',
+        'migratoria',
+      ])
+    ) {
+      nociplasticEvidence.push('dor difusa/multirregional');
+    }
+    if (
+      hasAny(`${sintomas} ${sinaisCentral}`, [
+        'desproporcional',
+        'maior do que o esperado',
+        'nao melhora',
+        'persistente',
+        'sensibilizacao',
+        'hipersens',
+      ])
+    ) {
+      nociplasticEvidence.push('dor desproporcional ou persistente');
+    }
+    if (
+      (typeof anamnese.qualidadeSono === 'number' && anamnese.qualidadeSono <= 4) ||
+      hasAny(`${sono} ${observacoesEstiloVida}`, [
+        'sono ruim',
+        'acorda cansado',
+        'insonia',
+      ])
+    ) {
+      nociplasticEvidence.push('sono ruim/nao reparador');
+    }
+    if (
+      (typeof anamnese.nivelEstresse === 'number' && anamnese.nivelEstresse >= 7) ||
+      (typeof anamnese.energiaDiaria === 'number' && anamnese.energiaDiaria <= 4) ||
+      hasAny(`${sinaisCentral} ${yellowFlags} ${observacoesEstiloVida}`, [
+        'estresse',
+        'cansaco',
+        'fadiga',
+        'catastrof',
+        'medo',
+      ])
+    ) {
+      nociplasticEvidence.push('estresse/fadiga/yellow flags');
+    }
+    if (hasAny(`${sintomas} ${sinaisCentral}`, ['exame normal', 'exames normais'])) {
+      nociplasticEvidence.push('exames normais com dor persistente');
+    }
+
+    const candidates = [
+      {
+        principal: 'NOCICEPTIVA' as const,
+        subtipo: 'MECANICA' as const,
+        evidence: nociceptiveEvidence,
+        reason:
+          'Fenotipo mecanico: terapia manual, carga progressiva e controle inflamatorio conforme irritabilidade.',
+        fields: [
+          'areasAfetadas',
+          'descricaoSintomas',
+          'fatoresPiora',
+          'fatorAlivio',
+          'inicioProblema',
+          'mecanismoLesao',
+        ],
+      },
+      {
+        principal: 'NEUROPATICA' as const,
+        subtipo: 'NEURAL' as const,
+        evidence: neuropathicEvidence,
+        reason:
+          'Fenotipo neural: terapia manual, mobilizacao neural, descompressao e modulacao conforme exame neurologico.',
+        fields: ['irradiacao', 'localIrradiacao', 'descricaoSintomas', 'fatoresPiora'],
+      },
+      {
+        principal: 'NOCIPLASTICA' as const,
+        subtipo: 'MIOFASCIAL' as const,
+        evidence: nociplasticEvidence,
+        reason:
+          'Fenotipo de modulacao central: educacao em dor, exercicio graduado e estrategias de regulacao do sistema nervoso.',
+        fields: [
+          'sinaisSensibilizacaoCentral',
+          'descricaoSintomas',
+          'qualidadeSono',
+          'nivelEstresse',
+          'energiaDiaria',
+          'yellowFlags',
+        ],
+      },
+    ].sort((a, b) => b.evidence.length - a.evidence.length);
+
+    const best = candidates[0];
+    const second = candidates[1];
+    if (best.evidence.length >= 2 && best.evidence.length > second.evidence.length) {
       return {
-        principal: 'NEUROPATICA',
-        subtipo: 'NEURAL',
+        principal: best.principal,
+        subtipo: best.subtipo,
+        confidence: best.evidence.length >= 4 ? 'ALTA' : 'MODERADA',
+        reason: `${best.reason} Evidencias: ${best.evidence.join('; ')}.`,
+        evidenceFields: best.fields,
+      };
+    }
+
+    if (best.evidence.length >= 2 && best.evidence.length === second.evidence.length) {
+      return {
+        principal: 'NOCIPLASTICA',
+        subtipo: 'MIOFASCIAL',
         confidence: 'MODERADA',
-        reason: 'Sinais de irradiacao/parestesia sugerem componente neural.',
-        evidenceFields: ['irradiacao', 'localIrradiacao', 'descricaoSintomas'],
+        reason: `Fenotipo misto/inconsistente com sinais de sensibilizacao. Integrar exame fisico antes de fechar conduta. Evidencias: ${best.evidence
+          .concat(second.evidence)
+          .join('; ')}.`,
+        evidenceFields: Array.from(new Set(best.fields.concat(second.fields))),
       };
     }
 
@@ -698,20 +901,6 @@ export class CharlesService {
         confidence: 'MODERADA',
         reason: 'Padrao em repouso/noturno sugere componente inflamatorio.',
         evidenceFields: ['dorRepouso', 'dorNoturna', 'descricaoSintomas'],
-      };
-    }
-
-    if (
-      sinaisCentral.includes('hipersens') ||
-      sintomas.includes('dor difusa') ||
-      sintomas.includes('dor generalizada')
-    ) {
-      return {
-        principal: 'NOCIPLASTICA',
-        subtipo: 'MIOFASCIAL',
-        confidence: 'MODERADA',
-        reason: 'Padrao de sensibilizacao central/dor difusa sugere nociplastia.',
-        evidenceFields: ['sinaisSensibilizacaoCentral', 'descricaoSintomas'],
       };
     }
 

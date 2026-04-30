@@ -323,6 +323,67 @@ describe('CharlesService - deterministic orchestrator', () => {
     expect(result.confidence).toBe('ALTA');
   });
 
+  it('learns nociceptive phenotype from mechanical pain evidence', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        areasAfetadas: [{ regiao: 'JOELHO' }],
+        descricaoSintomas: 'Dor localizada que reproduz ao apertar o ponto.',
+        fatoresPiora: 'Piora com movimento, carga e agachamento.',
+        fatorAlivio: 'Melhora com repouso.',
+        inicioProblema: 'APOS_EVENTO',
+        mecanismoLesao: 'SOBRECARGA',
+      },
+    });
+
+    const result = await service.getExameFisicoDorSuggestion('pac-1', user);
+    expect(result.dorPrincipal).toBe('NOCICEPTIVA');
+    expect(result.dorSubtipo).toBe('MECANICA');
+    expect(result.confidence).toBe('ALTA');
+    expect(result.reason).toContain('Fenotipo mecanico');
+  });
+
+  it('learns neuropathic phenotype from neural pain evidence', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        areasAfetadas: [{ regiao: 'LOMBAR' }],
+        descricaoSintomas: 'Dor em choque e queima que desce pela perna.',
+        fatoresPiora: 'Piora ao sentar e dobrar a coluna.',
+        irradiacao: true,
+        localIrradiacao: 'Perna esquerda',
+      },
+    });
+
+    const result = await service.getExameFisicoDorSuggestion('pac-1', user);
+    expect(result.dorPrincipal).toBe('NEUROPATICA');
+    expect(result.dorSubtipo).toBe('NEURAL');
+    expect(result.confidence).toBe('ALTA');
+    expect(result.reason).toContain('Fenotipo neural');
+  });
+
+  it('learns nociplastic phenotype from central modulation evidence', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        areasAfetadas: [{ regiao: 'LOMBAR' }, { regiao: 'CERVICAL' }],
+        descricaoSintomas:
+          'Dor difusa, desproporcional e persistente mesmo com exames normais.',
+        sinaisSensibilizacaoCentral: 'Hipersensibilidade e nao melhora.',
+        qualidadeSono: 3,
+        nivelEstresse: 9,
+        energiaDiaria: 3,
+        yellowFlags: ['catastrofizacao', 'medo de movimento'],
+      },
+    });
+
+    const result = await service.getExameFisicoDorSuggestion('pac-1', user);
+    expect(result.dorPrincipal).toBe('NOCIPLASTICA');
+    expect(result.dorSubtipo).toBe('MIOFASCIAL');
+    expect(result.confidence).toBe('ALTA');
+    expect(result.reason).toContain('modulacao central');
+  });
+
   it('returns low-confidence suggestion when there is no anamnesis', async () => {
     const service = makeService();
     const result = await service.getExameFisicoDorSuggestion('pac-1', user);
