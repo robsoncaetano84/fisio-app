@@ -11,7 +11,7 @@ Objetivo: validar ponta a ponta `anamnese -> exame físico -> laudo/conduta IA` 
 ## Convenções de aceite
 - A anamnese deve salvar sem erro e persistir os campos clínicos novos:
   - `inicioProblema`, `mecanismoLesao`, `fatorAlivio`, `fatoresPiora`,
-  - `historicoEsportivo`, `lesoesPrevias`, `usoMedicamentos`.
+  - `lesoesPrevias`, `usoMedicamentos` e contexto funcional/esportivo nos campos atuais.
 - Exame físico deve impedir salvar sem ao menos 1 teste regional `Positivo` ou `Negativo`.
 - Se `tipoLesao` incluir `Neural`, exigir preenchimento de neurológico detalhado.
 - Laudo/conduta IA deve citar evidência clínica dos achados (não texto genérico).
@@ -26,7 +26,7 @@ Objetivo: validar ponta a ponta `anamnese -> exame físico -> laudo/conduta IA` 
 - Mecanismo: sobrecarga.
 - Melhora: repouso relativo e gelo.
 - Piora: corrida, salto, escada.
-- Histórico esportivo: futebol recreativo 3x/semana.
+- Contexto esportivo/funcional: futebol recreativo 3x/semana.
 - Lesões prévias: entorse prévia tornozelo D.
 - Medicamentos: anti-inflamatório eventual.
 
@@ -53,7 +53,7 @@ Objetivo: validar ponta a ponta `anamnese -> exame físico -> laudo/conduta IA` 
 - Mecanismo: trauma/sobrecarga mista.
 - Melhora: deitado com joelhos flexionados.
 - Piora: flexão, carga, permanecer sentado.
-- Histórico esportivo: crossfit 4x/semana.
+- Contexto esportivo/funcional: crossfit 4x/semana.
 - Lesões prévias: lombalgia recorrente.
 - Medicamentos: analgésico comum.
 
@@ -82,7 +82,7 @@ Objetivo: validar ponta a ponta `anamnese -> exame físico -> laudo/conduta IA` 
 - Mecanismo: sobrecarga repetitiva.
 - Melhora: redução de volume de treino.
 - Piora: elevação acima da cabeça, saque, arremesso.
-- Histórico esportivo: voleibol 5x/semana.
+- Contexto esportivo/funcional: voleibol 5x/semana.
 - Lesões prévias: sem cirurgia, episódios de tendinite.
 - Medicamentos: sem uso contínuo.
 

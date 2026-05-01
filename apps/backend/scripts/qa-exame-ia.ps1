@@ -68,7 +68,6 @@ $anamnese = Invoke-ApiJson -Method Post -Uri "$BaseUrl/anamneses" -Headers $head
   problemaAnterior = $false
   quandoProblemaAnterior = ""
   tratamentosAnteriores = @("Nenhum")
-  historicoFamiliar = "sem historico"
 }
 if (-not $anamnese.id) { throw "Anamnese não criada" }
 

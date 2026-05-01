@@ -5,7 +5,7 @@
 - [x] Mecanismo de lesão (trauma/sobrecarga/misto): `mecanismoLesao`
 - [x] Fatores de melhora/alívio: `fatorAlivio`
 - [x] Fatores de piora/agravo: `fatoresPiora`
-- [x] Histórico esportivo: `historicoEsportivo`
+- [x] Contexto esportivo/funcional registrado em campos clínicos atuais, sem contrato dedicado legado
 - [x] Lesões prévias: `lesoesPrevias`
 - [x] Uso de medicamentos: `usoMedicamentos`
 - [x] Validação frontend + backend para sintomas existentes (campos obrigatórios)

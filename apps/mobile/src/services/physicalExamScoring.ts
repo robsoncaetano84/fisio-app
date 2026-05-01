@@ -60,7 +60,6 @@ export const TEST_SCORE_RULES: TestScoreRule[] = [
   { token: "Gaenslen", score: 3 },
   { token: "Thigh thrust", score: 3 },
   { token: "Sacral thrust", score: 3 },
-  { token: "Gillet", score: 3 },
   { token: "Phalen", score: 3 },
   { token: "Tinel", score: 3 },
 ];

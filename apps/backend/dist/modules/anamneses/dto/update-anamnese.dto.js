@@ -24,11 +24,16 @@ class UpdateAnamneseDto {
     fatorAlivio;
     mecanismoLesao;
     fatoresPiora;
+    dorRepouso;
+    dorNoturna;
+    irradiacao;
+    localIrradiacao;
+    tipoDor;
+    fenotipoDorEvidencias;
+    sinaisSensibilizacaoCentral;
     problemaAnterior;
     quandoProblemaAnterior;
     tratamentosAnteriores;
-    historicoFamiliar;
-    historicoEsportivo;
     lesoesPrevias;
     usoMedicamentos;
     limitacoesFuncionais;
@@ -106,6 +111,41 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
+], UpdateAnamneseDto.prototype, "dorRepouso", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateAnamneseDto.prototype, "dorNoturna", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateAnamneseDto.prototype, "irradiacao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "localIrradiacao", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(anamnese_entity_1.TipoDor),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "tipoDor", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], UpdateAnamneseDto.prototype, "fenotipoDorEvidencias", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAnamneseDto.prototype, "sinaisSensibilizacaoCentral", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
 ], UpdateAnamneseDto.prototype, "problemaAnterior", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
@@ -117,16 +157,6 @@ __decorate([
     (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
 ], UpdateAnamneseDto.prototype, "tratamentosAnteriores", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], UpdateAnamneseDto.prototype, "historicoFamiliar", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], UpdateAnamneseDto.prototype, "historicoEsportivo", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

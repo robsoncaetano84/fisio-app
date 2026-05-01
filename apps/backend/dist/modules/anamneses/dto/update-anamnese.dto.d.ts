@@ -1,4 +1,5 @@
-import { MotivoBusca, InicioProblema, AreaAfetada, MecanismoLesao } from '../entities/anamnese.entity';
+import { MotivoBusca, InicioProblema, AreaAfetada, TipoDor, MecanismoLesao } from '../entities/anamnese.entity';
+import type { FenotipoDorEvidencias } from '../entities/anamnese.entity';
 export declare class UpdateAnamneseDto {
     motivoBusca?: MotivoBusca;
     areasAfetadas?: AreaAfetada[];
@@ -11,11 +12,16 @@ export declare class UpdateAnamneseDto {
     fatorAlivio?: string;
     mecanismoLesao?: MecanismoLesao;
     fatoresPiora?: string;
+    dorRepouso?: boolean;
+    dorNoturna?: boolean;
+    irradiacao?: boolean;
+    localIrradiacao?: string;
+    tipoDor?: TipoDor;
+    fenotipoDorEvidencias?: FenotipoDorEvidencias;
+    sinaisSensibilizacaoCentral?: string;
     problemaAnterior?: boolean;
     quandoProblemaAnterior?: string;
     tratamentosAnteriores?: string[];
-    historicoFamiliar?: string;
-    historicoEsportivo?: string;
     lesoesPrevias?: string;
     usoMedicamentos?: string;
     limitacoesFuncionais?: string;

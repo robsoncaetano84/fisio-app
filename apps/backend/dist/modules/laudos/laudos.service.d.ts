@@ -41,6 +41,7 @@ export declare class LaudosService {
     private readonly usuariosService;
     private isTruthyEnv;
     private shouldUseExamAi;
+    private getPositiveIntegerEnv;
     constructor(laudoRepository: Repository<Laudo>, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoAiGenerationRepository: Repository<LaudoAiGeneration>, pacienteExameRepository: Repository<PacienteExame>, laudoExameHistoricoRepository: Repository<LaudoExameHistorico>, laudoExameFisicoRepository: Repository<LaudoExameFisico>, pacientesService: PacientesService, usuariosService: UsuariosService);
     getSuggestedReferences(pacienteId: string, usuarioId: string): Promise<LaudoReferenceSuggestionResponse>;
     create(createLaudoDto: CreateLaudoDto, usuarioId: string): Promise<Laudo>;
@@ -84,6 +85,7 @@ export declare class LaudosService {
     private hydrateLaudoExameFisico;
     private normalizeLimit;
     private readonly structuredExamePrefix;
+    private readonly legacyStructuredExamePrefix;
     private formatExameFisicoForDisplay;
     private parseStructuredExame;
     private validateStructuredExameInput;

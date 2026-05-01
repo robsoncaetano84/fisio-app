@@ -25,7 +25,11 @@ export declare enum MecanismoLesao {
 export interface AreaAfetada {
     regiao: string;
     lado?: 'esquerdo' | 'direito' | 'ambos';
+    vista?: 'anterior' | 'posterior';
+    intensidade?: number;
+    observacao?: string;
 }
+export type FenotipoDorEvidencias = Record<string, boolean>;
 export declare class Anamnese extends BaseEntity {
     paciente: Paciente;
     pacienteId: string;
@@ -45,14 +49,13 @@ export declare class Anamnese extends BaseEntity {
     irradiacao: boolean;
     localIrradiacao: string;
     tipoDor: TipoDor;
+    fenotipoDorEvidencias: FenotipoDorEvidencias;
     sinaisSensibilizacaoCentral: string;
     redFlags: string[];
     yellowFlags: string[];
     problemaAnterior: boolean;
     quandoProblemaAnterior: string;
     tratamentosAnteriores: string[];
-    historicoFamiliar: string;
-    historicoEsportivo: string;
     lesoesPrevias: string;
     usoMedicamentos: string;
     limitacoesFuncionais: string;

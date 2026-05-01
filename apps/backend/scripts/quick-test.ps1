@@ -126,7 +126,6 @@ $anamneseBody = @{
   problemaAnterior = $false
   quandoProblemaAnterior = ""
   tratamentosAnteriores = @("Massagens")
-  historicoFamiliar = "sem historico"
 } | ConvertTo-Json -Depth 6
 
 $anamnese = Invoke-RestMethod -Method Post -Uri "$BaseUrl/anamneses" -Headers $headers -ContentType "application/json" -Body $anamneseBody

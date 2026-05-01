@@ -63,6 +63,8 @@ const crm_task_entity_1 = require("./modules/crm/entities/crm-task.entity");
 const crm_interaction_entity_1 = require("./modules/crm/entities/crm-interaction.entity");
 const crm_admin_audit_log_entity_1 = require("./modules/crm/entities/crm-admin-audit-log.entity");
 const paciente_exame_entity_1 = require("./modules/pacientes/entities/paciente-exame.entity");
+const clinical_photo_entity_1 = require("./modules/pacientes/entities/clinical-photo.entity");
+const clinical_photo_comparison_entity_1 = require("./modules/pacientes/entities/clinical-photo-comparison.entity");
 const profissional_paciente_vinculo_entity_1 = require("./modules/pacientes/entities/profissional-paciente-vinculo.entity");
 const clinical_flow_event_entity_1 = require("./modules/metrics/entities/clinical-flow-event.entity");
 const patient_check_click_event_entity_1 = require("./modules/metrics/entities/patient-check-click-event.entity");
@@ -122,6 +124,16 @@ exports.AppModule = AppModule = __decorate([
                     MASTER_ADMIN_PERMISSIONS: Joi.string().allow('').optional(),
                     OPENAI_API_KEY: Joi.string().allow('').optional(),
                     OPENAI_MODEL: Joi.string().allow('').optional(),
+                    OPENAI_LAUDO_MODEL: Joi.string().allow('').optional(),
+                    OPENAI_EXAM_MODEL: Joi.string().allow('').optional(),
+                    OPENAI_EXAM_AI_ENABLED: Joi.string()
+                        .valid('true', 'false')
+                        .default('true'),
+                    OPENAI_LAUDO_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
+                    OPENAI_EXAM_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
+                    SUPABASE_URL: Joi.string().allow('').optional(),
+                    SUPABASE_SERVICE_ROLE_KEY: Joi.string().allow('').optional(),
+                    SUPABASE_STORAGE_BUCKET: Joi.string().allow('').optional(),
                     EXPO_ACCESS_TOKEN: Joi.string().allow('').optional(),
                     TRUST_PROXY: Joi.string().valid('true', 'false').default('false'),
                     APP_VERSION: Joi.string().allow('').optional(),
@@ -160,6 +172,8 @@ exports.AppModule = AppModule = __decorate([
                             crm_interaction_entity_1.CrmInteraction,
                             crm_admin_audit_log_entity_1.CrmAdminAuditLog,
                             paciente_exame_entity_1.PacienteExame,
+                            clinical_photo_entity_1.ClinicalPhoto,
+                            clinical_photo_comparison_entity_1.ClinicalPhotoComparison,
                             profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo,
                             clinical_flow_event_entity_1.ClinicalFlowEvent,
                             patient_check_click_event_entity_1.PatientCheckClickEvent,

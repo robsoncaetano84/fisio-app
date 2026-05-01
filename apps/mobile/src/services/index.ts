@@ -61,6 +61,19 @@ export {
   type LogAiSuggestionPayload,
   type ClinicalOrchestratorNextActionResponse,
 } from "./clinicalOrchestrator";
+export {
+  analyzeClinicalPhoto,
+  compareClinicalPhotos,
+  listClinicalPhotoComparisons,
+  listClinicalPhotos,
+  uploadClinicalPhoto,
+  type ClinicalPhotoComparisonItem,
+  type ClinicalPhotoItem,
+  type ClinicalPhotoType,
+  type ClinicalPhotoUploadAsset,
+  type ClinicalPhotoUploadMetadata,
+  type ClinicalPhotoView,
+} from "./clinicalPhotos";
 export { cachedGet, invalidateCachedGet } from "./requestCache";
 
 

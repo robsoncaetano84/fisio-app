@@ -15,10 +15,11 @@ describe('LaudosService - structured exame validation and parsing', () => {
       {} as any,
     );
 
-  const prefix = '__EXAME_FISICO_STRUCTURED_V1__';
+  const prefix = '__EXAME_FISICO_STRUCTURED_V2__';
+  const legacyPrefix = '__EXAME_FISICO_STRUCTURED_V1__';
 
   const buildPayload = (overrides?: Record<string, unknown>) => ({
-    version: 1,
+    version: 2,
     avaliacaoRegioes: [
       {
         regiao: 'LOMBAR',
@@ -44,7 +45,6 @@ describe('LaudosService - structured exame validation and parsing', () => {
     diagnosticoFuncionalIa: {
       disfuncaoPrincipal: 'Déficit de estabilidade lombar em carga.',
       cadeiaEnvolvida: 'Cadeia lombo-pelvica',
-      compensacoes: 'Compensação em cadeia posterior.',
     },
     condutaIa: {
       tecnicaManualIndicada: 'Mobilização lombar de baixa irritabilidade.',
@@ -122,8 +122,18 @@ describe('LaudosService - structured exame validation and parsing', () => {
       `${prefix}${JSON.stringify(payload)}`,
     );
     expect(parsed).toBeTruthy();
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.raciocinioClinico?.tipoLesao).toBe('Mecanica');
+  });
+
+  it('keeps reading legacy structured V1 payloads', () => {
+    const service = makeService();
+    const payload = buildPayload({ version: 1 });
+    const parsed = (service as any).parseStructuredExame(
+      `${legacyPrefix}${JSON.stringify(payload)}`,
+    );
+    expect(parsed).toBeTruthy();
+    expect(parsed.version).toBe(1);
   });
 
   it('returns null when parsing payload without prefix', () => {

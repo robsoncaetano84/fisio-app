@@ -185,7 +185,12 @@ export interface Paciente {
 export interface AreaAfetada {
   regiao: string;
   lado?: "esquerdo" | "direito" | "ambos";
+  vista?: "anterior" | "posterior";
+  intensidade?: number;
+  observacao?: string;
 }
+
+export type FenotipoDorEvidencias = Record<string, boolean>;
 
 export interface Anamnese {
   id: string;
@@ -206,6 +211,7 @@ export interface Anamnese {
   irradiacao?: boolean | null;
   localIrradiacao?: string;
   tipoDor?: TipoDor | null;
+  fenotipoDorEvidencias?: FenotipoDorEvidencias;
   sinaisSensibilizacaoCentral?: string;
   redFlags?: string[];
   yellowFlags?: string[];
@@ -213,8 +219,6 @@ export interface Anamnese {
   quandoProblemaAnterior?: string;
   tratamentosAnteriores: string[];
   statusTratamento?: StatusTratamento;
-  historicoFamiliar?: string;
-  historicoEsportivo?: string;
   lesoesPrevias?: string;
   usoMedicamentos?: string;
   limitacoesFuncionais?: string;

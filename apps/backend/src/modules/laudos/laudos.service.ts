@@ -67,6 +67,16 @@ export class LaudosService {
     return this.isTruthyEnv(raw);
   }
 
+  private getPositiveIntegerEnv(
+    key: string,
+    fallback: number,
+    max: number,
+  ): number {
+    const parsed = Number.parseInt(String(process.env[key] || ''), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return Math.min(parsed, max);
+  }
+
   constructor(
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
@@ -691,7 +701,6 @@ export class LaudosService {
                 fatorAlivio: anamneses[0].fatorAlivio ?? '',
                 fatoresPiora: anamneses[0].fatoresPiora ?? '',
                 mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
-                historicoEsportivo: anamneses[0].historicoEsportivo ?? '',
                 lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
                 usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
               }
@@ -787,7 +796,6 @@ export class LaudosService {
             fatorAlivio: anamneses[0].fatorAlivio ?? '',
             fatoresPiora: anamneses[0].fatoresPiora ?? '',
             mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
-            historicoEsportivo: anamneses[0].historicoEsportivo ?? '',
             lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
             usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
           }
@@ -940,7 +948,11 @@ ${input.observacao || 'Sem observacao adicional.'}
       }
 
       const controller = new AbortController();
-      const timeoutMs = 8000;
+      const timeoutMs = this.getPositiveIntegerEnv(
+        'OPENAI_EXAM_TIMEOUT_MS',
+        30000,
+        120000,
+      );
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -1093,7 +1105,6 @@ ${input.observacao || 'Sem observacao adicional.'}
       fatorAlivio: string;
       fatoresPiora: string;
       mecanismoLesao: string;
-      historicoEsportivo: string;
       lesoesPrevias: string;
       usoMedicamentos: string;
     } | null;
@@ -1139,7 +1150,7 @@ criteriosAlta (string).
 
 Regras clinicas:
 - Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
-- Use explicitamente os campos da anamnese: inicioProblema, mecanismoLesao, fatorAlivio, fatoresPiora, historicoEsportivo, lesoesPrevias e usoMedicamentos.
+- Use explicitamente os campos da anamnese: inicioProblema, mecanismoLesao, fatorAlivio, fatoresPiora, lesoesPrevias e usoMedicamentos.
 - Se algum desses campos estiver vazio, declare a lacuna clinica em vez de supor informacao.
 - Considere os exames anexados (tipoExame, observacao, dataExame, mimeType e aiInterpretacao quando houver) para orientar diagnostico funcional, condutas e plano.
 - Nao invente achados de imagem nao descritos no contexto.
@@ -1160,7 +1171,11 @@ ${JSON.stringify(input, null, 2)}
 
     try {
       const controller = new AbortController();
-      const timeoutMs = 4000;
+      const timeoutMs = this.getPositiveIntegerEnv(
+        'OPENAI_LAUDO_TIMEOUT_MS',
+        15000,
+        120000,
+      );
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -1412,7 +1427,8 @@ ${JSON.stringify(input, null, 2)}
     if (integer > max) return max;
     return integer;
   }
-  private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
+  private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V2__';
+  private readonly legacyStructuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
 
   private formatExameFisicoForDisplay(value?: string | null): string {
     const parsed = this.parseStructuredExame(value);
@@ -1427,6 +1443,7 @@ ${JSON.stringify(input, null, 2)}
 
     const regionalGroups = (parsed.avaliacaoRegioes || []) as Array<{
       titulo?: string;
+      adm?: string;
       testes?: Array<{
         nome?: string;
         resultado?: string;
@@ -1468,9 +1485,6 @@ ${JSON.stringify(input, null, 2)}
       'Dor local: ' + String(parsed.padraoDor?.local || 'Nao informado'),
       'Dor irradiada: ' +
         String(parsed.padraoDor?.irradiada || 'Nao informado'),
-      'Comportamento da dor: ' +
-        String(parsed.padraoDor?.comportamento || 'Nao informado'),
-      '',
       'Movimento (chave)',
       'Ativo: ' + String(parsed.movimento?.ativo || 'Nao informado'),
       'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
@@ -1479,16 +1493,9 @@ ${JSON.stringify(input, null, 2)}
         String(parsed.movimento?.reproduzDor || 'Nao informado'),
       'Qualidade do movimento: ' +
         String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
-      'Compensacoes: ' +
-        String(parsed.movimento?.compensacoes || 'Nao informado'),
-      'Dor no movimento: ' +
-        String(parsed.movimento?.dorNoMovimento || 'Nao informado'),
-      '',
       'Palpacao',
       'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
       'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),
-      'Pontos gatilho: ' +
-        String(parsed.palpacao?.pontosGatilho || 'Nao informado'),
       'Palpacao dinamica vertebral: ' +
         String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
       'Pontos dolorosos: ' +
@@ -1496,8 +1503,6 @@ ${JSON.stringify(input, null, 2)}
       'Temperatura: ' + String(parsed.palpacao?.temperatura || 'Nao informado'),
       'Tonus muscular: ' +
         String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
-      'Estruturas especificas: ' +
-        String(parsed.palpacao?.estruturasEspecificas || 'Nao informado'),
       'Hipomobilidade articular: ' +
         String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
       'Hipomobilidade segmentar - Cervical: ' +
@@ -1544,17 +1549,7 @@ ${JSON.stringify(input, null, 2)}
       'Testes',
       'Biomecanicos: ' + String(parsed.testes?.biomecanicos || 'Nao informado'),
       'Ortopedicos: ' + String(parsed.testes?.ortopedicos || 'Nao informado'),
-      'Neurologicos: ' + String(parsed.testes?.neurologicos || 'Nao informado'),
       'Imagem: ' + String(parsed.testes?.imagem || 'Nao informado'),
-      '',
-      'Neurologico detalhado',
-      'Forca: ' + String(parsed.neurologico?.forca || 'Nao informado'),
-      'Sensibilidade: ' +
-        String(parsed.neurologico?.sensibilidade || 'Nao informado'),
-      'Reflexos: ' + String(parsed.neurologico?.reflexos || 'Nao informado'),
-      'Dermatomos: ' +
-        String(parsed.neurologico?.dermatomos || 'Nao informado'),
-      'Miotomos: ' + String(parsed.neurologico?.miotomos || 'Nao informado'),
       '',
       'Avaliacao por regioes',
       `Resumo: ${regionalPositiveCount} positivo(s), ${regionalNegativeCount} negativo(s), ${regionalNotTestedCount} nao testado(s).`,
@@ -1566,8 +1561,9 @@ ${JSON.stringify(input, null, 2)}
             String(test?.resultado || '') !== 'NAO_TESTADO' ||
             test?.selecionado === true,
         );
+        const admLine = `- ADM: ${String(group?.adm || 'Nao informado')}`;
         if (!selectedOrTested.length) {
-          return [groupTitle, '- Sem testes marcados'];
+          return [groupTitle, admLine, '- Sem testes marcados'];
         }
         const entries = selectedOrTested.map((test) => {
           const name = String(test?.nome || 'Teste');
@@ -1577,7 +1573,7 @@ ${JSON.stringify(input, null, 2)}
           }
           return `- ${name}: ${result === 'POSITIVO' ? 'Positivo' : 'Negativo'}`;
         });
-        return [groupTitle, ...entries];
+        return [groupTitle, admLine, ...entries];
       }),
       '',
       'Cruzamento final',
@@ -1610,7 +1606,7 @@ ${JSON.stringify(input, null, 2)}
           parsed.raciocinioClinico?.fatorBiomecanicoAssociado ||
             'Nao informado',
         ),
-      'Relacao com esporte: ' +
+      'Relacao com atividade/gesto: ' +
         String(parsed.raciocinioClinico?.relacaoComEsporte || 'Nao informado'),
       '',
       'Diagnostico funcional',
@@ -1622,8 +1618,6 @@ ${JSON.stringify(input, null, 2)}
         String(
           parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || 'Nao informado',
         ),
-      'Compensacoes: ' +
-        String(parsed.diagnosticoFuncionalIa?.compensacoes || 'Nao informado'),
       '',
       'Conduta direcionada',
       'Tecnica manual indicada: ' +
@@ -1656,8 +1650,13 @@ ${JSON.stringify(input, null, 2)}
 
   private parseStructuredExame(value?: string | null): any | null {
     const raw = String(value || '').trim();
-    if (!raw.startsWith(this.structuredExamePrefix)) return null;
-    const json = raw.slice(this.structuredExamePrefix.length);
+    const prefix = raw.startsWith(this.structuredExamePrefix)
+      ? this.structuredExamePrefix
+      : raw.startsWith(this.legacyStructuredExamePrefix)
+        ? this.legacyStructuredExamePrefix
+        : null;
+    if (!prefix) return null;
+    const json = raw.slice(prefix.length);
     if (!json) return null;
     try {
       return JSON.parse(json);
@@ -1717,7 +1716,7 @@ ${JSON.stringify(input, null, 2)}
       anamnese.fatorAlivio,
       anamnese.fatoresPiora,
       anamnese.mecanismoLesao,
-      anamnese.historicoEsportivo,
+      anamnese.atividadesQuePioram,
       anamnese.lesoesPrevias,
       anamnese.usoMedicamentos,
       anamnese.eventoEspecifico,

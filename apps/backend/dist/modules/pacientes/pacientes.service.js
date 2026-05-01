@@ -19,7 +19,10 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const paciente_entity_1 = require("./entities/paciente.entity");
 const paciente_exame_entity_1 = require("./entities/paciente-exame.entity");
+const clinical_photo_entity_1 = require("./entities/clinical-photo.entity");
+const clinical_photo_comparison_entity_1 = require("./entities/clinical-photo-comparison.entity");
 const profissional_paciente_vinculo_entity_1 = require("./entities/profissional-paciente-vinculo.entity");
+const exame_storage_1 = require("./exame-storage");
 const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
@@ -33,18 +36,22 @@ let PacientesService = class PacientesService {
     laudoRepository;
     usuarioRepository;
     pacienteExameRepository;
+    clinicalPhotoRepository;
+    clinicalPhotoComparisonRepository;
     vinculoRepository;
     atividadeRepository;
     anamneseRepository;
     configService;
     masterAdminEmailsCache = null;
     masterByUserIdCache = new Map();
-    constructor(pacienteRepository, evolucaoRepository, laudoRepository, usuarioRepository, pacienteExameRepository, vinculoRepository, atividadeRepository, anamneseRepository, configService) {
+    constructor(pacienteRepository, evolucaoRepository, laudoRepository, usuarioRepository, pacienteExameRepository, clinicalPhotoRepository, clinicalPhotoComparisonRepository, vinculoRepository, atividadeRepository, anamneseRepository, configService) {
         this.pacienteRepository = pacienteRepository;
         this.evolucaoRepository = evolucaoRepository;
         this.laudoRepository = laudoRepository;
         this.usuarioRepository = usuarioRepository;
         this.pacienteExameRepository = pacienteExameRepository;
+        this.clinicalPhotoRepository = clinicalPhotoRepository;
+        this.clinicalPhotoComparisonRepository = clinicalPhotoComparisonRepository;
         this.vinculoRepository = vinculoRepository;
         this.atividadeRepository = atividadeRepository;
         this.anamneseRepository = anamneseRepository;
@@ -860,6 +867,305 @@ let PacientesService = class PacientesService {
         await this.pacienteExameRepository.remove(exame);
         return exame;
     }
+    async listClinicalPhotos(pacienteId, actor) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
+        return this.clinicalPhotoRepository.find({
+            where: { pacienteId, usuarioId: ownerUsuarioId },
+            order: { createdAt: 'DESC' },
+        });
+    }
+    async listClinicalPhotoComparisons(pacienteId, actor) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
+        return this.clinicalPhotoComparisonRepository.find({
+            where: { pacienteId, usuarioId: ownerUsuarioId },
+            order: { createdAt: 'DESC' },
+        });
+    }
+    async createClinicalPhoto(pacienteId, actor, payload) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
+        const photo = this.clinicalPhotoRepository.create({
+            pacienteId,
+            usuarioId: ownerUsuarioId,
+            nomeOriginal: payload.nomeOriginal,
+            nomeArquivo: payload.nomeArquivo,
+            mimeType: payload.mimeType,
+            tamanhoBytes: payload.tamanhoBytes,
+            caminhoArquivo: payload.caminhoArquivo,
+            tipo: payload.tipo || clinical_photo_entity_1.ClinicalPhotoType.FOTO_POSTURAL_FRONTAL,
+            vista: payload.vista || null,
+            regiao: payload.regiao?.trim() || null,
+            lado: payload.lado?.trim() || null,
+            intensidadeDor: typeof payload.intensidadeDor === 'number'
+                ? Math.max(0, Math.min(10, payload.intensidadeDor))
+                : null,
+            observacao: payload.observacao?.trim() || null,
+            dataFoto: payload.dataFoto || null,
+            qualityScore: null,
+            aiAnalise: null,
+            aiLimites: null,
+            aiRaw: null,
+            confirmadoPorProfissional: false,
+        });
+        return this.clinicalPhotoRepository.save(photo);
+    }
+    async findClinicalPhotoOrFail(pacienteId, photoId, actor) {
+        const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
+        const photo = await this.clinicalPhotoRepository.findOne({
+            where: { id: photoId, pacienteId, usuarioId: ownerUsuarioId },
+        });
+        if (!photo) {
+            throw new common_1.NotFoundException('Foto clinica nao encontrada');
+        }
+        return photo;
+    }
+    async removeClinicalPhoto(pacienteId, photoId, actor) {
+        const photo = await this.findClinicalPhotoOrFail(pacienteId, photoId, actor);
+        await this.clinicalPhotoRepository.remove(photo);
+        return photo;
+    }
+    async analyzeClinicalPhoto(pacienteId, photoId, actor) {
+        const photo = await this.findClinicalPhotoOrFail(pacienteId, photoId, actor);
+        const fileBuffer = await (0, exame_storage_1.readExameFile)(photo.caminhoArquivo);
+        const analysis = await this.interpretClinicalPhotoWithAI({
+            photo,
+            fileBuffer,
+        });
+        if (!analysis) {
+            photo.aiLimites =
+                'Analise visual por IA indisponivel. Use a foto apenas como registro clinico.';
+            return this.clinicalPhotoRepository.save(photo);
+        }
+        photo.qualityScore = analysis.qualityScore;
+        photo.aiAnalise = analysis.summary;
+        photo.aiLimites = analysis.limitations;
+        photo.aiRaw = analysis.raw;
+        return this.clinicalPhotoRepository.save(photo);
+    }
+    async compareClinicalPhotos(pacienteId, actor, payload) {
+        const baseline = await this.findClinicalPhotoOrFail(pacienteId, payload.baselinePhotoId, actor);
+        const followup = await this.findClinicalPhotoOrFail(pacienteId, payload.followupPhotoId, actor);
+        const [baselineBuffer, followupBuffer] = await Promise.all([
+            (0, exame_storage_1.readExameFile)(baseline.caminhoArquivo),
+            (0, exame_storage_1.readExameFile)(followup.caminhoArquivo),
+        ]);
+        const analysis = await this.interpretClinicalPhotoComparisonWithAI({
+            baseline,
+            followup,
+            baselineBuffer,
+            followupBuffer,
+            observacao: payload.observacao || '',
+        });
+        const comparison = this.clinicalPhotoComparisonRepository.create({
+            pacienteId,
+            usuarioId: baseline.usuarioId,
+            baselinePhotoId: baseline.id,
+            followupPhotoId: followup.id,
+            regiao: payload.regiao?.trim() || baseline.regiao || followup.regiao || null,
+            vista: payload.vista?.trim() || baseline.vista || followup.vista || null,
+            observacao: payload.observacao?.trim() || null,
+            resumo: analysis?.summary ||
+                'Comparacao registrada. Analise visual por IA indisponivel no momento.',
+            aiComparacao: analysis?.comparison || null,
+            aiLimites: analysis?.limitations ||
+                'Compare apenas fotos com mesma vista, distancia e iluminacao semelhantes.',
+            aiRaw: analysis?.raw || null,
+            confirmadoPorProfissional: false,
+        });
+        return this.clinicalPhotoComparisonRepository.save(comparison);
+    }
+    shouldUseExamAi() {
+        return (process.env.OPENAI_EXAM_AI_ENABLED || 'true') !== 'false';
+    }
+    getPositiveIntegerEnv(key, fallback, max) {
+        const value = Number(process.env[key]);
+        if (!Number.isFinite(value) || value <= 0)
+            return fallback;
+        return Math.min(Math.floor(value), max);
+    }
+    extractJsonObject(raw) {
+        const start = raw.indexOf('{');
+        const end = raw.lastIndexOf('}');
+        if (start === -1 || end === -1 || end <= start)
+            return null;
+        try {
+            return JSON.parse(raw.slice(start, end + 1));
+        }
+        catch {
+            return null;
+        }
+    }
+    extractOutputText(data) {
+        return (data.output_text ||
+            data.output
+                ?.flatMap((item) => item.content || [])
+                .map((content) => content.text || '')
+                .join('\n') ||
+            '');
+    }
+    asStringArray(value, maxItems = 6) {
+        if (!Array.isArray(value))
+            return [];
+        return value
+            .filter((item) => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .slice(0, maxItems);
+    }
+    asString(value) {
+        return typeof value === 'string' ? value.trim() : '';
+    }
+    asQualityScore(value) {
+        const numberValue = Number(value);
+        if (!Number.isFinite(numberValue))
+            return null;
+        return Math.max(0, Math.min(100, Math.round(numberValue)));
+    }
+    buildOpenAiClinicalVisionRequest(input) {
+        const content = [
+            { type: 'input_text', text: input.prompt },
+        ];
+        for (const image of input.images) {
+            content.push({
+                type: 'input_image',
+                image_url: `data:${image.mimeType};base64,${image.buffer.toString('base64')}`,
+            });
+        }
+        return content;
+    }
+    async callClinicalVisionAi(input) {
+        const apiKey = (process.env.OPENAI_API_KEY || '').trim();
+        if (!apiKey || !this.shouldUseExamAi())
+            return null;
+        const model = (process.env.OPENAI_EXAM_MODEL ||
+            process.env.OPENAI_LAUDO_MODEL ||
+            process.env.OPENAI_MODEL ||
+            'gpt-4.1-mini').trim();
+        const controller = new AbortController();
+        const timeoutMs = this.getPositiveIntegerEnv('OPENAI_EXAM_TIMEOUT_MS', 30000, 120000);
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch('https://api.openai.com/v1/responses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model,
+                    input: [
+                        {
+                            role: 'system',
+                            content: 'Voce e um assistente clinico de fisioterapia. Analise fotos clinicas com prudencia, sem diagnosticar por imagem e sempre destacando limitacoes.',
+                        },
+                        {
+                            role: 'user',
+                            content: this.buildOpenAiClinicalVisionRequest(input),
+                        },
+                    ],
+                    temperature: 0.1,
+                }),
+                signal: controller.signal,
+            }).finally(() => clearTimeout(timeoutId));
+            if (!response.ok)
+                return null;
+            const data = (await response.json());
+            return this.extractJsonObject(this.extractOutputText(data));
+        }
+        catch {
+            return null;
+        }
+    }
+    async interpretClinicalPhotoWithAI(input) {
+        const prompt = `Analise a foto clinica de fisioterapia e retorne SOMENTE JSON com:
+qualidadeImagemScore (numero de 0 a 100),
+qualidadeImagem (string curta),
+observacoesVisuais (array de strings),
+assimetriasProvaveis (array de strings),
+sugestoesExameFisico (array de strings),
+redFlagsVisuais (array de strings),
+limitacoes (string curta).
+
+Contexto:
+tipo=${input.photo.tipo}
+vista=${input.photo.vista || 'nao informada'}
+regiao=${input.photo.regiao || 'nao informada'}
+lado=${input.photo.lado || 'nao informado'}
+intensidadeDor=${input.photo.intensidadeDor ?? 'nao informada'}
+observacao=${input.photo.observacao || 'sem observacao'}
+`;
+        const parsed = await this.callClinicalVisionAi({
+            prompt,
+            images: [{ mimeType: input.photo.mimeType, buffer: input.fileBuffer }],
+        });
+        if (!parsed)
+            return null;
+        const summaryParts = [
+            this.asString(parsed.qualidadeImagem)
+                ? `Qualidade: ${this.asString(parsed.qualidadeImagem)}`
+                : '',
+            ...this.asStringArray(parsed.observacoesVisuais).map((item) => `Observacao: ${item}`),
+            ...this.asStringArray(parsed.assimetriasProvaveis).map((item) => `Assimetria provavel: ${item}`),
+            ...this.asStringArray(parsed.sugestoesExameFisico).map((item) => `Validar no exame fisico: ${item}`),
+            ...this.asStringArray(parsed.redFlagsVisuais).map((item) => `Alerta visual: ${item}`),
+        ].filter(Boolean);
+        return {
+            qualityScore: this.asQualityScore(parsed.qualidadeImagemScore),
+            summary: summaryParts.join('\n') ||
+                'Analise visual concluida sem achados estruturados relevantes.',
+            limitations: this.asString(parsed.limitacoes) ||
+                'Foto clinica nao substitui exame fisico, medida objetiva ou julgamento profissional.',
+            raw: parsed,
+        };
+    }
+    async interpretClinicalPhotoComparisonWithAI(input) {
+        const prompt = `Compare duas fotos clinicas de fisioterapia: a primeira e ANTES/baseline, a segunda e DEPOIS/follow-up.
+Retorne SOMENTE JSON com:
+comparabilidade (string curta),
+mudancasVisuais (array de strings),
+melhoraPioraSemMudanca (string curta),
+sugestaoSoapObjetivo (string curta),
+recomendacaoRepetirFoto (string curta),
+limitacoes (string curta).
+
+Contexto:
+baseline_tipo=${input.baseline.tipo}
+followup_tipo=${input.followup.tipo}
+baseline_vista=${input.baseline.vista || 'nao informada'}
+followup_vista=${input.followup.vista || 'nao informada'}
+regiao=${input.followup.regiao || input.baseline.regiao || 'nao informada'}
+observacao=${input.observacao || 'sem observacao'}
+`;
+        const parsed = await this.callClinicalVisionAi({
+            prompt,
+            images: [
+                { mimeType: input.baseline.mimeType, buffer: input.baselineBuffer },
+                { mimeType: input.followup.mimeType, buffer: input.followupBuffer },
+            ],
+        });
+        if (!parsed)
+            return null;
+        const changes = this.asStringArray(parsed.mudancasVisuais);
+        const summary = [
+            this.asString(parsed.comparabilidade)
+                ? `Comparabilidade: ${this.asString(parsed.comparabilidade)}`
+                : '',
+            this.asString(parsed.melhoraPioraSemMudanca)
+                ? `Evolucao visual: ${this.asString(parsed.melhoraPioraSemMudanca)}`
+                : '',
+            ...changes.map((item) => `Mudanca: ${item}`),
+            this.asString(parsed.sugestaoSoapObjetivo)
+                ? `SOAP objetivo: ${this.asString(parsed.sugestaoSoapObjetivo)}`
+                : '',
+        ].filter(Boolean);
+        return {
+            summary: summary.join('\n') || 'Comparacao visual concluida.',
+            comparison: changes.join('\n') || this.asString(parsed.melhoraPioraSemMudanca),
+            limitations: this.asString(parsed.limitacoes) ||
+                this.asString(parsed.recomendacaoRepetirFoto) ||
+                'Comparacao visual depende de mesma vista, distancia, iluminacao e postura inicial.',
+            raw: parsed,
+        };
+    }
 };
 exports.PacientesService = PacientesService;
 exports.PacientesService = PacientesService = __decorate([
@@ -869,10 +1175,14 @@ exports.PacientesService = PacientesService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(laudo_entity_1.Laudo)),
     __param(3, (0, typeorm_1.InjectRepository)(usuario_entity_1.Usuario)),
     __param(4, (0, typeorm_1.InjectRepository)(paciente_exame_entity_1.PacienteExame)),
-    __param(5, (0, typeorm_1.InjectRepository)(profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo)),
-    __param(6, (0, typeorm_1.InjectRepository)(atividade_entity_1.Atividade)),
-    __param(7, (0, typeorm_1.InjectRepository)(anamnese_entity_1.Anamnese)),
+    __param(5, (0, typeorm_1.InjectRepository)(clinical_photo_entity_1.ClinicalPhoto)),
+    __param(6, (0, typeorm_1.InjectRepository)(clinical_photo_comparison_entity_1.ClinicalPhotoComparison)),
+    __param(7, (0, typeorm_1.InjectRepository)(profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo)),
+    __param(8, (0, typeorm_1.InjectRepository)(atividade_entity_1.Atividade)),
+    __param(9, (0, typeorm_1.InjectRepository)(anamnese_entity_1.Anamnese)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

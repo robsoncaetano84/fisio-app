@@ -27,8 +27,11 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
 const usuario_entity_2 = require("../usuarios/entities/usuario.entity");
 const create_paciente_exame_dto_1 = require("./dto/create-paciente-exame.dto");
+const create_clinical_photo_dto_1 = require("./dto/create-clinical-photo.dto");
+const compare_clinical_photos_dto_1 = require("./dto/compare-clinical-photos.dto");
 const exame_storage_1 = require("./exame-storage");
 const MAX_EXAME_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_CLINICAL_PHOTO_SIZE_BYTES = 12 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
     'application/pdf',
     'image/jpeg',
@@ -104,6 +107,66 @@ let PacientesController = class PacientesController {
             updatedAt: exame.updatedAt,
             downloadUrl: `/api/pacientes/${pacienteId}/exames/${exame.id}/arquivo`,
         };
+    }
+    toClinicalPhotoResponse(pacienteId, photo) {
+        return {
+            id: photo.id,
+            pacienteId: photo.pacienteId,
+            nomeOriginal: photo.nomeOriginal,
+            mimeType: photo.mimeType,
+            tamanhoBytes: photo.tamanhoBytes,
+            tipo: photo.tipo,
+            vista: photo.vista,
+            regiao: photo.regiao,
+            lado: photo.lado,
+            intensidadeDor: photo.intensidadeDor,
+            observacao: photo.observacao,
+            dataFoto: photo.dataFoto,
+            qualityScore: photo.qualityScore,
+            aiAnalise: photo.aiAnalise,
+            aiLimites: photo.aiLimites,
+            aiRaw: photo.aiRaw,
+            confirmadoPorProfissional: photo.confirmadoPorProfissional,
+            createdAt: photo.createdAt,
+            updatedAt: photo.updatedAt,
+            downloadUrl: `/api/pacientes/${pacienteId}/fotos-clinicas/${photo.id}/arquivo`,
+        };
+    }
+    toClinicalPhotoComparisonResponse(comparison) {
+        return {
+            id: comparison.id,
+            pacienteId: comparison.pacienteId,
+            baselinePhotoId: comparison.baselinePhotoId,
+            followupPhotoId: comparison.followupPhotoId,
+            regiao: comparison.regiao,
+            vista: comparison.vista,
+            observacao: comparison.observacao,
+            resumo: comparison.resumo,
+            aiComparacao: comparison.aiComparacao,
+            aiLimites: comparison.aiLimites,
+            aiRaw: comparison.aiRaw,
+            confirmadoPorProfissional: comparison.confirmadoPorProfissional,
+            createdAt: comparison.createdAt,
+            updatedAt: comparison.updatedAt,
+        };
+    }
+    parseOptionalDate(value) {
+        if (!value)
+            return null;
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            throw new common_1.BadRequestException('Data da foto invalida');
+        }
+        return parsed;
+    }
+    parseOptionalPainIntensity(value) {
+        if (value === undefined || value === null || value === '')
+            return null;
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10) {
+            throw new common_1.BadRequestException('Intensidade da dor deve estar entre 0 e 10');
+        }
+        return Math.round(parsed);
     }
     create(createPacienteDto, usuario) {
         return this.pacientesService.create(createPacienteDto, usuario.id);
@@ -185,6 +248,80 @@ let PacientesController = class PacientesController {
     async deleteExame(id, exameId, usuario) {
         const exame = await this.pacientesService.removeExame(id, exameId, usuario);
         await (0, exame_storage_1.deleteExameFile)(exame.caminhoArquivo).catch(() => undefined);
+        return { success: true };
+    }
+    async listClinicalPhotos(id, usuario) {
+        const photos = await this.pacientesService.listClinicalPhotos(id, usuario);
+        return photos.map((item) => this.toClinicalPhotoResponse(id, item));
+    }
+    async listClinicalPhotoComparisons(id, usuario) {
+        const comparisons = await this.pacientesService.listClinicalPhotoComparisons(id, usuario);
+        return comparisons.map((item) => this.toClinicalPhotoComparisonResponse(item));
+    }
+    async uploadClinicalPhoto(id, file, body, usuario) {
+        if (!file) {
+            throw new common_1.BadRequestException('Foto obrigatoria');
+        }
+        const ownerUsuarioId = await this.pacientesService.resolveExameOwnerUsuarioId(id, usuario);
+        const detectedExtension = (0, path_1.extname)(file.originalname || '').toLowerCase();
+        if (!ALLOWED_EXTENSIONS.has(detectedExtension) || detectedExtension === '.pdf') {
+            throw new common_1.BadRequestException('Extensao de imagem nao suportada');
+        }
+        if (!isValidBySignature(detectedExtension, file.buffer)) {
+            throw new common_1.BadRequestException('Assinatura de imagem invalida para a extensao informada');
+        }
+        const safeMimeType = MIME_BY_EXTENSION[detectedExtension] ||
+            (ALLOWED_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())
+                ? file.mimetype
+                : 'application/octet-stream');
+        const objectKey = (0, exame_storage_1.buildExameObjectKey)(ownerUsuarioId, id, file.originalname || 'foto');
+        const persisted = await (0, exame_storage_1.persistExameFile)({
+            usuarioId: ownerUsuarioId,
+            pacienteId: id,
+            objectKey,
+            mimeType: safeMimeType,
+            fileBuffer: file.buffer,
+        });
+        try {
+            const photo = await this.pacientesService.createClinicalPhoto(id, usuario, {
+                nomeOriginal: file.originalname,
+                nomeArquivo: persisted.nomeArquivo,
+                mimeType: safeMimeType,
+                tamanhoBytes: file.size,
+                caminhoArquivo: persisted.caminhoArquivo,
+                tipo: body.tipo,
+                vista: body.vista,
+                regiao: body.regiao,
+                lado: body.lado,
+                intensidadeDor: this.parseOptionalPainIntensity(body.intensidadeDor),
+                observacao: body.observacao,
+                dataFoto: this.parseOptionalDate(body.dataFoto),
+            });
+            return this.toClinicalPhotoResponse(id, photo);
+        }
+        catch (error) {
+            await (0, exame_storage_1.deleteExameFile)(persisted.caminhoArquivo).catch(() => undefined);
+            throw error;
+        }
+    }
+    async analyzeClinicalPhoto(id, fotoId, usuario) {
+        const photo = await this.pacientesService.analyzeClinicalPhoto(id, fotoId, usuario);
+        return this.toClinicalPhotoResponse(id, photo);
+    }
+    async compareClinicalPhotos(id, body, usuario) {
+        const comparison = await this.pacientesService.compareClinicalPhotos(id, usuario, body);
+        return this.toClinicalPhotoComparisonResponse(comparison);
+    }
+    async downloadClinicalPhoto(id, fotoId, usuario, res) {
+        const photo = await this.pacientesService.findClinicalPhotoOrFail(id, fotoId, usuario);
+        res.setHeader('Content-Type', photo.mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${photo.nomeOriginal}"`);
+        const fileBuffer = await (0, exame_storage_1.readExameFile)(photo.caminhoArquivo);
+        return res.send(fileBuffer);
+    }
+    async deleteClinicalPhoto(id, fotoId, usuario) {
+        const photo = await this.pacientesService.removeClinicalPhoto(id, fotoId, usuario);
+        await (0, exame_storage_1.deleteExameFile)(photo.caminhoArquivo).catch(() => undefined);
         return { success: true };
     }
     findOne(id, usuario) {
@@ -341,6 +478,102 @@ __decorate([
     __metadata("design:paramtypes", [String, String, usuario_entity_2.Usuario]),
     __metadata("design:returntype", Promise)
 ], PacientesController.prototype, "deleteExame", null);
+__decorate([
+    (0, common_1.Get)(':id/fotos-clinicas'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "listClinicalPhotos", null);
+__decorate([
+    (0, common_1.Get)(':id/fotos-clinicas/comparacoes'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "listClinicalPhotoComparisons", null);
+__decorate([
+    (0, common_1.Post)(':id/fotos-clinicas'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        storage: (0, multer_1.memoryStorage)(),
+        limits: { fileSize: MAX_CLINICAL_PHOTO_SIZE_BYTES },
+        fileFilter: (_req, file, cb) => {
+            const mimeType = String(file.mimetype || '').toLowerCase();
+            const extension = (0, path_1.extname)(file.originalname || '').toLowerCase();
+            const expectedMime = MIME_BY_EXTENSION[extension];
+            const isImageExtensionAllowed = ALLOWED_EXTENSIONS.has(extension) && extension !== '.pdf';
+            const isMimeAllowed = mimeType.startsWith('image/') &&
+                ALLOWED_MIME_TYPES.has(mimeType) &&
+                (!expectedMime || mimeType === expectedMime);
+            if (!isImageExtensionAllowed || !isMimeAllowed) {
+                return cb(new common_1.BadRequestException('Envie apenas imagem clinica'), false);
+            }
+            cb(null, true);
+        },
+    })),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, create_clinical_photo_dto_1.CreateClinicalPhotoDto,
+        usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "uploadClinicalPhoto", null);
+__decorate([
+    (0, common_1.Post)(':id/fotos-clinicas/:fotoId/analisar'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Param)('fotoId', common_1.ParseUUIDPipe)),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "analyzeClinicalPhoto", null);
+__decorate([
+    (0, common_1.Post)(':id/fotos-clinicas/comparar'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, compare_clinical_photos_dto_1.CompareClinicalPhotosDto,
+        usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "compareClinicalPhotos", null);
+__decorate([
+    (0, common_1.Get)(':id/fotos-clinicas/:fotoId/arquivo'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Param)('fotoId', common_1.ParseUUIDPipe)),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __param(3, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, usuario_entity_2.Usuario, Object]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "downloadClinicalPhoto", null);
+__decorate([
+    (0, common_1.Delete)(':id/fotos-clinicas/:fotoId'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 20 } }),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.UserRole.ADMIN, usuario_entity_1.UserRole.USER, usuario_entity_1.UserRole.PACIENTE),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Param)('fotoId', common_1.ParseUUIDPipe)),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, usuario_entity_2.Usuario]),
+    __metadata("design:returntype", Promise)
+], PacientesController.prototype, "deleteClinicalPhoto", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, throttler_1.Throttle)({ default: { ttl: 60, limit: 120 } }),

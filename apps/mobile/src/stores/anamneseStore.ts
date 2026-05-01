@@ -13,6 +13,7 @@ import {
   InicioProblema,
   TipoDor,
   MecanismoLesao,
+  FenotipoDorEvidencias,
 } from "../types";
 
 type AnamnesePayload = {
@@ -33,14 +34,13 @@ type AnamnesePayload = {
   irradiacao?: boolean;
   localIrradiacao?: string;
   tipoDor?: TipoDor;
+  fenotipoDorEvidencias?: FenotipoDorEvidencias;
   sinaisSensibilizacaoCentral?: string;
   redFlags?: string[];
   yellowFlags?: string[];
   problemaAnterior?: boolean;
   quandoProblemaAnterior?: string;
   tratamentosAnteriores?: string[];
-  historicoFamiliar?: string;
-  historicoEsportivo?: string;
   lesoesPrevias?: string;
   usoMedicamentos?: string;
   limitacoesFuncionais?: string;

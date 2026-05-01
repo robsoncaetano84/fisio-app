@@ -26,6 +26,8 @@ import { CrmTask } from './modules/crm/entities/crm-task.entity';
 import { CrmInteraction } from './modules/crm/entities/crm-interaction.entity';
 import { CrmAdminAuditLog } from './modules/crm/entities/crm-admin-audit-log.entity';
 import { PacienteExame } from './modules/pacientes/entities/paciente-exame.entity';
+import { ClinicalPhoto } from './modules/pacientes/entities/clinical-photo.entity';
+import { ClinicalPhotoComparison } from './modules/pacientes/entities/clinical-photo-comparison.entity';
 import { ProfissionalPacienteVinculo } from './modules/pacientes/entities/profissional-paciente-vinculo.entity';
 import { ClinicalFlowEvent } from './modules/metrics/entities/clinical-flow-event.entity';
 import { PatientCheckClickEvent } from './modules/metrics/entities/patient-check-click-event.entity';
@@ -84,6 +86,16 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
         MASTER_ADMIN_PERMISSIONS: Joi.string().allow('').optional(),
         OPENAI_API_KEY: Joi.string().allow('').optional(),
         OPENAI_MODEL: Joi.string().allow('').optional(),
+        OPENAI_LAUDO_MODEL: Joi.string().allow('').optional(),
+        OPENAI_EXAM_MODEL: Joi.string().allow('').optional(),
+        OPENAI_EXAM_AI_ENABLED: Joi.string()
+          .valid('true', 'false')
+          .default('true'),
+        OPENAI_LAUDO_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
+        OPENAI_EXAM_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
+        SUPABASE_URL: Joi.string().allow('').optional(),
+        SUPABASE_SERVICE_ROLE_KEY: Joi.string().allow('').optional(),
+        SUPABASE_STORAGE_BUCKET: Joi.string().allow('').optional(),
         EXPO_ACCESS_TOKEN: Joi.string().allow('').optional(),
         TRUST_PROXY: Joi.string().valid('true', 'false').default('false'),
         APP_VERSION: Joi.string().allow('').optional(),
@@ -126,6 +138,8 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
             CrmInteraction,
             CrmAdminAuditLog,
             PacienteExame,
+            ClinicalPhoto,
+            ClinicalPhotoComparison,
             ProfissionalPacienteVinculo,
             ClinicalFlowEvent,
             PatientCheckClickEvent,

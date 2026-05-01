@@ -362,6 +362,26 @@ describe('CharlesService - deterministic orchestrator', () => {
     expect(result.reason).toContain('Fenotipo neural');
   });
 
+  it('uses explicit pain phenotype controls as clinical evidence', async () => {
+    const service = makeService({
+      anamnese: {
+        createdAt: new Date(),
+        areasAfetadas: [{ regiao: 'OMBRO' }],
+        fenotipoDorEvidencias: {
+          irradiacaoTrajeto: true,
+          choqueFormigamentoQueimacao: true,
+          dormenciaAlteracaoToque: true,
+        },
+      },
+    });
+
+    const result = await service.getExameFisicoDorSuggestion('pac-1', user);
+    expect(result.dorPrincipal).toBe('NEUROPATICA');
+    expect(result.dorSubtipo).toBe('NEURAL');
+    expect(result.confidence).toBe('MODERADA');
+    expect(result.evidenceFields).toContain('fenotipoDorEvidencias');
+  });
+
   it('learns nociplastic phenotype from central modulation evidence', async () => {
     const service = makeService({
       anamnese: {

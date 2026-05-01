@@ -35,7 +35,12 @@ export enum MecanismoLesao {
 export interface AreaAfetada {
   regiao: string;
   lado?: 'esquerdo' | 'direito' | 'ambos';
+  vista?: 'anterior' | 'posterior';
+  intensidade?: number;
+  observacao?: string;
 }
+
+export type FenotipoDorEvidencias = Record<string, boolean>;
 
 @Entity('anamneses')
 export class Anamnese extends BaseEntity {
@@ -105,6 +110,13 @@ export class Anamnese extends BaseEntity {
   tipoDor: TipoDor;
 
   @Column({
+    name: 'fenotipo_dor_evidencias',
+    type: 'jsonb',
+    default: {},
+  })
+  fenotipoDorEvidencias: FenotipoDorEvidencias;
+
+  @Column({
     name: 'sinais_sensibilizacao_central',
     type: 'text',
     nullable: true,
@@ -125,12 +137,6 @@ export class Anamnese extends BaseEntity {
 
   @Column({ name: 'tratamentos_anteriores', type: 'jsonb', default: [] })
   tratamentosAnteriores: string[];
-
-  @Column({ name: 'historico_familiar', type: 'text', nullable: true })
-  historicoFamiliar: string;
-
-  @Column({ name: 'historico_esportivo', type: 'text', nullable: true })
-  historicoEsportivo: string;
 
   @Column({ name: 'lesoes_previas', type: 'text', nullable: true })
   lesoesPrevias: string;

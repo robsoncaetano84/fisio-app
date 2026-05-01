@@ -14,6 +14,8 @@ const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
 const usuario_entity_1 = require("../usuarios/entities/usuario.entity");
 const paciente_exame_entity_1 = require("./entities/paciente-exame.entity");
+const clinical_photo_entity_1 = require("./entities/clinical-photo.entity");
+const clinical_photo_comparison_entity_1 = require("./entities/clinical-photo-comparison.entity");
 const profissional_paciente_vinculo_entity_1 = require("./entities/profissional-paciente-vinculo.entity");
 const atividade_entity_1 = require("../atividades/entities/atividade.entity");
 const anamnese_entity_1 = require("../anamneses/entities/anamnese.entity");
@@ -31,6 +33,8 @@ exports.PacientesModule = PacientesModule = __decorate([
                 laudo_entity_1.Laudo,
                 usuario_entity_1.Usuario,
                 paciente_exame_entity_1.PacienteExame,
+                clinical_photo_entity_1.ClinicalPhoto,
+                clinical_photo_comparison_entity_1.ClinicalPhotoComparison,
                 profissional_paciente_vinculo_entity_1.ProfissionalPacienteVinculo,
                 atividade_entity_1.Atividade,
                 anamnese_entity_1.Anamnese,

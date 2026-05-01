@@ -58,14 +58,13 @@ let Anamnese = class Anamnese extends base_entity_1.BaseEntity {
     irradiacao;
     localIrradiacao;
     tipoDor;
+    fenotipoDorEvidencias;
     sinaisSensibilizacaoCentral;
     redFlags;
     yellowFlags;
     problemaAnterior;
     quandoProblemaAnterior;
     tratamentosAnteriores;
-    historicoFamiliar;
-    historicoEsportivo;
     lesoesPrevias;
     usoMedicamentos;
     limitacoesFuncionais;
@@ -167,6 +166,14 @@ __decorate([
 ], Anamnese.prototype, "tipoDor", void 0);
 __decorate([
     (0, typeorm_1.Column)({
+        name: 'fenotipo_dor_evidencias',
+        type: 'jsonb',
+        default: {},
+    }),
+    __metadata("design:type", Object)
+], Anamnese.prototype, "fenotipoDorEvidencias", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
         name: 'sinais_sensibilizacao_central',
         type: 'text',
         nullable: true,
@@ -193,14 +200,6 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'tratamentos_anteriores', type: 'jsonb', default: [] }),
     __metadata("design:type", Array)
 ], Anamnese.prototype, "tratamentosAnteriores", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ name: 'historico_familiar', type: 'text', nullable: true }),
-    __metadata("design:type", String)
-], Anamnese.prototype, "historicoFamiliar", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ name: 'historico_esportivo', type: 'text', nullable: true }),
-    __metadata("design:type", String)
-], Anamnese.prototype, "historicoEsportivo", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'lesoes_previas', type: 'text', nullable: true }),
     __metadata("design:type", String)

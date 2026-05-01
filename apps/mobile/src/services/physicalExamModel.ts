@@ -71,11 +71,12 @@ export interface RegionalTestGroup {
     | "COTOVELO"
     | "PUNHO_MAO";
   titulo: string;
+  adm: string;
   testes: RegionalTest[];
 }
 
 export interface ExameFisicoStructured {
-  version: 1;
+  version: 2;
   source: "rule-based" | "manual";
   generatedAt: string;
   dorPrincipal: DorClassificacaoPrincipal | null;
@@ -95,23 +96,18 @@ export interface ExameFisicoStructured {
     resistido: string;
     reproduzDor: string;
     qualidadeMovimento: string;
-    compensacoes: string;
-    dorNoMovimento: string;
   };
   padraoDor: {
     local: string;
     irradiada: string;
-    comportamento: string;
   };
   palpacao: {
     pontosDolorosos: string;
     muscular: string;
     articular: string;
-    pontosGatilho: string;
     dinamicaVertebral: string;
     temperatura: string;
     tonusMuscular: string;
-    estruturasEspecificas: string;
     hipomobilidadeArticular: string;
     hipomobilidadeSegmentar: {
       cervical: string;
@@ -133,15 +129,7 @@ export interface ExameFisicoStructured {
   testes: {
     biomecanicos: string;
     ortopedicos: string;
-    neurologicos: string;
     imagem: string;
-  };
-  neurologico: {
-    forca: string;
-    sensibilidade: string;
-    reflexos: string;
-    dermatomos: string;
-    miotomos: string;
   };
   avaliacaoRegioes: RegionalTestGroup[];
   cadeiaCinetica: {
@@ -170,7 +158,6 @@ export interface ExameFisicoStructured {
   diagnosticoFuncionalIa: {
     disfuncaoPrincipal: string;
     cadeiaEnvolvida: string;
-    compensacoes: string;
   };
   condutaIa: {
     tecnicaManualIndicada: string;
@@ -199,7 +186,8 @@ const buildHipomobilidadeSummary = (segmentar: {
     `Iliaco E: ${safeText(segmentar.iliacoEsquerdo)}`,
   ].join(" | ");
 
-export const STRUCTURED_EXAME_PREFIX = "__EXAME_FISICO_STRUCTURED_V1__";
+export const STRUCTURED_EXAME_PREFIX = "__EXAME_FISICO_STRUCTURED_V2__";
+const LEGACY_STRUCTURED_EXAME_PREFIX = "__EXAME_FISICO_STRUCTURED_V1__";
 
 const boolLabel = (value?: boolean | null) => {
   if (value === true) return "Sim";
@@ -318,6 +306,26 @@ export function inferDorClassificationFromAnamnese(
   const nociceptiveEvidence: string[] = [];
   const neuropathicEvidence: string[] = [];
   const nociplasticEvidence: string[] = [];
+  const fenotipoDorEvidencias = anamnese.fenotipoDorEvidencias || {};
+  const hasFenotipoEvidence = (key: string) => fenotipoDorEvidencias[key] === true;
+
+  if (hasFenotipoEvidence("dorLocalizada")) nociceptiveEvidence.push("dor localizada");
+  if (hasFenotipoEvidence("pioraMovimentoEsforco")) nociceptiveEvidence.push("piora com movimento/esforco");
+  if (hasFenotipoEvidence("melhoraRepouso")) nociceptiveEvidence.push("melhora com repouso");
+  if (hasFenotipoEvidence("inicioAposEsforcoLesao")) nociceptiveEvidence.push("inicio apos esforco/lesao");
+  if (hasFenotipoEvidence("dorReproduzidaPalpacao")) nociceptiveEvidence.push("dor reproduzida por pressao/palpacao");
+
+  if (hasFenotipoEvidence("irradiacaoTrajeto")) neuropathicEvidence.push("dor irradiada");
+  if (hasFenotipoEvidence("choqueFormigamentoQueimacao")) neuropathicEvidence.push("choque/formigamento/queimacao");
+  if (hasFenotipoEvidence("dormenciaAlteracaoToque")) neuropathicEvidence.push("dormencia ou alteracao ao toque");
+  if (hasFenotipoEvidence("pioraPosicaoNeural")) neuropathicEvidence.push("piora com posicoes especificas");
+
+  if (hasFenotipoEvidence("dorMultirregionalMigratoria")) nociplasticEvidence.push("dor difusa/multirregional");
+  if (hasFenotipoEvidence("dorDesproporcionalPersistente")) nociplasticEvidence.push("dor desproporcional ou persistente");
+  if (hasFenotipoEvidence("sonoRuimNaoReparador")) nociplasticEvidence.push("sono ruim/nao reparador");
+  if (hasFenotipoEvidence("cansacoFrequente")) nociplasticEvidence.push("cansaco/fadiga frequente");
+  if (hasFenotipoEvidence("estresseElevado")) nociplasticEvidence.push("estresse elevado");
+  if (hasFenotipoEvidence("examesNormaisDorPersistente")) nociplasticEvidence.push("exames normais com dor persistente");
 
   if (
     affectedAreas.length === 1 ||
@@ -466,6 +474,7 @@ export function inferDorClassificationFromAnamnese(
         "fatorAlivio",
         "inicioProblema",
         "mecanismoLesao",
+        "fenotipoDorEvidencias",
       ],
     },
     {
@@ -473,8 +482,14 @@ export function inferDorClassificationFromAnamnese(
       subtipo: "NEURAL" as const,
       evidence: neuropathicEvidence,
       reason:
-        "Fenotipo neural: terapia manual, mobilizacao neural, descompressao e modulacao conforme exame neurologico.",
-      fields: ["irradiacao", "localIrradiacao", "descricaoSintomas", "fatoresPiora"],
+        "Fenotipo neural: terapia manual, mobilizacao neural, descompressao e modulacao conforme exame fisico.",
+      fields: [
+        "irradiacao",
+        "localIrradiacao",
+        "descricaoSintomas",
+        "fatoresPiora",
+        "fenotipoDorEvidencias",
+      ],
     },
     {
       principal: "NOCIPLASTICA" as const,
@@ -489,6 +504,7 @@ export function inferDorClassificationFromAnamnese(
         "nivelEstresse",
         "energiaDiaria",
         "yellowFlags",
+        "fenotipoDorEvidencias",
       ],
     },
   ].sort((a, b) => b.evidence.length - a.evidence.length);
@@ -564,10 +580,6 @@ const normalizeTestKey = (value?: string | null): string =>
 const LEGACY_TEST_NAME_ALIASES: Record<string, string[]> = {
   [normalizeTestKey("Teste de Roos (desfiladeiro toracico)")]: ["Teste de Roos"],
   [normalizeTestKey("Teste de extensao lombar (Kemp)")]: ["Kemp (extensao lombar)"],
-  [normalizeTestKey("Teste de fluido sacral")]: ["Fluido sacral"],
-  [normalizeTestKey("Teste sacro extensao de perna")]: ["Sacro extensao perna"],
-  [normalizeTestKey("Teste de flexao em pe (D/E)")]: ["Flexao em pe D/E"],
-  [normalizeTestKey("Teste de flexao de joelho (Gillet)")]: ["Gillet (flexao de joelho)"],
   [normalizeTestKey("Golfer's elbow test")]: ["Golfer's elbow"],
 };
 
@@ -575,6 +587,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "CERVICAL",
     titulo: "Coluna cervical",
+    adm: "",
     testes: makeTests([
       "Sharp Purser",
       "Dekleyn",
@@ -589,6 +602,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "TORACICA",
     titulo: "Coluna torácica",
+    adm: "",
     testes: makeTests([
       "Expansão torácica",
       "Mobilidade segmentar",
@@ -600,6 +614,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "LOMBAR",
     titulo: "Coluna lombar",
+    adm: "",
     testes: makeTests([
       "Lasègue (SLR)",
       "Slump test",
@@ -612,6 +627,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "SACROILIACA",
     titulo: "Sacroilíaca",
+    adm: "",
     testes: makeTests([
       "FABER (Patrick)",
       "Gaenslen",
@@ -619,16 +635,12 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
       "Distração pélvica",
       "Thigh thrust",
       "Sacral thrust",
-      "Teste de fluido sacral",
-      "Teste sacro extensao de perna",
-      "Teste de flexao em pe (D/E)",
-      "Teste de flexao de joelho (Gillet)",
-      "Funning test",
     ]),
   },
   {
     regiao: "QUADRIL",
-    titulo: "Quadril (coxo-femoral)",
+    titulo: "Coxofemoral",
+    adm: "",
     testes: makeTests([
       "FADIR",
       "FABER",
@@ -642,6 +654,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "JOELHO",
     titulo: "Joelho",
+    adm: "",
     testes: makeTests([
       "Lachman",
       "Gaveta anterior",
@@ -657,6 +670,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "TORNOZELO_PE",
     titulo: "Tornozelo e pé",
+    adm: "",
     testes: makeTests([
       "Gaveta anterior do tornozelo",
       "Inclinação talar",
@@ -670,6 +684,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "OMBRO",
     titulo: "Ombro",
+    adm: "",
     testes: makeTests([
       "Neer",
       "Hawkins-Kennedy",
@@ -686,6 +701,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "COTOVELO",
     titulo: "Cotovelo",
+    adm: "",
     testes: makeTests([
       "Cozen",
       "Mill",
@@ -697,6 +713,7 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
   {
     regiao: "PUNHO_MAO",
     titulo: "Punho e mão",
+    adm: "",
     testes: makeTests([
       "Phalen",
       "Tinel",
@@ -724,6 +741,7 @@ const normalizeRegionalTests = (
     );
     return {
       ...baseGroup,
+      adm: safeText(foundGroup.adm, baseGroup.adm),
       testes: baseGroup.testes.map((baseTest) => {
         const baseKey = normalizeTestKey(baseTest.nome);
         const aliasKeys = (LEGACY_TEST_NAME_ALIASES[baseKey] || []).map((alias) =>
@@ -784,13 +802,13 @@ export function buildStructuredExameFromAnamnese(
   }
 
   const baseExam: ExameFisicoStructured = {
-    version: 1,
+    version: 2,
     source: "rule-based",
     generatedAt: new Date().toISOString(),
     dorPrincipal: map.principal,
     dorSubtipo: map.subtipo,
     observacao: {
-      postura: "Avaliar alinhamento global e compensacoes.",
+      postura: "Avaliar alinhamento global e estrategias posturais.",
       assimetria: "Comparar hemicorpos e desvios relevantes.",
       protecao: safeText(anamnese?.atividadesQuePioram, "Sem protecao descrita."),
       padraoMovimento: "Observar estrategia antalgica durante tarefas funcionais.",
@@ -804,23 +822,18 @@ export function buildStructuredExameFromAnamnese(
       resistido: "Testar grupos motores principais e reproducao de sintomas.",
       reproduzDor: "Identificar movimento-chave que reproduz dor.",
       qualidadeMovimento: "Nao informado",
-      compensacoes: "Nao informado",
-      dorNoMovimento: "Nao informado",
     },
     padraoDor: {
       local: safeText(anamnese?.descricaoSintomas, areaPrincipal),
       irradiada: boolLabel(anamnese?.irradiacao) + (anamnese?.localIrradiacao ? ` (${anamnese.localIrradiacao})` : ""),
-      comportamento: safeText(anamnese?.tempoProblema, "Comportamento temporal nao informado."),
     },
     palpacao: {
       pontosDolorosos: "Mapear pontos dolorosos por regiao e profundidade.",
       muscular: "Identificar hipertonia, dor a pressao e consistencia tecidual.",
       articular: "Avaliar dor segmentar e mobilidade acessoria.",
-      pontosGatilho: "Pesquisar pontos gatilho ativos/latentes.",
       dinamicaVertebral: "Palpacao dinamica para disfuncao segmentar e resposta a movimento.",
       temperatura: "Nao informado",
       tonusMuscular: "Nao informado",
-      estruturasEspecificas: "Nao informado",
       hipomobilidadeArticular:
         "Cervical (C1-C7), toracica (T1-T12), lombar (L1-L5), sacro, iliacos D/E.",
       hipomobilidadeSegmentar: {
@@ -843,19 +856,11 @@ export function buildStructuredExameFromAnamnese(
     testes: {
       biomecanicos: "Selecionar testes funcionais de carga e controle motor.",
       ortopedicos: "Selecionar conforme hipotese principal e diferencial.",
-      neurologicos: "Dermatomo, miotomo e reflexos profundos.",
       imagem: "Correlacionar exames de imagem com quadro clinico (se disponiveis).",
-    },
-    neurologico: {
-      forca: "Nao informado",
-      sensibilidade: "Nao informado",
-      reflexos: "Nao informado",
-      dermatomos: "Nao informado",
-      miotomos: "Nao informado",
     },
     avaliacaoRegioes: getDefaultRegionalTests(),
     cadeiaCinetica: {
-      quadril: "Avaliar mobilidade e controle do quadril.",
+      quadril: "Avaliar mobilidade e controle coxofemoral.",
       pelve: "Avaliar alinhamento e dissociacao pelvica.",
       colunaToracica: "Avaliar mobilidade toracica e impacto em cadeia.",
       pe: "Avaliar apoio plantar e estrategia de propulsao.",
@@ -884,20 +889,19 @@ export function buildStructuredExameFromAnamnese(
         "Nao informado",
       ),
       relacaoComEsporte: safeText(
-        anamnese?.historicoEsportivo,
+        anamnese?.atividadesQuePioram,
         "Nao informado",
       ),
     },
     diagnosticoFuncionalIa: {
       disfuncaoPrincipal: "A definir com base nos testes positivos e movimento-chave.",
       cadeiaEnvolvida: "A definir com base na cadeia cinetica.",
-      compensacoes: "A definir com base na observacao e movimento.",
     },
     condutaIa: {
       tecnicaManualIndicada: "A definir conforme estrutura e irritabilidade tecidual.",
       ajusteArticular: "A definir conforme hipomobilidade segmentar relevante.",
       exercicioCorretivo: "A definir conforme deficit funcional identificado.",
-      liberacaoMiofascial: "A definir conforme pontos de gatilho e tonus.",
+      liberacaoMiofascial: "A definir conforme cadeias tensionais e tonus.",
       progressaoEsportiva: "A definir conforme controle motor e resposta clinica.",
     },
     redFlags: deriveRedFlagMeta(redFlags),
@@ -1041,7 +1045,7 @@ const regionLabels: Record<RegionalTestGroup["regiao"], string> = {
   TORACICA: "Coluna toracica",
   LOMBAR: "Coluna lombar",
   SACROILIACA: "Sacroiliaca",
-  QUADRIL: "Quadril",
+  QUADRIL: "Coxofemoral",
   JOELHO: "Joelho",
   TORNOZELO_PE: "Tornozelo e pe",
   OMBRO: "Ombro",
@@ -1105,7 +1109,7 @@ const REGION_CONDUTA_HINTS: Record<
   },
   QUADRIL: {
     tecnicaManual: "Mobilizacao coxo-femoral e tecidos periarticulares.",
-    ajuste: "Ajuste articular de quadril conforme restricao encontrada.",
+    ajuste: "Ajuste articular coxofemoral conforme restricao encontrada.",
     exercicio: "Fortalecimento de gluteos e controle de valgo dinamico.",
     progressao: "Progressao para tarefas funcionais e gesto esportivo.",
   },
@@ -1206,23 +1210,18 @@ const TEST_STRUCTURE_HINTS: Array<{
   { token: "Kemp", estrutura: "Complexo facetario lombar", tipoLesao: "Mecanica" },
   { token: "Instabilidade lombar", estrutura: "Estabilidade segmentar lombar", tipoLesao: "Mecanica" },
   { token: "Elevacao bilateral", estrutura: "Controle lombopelvico em cadeia posterior", tipoLesao: "Mecanica" },
-  { token: "FABER", estrutura: "Quadril/SI em cadeia lombo-pelvica", tipoLesao: "Mecanica" },
+  { token: "FABER", estrutura: "Coxofemoral/SI em cadeia lombo-pelvica", tipoLesao: "Mecanica" },
   { token: "Compressao pelvica", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Distracao pelvica", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Gaenslen", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Thigh thrust", estrutura: "Articulacao sacroiliaca", tipoLesao: "Mecanica" },
   { token: "Sacral thrust", estrutura: "Complexo sacroiliaco posterior", tipoLesao: "Mecanica" },
-  { token: "fluido sacral", estrutura: "Mobilidade do fluido sacral e mecanica sacroiliaca", tipoLesao: "Mecanica" },
-  { token: "sacro extensao", estrutura: "Componente sacroiliaco em extensao de membro inferior", tipoLesao: "Mecanica" },
-  { token: "flexao em pe", estrutura: "Dinamica lombo-pelvica em flexao ortostatica", tipoLesao: "Mecanica" },
-  { token: "Gillet", estrutura: "Dinamica sacroiliaca funcional", tipoLesao: "Mecanica" },
-  { token: "Funning", estrutura: "Integracao funcional sacroiliaca", tipoLesao: "Mecanica" },
   { token: "FADIR", estrutura: "Conflito femoroacetabular/labrum", tipoLesao: "Mecanica" },
-  { token: "Thomas", estrutura: "Flexores de quadril e cadeia anterior", tipoLesao: "Mecanica" },
+  { token: "Thomas", estrutura: "Flexores coxofemorais e cadeia anterior", tipoLesao: "Mecanica" },
   { token: "Ober", estrutura: "Banda iliotibial/cadeia lateral", tipoLesao: "Mecanica" },
-  { token: "Trendelenburg", estrutura: "Complexo abdutor do quadril", tipoLesao: "Mecanica" },
+  { token: "Trendelenburg", estrutura: "Complexo abdutor coxofemoral", tipoLesao: "Mecanica" },
   { token: "Ely", estrutura: "Quadriceps/reto femoral em cadeia anterior", tipoLesao: "Mecanica" },
-  { token: "Log roll", estrutura: "Capsula/labrum do quadril", tipoLesao: "Mecanica" },
+  { token: "Log roll", estrutura: "Capsula/labrum coxofemoral", tipoLesao: "Mecanica" },
   { token: "Lachman", estrutura: "Ligamento cruzado anterior", tipoLesao: "Mecanica" },
   { token: "Gaveta anterior", estrutura: "Complexo anterior ligamentar", tipoLesao: "Mecanica" },
   { token: "Gaveta posterior", estrutura: "Ligamento cruzado posterior", tipoLesao: "Mecanica" },
@@ -1357,7 +1356,7 @@ export function enrichStructuredExameWithClinicalLogic(
   ) {
     secondaryRegion = "QUADRIL";
     decisionRationale.push(
-      "Quadril mantido como cadeia secundária por possível compensação.",
+      "Coxofemoral mantido como cadeia secundária por possível compensação.",
     );
   }
 
@@ -1420,9 +1419,9 @@ export function enrichStructuredExameWithClinicalLogic(
     primaryRegionLabel +
     (testsPositiveCount > 0 ? ` com ${testsPositiveCount} teste(s) positivo(s)` : "");
 
-  const relacaoEsporte = isMeaningfulText(anamnese?.historicoEsportivo)
-    ? String(anamnese?.historicoEsportivo || "").trim()
-    : "Sem relacao esportiva clara no momento.";
+  const relacaoAtividade = isMeaningfulText(anamnese?.atividadesQuePioram)
+    ? String(anamnese?.atividadesQuePioram || "").trim()
+    : "Sem relacao funcional clara no momento.";
 
   const structureHints = allPositiveTests
     .map((item) => {
@@ -1498,7 +1497,7 @@ export function enrichStructuredExameWithClinicalLogic(
     : `${originBase}.`;
   const originSuggestionWithSecondary =
     primaryRegion === "LOMBAR" && secondaryRegion === "QUADRIL"
-      ? `${originSuggestion} Quadril com provável sobrecarga secundária.`
+      ? `${originSuggestion} Coxofemoral com provável sobrecarga secundária.`
       : originSuggestion;
 
   const condutaHintByRegion = primaryRegion
@@ -1527,15 +1526,17 @@ export function enrichStructuredExameWithClinicalLogic(
         exercicio: `${condutaHintByRegion.exercicio} ${condutaHintByLesion.exercicio}`,
         progressao: `${condutaHintByRegion.progressao} ${condutaHintByLesion.progressao}`,
       };
+  const shouldRecalculateText = overwrite || recalculateDecision;
 
   const baseExam: ExameFisicoStructured = {
     ...preparedExam,
+    version: 2,
     cruzamentoFinal: {
       ...preparedExam.cruzamentoFinal,
       hipotesePrincipal: pickText(
         preparedExam.cruzamentoFinal.hipotesePrincipal,
         `Disfuncao mecanico-funcional predominante em ${primaryRegionLabel}.`,
-        overwrite,
+        shouldRecalculateText,
       ),
       hipotesesSecundarias: pickText(
         preparedExam.cruzamentoFinal.hipotesesSecundarias,
@@ -1550,12 +1551,12 @@ export function enrichStructuredExameWithClinicalLogic(
             ? ` Racional: ${decisionRationale.join(" ")}`
             : ""
         }`,
-        overwrite,
+        shouldRecalculateText,
       ),
       inconsistencias: pickText(
         preparedExam.cruzamentoFinal.inconsistencias,
         "Revisar sinais nao mecanicos e divergencias entre dor referida e testes.",
-        overwrite,
+        shouldRecalculateText,
       ),
       condutaDirecionada: pickText(
         preparedExam.cruzamentoFinal.condutaDirecionada,
@@ -1564,7 +1565,7 @@ export function enrichStructuredExameWithClinicalLogic(
           : functionalDeficitCount > 0
             ? `Priorizar intervencao na ${primaryRegionLabel.toLowerCase()} com foco em controle motor/estabilidade e reavaliacao funcional progressiva.`
             : `Priorizar intervencao na ${primaryRegionLabel.toLowerCase()} com reavaliacao funcional progressiva.`,
-        overwrite,
+        shouldRecalculateText,
       ),
       prioridade:
         overwrite || recalculateDecision
@@ -1580,17 +1581,17 @@ export function enrichStructuredExameWithClinicalLogic(
       origemProvavelDor: pickText(
         preparedExam.raciocinioClinico.origemProvavelDor,
         originSuggestionWithSecondary,
-        overwrite,
+        shouldRecalculateText,
       ),
       estruturaEnvolvida: pickText(
         preparedExam.raciocinioClinico.estruturaEnvolvida,
         structureSuggestion,
-        overwrite,
+        shouldRecalculateText,
       ),
       tipoLesao: pickText(
         preparedExam.raciocinioClinico.tipoLesao,
         tipoLesaoSuggestion,
-        overwrite,
+        shouldRecalculateText,
       ),
       fatorBiomecanicoAssociado: pickText(
         preparedExam.raciocinioClinico.fatorBiomecanicoAssociado,
@@ -1598,14 +1599,14 @@ export function enrichStructuredExameWithClinicalLogic(
         isMeaningfulText(anamnese?.fatorAlivio)
           ? buildBiomechanicalFactorsSummary(anamnese)
           : testsPositiveCount
-            ? `Padrao alterado em ${primaryRegionLabel.toLowerCase()} com compensacoes associadas.`
+            ? `Padrao alterado em ${primaryRegionLabel.toLowerCase()} com ajustes funcionais associados.`
             : "Sem fator biomecanico principal definido.",
-        overwrite,
+        shouldRecalculateText,
       ),
       relacaoComEsporte: pickText(
         preparedExam.raciocinioClinico.relacaoComEsporte,
-        relacaoEsporte,
-        overwrite,
+        relacaoAtividade,
+        shouldRecalculateText,
       ),
     },
     diagnosticoFuncionalIa: {
@@ -1614,7 +1615,7 @@ export function enrichStructuredExameWithClinicalLogic(
         secondaryRegionLabel
           ? `Disfuncao funcional predominante em ${primaryRegionLabel}, com participação de ${secondaryRegionLabel.toLowerCase()} como cadeia compensatória. Foco em ${structureSuggestion.toLowerCase()}.`
           : `Disfuncao funcional predominante em ${primaryRegionLabel}, com foco em ${structureSuggestion.toLowerCase()}.`,
-        overwrite,
+        shouldRecalculateText,
       ),
       cadeiaEnvolvida: pickText(
         preparedExam.diagnosticoFuncionalIa.cadeiaEnvolvida,
@@ -1623,41 +1624,34 @@ export function enrichStructuredExameWithClinicalLogic(
             ? `${inferChainByRegion(primaryRegion)} + ${inferChainByRegion(secondaryRegion)}`
             : inferChainByRegion(primaryRegion)
           : "Cadeia funcional global",
-        overwrite,
-      ),
-      compensacoes: pickText(
-        preparedExam.diagnosticoFuncionalIa.compensacoes,
-        testsPositiveCount || functionalDeficitCount
-          ? "Compensacoes observadas em padrao de movimento e testes funcionais."
-          : "Compensacoes ainda nao confirmadas.",
-        overwrite,
+        shouldRecalculateText,
       ),
     },
     condutaIa: {
       tecnicaManualIndicada: pickText(
         preparedExam.condutaIa.tecnicaManualIndicada,
         condutaHint.tecnicaManual,
-        overwrite,
+        shouldRecalculateText,
       ),
       ajusteArticular: pickText(
         preparedExam.condutaIa.ajusteArticular,
         condutaHint.ajuste,
-        overwrite,
+        shouldRecalculateText,
       ),
       exercicioCorretivo: pickText(
         preparedExam.condutaIa.exercicioCorretivo,
         condutaHint.exercicio,
-        overwrite,
+        shouldRecalculateText,
       ),
       liberacaoMiofascial: pickText(
         preparedExam.condutaIa.liberacaoMiofascial,
-        "Liberacao miofascial em pontos gatilho e cadeias tensionais relevantes.",
-        overwrite,
+        "Liberacao miofascial em cadeias tensionais relevantes.",
+        shouldRecalculateText,
       ),
       progressaoEsportiva: pickText(
         preparedExam.condutaIa.progressaoEsportiva,
         condutaHint.progressao,
-        overwrite,
+        shouldRecalculateText,
       ),
     },
   };
@@ -1670,120 +1664,171 @@ export function serializeStructuredExame(exam: ExameFisicoStructured): string {
 
 export function parseStructuredExame(raw?: string | null): ExameFisicoStructured | null {
   const text = String(raw || "").trim();
-  if (!text.startsWith(STRUCTURED_EXAME_PREFIX)) return null;
-  const json = text.slice(STRUCTURED_EXAME_PREFIX.length);
+  const prefix = text.startsWith(STRUCTURED_EXAME_PREFIX)
+    ? STRUCTURED_EXAME_PREFIX
+    : text.startsWith(LEGACY_STRUCTURED_EXAME_PREFIX)
+      ? LEGACY_STRUCTURED_EXAME_PREFIX
+      : null;
+  if (!prefix) return null;
+  const json = text.slice(prefix.length);
   if (!json) return null;
   try {
-    const parsed = JSON.parse(json) as ExameFisicoStructured;
-    if (!parsed || parsed.version !== 1) return null;
+    const parsed = JSON.parse(json) as any;
+    if (!parsed || (parsed.version !== 1 && parsed.version !== 2)) return null;
+
+    const rawAnswers = Array.isArray(parsed.redFlags?.answers)
+      ? parsed.redFlags.answers
+      : [];
+    const redFlagAnswers = initialRedFlagAnswers().map((base) => {
+      const found = rawAnswers.find((answer: any) => answer?.key === base.key);
+      return found
+        ? {
+            ...base,
+            question: String(found.question || base.question),
+            positive: found.positive === true,
+          }
+        : base;
+    });
+    const prioridade =
+      parsed.cruzamentoFinal?.prioridade === "BAIXA" ||
+      parsed.cruzamentoFinal?.prioridade === "ALTA" ||
+      parsed.cruzamentoFinal?.prioridade === "ENCAMINHAMENTO_IMEDIATO"
+        ? parsed.cruzamentoFinal.prioridade
+        : "MEDIA";
+    const confiancaHipotese =
+      parsed.cruzamentoFinal?.confiancaHipotese === "ALTA" ||
+      parsed.cruzamentoFinal?.confiancaHipotese === "MODERADA"
+        ? parsed.cruzamentoFinal.confiancaHipotese
+        : "BAIXA";
+    const perfilScoring =
+      parsed.cruzamentoFinal?.perfilScoring === "COLUNA" ||
+      parsed.cruzamentoFinal?.perfilScoring === "MEMBRO_INFERIOR" ||
+      parsed.cruzamentoFinal?.perfilScoring === "MEMBRO_SUPERIOR" ||
+      parsed.cruzamentoFinal?.perfilScoring === "ESPORTIVO"
+        ? parsed.cruzamentoFinal.perfilScoring
+        : "GERAL";
+
     return {
-      ...parsed,
+      version: 2,
+      source: parsed.source === "manual" ? "manual" : "rule-based",
+      generatedAt: safeText(parsed.generatedAt, new Date().toISOString()),
+      dorPrincipal: parsed.dorPrincipal || null,
+      dorSubtipo: parsed.dorSubtipo || null,
       observacao: {
-        ...parsed.observacao,
-        edema: parsed.observacao?.edema || "Nao informado",
-        atrofiaMuscular: parsed.observacao?.atrofiaMuscular || "Nao informado",
-        marcha: parsed.observacao?.marcha || "Nao informado",
+        postura: safeText(parsed.observacao?.postura),
+        assimetria: safeText(parsed.observacao?.assimetria),
+        protecao: safeText(parsed.observacao?.protecao),
+        padraoMovimento: safeText(parsed.observacao?.padraoMovimento),
+        edema: safeText(parsed.observacao?.edema),
+        atrofiaMuscular: safeText(parsed.observacao?.atrofiaMuscular),
+        marcha: safeText(parsed.observacao?.marcha),
       },
       movimento: {
-        ...parsed.movimento,
-        qualidadeMovimento: parsed.movimento?.qualidadeMovimento || "Nao informado",
-        compensacoes: parsed.movimento?.compensacoes || "Nao informado",
-        dorNoMovimento: parsed.movimento?.dorNoMovimento || "Nao informado",
+        ativo: safeText(parsed.movimento?.ativo),
+        passivo: safeText(parsed.movimento?.passivo),
+        resistido: safeText(parsed.movimento?.resistido),
+        reproduzDor: safeText(parsed.movimento?.reproduzDor),
+        qualidadeMovimento: safeText(parsed.movimento?.qualidadeMovimento),
+      },
+      padraoDor: {
+        local: safeText(parsed.padraoDor?.local),
+        irradiada: safeText(parsed.padraoDor?.irradiada),
       },
       palpacao: {
-        ...parsed.palpacao,
+        pontosDolorosos: safeText(parsed.palpacao?.pontosDolorosos),
+        muscular: safeText(parsed.palpacao?.muscular),
+        articular: safeText(parsed.palpacao?.articular),
+        dinamicaVertebral: safeText(parsed.palpacao?.dinamicaVertebral),
+        temperatura: safeText(parsed.palpacao?.temperatura),
+        tonusMuscular: safeText(parsed.palpacao?.tonusMuscular),
         hipomobilidadeSegmentar: {
           cervical:
-            parsed.palpacao?.hipomobilidadeSegmentar?.cervical || "Nao informado",
+            safeText(parsed.palpacao?.hipomobilidadeSegmentar?.cervical),
           toracica:
-            parsed.palpacao?.hipomobilidadeSegmentar?.toracica || "Nao informado",
+            safeText(parsed.palpacao?.hipomobilidadeSegmentar?.toracica),
           lombar:
-            parsed.palpacao?.hipomobilidadeSegmentar?.lombar || "Nao informado",
+            safeText(parsed.palpacao?.hipomobilidadeSegmentar?.lombar),
           sacro:
-            parsed.palpacao?.hipomobilidadeSegmentar?.sacro || "Nao informado",
+            safeText(parsed.palpacao?.hipomobilidadeSegmentar?.sacro),
           iliacoDireito:
-            parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito ||
-            "Nao informado",
+            safeText(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito),
           iliacoEsquerdo:
-            parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo ||
-            "Nao informado",
+            safeText(parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo),
         },
-        pontosDolorosos:
-          parsed.palpacao?.pontosDolorosos || "Nao informado",
-        temperatura: parsed.palpacao?.temperatura || "Nao informado",
-        tonusMuscular: parsed.palpacao?.tonusMuscular || "Nao informado",
-        estruturasEspecificas: parsed.palpacao?.estruturasEspecificas || "Nao informado",
         hipomobilidadeArticular:
-          parsed.palpacao?.hipomobilidadeArticular ||
-          buildHipomobilidadeSummary(parsed.palpacao?.hipomobilidadeSegmentar || {}),
+          safeText(
+            parsed.palpacao?.hipomobilidadeArticular,
+            buildHipomobilidadeSummary(parsed.palpacao?.hipomobilidadeSegmentar || {}),
+          ),
       },
       testesFuncionais: {
-        agachamento: parsed.testesFuncionais?.agachamento || "Nao testado",
+        agachamento: safeText(parsed.testesFuncionais?.agachamento, "Nao testado"),
         agachamentoUnilateral:
-          parsed.testesFuncionais?.agachamentoUnilateral || "Nao testado",
-        salto: parsed.testesFuncionais?.salto || "Nao testado",
-        corrida: parsed.testesFuncionais?.corrida || "Nao testado",
-        estabilidade: parsed.testesFuncionais?.estabilidade || "Nao testado",
-        controleMotor: parsed.testesFuncionais?.controleMotor || "Nao testado",
+          safeText(parsed.testesFuncionais?.agachamentoUnilateral, "Nao testado"),
+        salto: safeText(parsed.testesFuncionais?.salto, "Nao testado"),
+        corrida: safeText(parsed.testesFuncionais?.corrida, "Nao testado"),
+        estabilidade: safeText(parsed.testesFuncionais?.estabilidade, "Nao testado"),
+        controleMotor: safeText(parsed.testesFuncionais?.controleMotor, "Nao testado"),
       },
-      neurologico: {
-        forca: parsed.neurologico?.forca || "Nao informado",
-        sensibilidade: parsed.neurologico?.sensibilidade || "Nao informado",
-        reflexos: parsed.neurologico?.reflexos || "Nao informado",
-        dermatomos: parsed.neurologico?.dermatomos || "Nao informado",
-        miotomos: parsed.neurologico?.miotomos || "Nao informado",
+      testes: {
+        biomecanicos: safeText(parsed.testes?.biomecanicos),
+        ortopedicos: safeText(parsed.testes?.ortopedicos),
+        imagem: safeText(parsed.testes?.imagem),
       },
       avaliacaoRegioes: normalizeRegionalTests(parsed.avaliacaoRegioes),
+      cadeiaCinetica: {
+        quadril: safeText(parsed.cadeiaCinetica?.quadril),
+        pelve: safeText(parsed.cadeiaCinetica?.pelve),
+        colunaToracica: safeText(parsed.cadeiaCinetica?.colunaToracica),
+        pe: safeText(parsed.cadeiaCinetica?.pe),
+      },
       cruzamentoFinal: {
-        ...parsed.cruzamentoFinal,
-        confiancaHipotese:
-          parsed.cruzamentoFinal?.confiancaHipotese === "ALTA" ||
-          parsed.cruzamentoFinal?.confiancaHipotese === "MODERADA"
-            ? parsed.cruzamentoFinal.confiancaHipotese
-            : "BAIXA",
+        hipotesePrincipal: safeText(parsed.cruzamentoFinal?.hipotesePrincipal),
+        hipotesesSecundarias: safeText(parsed.cruzamentoFinal?.hipotesesSecundarias),
+        inconsistencias: safeText(parsed.cruzamentoFinal?.inconsistencias),
+        condutaDirecionada: safeText(parsed.cruzamentoFinal?.condutaDirecionada),
+        prioridade,
+        confiancaHipotese,
         scoreEvidencia:
           typeof parsed.cruzamentoFinal?.scoreEvidencia === "number"
             ? parsed.cruzamentoFinal.scoreEvidencia
             : 0,
-        perfilScoring:
-          parsed.cruzamentoFinal?.perfilScoring === "COLUNA" ||
-          parsed.cruzamentoFinal?.perfilScoring === "MEMBRO_INFERIOR" ||
-          parsed.cruzamentoFinal?.perfilScoring === "MEMBRO_SUPERIOR" ||
-          parsed.cruzamentoFinal?.perfilScoring === "ESPORTIVO"
-            ? parsed.cruzamentoFinal.perfilScoring
-            : "GERAL",
+        perfilScoring,
       },
       raciocinioClinico: {
         origemProvavelDor:
-          parsed.raciocinioClinico?.origemProvavelDor || "Nao informado",
+          safeText(parsed.raciocinioClinico?.origemProvavelDor),
         estruturaEnvolvida:
-          parsed.raciocinioClinico?.estruturaEnvolvida || "Nao informado",
-        tipoLesao: parsed.raciocinioClinico?.tipoLesao || "Nao informado",
+          safeText(parsed.raciocinioClinico?.estruturaEnvolvida),
+        tipoLesao: safeText(parsed.raciocinioClinico?.tipoLesao),
         fatorBiomecanicoAssociado:
-          parsed.raciocinioClinico?.fatorBiomecanicoAssociado || "Nao informado",
+          safeText(parsed.raciocinioClinico?.fatorBiomecanicoAssociado),
         relacaoComEsporte:
-          parsed.raciocinioClinico?.relacaoComEsporte || "Nao informado",
+          safeText(parsed.raciocinioClinico?.relacaoComEsporte),
       },
       diagnosticoFuncionalIa: {
         disfuncaoPrincipal:
-          parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal || "Nao informado",
+          safeText(parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal),
         cadeiaEnvolvida:
-          parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || "Nao informado",
-        compensacoes:
-          parsed.diagnosticoFuncionalIa?.compensacoes || "Nao informado",
+          safeText(parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida),
       },
       condutaIa: {
         tecnicaManualIndicada:
-          parsed.condutaIa?.tecnicaManualIndicada || "Nao informado",
-        ajusteArticular: parsed.condutaIa?.ajusteArticular || "Nao informado",
+          safeText(parsed.condutaIa?.tecnicaManualIndicada),
+        ajusteArticular: safeText(parsed.condutaIa?.ajusteArticular),
         exercicioCorretivo:
-          parsed.condutaIa?.exercicioCorretivo || "Nao informado",
+          safeText(parsed.condutaIa?.exercicioCorretivo),
         liberacaoMiofascial:
-          parsed.condutaIa?.liberacaoMiofascial || "Nao informado",
+          safeText(parsed.condutaIa?.liberacaoMiofascial),
         progressaoEsportiva:
-          parsed.condutaIa?.progressaoEsportiva || "Nao informado",
+          safeText(parsed.condutaIa?.progressaoEsportiva),
       },
-    };
+      redFlags: {
+        ...deriveRedFlagMeta(redFlagAnswers),
+        referralDestination: parsed.redFlags?.referralDestination || "",
+        referralReason: parsed.redFlags?.referralReason || "",
+      },
+    } as ExameFisicoStructured;
   } catch {
     return null;
   }
@@ -1815,23 +1860,18 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Resistido: ${exam.movimento.resistido}`,
     `Reproduz dor: ${exam.movimento.reproduzDor}`,
     `Qualidade do movimento: ${exam.movimento.qualidadeMovimento}`,
-    `Compensacoes: ${exam.movimento.compensacoes}`,
-    `Dor no movimento: ${exam.movimento.dorNoMovimento}`,
     "",
     "Padrao de dor",
     `Local: ${exam.padraoDor.local}`,
     `Irradiada: ${exam.padraoDor.irradiada}`,
-    `Comportamento: ${exam.padraoDor.comportamento}`,
     "",
     "Palpacao",
     `Pontos dolorosos: ${exam.palpacao.pontosDolorosos}`,
     `Muscular: ${exam.palpacao.muscular}`,
     `Articular: ${exam.palpacao.articular}`,
-    `Pontos gatilho: ${exam.palpacao.pontosGatilho}`,
     `Palpacao dinamica vertebral: ${exam.palpacao.dinamicaVertebral}`,
     `Temperatura: ${exam.palpacao.temperatura}`,
     `Tonus muscular: ${exam.palpacao.tonusMuscular}`,
-    `Estruturas especificas: ${exam.palpacao.estruturasEspecificas}`,
     `Hipomobilidade articular: ${exam.palpacao.hipomobilidadeArticular}`,
     `Hipomobilidade segmentar - Cervical: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.cervical)}`,
     `Hipomobilidade segmentar - Toracica: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.toracica)}`,
@@ -1851,19 +1891,11 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     "Testes",
     `Biomecanicos: ${exam.testes.biomecanicos}`,
     `Ortopedicos: ${exam.testes.ortopedicos}`,
-    `Neurologicos: ${exam.testes.neurologicos}`,
     `Imagem: ${exam.testes.imagem}`,
-    "",
-    "Neurologico",
-    `Forca: ${exam.neurologico.forca}`,
-    `Sensibilidade: ${exam.neurologico.sensibilidade}`,
-    `Reflexos: ${exam.neurologico.reflexos}`,
-    `Dermatomos: ${exam.neurologico.dermatomos}`,
-    `Miotomos: ${exam.neurologico.miotomos}`,
     "",
     "Avaliacao por regioes",
     ...exam.avaliacaoRegioes.flatMap((group) => {
-      const lines = [`${group.titulo}`];
+      const lines = [`${group.titulo}`, `- ADM: ${safeText(group.adm)}`];
       const selectedOrTested = group.testes.filter(
         (t) => t.resultado !== "NAO_TESTADO" || t.selecionado,
       );
@@ -1882,7 +1914,7 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     }),
     "",
     "Cadeia cinetica",
-    `Quadril: ${exam.cadeiaCinetica.quadril}`,
+    `Coxofemoral: ${exam.cadeiaCinetica.quadril}`,
     `Pelve: ${exam.cadeiaCinetica.pelve}`,
     `Coluna toracica: ${exam.cadeiaCinetica.colunaToracica}`,
     `Pe: ${exam.cadeiaCinetica.pe}`,
@@ -1902,12 +1934,11 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Estrutura envolvida: ${exam.raciocinioClinico.estruturaEnvolvida}`,
     `Tipo de lesao: ${exam.raciocinioClinico.tipoLesao}`,
     `Fator biomecanico associado: ${exam.raciocinioClinico.fatorBiomecanicoAssociado}`,
-    `Relacao com esporte: ${exam.raciocinioClinico.relacaoComEsporte}`,
+    `Relacao com atividade/gesto: ${exam.raciocinioClinico.relacaoComEsporte}`,
     "",
     "Diagnostico funcional",
     `Disfuncao principal: ${exam.diagnosticoFuncionalIa.disfuncaoPrincipal}`,
     `Cadeia envolvida: ${exam.diagnosticoFuncionalIa.cadeiaEnvolvida}`,
-    `Compensacoes: ${exam.diagnosticoFuncionalIa.compensacoes}`,
     "",
     "Conduta direcionada",
     `Tecnica manual indicada: ${exam.condutaIa.tecnicaManualIndicada}`,

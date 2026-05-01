@@ -921,9 +921,6 @@ export class Anamnese extends BaseEntity {
 
   @Column({ name: 'tratamentos_anteriores', type: 'jsonb', default: [] })
   tratamentosAnteriores: string[];
-
-  @Column({ name: 'historico_familiar', type: 'text', nullable: true })
-  historicoFamiliar: string;
 }
 '@
 Set-Content -Path "$basePath\modules\anamneses\entities\anamnese.entity.ts" -Value $content -Encoding UTF8
@@ -1001,10 +998,6 @@ export class CreateAnamneseDto {
   @IsOptional()
   @IsArray()
   tratamentosAnteriores?: string[];
-
-  @IsOptional()
-  @IsString()
-  historicoFamiliar?: string;
 }
 '@
 Set-Content -Path "$basePath\modules\anamneses\dto\create-anamnese.dto.ts" -Value $content -Encoding UTF8

@@ -9,6 +9,7 @@ import {
   IsArray,
   IsNumber,
   IsBoolean,
+  IsObject,
   Min,
   Max,
 } from 'class-validator';
@@ -16,8 +17,10 @@ import {
   MotivoBusca,
   InicioProblema,
   AreaAfetada,
+  TipoDor,
   MecanismoLesao,
 } from '../entities/anamnese.entity';
+import type { FenotipoDorEvidencias } from '../entities/anamnese.entity';
 
 export class UpdateAnamneseDto {
   @IsOptional()
@@ -68,6 +71,34 @@ export class UpdateAnamneseDto {
 
   @IsOptional()
   @IsBoolean()
+  dorRepouso?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  dorNoturna?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  irradiacao?: boolean;
+
+  @IsOptional()
+  @IsString()
+  localIrradiacao?: string;
+
+  @IsOptional()
+  @IsEnum(TipoDor)
+  tipoDor?: TipoDor;
+
+  @IsOptional()
+  @IsObject()
+  fenotipoDorEvidencias?: FenotipoDorEvidencias;
+
+  @IsOptional()
+  @IsString()
+  sinaisSensibilizacaoCentral?: string;
+
+  @IsOptional()
+  @IsBoolean()
   problemaAnterior?: boolean;
 
   @IsOptional()
@@ -77,14 +108,6 @@ export class UpdateAnamneseDto {
   @IsOptional()
   @IsArray()
   tratamentosAnteriores?: string[];
-
-  @IsOptional()
-  @IsString()
-  historicoFamiliar?: string;
-
-  @IsOptional()
-  @IsString()
-  historicoEsportivo?: string;
 
   @IsOptional()
   @IsString()

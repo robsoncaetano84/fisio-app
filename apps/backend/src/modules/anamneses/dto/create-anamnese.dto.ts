@@ -10,6 +10,7 @@ import {
   IsArray,
   IsNumber,
   IsBoolean,
+  IsObject,
   Min,
   Max,
   IsUUID,
@@ -21,6 +22,7 @@ import {
   TipoDor,
   MecanismoLesao,
 } from '../entities/anamnese.entity';
+import type { FenotipoDorEvidencias } from '../entities/anamnese.entity';
 
 export class CreateAnamneseDto {
   @IsNotEmpty({ message: 'ID do paciente é obrigatório' })
@@ -75,6 +77,34 @@ export class CreateAnamneseDto {
 
   @IsOptional()
   @IsBoolean()
+  dorRepouso?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  dorNoturna?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  irradiacao?: boolean;
+
+  @IsOptional()
+  @IsString()
+  localIrradiacao?: string;
+
+  @IsOptional()
+  @IsEnum(TipoDor)
+  tipoDor?: TipoDor;
+
+  @IsOptional()
+  @IsObject()
+  fenotipoDorEvidencias?: FenotipoDorEvidencias;
+
+  @IsOptional()
+  @IsString()
+  sinaisSensibilizacaoCentral?: string;
+
+  @IsOptional()
+  @IsBoolean()
   problemaAnterior?: boolean;
 
   @IsOptional()
@@ -84,14 +114,6 @@ export class CreateAnamneseDto {
   @IsOptional()
   @IsArray()
   tratamentosAnteriores?: string[];
-
-  @IsOptional()
-  @IsString()
-  historicoFamiliar?: string;
-
-  @IsOptional()
-  @IsString()
-  historicoEsportivo?: string;
 
   @IsOptional()
   @IsString()

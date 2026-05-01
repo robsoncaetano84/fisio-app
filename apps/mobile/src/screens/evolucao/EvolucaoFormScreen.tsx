@@ -4,6 +4,7 @@
 // ==========================================
 
 import React, { useEffect, useMemo, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   AppState,
   View,
@@ -22,8 +23,14 @@ import { Button, Input, PainScale, useToast } from "../../components/ui";
 import {
   getEvolucaoSoapSuggestion,
   getClinicalOrchestratorNextAction,
+  analyzeClinicalPhoto,
+  compareClinicalPhotos,
   logClinicalAiSuggestion,
+  listClinicalPhotos,
   trackEvent,
+  uploadClinicalPhoto,
+  type ClinicalPhotoComparisonItem,
+  type ClinicalPhotoItem,
   type ClinicalOrchestratorNextActionResponse,
   type EvolucaoSoapSuggestionResponse,
 } from "../../services";
@@ -267,6 +274,14 @@ export function EvolucaoFormScreen({
 
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [clinicalPhotos, setClinicalPhotos] = useState<ClinicalPhotoItem[]>([]);
+  const [baselinePhotoId, setBaselinePhotoId] = useState<string | null>(null);
+  const [followupPhotoId, setFollowupPhotoId] = useState<string | null>(null);
+  const [loadingClinicalPhotos, setLoadingClinicalPhotos] = useState(false);
+  const [uploadingFollowupPhoto, setUploadingFollowupPhoto] = useState(false);
+  const [comparingPhotos, setComparingPhotos] = useState(false);
+  const [visualComparison, setVisualComparison] =
+    useState<ClinicalPhotoComparisonItem | null>(null);
 
   const [subjetivo, setSubjetivo] = useState("");
   const [objetivo, setObjetivo] = useState("");
@@ -310,6 +325,119 @@ export function EvolucaoFormScreen({
       if (current.toLowerCase().includes(next.toLowerCase())) return prev;
       return `${prev}\n${next}`;
     });
+  };
+
+  const loadClinicalPhotos = async () => {
+    setLoadingClinicalPhotos(true);
+    try {
+      const photos = await listClinicalPhotos(pacienteId);
+      setClinicalPhotos(photos);
+      const currentBaseline =
+        photos.find((item) => item.id === baselinePhotoId) ||
+        photos.find((item) => item.tipo === "FOTO_EVOLUCAO_BASELINE") ||
+        photos.find((item) => String(item.tipo || "").startsWith("FOTO_POSTURAL")) ||
+        photos[0];
+      if (currentBaseline) {
+        setBaselinePhotoId(currentBaseline.id);
+      }
+    } catch {
+      setClinicalPhotos([]);
+    } finally {
+      setLoadingClinicalPhotos(false);
+    }
+  };
+
+  const pickFollowupPhoto = async (source: "camera" | "gallery") => {
+    try {
+      if (source === "camera") {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          showToast({ type: "error", message: "Permita acesso a camera para registrar a foto." });
+          return;
+        }
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          showToast({ type: "error", message: "Permita acesso a galeria para selecionar a foto." });
+          return;
+        }
+      }
+
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: ["images"],
+              quality: 0.85,
+              allowsEditing: false,
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ["images"],
+              quality: 0.9,
+              allowsEditing: false,
+            });
+      if (result.canceled || !result.assets?.length) return;
+
+      setUploadingFollowupPhoto(true);
+      const uploaded = await uploadClinicalPhoto(pacienteId, result.assets[0], {
+        tipo: "FOTO_EVOLUCAO_FOLLOWUP",
+        vista: "ANTERIOR",
+        observacao: "Foto de evolucao para comparacao antes/depois",
+      });
+      const analyzed = await analyzeClinicalPhoto(pacienteId, uploaded.id);
+      setFollowupPhotoId(analyzed.id);
+      setClinicalPhotos((prev) => [analyzed, ...prev.filter((item) => item.id !== analyzed.id)]);
+      await logClinicalAiSuggestion({
+        stage: "EVOLUCAO",
+        suggestionType: "VISUAL_ANALYSIS",
+        confidence: analyzed.qualityScore && analyzed.qualityScore >= 70 ? "MODERADA" : "BAIXA",
+        reason: (analyzed.aiAnalise || "Foto de evolucao registrada.").slice(0, 400),
+        evidenceFields: ["clinicalPhoto", "aiAnalise", "qualityScore"],
+        patientId: pacienteId,
+      }).catch(() => undefined);
+      showToast({ type: "success", message: "Foto da evolucao registrada." });
+    } catch {
+      showToast({ type: "error", message: "Nao foi possivel registrar a foto." });
+    } finally {
+      setUploadingFollowupPhoto(false);
+    }
+  };
+
+  const handleComparePhotos = async () => {
+    if (!baselinePhotoId || !followupPhotoId) {
+      showToast({
+        type: "error",
+        message: "Selecione uma foto anterior e registre a foto atual.",
+      });
+      return;
+    }
+    setComparingPhotos(true);
+    try {
+      const comparison = await compareClinicalPhotos(pacienteId, {
+        baselinePhotoId,
+        followupPhotoId,
+        observacao: "Comparacao visual registrada na evolucao SOAP",
+      });
+      setVisualComparison(comparison);
+      if (comparison.resumo) {
+        appendLineIfMissing(setObjetivo, comparison.resumo);
+      }
+      if (comparison.aiComparacao) {
+        appendLineIfMissing(setAvaliacao, comparison.aiComparacao);
+      }
+      await logClinicalAiSuggestion({
+        stage: "EVOLUCAO",
+        suggestionType: "VISUAL_COMPARISON",
+        confidence: "MODERADA",
+        reason: (comparison.resumo || comparison.aiComparacao || "Comparacao visual").slice(0, 400),
+        evidenceFields: ["baselinePhotoId", "followupPhotoId", "aiComparacao"],
+        patientId: pacienteId,
+      }).catch(() => undefined);
+      showToast({ type: "success", message: "Comparacao visual adicionada ao SOAP." });
+    } catch {
+      showToast({ type: "error", message: "Nao foi possivel comparar as fotos." });
+    } finally {
+      setComparingPhotos(false);
+    }
   };
 
   const { isRecording, partial, start, stop } = useSpeechToText({
@@ -410,6 +538,10 @@ export function EvolucaoFormScreen({
       active = false;
     };
   }, [fetchPacientes, paciente]);
+
+  useEffect(() => {
+    loadClinicalPhotos().catch(() => undefined);
+  }, [pacienteId]);
 
   useEffect(() => {
     stageOpenedAtRef.current = Date.now();
@@ -1173,6 +1305,93 @@ export function EvolucaoFormScreen({
         </FormSection>
 
         <FormSection
+          title="Comparação visual"
+          subtitle="Foto anterior e foto atual para apoiar o registro objetivo"
+        >
+          <Text style={styles.smallLabel}>
+            {loadingClinicalPhotos
+              ? "Carregando fotos clinicas..."
+              : `${clinicalPhotos.length} foto(s) clinica(s) disponiveis`}
+          </Text>
+          {clinicalPhotos.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.photoChipRow}>
+                {clinicalPhotos.slice(0, 10).map((photo) => (
+                  <TouchableOpacity
+                    key={photo.id}
+                    style={[
+                      styles.photoSelectChip,
+                      baselinePhotoId === photo.id && styles.photoSelectChipActive,
+                    ]}
+                    onPress={() => setBaselinePhotoId(photo.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.photoSelectChipText,
+                        baselinePhotoId === photo.id && styles.photoSelectChipTextActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {photo.tipo.replace("FOTO_", "").replace(/_/g, " ")}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          ) : (
+            <Text style={styles.helperText}>
+              Registre uma foto postural no exame fisico para usar como anterior.
+            </Text>
+          )}
+
+          <View style={styles.photoActionRow}>
+            <TouchableOpacity
+              style={[styles.secondaryAction, uploadingFollowupPhoto && styles.disabledAction]}
+              onPress={() => pickFollowupPhoto("camera")}
+              disabled={uploadingFollowupPhoto}
+            >
+              <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.secondaryActionText}>
+                {uploadingFollowupPhoto ? "Enviando..." : "Foto atual"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryAction, uploadingFollowupPhoto && styles.disabledAction]}
+              onPress={() => pickFollowupPhoto("gallery")}
+              disabled={uploadingFollowupPhoto}
+            >
+              <Ionicons name="images-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.secondaryActionText}>Galeria</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.primaryMiniAction,
+                (!baselinePhotoId || !followupPhotoId || comparingPhotos) &&
+                  styles.disabledAction,
+              ]}
+              onPress={handleComparePhotos}
+              disabled={!baselinePhotoId || !followupPhotoId || comparingPhotos}
+            >
+              <Text style={styles.primaryMiniActionText}>
+                {comparingPhotos ? "Comparando..." : "Comparar"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {visualComparison?.resumo ? (
+            <View style={styles.visualResultBox}>
+              <Text style={styles.visualResultTitle}>Resultado visual</Text>
+              <Text style={styles.visualResultText}>{visualComparison.resumo}</Text>
+              {visualComparison.aiLimites ? (
+                <Text style={styles.visualResultLimit}>
+                  {visualComparison.aiLimites}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+        </FormSection>
+
+        <FormSection
           title="A - Avaliação *"
           subtitle="Interpretação clínica e resposta ao tratamento"
         >
@@ -1800,6 +2019,106 @@ const styles = StyleSheet.create({
   textAreaSmall: {
     height: 80,
     textAlignVertical: "top",
+  },
+  smallLabel: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "600",
+    marginBottom: SPACING.sm,
+  },
+  helperText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    marginBottom: SPACING.sm,
+  },
+  photoChipRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    paddingBottom: SPACING.xs,
+  },
+  photoSelectChip: {
+    maxWidth: 150,
+    minHeight: 42,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.white,
+  },
+  photoSelectChipActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  photoSelectChipText: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "600",
+  },
+  photoSelectChipTextActive: {
+    color: COLORS.white,
+  },
+  photoActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  secondaryAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.primary + "12",
+  },
+  secondaryActionText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  primaryMiniAction: {
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.primary,
+  },
+  primaryMiniActionText: {
+    color: COLORS.white,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  disabledAction: {
+    opacity: 0.55,
+  },
+  visualResultBox: {
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "30",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.primary + "08",
+  },
+  visualResultTitle: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  visualResultText: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+  },
+  visualResultLimit: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    marginTop: SPACING.xs,
+    lineHeight: 18,
   },
   buttonsContainer: {
     flexDirection: "row",

@@ -691,6 +691,57 @@ export class CharlesService {
     const nociceptiveEvidence: string[] = [];
     const neuropathicEvidence: string[] = [];
     const nociplasticEvidence: string[] = [];
+    const fenotipoDorEvidencias = anamnese.fenotipoDorEvidencias || {};
+    const hasFenotipoEvidence = (key: string) =>
+      fenotipoDorEvidencias[key] === true;
+
+    if (hasFenotipoEvidence('dorLocalizada')) {
+      nociceptiveEvidence.push('dor localizada');
+    }
+    if (hasFenotipoEvidence('pioraMovimentoEsforco')) {
+      nociceptiveEvidence.push('piora com movimento/esforco');
+    }
+    if (hasFenotipoEvidence('melhoraRepouso')) {
+      nociceptiveEvidence.push('melhora com repouso');
+    }
+    if (hasFenotipoEvidence('inicioAposEsforcoLesao')) {
+      nociceptiveEvidence.push('inicio apos esforco/lesao');
+    }
+    if (hasFenotipoEvidence('dorReproduzidaPalpacao')) {
+      nociceptiveEvidence.push('dor reproduzida por pressao/palpacao');
+    }
+
+    if (hasFenotipoEvidence('irradiacaoTrajeto')) {
+      neuropathicEvidence.push('dor irradiada');
+    }
+    if (hasFenotipoEvidence('choqueFormigamentoQueimacao')) {
+      neuropathicEvidence.push('choque/formigamento/queimacao');
+    }
+    if (hasFenotipoEvidence('dormenciaAlteracaoToque')) {
+      neuropathicEvidence.push('dormencia ou alteracao ao toque');
+    }
+    if (hasFenotipoEvidence('pioraPosicaoNeural')) {
+      neuropathicEvidence.push('piora com posicoes especificas');
+    }
+
+    if (hasFenotipoEvidence('dorMultirregionalMigratoria')) {
+      nociplasticEvidence.push('dor difusa/multirregional');
+    }
+    if (hasFenotipoEvidence('dorDesproporcionalPersistente')) {
+      nociplasticEvidence.push('dor desproporcional ou persistente');
+    }
+    if (hasFenotipoEvidence('sonoRuimNaoReparador')) {
+      nociplasticEvidence.push('sono ruim/nao reparador');
+    }
+    if (hasFenotipoEvidence('cansacoFrequente')) {
+      nociplasticEvidence.push('cansaco/fadiga frequente');
+    }
+    if (hasFenotipoEvidence('estresseElevado')) {
+      nociplasticEvidence.push('estresse elevado');
+    }
+    if (hasFenotipoEvidence('examesNormaisDorPersistente')) {
+      nociplasticEvidence.push('exames normais com dor persistente');
+    }
 
     if (
       affectedAreas.length === 1 ||
@@ -839,6 +890,7 @@ export class CharlesService {
           'fatorAlivio',
           'inicioProblema',
           'mecanismoLesao',
+          'fenotipoDorEvidencias',
         ],
       },
       {
@@ -846,8 +898,14 @@ export class CharlesService {
         subtipo: 'NEURAL' as const,
         evidence: neuropathicEvidence,
         reason:
-          'Fenotipo neural: terapia manual, mobilizacao neural, descompressao e modulacao conforme exame neurologico.',
-        fields: ['irradiacao', 'localIrradiacao', 'descricaoSintomas', 'fatoresPiora'],
+          'Fenotipo neural: terapia manual, mobilizacao neural, descompressao e modulacao conforme exame fisico.',
+        fields: [
+          'irradiacao',
+          'localIrradiacao',
+          'descricaoSintomas',
+          'fatoresPiora',
+          'fenotipoDorEvidencias',
+        ],
       },
       {
         principal: 'NOCIPLASTICA' as const,
@@ -862,6 +920,7 @@ export class CharlesService {
           'nivelEstresse',
           'energiaDiaria',
           'yellowFlags',
+          'fenotipoDorEvidencias',
         ],
       },
     ].sort((a, b) => b.evidence.length - a.evidence.length);

@@ -9,6 +9,8 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteExame } from './entities/paciente-exame.entity';
+import { ClinicalPhoto } from './entities/clinical-photo.entity';
+import { ClinicalPhotoComparison } from './entities/clinical-photo-comparison.entity';
 import { ProfissionalPacienteVinculo } from './entities/profissional-paciente-vinculo.entity';
 import { Atividade } from '../atividades/entities/atividade.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
@@ -23,6 +25,8 @@ import { PacientesController } from './pacientes.controller';
       Laudo,
       Usuario,
       PacienteExame,
+      ClinicalPhoto,
+      ClinicalPhotoComparison,
       ProfissionalPacienteVinculo,
       Atividade,
       Anamnese,

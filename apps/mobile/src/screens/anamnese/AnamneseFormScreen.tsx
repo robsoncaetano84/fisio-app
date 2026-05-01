@@ -44,6 +44,7 @@ import {
   TipoDor,
   MecanismoLesao,
   Anamnese,
+  FenotipoDorEvidencias,
 } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -180,6 +181,28 @@ const TIPO_DOR_PRESETS = [
   { label: "Neuropática", value: TipoDor.NEUROPATICA },
   { label: "Mista", value: TipoDor.MISTA },
 ];
+
+const FENOTIPO_DOR_QUESTIONS: Array<{
+  key: string;
+  label: string;
+  group: "nociceptiva" | "neuropatica" | "nociplastica";
+}> = [
+  { key: "dorLocalizada", label: "Aponta exatamente onde doi", group: "nociceptiva" },
+  { key: "pioraMovimentoEsforco", label: "Piora com movimento/esforco", group: "nociceptiva" },
+  { key: "melhoraRepouso", label: "Melhora com repouso", group: "nociceptiva" },
+  { key: "inicioAposEsforcoLesao", label: "Comecou apos esforco/lesao", group: "nociceptiva" },
+  { key: "dorReproduzidaPalpacao", label: "Pressao/palpacao reproduz", group: "nociceptiva" },
+  { key: "irradiacaoTrajeto", label: "Corre para braco/perna/mao/pe", group: "neuropatica" },
+  { key: "choqueFormigamentoQueimacao", label: "Choque, formigamento ou queimacao", group: "neuropatica" },
+  { key: "dormenciaAlteracaoToque", label: "Dormencia ou toque diferente", group: "neuropatica" },
+  { key: "pioraPosicaoNeural", label: "Piora sentado, dobrando ou virando", group: "neuropatica" },
+  { key: "dorMultirregionalMigratoria", label: "Dor muda de lugar ou varias regioes", group: "nociplastica" },
+  { key: "dorDesproporcionalPersistente", label: "Dor desproporcional ou nao melhora", group: "nociplastica" },
+  { key: "sonoRuimNaoReparador", label: "Sono ruim ou acorda cansado", group: "nociplastica" },
+  { key: "cansacoFrequente", label: "Cansaco frequente", group: "nociplastica" },
+  { key: "estresseElevado", label: "Estresse elevado", group: "nociplastica" },
+  { key: "examesNormaisDorPersistente", label: "Exames normais e dor continua", group: "nociplastica" },
+];
 const RED_FLAGS_PRESETS = [
   "Febre",
   "Perda de peso inexplicada",
@@ -193,6 +216,68 @@ const YELLOW_FLAGS_PRESETS = [
   "Estresse",
   "Baixa adesão prévia",
 ];
+
+const AREA_LABELS: Record<string, string> = {
+  cabeca: "Cabeça",
+  pescoco: "Pescoço",
+  ombro: "Ombro",
+  braco: "Braço",
+  cotovelo: "Cotovelo",
+  punho_mao: "Punho/Mão",
+  coluna_cervical: "Coluna cervical",
+  coluna_toracica: "Coluna torácica",
+  coluna_lombar: "Coluna lombar",
+  quadril: "Coxofemoral",
+  coxofemoral: "Coxofemoral",
+  coxa: "Coxa",
+  joelho: "Joelho",
+  tibial_anterior: "Tibial anterior",
+  panturrilha: "Panturrilha",
+  tornozelo_pe: "Tornozelo/Pé",
+  torax: "Tórax",
+  abdomen: "Abdômen",
+};
+
+const IRRADIATION_CHAINS: Record<string, string[]> = {
+  pescoco: ["ombro", "braco", "cotovelo", "punho_mao"],
+  coluna_cervical: ["ombro", "braco", "cotovelo", "punho_mao"],
+  ombro: ["braco", "cotovelo", "punho_mao"],
+  braco: ["cotovelo", "punho_mao"],
+  cotovelo: ["punho_mao"],
+  coluna_lombar: ["coxofemoral", "coxa", "joelho", "tibial_anterior", "panturrilha", "tornozelo_pe"],
+  quadril: ["coxa", "joelho", "tibial_anterior", "panturrilha", "tornozelo_pe"],
+  coxofemoral: ["coxa", "joelho", "tibial_anterior", "panturrilha", "tornozelo_pe"],
+  coxa: ["joelho", "tibial_anterior", "panturrilha", "tornozelo_pe"],
+  joelho: ["tibial_anterior", "panturrilha", "tornozelo_pe"],
+  tibial_anterior: ["tornozelo_pe"],
+  panturrilha: ["tornozelo_pe"],
+};
+
+const formatAreaWithSide = (areaId: string, lado?: AreaAfetada["lado"]) => {
+  const label = AREA_LABELS[areaId] || areaId;
+  if (lado === "esquerdo") return `${label} esquerdo`;
+  if (lado === "direito") return `${label} direito`;
+  if (lado === "ambos") return `${label} bilateral`;
+  return label;
+};
+
+const buildIrradiationSuggestions = (areas: AreaAfetada[]) => {
+  const seen = new Set<string>();
+  return areas.flatMap((area) => {
+    const destinations = IRRADIATION_CHAINS[area.regiao] || [];
+    return destinations
+      .map((destination) => {
+        const value = `${formatAreaWithSide(area.regiao, area.lado)} -> ${formatAreaWithSide(
+          destination,
+          area.lado,
+        )}`;
+        if (seen.has(value)) return null;
+        seen.add(value);
+        return value;
+      })
+      .filter(Boolean) as string[];
+  });
+};
 
 export function AnamneseFormScreen({
   navigation,
@@ -246,6 +331,8 @@ export function AnamneseFormScreen({
   const [irradiacao, setIrradiacao] = useState<boolean | null>(null);
   const [localIrradiacao, setLocalIrradiacao] = useState("");
   const [tipoDor, setTipoDor] = useState<TipoDor | null>(null);
+  const [fenotipoDorEvidencias, setFenotipoDorEvidencias] =
+    useState<FenotipoDorEvidencias>({});
   const [sinaisSensibilizacaoCentral, setSinaisSensibilizacaoCentral] =
     useState("");
   const [redFlags, setRedFlags] = useState<string[]>([]);
@@ -258,8 +345,6 @@ export function AnamneseFormScreen({
   const [tratamentosAnteriores, setTratamentosAnteriores] = useState<string[]>(
     [],
   );
-  const [historicoFamiliar, setHistoricoFamiliar] = useState("");
-  const [historicoEsportivo, setHistoricoEsportivo] = useState("");
   const [lesoesPrevias, setLesoesPrevias] = useState("");
   const [usoMedicamentos, setUsoMedicamentos] = useState("");
   const [limitacoesFuncionais, setLimitacoesFuncionais] = useState("");
@@ -299,6 +384,45 @@ export function AnamneseFormScreen({
   const draftTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const irradiationSuggestions = buildIrradiationSuggestions(areasAfetadas);
+
+  const inferTipoDorFromFenotipo = (evidencias: FenotipoDorEvidencias) => {
+    const score = FENOTIPO_DOR_QUESTIONS.reduce(
+      (acc, item) => {
+        if (evidencias[item.key]) acc[item.group] += 1;
+        return acc;
+      },
+      { nociceptiva: 0, neuropatica: 0, nociplastica: 0 },
+    );
+    if (score.neuropatica >= 2 && score.neuropatica >= score.nociceptiva) {
+      return TipoDor.NEUROPATICA;
+    }
+    if (score.nociplastica >= 3) return TipoDor.MISTA;
+    if (score.nociceptiva >= 2) return TipoDor.MECANICA;
+    return null;
+  };
+
+  const toggleFenotipoDorEvidence = (key: string) => {
+    setFenotipoDorEvidencias((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      const inferred = inferTipoDorFromFenotipo(next);
+      if (inferred) setTipoDor(inferred);
+      return next;
+    });
+
+    const willEnable = !fenotipoDorEvidencias[key];
+    if (!willEnable) return;
+    if (key === "irradiacaoTrajeto") setIrradiacao(true);
+    if (key === "sonoRuimNaoReparador" && qualidadeSono === 0) {
+      setQualidadeSono(4);
+    }
+    if (key === "cansacoFrequente" && energiaDiaria === 0) {
+      setEnergiaDiaria(4);
+    }
+    if (key === "estresseElevado" && nivelEstresse < 7) {
+      setNivelEstresse(7);
+    }
+  };
 
   const steps: Array<{ title: string; icon: IconName }> = [
     { title: "Queixa principal", icon: "body-outline" },
@@ -329,6 +453,15 @@ export function AnamneseFormScreen({
 
     return [...values, preset].join(", ");
   };
+
+  const toggleIrradiationSuggestion = (suggestion: string) => {
+    setIrradiacao(true);
+    setLocalIrradiacao((current) => togglePresetInText(current, suggestion));
+    if (errors.localIrradiacao) {
+      setErrors((prev) => ({ ...prev, localIrradiacao: "" }));
+    }
+  };
+
   const { isRecording, partial, start, stop } = useSpeechToText({
     enabled: VOICE_ENABLED,
     onResult: (text) => {
@@ -352,14 +485,14 @@ export function AnamneseFormScreen({
         case "fatoresPiora":
           appendText(setFatoresPiora, text);
           break;
+        case "localIrradiacao":
+          appendText(setLocalIrradiacao, text);
+          break;
+        case "sinaisSensibilizacaoCentral":
+          appendText(setSinaisSensibilizacaoCentral, text);
+          break;
         case "quandoProblemaAnterior":
           appendText(setQuandoProblemaAnterior, text);
-          break;
-        case "historicoFamiliar":
-          appendText(setHistoricoFamiliar, text);
-          break;
-        case "historicoEsportivo":
-          appendText(setHistoricoEsportivo, text);
           break;
         case "lesoesPrevias":
           appendText(setLesoesPrevias, text);
@@ -414,6 +547,7 @@ export function AnamneseFormScreen({
     );
     setLocalIrradiacao(anamnese.localIrradiacao || "");
     setTipoDor(anamnese.tipoDor || null);
+    setFenotipoDorEvidencias(anamnese.fenotipoDorEvidencias || {});
     setSinaisSensibilizacaoCentral(anamnese.sinaisSensibilizacaoCentral || "");
     setRedFlags(anamnese.redFlags || []);
     setYellowFlags(anamnese.yellowFlags || []);
@@ -424,8 +558,6 @@ export function AnamneseFormScreen({
     );
     setQuandoProblemaAnterior(anamnese.quandoProblemaAnterior || "");
     setTratamentosAnteriores(anamnese.tratamentosAnteriores || []);
-    setHistoricoFamiliar(anamnese.historicoFamiliar || "");
-    setHistoricoEsportivo(anamnese.historicoEsportivo || "");
     setLesoesPrevias(anamnese.lesoesPrevias || "");
     setUsoMedicamentos(anamnese.usoMedicamentos || "");
     setLimitacoesFuncionais(anamnese.limitacoesFuncionais || "");
@@ -584,11 +716,16 @@ export function AnamneseFormScreen({
           fatorAlivio?: string;
           mecanismoLesao?: MecanismoLesao | null;
           fatoresPiora?: string;
+          dorRepouso?: boolean | null;
+          dorNoturna?: boolean | null;
+          irradiacao?: boolean | null;
+          localIrradiacao?: string;
+          tipoDor?: TipoDor | null;
+          fenotipoDorEvidencias?: FenotipoDorEvidencias;
+          sinaisSensibilizacaoCentral?: string;
           problemaAnterior?: boolean | null;
           quandoProblemaAnterior?: string;
           tratamentosAnteriores?: string[];
-          historicoFamiliar?: string;
-          historicoEsportivo?: string;
           lesoesPrevias?: string;
           usoMedicamentos?: string;
           limitacoesFuncionais?: string;
@@ -623,16 +760,24 @@ export function AnamneseFormScreen({
         if (draft.mecanismoLesao !== undefined)
           setMecanismoLesao(draft.mecanismoLesao ?? null);
         if (draft.fatoresPiora) setFatoresPiora(draft.fatoresPiora);
+        if (draft.dorRepouso !== undefined)
+          setDorRepouso(draft.dorRepouso ?? null);
+        if (draft.dorNoturna !== undefined)
+          setDorNoturna(draft.dorNoturna ?? null);
+        if (draft.irradiacao !== undefined)
+          setIrradiacao(draft.irradiacao ?? null);
+        if (draft.localIrradiacao) setLocalIrradiacao(draft.localIrradiacao);
+        if (draft.tipoDor !== undefined) setTipoDor(draft.tipoDor ?? null);
+        if (draft.fenotipoDorEvidencias)
+          setFenotipoDorEvidencias(draft.fenotipoDorEvidencias);
+        if (draft.sinaisSensibilizacaoCentral)
+          setSinaisSensibilizacaoCentral(draft.sinaisSensibilizacaoCentral);
         if (draft.problemaAnterior !== undefined)
           setProblemaAnterior(draft.problemaAnterior);
         if (draft.quandoProblemaAnterior)
           setQuandoProblemaAnterior(draft.quandoProblemaAnterior);
         if (draft.tratamentosAnteriores)
           setTratamentosAnteriores(draft.tratamentosAnteriores);
-        if (draft.historicoFamiliar)
-          setHistoricoFamiliar(draft.historicoFamiliar);
-        if (draft.historicoEsportivo)
-          setHistoricoEsportivo(draft.historicoEsportivo);
         if (draft.lesoesPrevias) setLesoesPrevias(draft.lesoesPrevias);
         if (draft.usoMedicamentos) setUsoMedicamentos(draft.usoMedicamentos);
         if (draft.limitacoesFuncionais)
@@ -691,11 +836,16 @@ export function AnamneseFormScreen({
       fatorAlivio,
       mecanismoLesao,
       fatoresPiora,
+      dorRepouso,
+      dorNoturna,
+      irradiacao,
+      localIrradiacao,
+      tipoDor,
+      fenotipoDorEvidencias,
+      sinaisSensibilizacaoCentral,
       problemaAnterior,
       quandoProblemaAnterior,
       tratamentosAnteriores,
-      historicoFamiliar,
-      historicoEsportivo,
       lesoesPrevias,
       usoMedicamentos,
       limitacoesFuncionais,
@@ -755,11 +905,16 @@ export function AnamneseFormScreen({
     fatorAlivio,
     mecanismoLesao,
     fatoresPiora,
+    dorRepouso,
+    dorNoturna,
+    irradiacao,
+    localIrradiacao,
+    tipoDor,
+    fenotipoDorEvidencias,
+    sinaisSensibilizacaoCentral,
     problemaAnterior,
     quandoProblemaAnterior,
     tratamentosAnteriores,
-    historicoFamiliar,
-    historicoEsportivo,
     lesoesPrevias,
     usoMedicamentos,
     limitacoesFuncionais,
@@ -793,11 +948,16 @@ export function AnamneseFormScreen({
       fatorAlivio,
       mecanismoLesao,
       fatoresPiora,
+      dorRepouso,
+      dorNoturna,
+      irradiacao,
+      localIrradiacao,
+      tipoDor,
+      fenotipoDorEvidencias,
+      sinaisSensibilizacaoCentral,
       problemaAnterior,
       quandoProblemaAnterior,
       tratamentosAnteriores,
-      historicoFamiliar,
-      historicoEsportivo,
       lesoesPrevias,
       usoMedicamentos,
       limitacoesFuncionais,
@@ -857,11 +1017,16 @@ export function AnamneseFormScreen({
     fatorAlivio,
     mecanismoLesao,
     fatoresPiora,
+    dorRepouso,
+    dorNoturna,
+    irradiacao,
+    localIrradiacao,
+    tipoDor,
+    fenotipoDorEvidencias,
+    sinaisSensibilizacaoCentral,
     problemaAnterior,
     quandoProblemaAnterior,
     tratamentosAnteriores,
-    historicoFamiliar,
-    historicoEsportivo,
     lesoesPrevias,
     usoMedicamentos,
     limitacoesFuncionais,
@@ -936,6 +1101,10 @@ export function AnamneseFormScreen({
         ) {
           nextErrors.fatoresPiora = "Informe pelo menos um fator de piora/agravo";
         }
+        if (irradiacao === true && !String(localIrradiacao || "").trim()) {
+          nextErrors.localIrradiacao =
+            "Informe ou selecione o trajeto da dor irradiada";
+        }
         break;
       default:
         break;
@@ -950,6 +1119,7 @@ export function AnamneseFormScreen({
       mecanismoLesao: nextErrors.mecanismoLesao || "",
       fatorAlivio: nextErrors.fatorAlivio || "",
       fatoresPiora: nextErrors.fatoresPiora || "",
+      localIrradiacao: nextErrors.localIrradiacao || "",
     }));
     return Object.keys(nextErrors).length === 0;
   };
@@ -997,6 +1167,13 @@ export function AnamneseFormScreen({
       !String(fatoresPiora || "").trim()
     ) {
       fields.push("fatoresPiora");
+    }
+    if (
+      step === 1 &&
+      irradiacao === true &&
+      !String(localIrradiacao || "").trim()
+    ) {
+      fields.push("localIrradiacao");
     }
     return fields;
   };
@@ -1121,11 +1298,16 @@ export function AnamneseFormScreen({
         fatorAlivio,
         mecanismoLesao: mecanismoLesao || undefined,
         fatoresPiora,
+        dorRepouso: dorRepouso ?? undefined,
+        dorNoturna: dorNoturna ?? undefined,
+        irradiacao: irradiacao ?? undefined,
+        localIrradiacao,
+        tipoDor: tipoDor || undefined,
+        fenotipoDorEvidencias,
+        sinaisSensibilizacaoCentral,
         problemaAnterior: problemaAnterior || false,
         quandoProblemaAnterior,
         tratamentosAnteriores,
-        historicoFamiliar,
-        historicoEsportivo,
         lesoesPrevias,
         usoMedicamentos,
         limitacoesFuncionais,
@@ -1261,11 +1443,15 @@ export function AnamneseFormScreen({
             setFatorAlivio("");
             setMecanismoLesao(null);
             setFatoresPiora("");
+            setDorRepouso(null);
+            setDorNoturna(null);
+            setIrradiacao(null);
+            setLocalIrradiacao("");
+            setTipoDor(null);
+            setSinaisSensibilizacaoCentral("");
             setProblemaAnterior(null);
             setQuandoProblemaAnterior("");
             setTratamentosAnteriores([]);
-            setHistoricoFamiliar("");
-            setHistoricoEsportivo("");
             setLesoesPrevias("");
             setUsoMedicamentos("");
             setLimitacoesFuncionais("");
@@ -1344,6 +1530,7 @@ export function AnamneseFormScreen({
                 <FormSection title="Áreas Afetadas">
                   <BodyMap
                     selectedAreas={areasAfetadas}
+                    sexo={(paciente as { sexo?: string } | undefined)?.sexo}
                     onAreasChange={(nextAreas) => {
                       setAreasAfetadas(nextAreas);
                       if (errors.areasAfetadas) {
@@ -1701,6 +1888,148 @@ export function AnamneseFormScreen({
                 containerStyle={{ marginTop: SPACING.sm }}
               />
             </FormSection>
+
+            <FormSection title="Dor irradiada e trajeto">
+              <Text style={styles.subLabel}>
+                A dor sai da área principal e caminha para outra região?
+              </Text>
+              <View style={styles.optionsRow}>
+                <SelectOption
+                  label="Sim"
+                  selected={irradiacao === true}
+                  onPress={() => {
+                    setIrradiacao(true);
+                    if (errors.localIrradiacao) {
+                      setErrors((prev) => ({ ...prev, localIrradiacao: "" }));
+                    }
+                  }}
+                />
+                <SelectOption
+                  label="Não"
+                  selected={irradiacao === false}
+                  onPress={() => {
+                    setIrradiacao(false);
+                    setLocalIrradiacao("");
+                    if (tipoDor === TipoDor.NEUROPATICA) {
+                      setTipoDor(null);
+                    }
+                    if (errors.localIrradiacao) {
+                      setErrors((prev) => ({ ...prev, localIrradiacao: "" }));
+                    }
+                  }}
+                />
+              </View>
+
+              {irradiacao === true ? (
+                <>
+                  {irradiationSuggestions.length > 0 ? (
+                    <>
+                      <Text style={[styles.subLabel, { marginTop: SPACING.md }]}>
+                        Trajetos sugeridos pelas áreas afetadas
+                      </Text>
+                      <View style={styles.optionsGrid}>
+                        {irradiationSuggestions.map((suggestion) => (
+                          <SelectOption
+                            key={suggestion}
+                            label={suggestion}
+                            selected={parsePresetValues(localIrradiacao).includes(
+                              suggestion,
+                            )}
+                            onPress={() => toggleIrradiationSuggestion(suggestion)}
+                          />
+                        ))}
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={[styles.hintText, { marginTop: SPACING.sm }]}>
+                      Selecione uma área afetada para sugerir o trajeto provável.
+                    </Text>
+                  )}
+
+                  <Input
+                    placeholder="Ex.: ombro direito -> braço/cotovelo/punho/mão direitos"
+                    value={localIrradiacao}
+                    onChangeText={(text) => {
+                      setLocalIrradiacao(text);
+                      if (text.trim()) {
+                        setIrradiacao(true);
+                      }
+                      if (errors.localIrradiacao) {
+                        setErrors((prev) => ({ ...prev, localIrradiacao: "" }));
+                      }
+                    }}
+                    error={errors.localIrradiacao}
+                    showCount
+                    showClear
+                    maxLength={1000}
+                    onClear={() => setLocalIrradiacao("")}
+                    rightIcon={
+                      VOICE_ENABLED ? getMicIcon("localIrradiacao") : undefined
+                    }
+                    onRightIconPress={
+                      VOICE_ENABLED
+                        ? () => toggleVoice("localIrradiacao")
+                        : undefined
+                    }
+                    hint={
+                      activeField === "localIrradiacao" && isRecording
+                        ? partial
+                        : undefined
+                    }
+                    multiline
+                    numberOfLines={3}
+                    style={{ height: 90, textAlignVertical: "top" }}
+                    containerStyle={{ marginTop: SPACING.sm }}
+                  />
+                </>
+              ) : null}
+            </FormSection>
+
+            <FormSection title="Fenótipo de dor">
+              <Text style={styles.subLabel}>Comportamento em repouso e à noite</Text>
+              <View style={styles.optionsRow}>
+                <SelectOption
+                  label="Dor em repouso"
+                  selected={dorRepouso === true}
+                  onPress={() => setDorRepouso(dorRepouso === true ? null : true)}
+                />
+                <SelectOption
+                  label="Sem dor em repouso"
+                  selected={dorRepouso === false}
+                  onPress={() => setDorRepouso(dorRepouso === false ? null : false)}
+                />
+                <SelectOption
+                  label="Dor noturna"
+                  selected={dorNoturna === true}
+                  onPress={() => setDorNoturna(dorNoturna === true ? null : true)}
+                />
+                <SelectOption
+                  label="Sem dor noturna"
+                  selected={dorNoturna === false}
+                  onPress={() => setDorNoturna(dorNoturna === false ? null : false)}
+                />
+              </View>
+
+              {renderFenotipoQuestionGroup("nociceptiva", "Mecanico / nociceptivo")}
+              {renderFenotipoQuestionGroup("neuropatica", "Neural / neuropatico")}
+              {renderFenotipoQuestionGroup("nociplastica", "Modulacao central / nociplastico")}
+
+              <Text style={[styles.subLabel, { marginTop: SPACING.md }]}>
+                Tipo provavel para o agente clinico
+              </Text>
+              <View style={styles.optionsGrid}>
+                {TIPO_DOR_PRESETS.map((option) => (
+                  <SelectOption
+                    key={option.value}
+                    label={option.label}
+                    selected={tipoDor === option.value}
+                    onPress={() =>
+                      setTipoDor(tipoDor === option.value ? null : option.value)
+                    }
+                  />
+                ))}
+              </View>
+            </FormSection>
           </>
         );
 
@@ -1934,68 +2263,6 @@ export function AnamneseFormScreen({
                 numberOfLines={3}
                 style={{ height: 90, textAlignVertical: "top" }}
                 containerStyle={{ marginTop: SPACING.sm }}
-              />
-            </FormSection>
-
-            <FormSection title="Histórico familiar relacionado">
-              <Input
-                placeholder="Alguém na família tem sintomas/diagnósticos semelhantes?"
-                value={historicoFamiliar}
-                onChangeText={(text) => {
-                  setHistoricoFamiliar(text);
-                  if (errors.historicoFamiliar) {
-                    setErrors((prev) => ({ ...prev, historicoFamiliar: "" }));
-                  }
-                }}
-                error={errors.historicoFamiliar}
-                showCount
-                showClear
-                maxLength={2000}
-                onClear={() => setHistoricoFamiliar("")}
-                rightIcon={
-                  VOICE_ENABLED ? getMicIcon("historicoFamiliar") : undefined
-                }
-                onRightIconPress={
-                  VOICE_ENABLED
-                    ? () => toggleVoice("historicoFamiliar")
-                    : undefined
-                }
-                hint={
-                  activeField === "historicoFamiliar" && isRecording
-                    ? partial
-                    : undefined
-                }
-                multiline
-                numberOfLines={3}
-                style={{ height: 80, textAlignVertical: "top" }}
-              />
-            </FormSection>
-
-            <FormSection title="Histórico esportivo">
-              <Input
-                placeholder="Modalidades, frequência, nível e demandas esportivas relevantes"
-                value={historicoEsportivo}
-                onChangeText={setHistoricoEsportivo}
-                showCount
-                showClear
-                maxLength={2000}
-                onClear={() => setHistoricoEsportivo("")}
-                rightIcon={
-                  VOICE_ENABLED ? getMicIcon("historicoEsportivo") : undefined
-                }
-                onRightIconPress={
-                  VOICE_ENABLED
-                    ? () => toggleVoice("historicoEsportivo")
-                    : undefined
-                }
-                hint={
-                  activeField === "historicoEsportivo" && isRecording
-                    ? partial
-                    : undefined
-                }
-                multiline
-                numberOfLines={3}
-                style={{ height: 80, textAlignVertical: "top" }}
               />
             </FormSection>
 
@@ -2328,6 +2595,27 @@ export function AnamneseFormScreen({
       status: "Sinais de vulnerabilidade emocional",
     };
   };
+
+  const renderFenotipoQuestionGroup = (
+    group: "nociceptiva" | "neuropatica" | "nociplastica",
+    title: string,
+  ) => (
+    <View style={styles.questionGroup}>
+      <Text style={styles.subLabel}>{title}</Text>
+      <View style={styles.optionsGrid}>
+        {FENOTIPO_DOR_QUESTIONS.filter((item) => item.group === group).map(
+          (item) => (
+            <SelectOption
+              key={item.key}
+              label={item.label}
+              selected={fenotipoDorEvidencias[item.key] === true}
+              onPress={() => toggleFenotipoDorEvidence(item.key)}
+            />
+          ),
+        )}
+      </View>
+    </View>
+  );
 
   if (!paciente && !isSelfMode) {
     return (
@@ -2671,6 +2959,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: SPACING.sm,
+  },
+  questionGroup: {
+    marginTop: SPACING.md,
   },
   option: {
     paddingVertical: SPACING.sm,
