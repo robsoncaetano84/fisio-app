@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PacientesService } from '../pacientes/pacientes.service';
@@ -7,6 +7,7 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { ClinicalGovernanceService } from '../clinical-governance/clinical-governance.service';
+import { OpenAiService } from '../ai/openai.service';
 
 const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
 const CLINICAL_REGION_KEYS = [
@@ -23,13 +24,16 @@ const CLINICAL_REGION_KEYS = [
 ] as const;
 type ClinicalRegionKey = (typeof CLINICAL_REGION_KEYS)[number];
 
-const REGION_INFERENCE_RULES: Array<{ regex: RegExp; region: ClinicalRegionKey }> = [
+const REGION_INFERENCE_RULES: Array<{
+  regex: RegExp;
+  region: ClinicalRegionKey;
+}> = [
   { regex: /(cerv|pescoc|cabec)/, region: 'CERVICAL' },
   { regex: /(torac|torax)/, region: 'TORACICA' },
   { regex: /(lomb|abdomen)/, region: 'LOMBAR' },
   { regex: /(sacro|iliac|pelve)/, region: 'SACROILIACA' },
   { regex: /(quadril|coxa)/, region: 'QUADRIL' },
-  { regex: /(joelho)/, region: 'JOELHO' },
+  { regex: /(joelho|poplit)/, region: 'JOELHO' },
   { regex: /(tornoz|pe\b|pé)/, region: 'TORNOZELO_PE' },
   { regex: /(ombro|braco|braço)/, region: 'OMBRO' },
   { regex: /(cotovelo)/, region: 'COTOVELO' },
@@ -156,6 +160,16 @@ export interface CharlesEvolucaoSoapSuggestionResponse {
   plano: string | null;
 }
 
+type CharlesSoapSuggestionDraft = {
+  confidence: CharlesEvolucaoSoapSuggestionResponse['confidence'];
+  reason: string;
+  evidenceFields: string[];
+  subjetivo: string | null;
+  objetivo: string | null;
+  avaliacao: string | null;
+  plano: string | null;
+};
+
 @Injectable()
 export class CharlesService {
   constructor(
@@ -167,37 +181,45 @@ export class CharlesService {
     private readonly evolucaoRepository: Repository<Evolucao>,
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
+    @Optional()
+    private readonly openAiService?: OpenAiService,
   ) {}
 
   async getNextAction(
     pacienteId: string,
     usuario: Usuario,
   ): Promise<CharlesNextActionResponse> {
-    const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
+    const paciente = await this.pacientesService.findOne(
+      pacienteId,
+      usuario.id,
+    );
 
     const [latestAnamnese, latestEvolucao, latestLaudo, activeProtocol] =
       await Promise.all([
-      this.anamneseRepository.findOne({
-        where: { pacienteId: paciente.id },
-        order: { createdAt: 'DESC' },
-      }),
-      this.evolucaoRepository.findOne({
-        where: { pacienteId: paciente.id },
-        order: { data: 'DESC' },
-      }),
-      this.laudoRepository.findOne({
-        where: { pacienteId: paciente.id },
-        order: { updatedAt: 'DESC' },
-      }),
-      this.getActiveProtocolSafe(usuario),
-    ]);
+        this.anamneseRepository.findOne({
+          where: { pacienteId: paciente.id },
+          order: { createdAt: 'DESC' },
+        }),
+        this.evolucaoRepository.findOne({
+          where: { pacienteId: paciente.id },
+          order: { data: 'DESC' },
+        }),
+        this.laudoRepository.findOne({
+          where: { pacienteId: paciente.id },
+          order: { updatedAt: 'DESC' },
+        }),
+        this.getActiveProtocolSafe(usuario),
+      ]);
 
     const hasAnamnese = !!latestAnamnese;
     const hasExameFisico = this.hasStructuredExame(latestLaudo?.exameFisico);
     const hasEvolucao = !!latestEvolucao;
-    const laudoValidado = latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL;
+    const laudoValidado =
+      latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL;
     const hasPlanoOuAlta = !!String(latestLaudo?.criteriosAlta || '').trim();
-    const hasCriticalRedFlag = this.hasCriticalRedFlag(latestAnamnese?.redFlags);
+    const hasCriticalRedFlag = this.hasCriticalRedFlag(
+      latestAnamnese?.redFlags,
+    );
     const context = this.buildClinicalContext(latestAnamnese);
     const blockers: CharlesNextActionResponse['blockers'] = [];
     const alerts: CharlesNextActionResponse['alerts'] = [];
@@ -324,7 +346,10 @@ export class CharlesService {
     pacienteId: string,
     usuario: Usuario,
   ): Promise<CharlesExameFisicoDorSuggestionResponse> {
-    const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
+    const paciente = await this.pacientesService.findOne(
+      pacienteId,
+      usuario.id,
+    );
     const latestAnamnese = await this.anamneseRepository.findOne({
       where: { pacienteId: paciente.id },
       order: { createdAt: 'DESC' },
@@ -370,7 +395,10 @@ export class CharlesService {
     pacienteId: string,
     usuario: Usuario,
   ): Promise<CharlesEvolucaoSoapSuggestionResponse> {
-    const paciente = await this.pacientesService.findOne(pacienteId, usuario.id);
+    const paciente = await this.pacientesService.findOne(
+      pacienteId,
+      usuario.id,
+    );
     const [latestAnamnese, latestEvolucao, latestLaudo] = await Promise.all([
       this.anamneseRepository.findOne({
         where: { pacienteId: paciente.id },
@@ -386,11 +414,21 @@ export class CharlesService {
       }),
     ]);
 
-    const suggestion = this.inferEvolucaoSoapSuggestion({
+    const fallbackSuggestion = this.inferEvolucaoSoapSuggestion({
       anamnese: latestAnamnese,
       evolucao: latestEvolucao,
       laudo: latestLaudo,
     });
+    const aiSuggestion = await this.generateEvolucaoSoapWithOpenAI({
+      paciente,
+      anamnese: latestAnamnese,
+      evolucao: latestEvolucao,
+      laudo: latestLaudo,
+      fallback: fallbackSuggestion,
+    });
+    const suggestion = aiSuggestion
+      ? this.mergeSoapSuggestions(fallbackSuggestion, aiSuggestion)
+      : fallbackSuggestion;
     const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
     await this.writeAuditSafe({
@@ -444,7 +482,9 @@ export class CharlesService {
     }
   }
 
-  private async writeAuditSafe(payload: Parameters<ClinicalGovernanceService['writeAudit']>[0]): Promise<void> {
+  private async writeAuditSafe(
+    payload: Parameters<ClinicalGovernanceService['writeAudit']>[0],
+  ): Promise<void> {
     try {
       await this.governanceService.writeAudit(payload);
     } catch {
@@ -485,7 +525,8 @@ export class CharlesService {
       return {
         stage: 'EXAME_FISICO',
         reason: 'Sem exame fisico estruturado.',
-        guidance: 'Preencher exame fisico orientado por regiao e cadeia relacionada.',
+        guidance:
+          'Preencher exame fisico orientado por regiao e cadeia relacionada.',
       };
     }
     if (!args.hasEvolucao) {
@@ -591,7 +632,11 @@ export class CharlesService {
     if ((CLINICAL_REGION_KEYS as readonly string[]).includes(normalized)) {
       return normalized as ClinicalRegionKey;
     }
-    if (normalized === 'SACRO' || normalized === 'ILIACO' || normalized === 'PELVIS') {
+    if (
+      normalized === 'SACRO' ||
+      normalized === 'ILIACO' ||
+      normalized === 'PELVIS'
+    ) {
       return 'SACROILIACA';
     }
     if (normalized === 'PUNHO' || normalized === 'MAO') {
@@ -630,7 +675,8 @@ export class CharlesService {
         principal: 'NEUROPATICA',
         subtipo: 'NEURAL',
         confidence: 'ALTA',
-        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        reason:
+          'Classificacao inferida diretamente do tipo de dor da anamnese.',
         evidenceFields: ['tipoDor'],
       };
     }
@@ -639,7 +685,8 @@ export class CharlesService {
         principal: 'INFLAMATORIA',
         subtipo: 'INFLAMATORIA',
         confidence: 'ALTA',
-        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        reason:
+          'Classificacao inferida diretamente do tipo de dor da anamnese.',
         evidenceFields: ['tipoDor'],
       };
     }
@@ -648,7 +695,8 @@ export class CharlesService {
         principal: 'NOCICEPTIVA',
         subtipo: 'MECANICA',
         confidence: 'ALTA',
-        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        reason:
+          'Classificacao inferida diretamente do tipo de dor da anamnese.',
         evidenceFields: ['tipoDor'],
       };
     }
@@ -657,7 +705,8 @@ export class CharlesService {
         principal: 'NOCIPLASTICA',
         subtipo: 'MIOFASCIAL',
         confidence: 'ALTA',
-        reason: 'Classificacao inferida diretamente do tipo de dor da anamnese.',
+        reason:
+          'Classificacao inferida diretamente do tipo de dor da anamnese.',
         evidenceFields: ['tipoDor'],
       };
     }
@@ -850,7 +899,8 @@ export class CharlesService {
       nociplasticEvidence.push('dor desproporcional ou persistente');
     }
     if (
-      (typeof anamnese.qualidadeSono === 'number' && anamnese.qualidadeSono <= 4) ||
+      (typeof anamnese.qualidadeSono === 'number' &&
+        anamnese.qualidadeSono <= 4) ||
       hasAny(`${sono} ${observacoesEstiloVida}`, [
         'sono ruim',
         'acorda cansado',
@@ -860,8 +910,10 @@ export class CharlesService {
       nociplasticEvidence.push('sono ruim/nao reparador');
     }
     if (
-      (typeof anamnese.nivelEstresse === 'number' && anamnese.nivelEstresse >= 7) ||
-      (typeof anamnese.energiaDiaria === 'number' && anamnese.energiaDiaria <= 4) ||
+      (typeof anamnese.nivelEstresse === 'number' &&
+        anamnese.nivelEstresse >= 7) ||
+      (typeof anamnese.energiaDiaria === 'number' &&
+        anamnese.energiaDiaria <= 4) ||
       hasAny(`${sinaisCentral} ${yellowFlags} ${observacoesEstiloVida}`, [
         'estresse',
         'cansaco',
@@ -872,7 +924,9 @@ export class CharlesService {
     ) {
       nociplasticEvidence.push('estresse/fadiga/yellow flags');
     }
-    if (hasAny(`${sintomas} ${sinaisCentral}`, ['exame normal', 'exames normais'])) {
+    if (
+      hasAny(`${sintomas} ${sinaisCentral}`, ['exame normal', 'exames normais'])
+    ) {
       nociplasticEvidence.push('exames normais com dor persistente');
     }
 
@@ -927,7 +981,10 @@ export class CharlesService {
 
     const best = candidates[0];
     const second = candidates[1];
-    if (best.evidence.length >= 2 && best.evidence.length > second.evidence.length) {
+    if (
+      best.evidence.length >= 2 &&
+      best.evidence.length > second.evidence.length
+    ) {
       return {
         principal: best.principal,
         subtipo: best.subtipo,
@@ -937,7 +994,10 @@ export class CharlesService {
       };
     }
 
-    if (best.evidence.length >= 2 && best.evidence.length === second.evidence.length) {
+    if (
+      best.evidence.length >= 2 &&
+      best.evidence.length === second.evidence.length
+    ) {
       return {
         principal: 'NOCIPLASTICA',
         subtipo: 'MIOFASCIAL',
@@ -977,24 +1037,280 @@ export class CharlesService {
       principal: null,
       subtipo: null,
       confidence: 'BAIXA',
-      reason: 'Dados insuficientes na anamnese para sugerir classificacao com seguranca.',
+      reason:
+        'Dados insuficientes na anamnese para sugerir classificacao com seguranca.',
       evidenceFields: [],
     };
+  }
+
+  private async generateEvolucaoSoapWithOpenAI(args: {
+    paciente: {
+      dataNascimento?: Date | null;
+      sexo?: string | null;
+      profissao?: string | null;
+    };
+    anamnese?: Anamnese | null;
+    evolucao?: Evolucao | null;
+    laudo?: Laudo | null;
+    fallback: CharlesSoapSuggestionDraft;
+  }): Promise<CharlesSoapSuggestionDraft | null> {
+    if (!this.openAiService?.isConfigured()) return null;
+    if (!this.openAiService.isEnabled('OPENAI_CHARLES_AI_ENABLED', true)) {
+      return null;
+    }
+
+    const model = this.openAiService.resolveModel(
+      ['OPENAI_CHARLES_MODEL', 'OPENAI_LAUDO_MODEL', 'OPENAI_MODEL'],
+      'gpt-5-mini',
+    );
+    const timeoutMs = this.openAiService.getPositiveIntegerEnv(
+      'OPENAI_CHARLES_TIMEOUT_MS',
+      12000,
+      120000,
+    );
+    const systemPrompt =
+      'Voce e Charles, um assistente clinico de apoio a fisioterapeutas. Gere sugestoes SOAP prudentes, rastreaveis e revisaveis. Nao invente dados ausentes e nunca substitua validacao profissional.';
+    const userPrompt = `
+Retorne SOMENTE JSON valido com as chaves:
+confidence ("BAIXA" | "MODERADA" | "ALTA"),
+reason (string ate 240 caracteres),
+evidenceFields (array de strings escolhidas dos campos do contexto),
+subjetivo (string ou null),
+objetivo (string ou null),
+avaliacao (string ou null),
+plano (string ou null).
+
+Regras:
+- Escreva em portugues do Brasil, direto para o prontuario do profissional.
+- Use SOAP: S deve refletir relato/sintomas; O deve pedir ou registrar medidas objetivas; A deve correlacionar evolucao, irritabilidade, funcao e hipotese; P deve orientar proxima conduta.
+- Se houver sinais de alerta ou lacunas, registre no campo avaliacao ou plano de forma prudente.
+- Nao use nome do paciente, nao prometa cura e nao mencione que foi gerado por IA.
+- Se os dados forem insuficientes, retorne confidence "BAIXA" e mantenha null nos campos que nao puder sustentar.
+- Preserve revisao profissional: textos devem ser rascunhos editaveis.
+
+Contexto clinico:
+${JSON.stringify(this.buildEvolucaoSoapAiContext(args), null, 2)}
+`;
+
+    const response = await this.openAiService.createJsonResponse({
+      model,
+      systemPrompt,
+      userContent: userPrompt,
+      temperature: 0.2,
+      timeoutMs,
+      operation: 'charles.evolucao_soap',
+    });
+    if (!response) return null;
+
+    return this.sanitizeAiSoapSuggestion(response.parsed);
+  }
+
+  private buildEvolucaoSoapAiContext(args: {
+    paciente: {
+      dataNascimento?: Date | null;
+      sexo?: string | null;
+      profissao?: string | null;
+    };
+    anamnese?: Anamnese | null;
+    evolucao?: Evolucao | null;
+    laudo?: Laudo | null;
+    fallback: CharlesSoapSuggestionDraft;
+  }) {
+    const anamnese = args.anamnese;
+    const evolucao = args.evolucao;
+    const laudo = args.laudo;
+
+    return {
+      paciente: {
+        idade: this.getAgeInYears(args.paciente.dataNascimento),
+        sexo: args.paciente.sexo || null,
+        profissao: this.truncateClinicalText(args.paciente.profissao, 120),
+      },
+      anamnese: anamnese
+        ? {
+            motivoBusca: this.truncateClinicalText(anamnese.motivoBusca, 500),
+            areasAfetadas: anamnese.areasAfetadas || [],
+            intensidadeDor: anamnese.intensidadeDor,
+            descricaoSintomas: this.truncateClinicalText(
+              anamnese.descricaoSintomas,
+              900,
+            ),
+            inicioProblema: anamnese.inicioProblema || null,
+            mecanismoLesao: anamnese.mecanismoLesao || null,
+            fatorAlivio: this.truncateClinicalText(anamnese.fatorAlivio, 500),
+            fatoresPiora: this.truncateClinicalText(anamnese.fatoresPiora, 500),
+            atividadesQuePioram: this.truncateClinicalText(
+              anamnese.atividadesQuePioram,
+              500,
+            ),
+            limitacoesFuncionais: this.truncateClinicalText(
+              anamnese.limitacoesFuncionais,
+              700,
+            ),
+            metaPrincipalPaciente: this.truncateClinicalText(
+              anamnese.metaPrincipalPaciente,
+              500,
+            ),
+            tipoDor: anamnese.tipoDor || null,
+            irradiacao: anamnese.irradiacao,
+            localIrradiacao: this.truncateClinicalText(
+              anamnese.localIrradiacao,
+              300,
+            ),
+            redFlags: anamnese.redFlags || [],
+            yellowFlags: anamnese.yellowFlags || [],
+            qualidadeSono: anamnese.qualidadeSono,
+            nivelEstresse: anamnese.nivelEstresse,
+          }
+        : null,
+      evolucaoAnterior: evolucao
+        ? {
+            data: evolucao.data,
+            subjetivo: this.truncateClinicalText(evolucao.subjetivo, 700),
+            objetivo: this.truncateClinicalText(evolucao.objetivo, 700),
+            avaliacao: this.truncateClinicalText(evolucao.avaliacao, 700),
+            plano: this.truncateClinicalText(evolucao.plano, 700),
+            checkinDor: evolucao.checkinDor,
+            checkinDificuldade: evolucao.checkinDificuldade,
+            dorStatus: evolucao.dorStatus,
+            funcaoStatus: evolucao.funcaoStatus,
+            adesaoStatus: evolucao.adesaoStatus,
+            statusEvolucao: evolucao.statusEvolucao,
+            condutaStatus: evolucao.condutaStatus,
+            observacoes: this.truncateClinicalText(evolucao.observacoes, 700),
+          }
+        : null,
+      laudo: laudo
+        ? {
+            diagnosticoFuncional: this.truncateClinicalText(
+              laudo.diagnosticoFuncional,
+              900,
+            ),
+            condutas: this.truncateClinicalText(laudo.condutas, 900),
+            planoTratamentoIA: this.truncateClinicalText(
+              laudo.planoTratamentoIA,
+              900,
+            ),
+            criteriosAlta: this.truncateClinicalText(laudo.criteriosAlta, 700),
+            exameFisico: this.truncateClinicalText(laudo.exameFisico, 1400),
+            status: laudo.status,
+          }
+        : null,
+      sugestaoDeterministicaFallback: args.fallback,
+      camposPermitidosParaEvidenceFields: [
+        'anamnese.descricaoSintomas',
+        'anamnese.areasAfetadas',
+        'anamnese.intensidadeDor',
+        'anamnese.fatoresPiora',
+        'anamnese.fatorAlivio',
+        'anamnese.limitacoesFuncionais',
+        'anamnese.metaPrincipalPaciente',
+        'anamnese.redFlags',
+        'anamnese.yellowFlags',
+        'evolucaoAnterior',
+        'laudo.diagnosticoFuncional',
+        'laudo.exameFisico',
+        'laudo.condutas',
+        'laudo.planoTratamentoIA',
+      ],
+    };
+  }
+
+  private sanitizeAiSoapSuggestion(
+    parsed: Record<string, unknown>,
+  ): CharlesSoapSuggestionDraft | null {
+    const subjetivo = this.normalizeAiText(parsed.subjetivo, 900);
+    const objetivo = this.normalizeAiText(parsed.objetivo, 900);
+    const avaliacao = this.normalizeAiText(parsed.avaliacao, 900);
+    const plano = this.normalizeAiText(parsed.plano, 900);
+    if (!subjetivo && !objetivo && !avaliacao && !plano) return null;
+
+    return {
+      confidence: this.normalizeConfidence(parsed.confidence),
+      reason:
+        this.normalizeAiText(parsed.reason, 240) ||
+        'Sugestao SOAP contextual baseada nos dados clinicos disponiveis.',
+      evidenceFields: this.normalizeEvidenceFields(parsed.evidenceFields),
+      subjetivo,
+      objetivo,
+      avaliacao,
+      plano,
+    };
+  }
+
+  private mergeSoapSuggestions(
+    fallback: CharlesSoapSuggestionDraft,
+    aiSuggestion: CharlesSoapSuggestionDraft,
+  ): CharlesSoapSuggestionDraft {
+    return {
+      confidence: aiSuggestion.confidence || fallback.confidence,
+      reason: aiSuggestion.reason || fallback.reason,
+      evidenceFields: Array.from(
+        new Set([...aiSuggestion.evidenceFields, ...fallback.evidenceFields]),
+      ).slice(0, 10),
+      subjetivo: aiSuggestion.subjetivo || fallback.subjetivo,
+      objetivo: aiSuggestion.objetivo || fallback.objetivo,
+      avaliacao: aiSuggestion.avaliacao || fallback.avaliacao,
+      plano: aiSuggestion.plano || fallback.plano,
+    };
+  }
+
+  private normalizeAiText(value: unknown, maxLen: number): string | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value
+      .trim()
+      .replace(/\s+\n/g, '\n')
+      .replace(/[ \t]+/g, ' ');
+    if (!normalized) return null;
+    return normalized.slice(0, maxLen);
+  }
+
+  private truncateClinicalText(value: unknown, maxLen: number): string | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    if (!normalized) return null;
+    return normalized.slice(0, maxLen);
+  }
+
+  private normalizeConfidence(
+    value: unknown,
+  ): CharlesEvolucaoSoapSuggestionResponse['confidence'] {
+    const normalized = String(value || '')
+      .trim()
+      .toUpperCase();
+    if (normalized === 'ALTA') return 'ALTA';
+    if (normalized === 'MODERADA') return 'MODERADA';
+    return 'BAIXA';
+  }
+
+  private normalizeEvidenceFields(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  private getAgeInYears(dataNascimento?: Date | null): number | null {
+    if (!dataNascimento) return null;
+    const birth = new Date(dataNascimento);
+    if (Number.isNaN(birth.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const monthDiff = now.getMonth() - birth.getMonth();
+    const dayDiff = now.getDate() - birth.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age -= 1;
+    }
+    return age;
   }
 
   private inferEvolucaoSoapSuggestion(args: {
     anamnese?: Anamnese | null;
     evolucao?: Evolucao | null;
     laudo?: Laudo | null;
-  }): {
-    confidence: CharlesEvolucaoSoapSuggestionResponse['confidence'];
-    reason: string;
-    evidenceFields: string[];
-    subjetivo: string | null;
-    objetivo: string | null;
-    avaliacao: string | null;
-    plano: string | null;
-  } {
+  }): CharlesSoapSuggestionDraft {
     const anamnese = args.anamnese;
     const evolucao = args.evolucao;
     const laudo = args.laudo;
@@ -1023,7 +1339,9 @@ export class CharlesService {
       };
     }
 
-    const regionHint = areas.length ? `regiao ${areas.join(', ')}` : 'regiao principal';
+    const regionHint = areas.length
+      ? `regiao ${areas.join(', ')}`
+      : 'regiao principal';
     const dorHint = queixa ? queixa : 'queixa relatada pelo paciente';
 
     const subjetivo = hadPreviousEvolution

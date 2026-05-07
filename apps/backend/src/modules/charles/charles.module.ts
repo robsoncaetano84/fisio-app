@@ -5,6 +5,7 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { ClinicalGovernanceModule } from '../clinical-governance/clinical-governance.module';
+import { OpenAiModule } from '../ai/openai.module';
 import { CharlesController } from './charles.controller';
 import { CharlesService } from './charles.service';
 
@@ -13,6 +14,7 @@ import { CharlesService } from './charles.service';
     TypeOrmModule.forFeature([Anamnese, Evolucao, Laudo]),
     PacientesModule,
     ClinicalGovernanceModule,
+    OpenAiModule,
   ],
   controllers: [CharlesController],
   providers: [CharlesService],

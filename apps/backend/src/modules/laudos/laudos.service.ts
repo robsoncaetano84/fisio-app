@@ -1748,6 +1748,7 @@ ${JSON.stringify(input, null, 2)}
     }
     if (
       combined.includes('joelho') ||
+      combined.includes('poplit') ||
       combined.includes('patel') ||
       combined.includes('menisc')
     ) {

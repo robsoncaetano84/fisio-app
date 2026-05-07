@@ -112,25 +112,39 @@ exports.AppModule = AppModule = __decorate([
                     HTTPS_CERT_PATH: Joi.string().allow('').optional(),
                     DB_MIGRATIONS_RUN: Joi.string().valid('true', 'false').default('false'),
                     DB_SSL: Joi.string().valid('true', 'false').default('false'),
-                    DB_SSL_REJECT_UNAUTHORIZED: Joi.string().valid('true', 'false').default('true'),
+                    DB_SSL_REJECT_UNAUTHORIZED: Joi.string()
+                        .valid('true', 'false')
+                        .default('true'),
                     THROTTLE_TTL: Joi.number().default(60),
                     THROTTLE_LIMIT: Joi.number().default(60),
                     LOCKOUT_MAX_ATTEMPTS: Joi.number().default(5),
                     LOCKOUT_WINDOW_MIN: Joi.number().default(15),
                     LOCKOUT_DURATION_MIN: Joi.number().default(30),
                     REDIS_URL: Joi.string().allow('').optional(),
-                    ALLOW_ADMIN_REGISTRATION: Joi.string().valid('true', 'false').default('false'),
+                    ALLOW_ADMIN_REGISTRATION: Joi.string()
+                        .valid('true', 'false')
+                        .default('false'),
                     MASTER_ADMIN_EMAILS: Joi.string().allow('').optional(),
                     MASTER_ADMIN_PERMISSIONS: Joi.string().allow('').optional(),
                     OPENAI_API_KEY: Joi.string().allow('').optional(),
                     OPENAI_MODEL: Joi.string().allow('').optional(),
                     OPENAI_LAUDO_MODEL: Joi.string().allow('').optional(),
                     OPENAI_EXAM_MODEL: Joi.string().allow('').optional(),
+                    OPENAI_ATIVIDADE_MODEL: Joi.string().allow('').optional(),
+                    OPENAI_CHARLES_MODEL: Joi.string().allow('').optional(),
                     OPENAI_EXAM_AI_ENABLED: Joi.string()
+                        .valid('true', 'false')
+                        .default('true'),
+                    OPENAI_CHARLES_AI_ENABLED: Joi.string()
                         .valid('true', 'false')
                         .default('true'),
                     OPENAI_LAUDO_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
                     OPENAI_EXAM_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
+                    OPENAI_ATIVIDADE_TIMEOUT_MS: Joi.number()
+                        .integer()
+                        .min(1000)
+                        .optional(),
+                    OPENAI_CHARLES_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
                     SUPABASE_URL: Joi.string().allow('').optional(),
                     SUPABASE_SERVICE_ROLE_KEY: Joi.string().allow('').optional(),
                     SUPABASE_STORAGE_BUCKET: Joi.string().allow('').optional(),

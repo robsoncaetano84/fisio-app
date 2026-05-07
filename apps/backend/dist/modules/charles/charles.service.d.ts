@@ -5,6 +5,7 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { ClinicalGovernanceService } from '../clinical-governance/clinical-governance.service';
+import { OpenAiService } from '../ai/openai.service';
 export type CharlesClinicalStage = 'ANAMNESE' | 'EXAME_FISICO' | 'EVOLUCAO' | 'LAUDO' | 'PLANO' | 'MONITORAMENTO';
 export type CharlesStageStatus = 'PENDING' | 'COMPLETED' | 'BLOCKED';
 export interface CharlesStageItem {
@@ -90,7 +91,8 @@ export declare class CharlesService {
     private readonly anamneseRepository;
     private readonly evolucaoRepository;
     private readonly laudoRepository;
-    constructor(pacientesService: PacientesService, governanceService: ClinicalGovernanceService, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>);
+    private readonly openAiService?;
+    constructor(pacientesService: PacientesService, governanceService: ClinicalGovernanceService, anamneseRepository: Repository<Anamnese>, evolucaoRepository: Repository<Evolucao>, laudoRepository: Repository<Laudo>, openAiService?: OpenAiService | undefined);
     getNextAction(pacienteId: string, usuario: Usuario): Promise<CharlesNextActionResponse>;
     getExameFisicoDorSuggestion(pacienteId: string, usuario: Usuario): Promise<CharlesExameFisicoDorSuggestionResponse>;
     getEvolucaoSoapSuggestion(pacienteId: string, usuario: Usuario): Promise<CharlesEvolucaoSoapSuggestionResponse>;
@@ -102,5 +104,14 @@ export declare class CharlesService {
     private buildClinicalContext;
     private normalizeClinicalRegion;
     private inferDorClassificationFromAnamnese;
+    private generateEvolucaoSoapWithOpenAI;
+    private buildEvolucaoSoapAiContext;
+    private sanitizeAiSoapSuggestion;
+    private mergeSoapSuggestions;
+    private normalizeAiText;
+    private truncateClinicalText;
+    private normalizeConfidence;
+    private normalizeEvidenceFields;
+    private getAgeInYears;
     private inferEvolucaoSoapSuggestion;
 }

@@ -57,8 +57,12 @@ const BODY_MAP_EXACT_OVERLAYS: Record<BodyVariant, Record<string, number>> = {
     combinado_punho_mao_direito: require("../../../assets/body-map/masculino-overlay-punho-mao-direito.png"),
     anterior_coxa_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-coxa-esquerdo-v2.png"),
     anterior_coxa_direito: require("../../../assets/body-map/masculino-overlay-anterior-coxa-direito-v2.png"),
+    anterior_coxofemoral_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-coxofemoral-esquerdo.png"),
+    anterior_coxofemoral_direito: require("../../../assets/body-map/masculino-overlay-anterior-coxofemoral-direito.png"),
     posterior_coxa_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-coxa-esquerdo-v2.png"),
     posterior_coxa_direito: require("../../../assets/body-map/masculino-overlay-posterior-coxa-direito-v2.png"),
+    posterior_coxofemoral_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-coxofemoral-esquerdo.png"),
+    posterior_coxofemoral_direito: require("../../../assets/body-map/masculino-overlay-posterior-coxofemoral-direito.png"),
     anterior_joelho_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-joelho-esquerdo-v8.png"),
     anterior_joelho_direito: require("../../../assets/body-map/masculino-overlay-anterior-joelho-direito-v8.png"),
     posterior_joelho_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-joelho-esquerdo-v8.png"),
@@ -79,8 +83,12 @@ const BODY_MAP_EXACT_OVERLAYS: Record<BodyVariant, Record<string, number>> = {
     combinado_punho_mao_direito: require("../../../assets/body-map/feminino-overlay-punho-mao-direito.png"),
     anterior_coxa_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-coxa-esquerdo-v2.png"),
     anterior_coxa_direito: require("../../../assets/body-map/feminino-overlay-anterior-coxa-direito-v2.png"),
+    anterior_coxofemoral_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-coxofemoral-esquerdo.png"),
+    anterior_coxofemoral_direito: require("../../../assets/body-map/feminino-overlay-anterior-coxofemoral-direito.png"),
     posterior_coxa_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-coxa-esquerdo-v2.png"),
     posterior_coxa_direito: require("../../../assets/body-map/feminino-overlay-posterior-coxa-direito-v2.png"),
+    posterior_coxofemoral_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-coxofemoral-esquerdo.png"),
+    posterior_coxofemoral_direito: require("../../../assets/body-map/feminino-overlay-posterior-coxofemoral-direito.png"),
     anterior_joelho_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-joelho-esquerdo-v8.png"),
     anterior_joelho_direito: require("../../../assets/body-map/feminino-overlay-anterior-joelho-direito-v8.png"),
     posterior_joelho_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-joelho-esquerdo-v8.png"),
@@ -108,7 +116,9 @@ const REGION_LABELS: Record<string, string> = {
   coluna_lombar: "Lombar",
   coxofemoral: "Coxofemoral",
   coxa: "Coxa",
+  posterior_coxa: "Posterior coxa",
   joelho: "Joelho",
+  popliteo: "Popliteo",
   tibial_anterior: "Tibial anterior",
   panturrilha: "Panturrilha",
   tornozelo_pe: "Tornozelo/Pe",
@@ -128,7 +138,9 @@ const CHAIN_ORDER = [
   "coluna_lombar",
   "coxofemoral",
   "coxa",
+  "posterior_coxa",
   "joelho",
+  "popliteo",
   "tibial_anterior",
   "panturrilha",
   "tornozelo_pe",
@@ -207,9 +219,15 @@ const overlayOpacity = (area?: AreaAfetada) => {
   return 0.66;
 };
 
+const OVERLAY_REGION_ALIASES: Record<string, string> = {
+  popliteo: "joelho",
+  posterior_coxa: "coxa",
+};
+
 const exactOverlayKeyCandidates = (mask: BodyMapMask) => {
-  const viewKey = `${mask.vista}_${mask.regiao}_${mask.lado}`;
-  const combinedKey = `combinado_${mask.regiao}_${mask.lado}`;
+  const overlayRegion = OVERLAY_REGION_ALIASES[mask.regiao] || mask.regiao;
+  const viewKey = `${mask.vista}_${overlayRegion}_${mask.lado}`;
+  const combinedKey = `combinado_${overlayRegion}_${mask.lado}`;
 
   if (mask.regiao === "punho_mao" || mask.regiao === "tornozelo_pe") {
     return [combinedKey, viewKey];
@@ -234,8 +252,8 @@ const shouldAreaBehaveAsCombined = (area: AreaAfetada) =>
 
 const sideLabel = (side?: AreaAfetada["lado"]) => {
   if (side === "ambos") return "Ambos";
-  if (side === "esquerdo") return "Esq.";
-  return "Dir.";
+  if (side === "esquerdo") return "Esquerdo";
+  return "Direito";
 };
 
 const areaLabel = (area: AreaAfetada) => {
@@ -254,7 +272,7 @@ const areaMetaLabel = (area: AreaAfetada, intensity: number) => {
 };
 
 const touchPriority = (mask: BodyMapMask) => {
-  if (mask.regiao === "joelho") return 30;
+  if (mask.regiao === "joelho" || mask.regiao === "popliteo") return 30;
   if (mask.regiao === "cotovelo") return 25;
   if (mask.regiao === "punho_mao" || mask.regiao === "tornozelo_pe") return 20;
   if (mask.regiao === "panturrilha" || mask.regiao === "tibial_anterior") return 10;
@@ -451,13 +469,8 @@ export function BodyMap({ selectedAreas, onAreasChange, sexo }: BodyMapProps) {
     <View style={styles.container}>
       <Text style={styles.title}>Mapa corporal</Text>
       <Text style={styles.subtitle}>
-        Toque na regiao da frente ou costas para marcar dor e intensidade.
+        Toque na regiao para marcar dor e intensidade.
       </Text>
-
-      <View style={styles.viewLabelRow}>
-        <Text style={styles.viewLabel}>Frente</Text>
-        <Text style={styles.viewLabel}>Costas</Text>
-      </View>
 
       <View
         style={[
@@ -561,17 +574,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
-  },
-  viewLabelRow: {
-    flexDirection: "row",
-    marginBottom: SPACING.xs,
-  },
-  viewLabel: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: FONTS.sizes.sm,
-    fontWeight: "700",
-    color: COLORS.textSecondary,
   },
   imageFrame: {
     width: "100%",

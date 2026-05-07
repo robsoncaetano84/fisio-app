@@ -1260,6 +1260,7 @@ ${JSON.stringify(input, null, 2)}
             return 'CERVICAL';
         }
         if (combined.includes('joelho') ||
+            combined.includes('poplit') ||
             combined.includes('patel') ||
             combined.includes('menisc')) {
             return 'JOELHO';

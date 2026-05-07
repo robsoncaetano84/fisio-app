@@ -14,6 +14,7 @@ const evolucao_entity_1 = require("../evolucoes/entities/evolucao.entity");
 const laudo_entity_1 = require("../laudos/entities/laudo.entity");
 const pacientes_module_1 = require("../pacientes/pacientes.module");
 const clinical_governance_module_1 = require("../clinical-governance/clinical-governance.module");
+const openai_module_1 = require("../ai/openai.module");
 const charles_controller_1 = require("./charles.controller");
 const charles_service_1 = require("./charles.service");
 let CharlesModule = class CharlesModule {
@@ -25,6 +26,7 @@ exports.CharlesModule = CharlesModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([anamnese_entity_1.Anamnese, evolucao_entity_1.Evolucao, laudo_entity_1.Laudo]),
             pacientes_module_1.PacientesModule,
             clinical_governance_module_1.ClinicalGovernanceModule,
+            openai_module_1.OpenAiModule,
         ],
         controllers: [charles_controller_1.CharlesController],
         providers: [charles_service_1.CharlesService],

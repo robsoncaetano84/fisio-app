@@ -659,6 +659,16 @@ export class AtividadesService {
     return trimmed.slice(0, maxLen);
   }
 
+  private getPositiveIntegerEnv(
+    key: string,
+    fallback: number,
+    max: number,
+  ): number {
+    const parsed = Number.parseInt(String(process.env[key] || ''), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return Math.min(parsed, max);
+  }
+
   private buildRuleSuggestion(
     dto: GenerateAtividadeAiDto,
     anamnese: Anamnese | null,
@@ -744,7 +754,12 @@ ${JSON.stringify(input, null, 2)}
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutMs = this.getPositiveIntegerEnv(
+        'OPENAI_ATIVIDADE_TIMEOUT_MS',
+        8000,
+        120000,
+      );
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {

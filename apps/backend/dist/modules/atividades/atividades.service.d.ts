@@ -76,6 +76,7 @@ export declare class AtividadesService {
     private getAgeInYears;
     private extractJsonObject;
     private sanitizeText;
+    private getPositiveIntegerEnv;
     private buildRuleSuggestion;
     private generateWithOpenAI;
     private getDefaultBibliographicReferences;
