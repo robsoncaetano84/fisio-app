@@ -969,11 +969,11 @@ const inferRegionFromAnamnese = (
   if (text.includes("torac")) return "TORACICA";
   if (text.includes("lomb")) return "LOMBAR";
   if (text.includes("sacro") || text.includes("iliac")) return "SACROILIACA";
-  if (text.includes("quadril") || text.includes("coxo") || text.includes("coxa")) return "QUADRIL";
+  if (text.includes("quadril") || text.includes("coxo") || text.includes("glute") || text.includes("coxa")) return "QUADRIL";
   if (text.includes("joelho") || text.includes("patel") || text.includes("poplit")) return "JOELHO";
   if (text.includes("tornoz") || text.includes("pe ")) return "TORNOZELO_PE";
   if (text.includes("ombro")) return "OMBRO";
-  if (text.includes("cotovelo")) return "COTOVELO";
+  if (text.includes("cotovelo") || text.includes("antebraco")) return "COTOVELO";
   if (text.includes("punho") || text.includes("mao")) return "PUNHO_MAO";
   return null;
 };

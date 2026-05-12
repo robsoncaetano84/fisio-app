@@ -1,105 +1,40 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
-  ImageBackground,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, {
-  ClipPath,
-  Defs,
-  Ellipse,
-  G,
-  Image as SvgImage,
-  Path,
-  Rect,
-} from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import { AreaAfetada, Sexo } from "../../types";
 import {
-  BODY_HALF_WIDTH,
-  BODY_MAP_DIMENSIONS,
-  BODY_REGION_MASKS_BY_VARIANT,
-  BODY_VIEWBOX,
-  BodyMapMask,
-  BodyMapShape,
-  BodySide,
-  BodyVariant,
-  BodyView,
-} from "./BodyMapMasks";
+  BodyMapPoint,
+  BodyMapPointOverrides,
+  BodySex,
+  SelectedBodyRegion,
+  bodyMapPointKey,
+  getBodyMapPoints,
+} from "./body-map-points.config";
+import { BodyMapSide } from "./BodyMapSide";
 
 interface BodyMapProps {
-  selectedAreas: AreaAfetada[];
-  onAreasChange: (areas: AreaAfetada[]) => void;
+  selectedAreas?: AreaAfetada[];
+  onAreasChange?: (areas: AreaAfetada[]) => void;
   sexo?: Sexo | string | null;
+  sex?: BodySex;
+  selectedRegions?: SelectedBodyRegion[];
+  onChange?: (regions: SelectedBodyRegion[]) => void;
+  multiple?: boolean;
+  disabled?: boolean;
+  editable?: boolean;
 }
 
-const BODY_MAP_IMAGES = {
+const BODY_MAP_COMBINED_IMAGES = {
   masculino: require("../../../assets/body-map/masculino-frente-costas-sem-faixa.png"),
   feminino: require("../../../assets/body-map/feminino-frente-costas-sem-faixa.png"),
-};
-
-const BODY_MAP_RED_IMAGES = {
-  masculino: require("../../../assets/body-map/masculino-vermelho-frente-costas-sem-faixa.png"),
-  feminino: require("../../../assets/body-map/feminino-vermelho-frente-costas-sem-faixa.png"),
-};
-
-const BODY_MAP_EXACT_OVERLAYS: Record<BodyVariant, Record<string, number>> = {
-  masculino: {
-    anterior_punho_mao_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-punho-mao-esquerdo.png"),
-    anterior_punho_mao_direito: require("../../../assets/body-map/masculino-overlay-anterior-punho-mao-direito.png"),
-    posterior_punho_mao_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-punho-mao-esquerdo.png"),
-    posterior_punho_mao_direito: require("../../../assets/body-map/masculino-overlay-posterior-punho-mao-direito.png"),
-    combinado_punho_mao_esquerdo: require("../../../assets/body-map/masculino-overlay-punho-mao-esquerdo.png"),
-    combinado_punho_mao_direito: require("../../../assets/body-map/masculino-overlay-punho-mao-direito.png"),
-    anterior_coxa_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-coxa-esquerdo-v2.png"),
-    anterior_coxa_direito: require("../../../assets/body-map/masculino-overlay-anterior-coxa-direito-v2.png"),
-    anterior_coxofemoral_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-coxofemoral-esquerdo.png"),
-    anterior_coxofemoral_direito: require("../../../assets/body-map/masculino-overlay-anterior-coxofemoral-direito.png"),
-    posterior_coxa_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-coxa-esquerdo-v2.png"),
-    posterior_coxa_direito: require("../../../assets/body-map/masculino-overlay-posterior-coxa-direito-v2.png"),
-    posterior_coxofemoral_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-coxofemoral-esquerdo.png"),
-    posterior_coxofemoral_direito: require("../../../assets/body-map/masculino-overlay-posterior-coxofemoral-direito.png"),
-    anterior_joelho_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-joelho-esquerdo-v8.png"),
-    anterior_joelho_direito: require("../../../assets/body-map/masculino-overlay-anterior-joelho-direito-v8.png"),
-    posterior_joelho_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-joelho-esquerdo-v8.png"),
-    posterior_joelho_direito: require("../../../assets/body-map/masculino-overlay-posterior-joelho-direito-v8.png"),
-    anterior_tibial_anterior_esquerdo: require("../../../assets/body-map/masculino-overlay-anterior-tibial-anterior-esquerdo.png"),
-    anterior_tibial_anterior_direito: require("../../../assets/body-map/masculino-overlay-anterior-tibial-anterior-direito.png"),
-    posterior_panturrilha_esquerdo: require("../../../assets/body-map/masculino-overlay-posterior-panturrilha-esquerdo.png"),
-    posterior_panturrilha_direito: require("../../../assets/body-map/masculino-overlay-posterior-panturrilha-direito-v2.png"),
-    combinado_tornozelo_pe_esquerdo: require("../../../assets/body-map/masculino-overlay-tornozelo-pe-esquerdo.png"),
-    combinado_tornozelo_pe_direito: require("../../../assets/body-map/masculino-overlay-tornozelo-pe-direito.png"),
-  },
-  feminino: {
-    anterior_punho_mao_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-punho-mao-esquerdo.png"),
-    anterior_punho_mao_direito: require("../../../assets/body-map/feminino-overlay-anterior-punho-mao-direito.png"),
-    posterior_punho_mao_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-punho-mao-esquerdo.png"),
-    posterior_punho_mao_direito: require("../../../assets/body-map/feminino-overlay-posterior-punho-mao-direito.png"),
-    combinado_punho_mao_esquerdo: require("../../../assets/body-map/feminino-overlay-punho-mao-esquerdo.png"),
-    combinado_punho_mao_direito: require("../../../assets/body-map/feminino-overlay-punho-mao-direito.png"),
-    anterior_coxa_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-coxa-esquerdo-v2.png"),
-    anterior_coxa_direito: require("../../../assets/body-map/feminino-overlay-anterior-coxa-direito-v2.png"),
-    anterior_coxofemoral_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-coxofemoral-esquerdo.png"),
-    anterior_coxofemoral_direito: require("../../../assets/body-map/feminino-overlay-anterior-coxofemoral-direito.png"),
-    posterior_coxa_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-coxa-esquerdo-v2.png"),
-    posterior_coxa_direito: require("../../../assets/body-map/feminino-overlay-posterior-coxa-direito-v2.png"),
-    posterior_coxofemoral_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-coxofemoral-esquerdo.png"),
-    posterior_coxofemoral_direito: require("../../../assets/body-map/feminino-overlay-posterior-coxofemoral-direito.png"),
-    anterior_joelho_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-joelho-esquerdo-v8.png"),
-    anterior_joelho_direito: require("../../../assets/body-map/feminino-overlay-anterior-joelho-direito-v8.png"),
-    posterior_joelho_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-joelho-esquerdo-v8.png"),
-    posterior_joelho_direito: require("../../../assets/body-map/feminino-overlay-posterior-joelho-direito-v8.png"),
-    anterior_tibial_anterior_esquerdo: require("../../../assets/body-map/feminino-overlay-anterior-tibial-anterior-esquerdo.png"),
-    anterior_tibial_anterior_direito: require("../../../assets/body-map/feminino-overlay-anterior-tibial-anterior-direito.png"),
-    posterior_panturrilha_esquerdo: require("../../../assets/body-map/feminino-overlay-posterior-panturrilha-esquerdo.png"),
-    posterior_panturrilha_direito: require("../../../assets/body-map/feminino-overlay-posterior-panturrilha-direito-v2.png"),
-    combinado_tornozelo_pe_esquerdo: require("../../../assets/body-map/feminino-overlay-tornozelo-pe-esquerdo.png"),
-    combinado_tornozelo_pe_direito: require("../../../assets/body-map/feminino-overlay-tornozelo-pe-direito.png"),
-  },
 };
 
 const REGION_LABELS: Record<string, string> = {
@@ -108,13 +43,16 @@ const REGION_LABELS: Record<string, string> = {
   ombro: "Ombro",
   braco: "Braco",
   cotovelo: "Cotovelo",
+  antebraco: "Antebraco",
   punho_mao: "Punho/Mao",
   torax: "Torax",
   abdomen: "Abdomen",
   coluna_cervical: "Cervical",
   coluna_toracica: "Toracica",
   coluna_lombar: "Lombar",
+  sacro: "Sacro",
   coxofemoral: "Coxofemoral",
+  gluteo: "Gluteo",
   coxa: "Coxa",
   posterior_coxa: "Posterior coxa",
   joelho: "Joelho",
@@ -131,12 +69,15 @@ const CHAIN_ORDER = [
   "ombro",
   "braco",
   "cotovelo",
+  "antebraco",
   "punho_mao",
   "torax",
   "coluna_toracica",
   "abdomen",
   "coluna_lombar",
+  "sacro",
   "coxofemoral",
+  "gluteo",
   "coxa",
   "posterior_coxa",
   "joelho",
@@ -157,7 +98,8 @@ const SIDE_ORDER: Record<string, number> = {
   esquerdo: 2,
 };
 
-const normalizeVariant = (sexo?: Sexo | string | null): BodyVariant => {
+const normalizeSex = (sex?: BodySex, sexo?: Sexo | string | null): BodySex => {
+  if (sex) return sex;
   const normalized = String(sexo || "").toUpperCase();
   if (normalized === Sexo.FEMININO || normalized.startsWith("F")) {
     return "feminino";
@@ -165,22 +107,22 @@ const normalizeVariant = (sexo?: Sexo | string | null): BodyVariant => {
   return "masculino";
 };
 
-const normalizeAreaView = (area: AreaAfetada): BodyView =>
+const normalizeAreaView = (area: AreaAfetada) =>
   area.vista === "posterior" ? "posterior" : "anterior";
 
-const normalizeAreaSide = (area: AreaAfetada): BodySide => {
+const normalizeAreaSide = (area: AreaAfetada) => {
   if (area.lado === "esquerdo" || area.lado === "direito") return area.lado;
   return "ambos";
 };
 
+const pointSideToAreaSide = (point: BodyMapPoint): AreaAfetada["lado"] =>
+  point.side === "esquerdo" || point.side === "direito" ? point.side : "ambos";
+
 const areaKey = (area: Pick<AreaAfetada, "regiao" | "vista" | "lado">) =>
   `${area.regiao}:${area.vista || "anterior"}:${area.lado || "ambos"}`;
 
-const maskAreaKey = (mask: BodyMapMask) =>
-  `${mask.regiao}:${mask.vista}:${mask.lado}`;
-
-const clipId = (variant: BodyVariant, mask: BodyMapMask) =>
-  `body-map-${variant}-${mask.key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+const pointAreaKey = (point: BodyMapPoint) =>
+  `${point.regionKey || point.id}:${point.view}:${pointSideToAreaSide(point)}`;
 
 const sortSelectedAreas = (areas: AreaAfetada[]) =>
   [...areas].sort((a, b) => {
@@ -197,155 +139,194 @@ const sortSelectedAreas = (areas: AreaAfetada[]) =>
     return sideA - sideB;
   });
 
-const displayAreaKey = (area: AreaAfetada) =>
-  shouldAreaBehaveAsCombined(area)
-    ? `${area.regiao}:${area.lado || "ambos"}:combinado`
-    : areaKey(area);
+const sideLabel = (side?: AreaAfetada["lado"], short = false) => {
+  if (side === "ambos") return short ? "Ambos" : "Ambos";
+  if (side === "esquerdo") return short ? "Esq." : "Esquerdo";
+  return short ? "Dir." : "Direito";
+};
 
-const buildDisplayAreas = (areas: AreaAfetada[]) => {
-  const seen = new Set<string>();
-  return sortSelectedAreas(areas).filter((area) => {
-    const key = displayAreaKey(area);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+const viewLabel = (view?: AreaAfetada["vista"]) =>
+  view === "posterior" ? "costas" : "frente";
+
+const areaLabel = (area: AreaAfetada) => REGION_LABELS[area.regiao] || area.regiao;
+
+const areaMetaLabel = (area: AreaAfetada, intensity: number) =>
+  `${sideLabel(area.lado)} ${viewLabel(area.vista)} - dor ${intensity}/10`;
+
+const selectedRegionToPointKey = (region: SelectedBodyRegion) =>
+  `${region.sex}:${region.view}:${region.id}`;
+
+const pointToSelectedRegion = (point: BodyMapPoint): SelectedBodyRegion => ({
+  id: point.id,
+  label: point.label,
+  sex: point.sex,
+  view: point.view,
+  side: point.side,
+});
+
+const pointToArea = (point: BodyMapPoint): AreaAfetada => ({
+  regiao: point.regionKey || point.id,
+  lado: pointSideToAreaSide(point),
+  vista: point.view,
+  intensidade: 6,
+  observacao: "",
+});
+
+const buildSelectedPointKeys = (
+  points: BodyMapPoint[],
+  selectedAreas: AreaAfetada[],
+  selectedRegions: SelectedBodyRegion[],
+) => {
+  const keys = new Set<string>();
+  const selectedAreaKeys = new Set(selectedAreas.map(areaKey));
+
+  points.forEach((point) => {
+    if (selectedAreaKeys.has(pointAreaKey(point))) {
+      keys.add(bodyMapPointKey(point));
+    }
   });
+
+  selectedRegions.forEach((region) => keys.add(selectedRegionToPointKey(region)));
+
+  return keys;
 };
 
-const overlayOpacity = (area?: AreaAfetada) => {
-  const intensity = Math.max(1, Math.min(10, Number(area?.intensidade || 6)));
-  if (intensity >= 8) return 0.9;
-  if (intensity >= 5) return 0.78;
-  return 0.66;
-};
+const buildRegionsFromKeys = (points: BodyMapPoint[], keys: Set<string>) =>
+  points
+    .filter((point) => keys.has(bodyMapPointKey(point)))
+    .map(pointToSelectedRegion);
 
-const OVERLAY_REGION_ALIASES: Record<string, string> = {
-  popliteo: "joelho",
-  posterior_coxa: "coxa",
-};
-
-const exactOverlayKeyCandidates = (mask: BodyMapMask) => {
-  const overlayRegion = OVERLAY_REGION_ALIASES[mask.regiao] || mask.regiao;
-  const viewKey = `${mask.vista}_${overlayRegion}_${mask.lado}`;
-  const combinedKey = `combinado_${overlayRegion}_${mask.lado}`;
-
-  if (mask.regiao === "punho_mao" || mask.regiao === "tornozelo_pe") {
-    return [combinedKey, viewKey];
-  }
-
-  return [viewKey, combinedKey];
-};
-
-const exactOverlayKey = (
-  variant: BodyVariant,
-  mask: BodyMapMask,
-): string | null =>
-  exactOverlayKeyCandidates(mask).find(
-    (key) => Boolean(BODY_MAP_EXACT_OVERLAYS[variant][key]),
-  ) || null;
-
-const shouldToggleAsCombinedRegion = (mask: BodyMapMask) =>
-  mask.regiao === "punho_mao" || mask.regiao === "tornozelo_pe";
-
-const shouldAreaBehaveAsCombined = (area: AreaAfetada) =>
-  area.regiao === "punho_mao" || area.regiao === "tornozelo_pe";
-
-const sideLabel = (side?: AreaAfetada["lado"]) => {
-  if (side === "ambos") return "Ambos";
-  if (side === "esquerdo") return "Esquerdo";
-  return "Direito";
-};
-
-const areaLabel = (area: AreaAfetada) => {
-  if (area.regiao === "torax" && area.vista === "posterior") {
-    return "Costas";
-  }
-  return REGION_LABELS[area.regiao] || area.regiao;
-};
-
-const areaMetaLabel = (area: AreaAfetada, intensity: number) => {
-  const side = sideLabel(area.lado);
-  if (shouldAreaBehaveAsCombined(area)) {
-    return `${side} frente e costas - dor ${intensity}/10`;
-  }
-  return `${side} ${area.vista === "posterior" ? "costas" : "frente"} - dor ${intensity}/10`;
-};
-
-const touchPriority = (mask: BodyMapMask) => {
-  if (mask.regiao === "joelho" || mask.regiao === "popliteo") return 30;
-  if (mask.regiao === "cotovelo") return 25;
-  if (mask.regiao === "punho_mao" || mask.regiao === "tornozelo_pe") return 20;
-  if (mask.regiao === "panturrilha" || mask.regiao === "tibial_anterior") return 10;
-  return 0;
-};
-
-export function BodyMap({ selectedAreas, onAreasChange, sexo }: BodyMapProps) {
-  const variant = normalizeVariant(sexo);
-  const selectedDisplayAreas = buildDisplayAreas(selectedAreas);
-  const dimensions = BODY_MAP_DIMENSIONS[variant];
-  const regionMasks = BODY_REGION_MASKS_BY_VARIANT[variant];
-  const prioritizedTouchMasks = [...regionMasks].sort(
-    (a, b) => touchPriority(a) - touchPriority(b),
+const buildCalibrationJson = (sex: BodySex, points: BodyMapPoint[]) =>
+  JSON.stringify(
+    {
+      sex,
+      posterior: points
+        .filter((point) => point.view === "posterior")
+        .map(({ id, label, side, xPercent, yPercent, group, regionKey }) => ({
+          id,
+          label,
+          side,
+          xPercent: Number(xPercent.toFixed(2)),
+          yPercent: Number(yPercent.toFixed(2)),
+          group,
+          regionKey,
+        })),
+      anterior: points
+        .filter((point) => point.view === "anterior")
+        .map(({ id, label, side, xPercent, yPercent, group, regionKey }) => ({
+          id,
+          label,
+          side,
+          xPercent: Number(xPercent.toFixed(2)),
+          yPercent: Number(yPercent.toFixed(2)),
+          group,
+          regionKey,
+        })),
+    },
+    null,
+    2,
   );
 
-  const findArea = (mask: BodyMapMask) =>
-    selectedAreas.find((area) => areaKey(area) === maskAreaKey(mask));
+export function BodyMap({
+  selectedAreas = [],
+  onAreasChange,
+  sexo,
+  sex,
+  selectedRegions = [],
+  onChange,
+  multiple = true,
+  disabled = false,
+  editable = false,
+}: BodyMapProps) {
+  const resolvedSex = normalizeSex(sex, sexo);
+  const [runtimeOverrides, setRuntimeOverrides] = useState<BodyMapPointOverrides>({});
 
-  const toggleMask = (mask: BodyMapMask) => {
-    const targetMasks = shouldToggleAsCombinedRegion(mask)
-      ? regionMasks.filter(
-          (candidate) =>
-            candidate.regiao === mask.regiao && candidate.lado === mask.lado,
-        )
-      : [mask];
-    const targetKeys = new Set(targetMasks.map(maskAreaKey));
-    const allTargetsSelected = targetMasks.every((candidate) => findArea(candidate));
+  const posteriorPoints = useMemo(
+    () => getBodyMapPoints(resolvedSex, "posterior", runtimeOverrides),
+    [resolvedSex, runtimeOverrides],
+  );
+  const anteriorPoints = useMemo(
+    () => getBodyMapPoints(resolvedSex, "anterior", runtimeOverrides),
+    [resolvedSex, runtimeOverrides],
+  );
+  const allPoints = useMemo(
+    () => [...posteriorPoints, ...anteriorPoints],
+    [posteriorPoints, anteriorPoints],
+  );
 
-    if (allTargetsSelected) {
-      onAreasChange(
-        selectedAreas.filter((area) => !targetKeys.has(areaKey(area))),
-      );
-      return;
+  const selectedPointKeys = useMemo(
+    () => buildSelectedPointKeys(allPoints, selectedAreas, selectedRegions),
+    [allPoints, selectedAreas, selectedRegions],
+  );
+
+  const selectedDisplayAreas = useMemo(
+    () => sortSelectedAreas(selectedAreas),
+    [selectedAreas],
+  );
+
+  const emitRegionChange = (nextPointKeys: Set<string>) => {
+    onChange?.(buildRegionsFromKeys(allPoints, nextPointKeys));
+  };
+
+  const togglePoint = (point: BodyMapPoint) => {
+    if (disabled) return;
+
+    const targetPointKey = bodyMapPointKey(point);
+    const targetAreaKey = pointAreaKey(point);
+    const isSelected = selectedPointKeys.has(targetPointKey);
+    const nextPointKeys = multiple ? new Set(selectedPointKeys) : new Set<string>();
+
+    if (isSelected) {
+      nextPointKeys.delete(targetPointKey);
+    } else {
+      nextPointKeys.add(targetPointKey);
     }
 
-    const existingKeys = new Set(selectedAreas.map(areaKey));
-    const nextAreas: AreaAfetada[] = targetMasks
-      .filter((candidate) => !existingKeys.has(maskAreaKey(candidate)))
-      .map((candidate) => ({
-        regiao: candidate.regiao,
-        lado: candidate.lado,
-        vista: candidate.vista,
-        intensidade: 6,
-        observacao: "",
-      }));
+    if (onAreasChange) {
+      if (!multiple) {
+        onAreasChange(isSelected ? [] : [pointToArea(point)]);
+      } else if (isSelected) {
+        onAreasChange(selectedAreas.filter((area) => areaKey(area) !== targetAreaKey));
+      } else {
+        onAreasChange([...selectedAreas, pointToArea(point)]);
+      }
+    }
 
-    onAreasChange([...selectedAreas, ...nextAreas]);
+    emitRegionChange(nextPointKeys);
+  };
+
+  const movePoint = (point: BodyMapPoint, xPercent: number, yPercent: number) => {
+    if (!editable) return;
+    setRuntimeOverrides((current) => ({
+      ...current,
+      [point.sex]: {
+        ...current[point.sex],
+        [point.view]: {
+          ...current[point.sex]?.[point.view],
+          [point.id]: {
+            ...current[point.sex]?.[point.view]?.[point.id],
+            xPercent,
+            yPercent,
+          },
+        },
+      },
+    }));
   };
 
   const removeArea = (selectedKey: string) => {
-    const selectedArea = selectedAreas.find((area) => areaKey(area) === selectedKey);
-
-    if (selectedArea && shouldAreaBehaveAsCombined(selectedArea)) {
-      onAreasChange(
-        selectedAreas.filter(
-          (area) =>
-            area.regiao !== selectedArea.regiao || area.lado !== selectedArea.lado,
-        ),
-      );
-      return;
+    onAreasChange?.(selectedAreas.filter((area) => areaKey(area) !== selectedKey));
+    const nextPointKeys = new Set(selectedPointKeys);
+    const point = allPoints.find((candidate) => pointAreaKey(candidate) === selectedKey);
+    if (point) {
+      nextPointKeys.delete(bodyMapPointKey(point));
     }
-
-    onAreasChange(selectedAreas.filter((area) => areaKey(area) !== selectedKey));
+    emitRegionChange(nextPointKeys);
   };
 
   const changeIntensity = (selectedKey: string, delta: number) => {
-    const selectedArea = selectedAreas.find((area) => areaKey(area) === selectedKey);
-    onAreasChange(
+    onAreasChange?.(
       selectedAreas.map((area) => {
-        const shouldUpdate = selectedArea && shouldAreaBehaveAsCombined(selectedArea)
-          ? area.regiao === selectedArea.regiao && area.lado === selectedArea.lado
-          : areaKey(area) === selectedKey;
-        if (!shouldUpdate) return area;
+        if (areaKey(area) !== selectedKey) return area;
         const next = Math.max(1, Math.min(10, Number(area.intensidade || 6) + delta));
         return { ...area, intensidade: next };
       }),
@@ -353,149 +334,60 @@ export function BodyMap({ selectedAreas, onAreasChange, sexo }: BodyMapProps) {
   };
 
   const changeObservation = (selectedKey: string, observacao: string) => {
-    const selectedArea = selectedAreas.find((area) => areaKey(area) === selectedKey);
-    onAreasChange(
-      selectedAreas.map((area) => {
-        const shouldUpdate = selectedArea && shouldAreaBehaveAsCombined(selectedArea)
-          ? area.regiao === selectedArea.regiao && area.lado === selectedArea.lado
-          : areaKey(area) === selectedKey;
-        return shouldUpdate ? { ...area, observacao } : area;
-      }),
+    onAreasChange?.(
+      selectedAreas.map((area) =>
+        areaKey(area) === selectedKey ? { ...area, observacao } : area,
+      ),
     );
   };
 
-  const renderShape = (
-    shape: BodyMapShape,
-    key: string,
-    props: Record<string, number | string | (() => void)>,
-  ) => {
-    if (shape.shape === "ellipse") {
-      return <Ellipse key={key} {...shape.props} {...props} />;
-    }
-    if (shape.shape === "path") {
-      return <Path key={key} {...shape.props} {...props} />;
-    }
-    return <Rect key={key} {...shape.props} {...props} />;
-  };
-
-  const selectedMasks = regionMasks.filter((mask) => Boolean(findArea(mask)));
-  const selectedExactOverlayKeys = Array.from(
-    new Set(
-      selectedMasks
-        .map((mask) => exactOverlayKey(variant, mask))
-        .filter((key): key is string => Boolean(key)),
-    ),
-  );
-  const selectedFallbackMasks = selectedMasks.filter(
-    (mask) => !exactOverlayKey(variant, mask),
+  const calibrationJson = useMemo(
+    () => buildCalibrationJson(resolvedSex, allPoints),
+    [allPoints, resolvedSex],
   );
 
-  const renderClipPath = (mask: BodyMapMask) => {
-    const xOffset = mask.vista === "anterior" ? 0 : BODY_HALF_WIDTH;
-    const clipShapeProps = {
-      fill: "#000000",
-      stroke: "transparent",
-      strokeWidth: 0,
-    };
-
-    return (
-      <ClipPath key={`clip-${mask.key}`} id={clipId(variant, mask)}>
-        <G transform={`translate(${xOffset} 0)`}>
-          {mask.visual.map((shape, index) =>
-            renderShape(shape, `${mask.key}-clip-${index}`, clipShapeProps),
-          )}
-        </G>
-      </ClipPath>
-    );
-  };
-
-  const renderRedOverlay = (mask: BodyMapMask) => {
-    const area = findArea(mask);
-    if (!area) return null;
-
-    return (
-      <SvgImage
-        key={`overlay-${mask.key}`}
-        href={BODY_MAP_RED_IMAGES[variant]}
-        x={0}
-        y={0}
-        width={BODY_VIEWBOX.width}
-        height={BODY_VIEWBOX.height}
-        preserveAspectRatio="none"
-        clipPath={`url(#${clipId(variant, mask)})`}
-        opacity={overlayOpacity(area)}
-      />
-    );
-  };
-
-  const renderExactOverlay = (overlayKey: string) => {
-    const source = BODY_MAP_EXACT_OVERLAYS[variant][overlayKey];
-    if (!source) return null;
-
-    return (
-      <SvgImage
-        key={`exact-overlay-${overlayKey}`}
-        href={source}
-        x={0}
-        y={0}
-        width={BODY_VIEWBOX.width}
-        height={BODY_VIEWBOX.height}
-        preserveAspectRatio="none"
-        opacity={1}
-      />
-    );
-  };
-
-  const renderTouchTarget = (mask: BodyMapMask) => {
-    const xOffset = mask.vista === "anterior" ? 0 : BODY_HALF_WIDTH;
-    const commonProps = {
-      stroke: "transparent",
-      strokeWidth: 0,
-      fill: "rgba(255,255,255,0.01)",
-      fillOpacity: 0.01,
-      onPress: () => toggleMask(mask),
-    };
-
-    return (
-      <G key={`touch-${mask.key}`} transform={`translate(${xOffset} 0)`}>
-        {mask.touch.map((shape, index) =>
-          renderShape(shape, `${mask.key}-touch-${index}`, commonProps),
-        )}
-      </G>
-    );
+  const exportCalibration = () => {
+    if (Platform.OS === "web") {
+      const maybeNavigator = globalThis.navigator as
+        | (Navigator & { clipboard?: { writeText: (value: string) => Promise<void> } })
+        | undefined;
+      maybeNavigator?.clipboard?.writeText(calibrationJson).catch(() => undefined);
+    }
+    console.log(calibrationJson);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mapa corporal</Text>
       <Text style={styles.subtitle}>
-        Toque na regiao para marcar dor e intensidade.
+        Toque nos pontos para marcar dor e intensidade.
       </Text>
 
-      <View
-        style={[
-          styles.imageFrame,
-          { aspectRatio: dimensions.width / dimensions.height },
-        ]}
-      >
-        <ImageBackground
-          source={BODY_MAP_IMAGES[variant]}
-          resizeMode="contain"
-          style={styles.bodyImage}
-          imageStyle={styles.bodyImageAsset}
-        >
-          <Svg
-            viewBox={`0 0 ${BODY_VIEWBOX.width} ${BODY_VIEWBOX.height}`}
-            width="100%"
-            height="100%"
-            style={styles.touchLayer}
-          >
-            <Defs>{selectedFallbackMasks.map(renderClipPath)}</Defs>
-            {selectedFallbackMasks.map(renderRedOverlay)}
-            {selectedExactOverlayKeys.map(renderExactOverlay)}
-            {prioritizedTouchMasks.map(renderTouchTarget)}
-          </Svg>
-        </ImageBackground>
+      <View style={styles.mapSurface}>
+        <BodyMapSide
+          sex={resolvedSex}
+          view="anterior"
+          source={BODY_MAP_COMBINED_IMAGES[resolvedSex]}
+          imageHalf="left"
+          points={anteriorPoints}
+          selectedKeys={selectedPointKeys}
+          disabled={disabled}
+          editable={editable}
+          onTogglePoint={togglePoint}
+          onMovePoint={movePoint}
+        />
+        <BodyMapSide
+          sex={resolvedSex}
+          view="posterior"
+          source={BODY_MAP_COMBINED_IMAGES[resolvedSex]}
+          imageHalf="right"
+          points={posteriorPoints}
+          selectedKeys={selectedPointKeys}
+          disabled={disabled}
+          editable={editable}
+          onTogglePoint={togglePoint}
+          onMovePoint={movePoint}
+        />
       </View>
 
       {selectedDisplayAreas.length > 0 && (
@@ -508,42 +400,50 @@ export function BodyMap({ selectedAreas, onAreasChange, sexo }: BodyMapProps) {
               const selectedKey = areaKey(area);
               const intensity = Number(area.intensidade || 6);
               return (
-                <View key={displayAreaKey(area)} style={styles.selectedChip}>
+                <View key={selectedKey} style={styles.selectedChip}>
                   <View style={styles.selectedChipHeader}>
                     <View style={styles.chipTextBlock}>
-                      <Text style={styles.selectedChipText}>
-                        {areaLabel(area)}
-                      </Text>
+                      <Text style={styles.selectedChipText}>{areaLabel(area)}</Text>
                       <Text style={styles.selectedChipMeta}>
                         {areaMetaLabel(area, intensity)}
                       </Text>
                     </View>
                     <View style={styles.intensityControls}>
                       <TouchableOpacity
-                        style={styles.intensityButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Diminuir dor em ${areaLabel(area)}`}
+                        disabled={disabled}
+                        style={[styles.intensityButton, disabled && styles.disabledControl]}
                         onPress={() => changeIntensity(selectedKey, -1)}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="remove" size={20} color={COLORS.white} />
+                        <Ionicons name="remove" size={22} color={COLORS.white} />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.intensityButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Aumentar dor em ${areaLabel(area)}`}
+                        disabled={disabled}
+                        style={[styles.intensityButton, disabled && styles.disabledControl]}
                         onPress={() => changeIntensity(selectedKey, 1)}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="add" size={20} color={COLORS.white} />
+                        <Ionicons name="add" size={22} color={COLORS.white} />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.removeButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remover ${areaLabel(area)}`}
+                        disabled={disabled}
+                        style={[styles.removeButton, disabled && styles.disabledControl]}
                         onPress={() => removeArea(selectedKey)}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="close" size={20} color={COLORS.white} />
+                        <Ionicons name="close" size={22} color={COLORS.white} />
                       </TouchableOpacity>
                     </View>
                   </View>
                   <TextInput
                     value={area.observacao || ""}
+                    editable={!disabled}
                     onChangeText={(value) => changeObservation(selectedKey, value)}
                     placeholder="Observacao clinica da area"
                     placeholderTextColor="rgba(255,255,255,0.72)"
@@ -554,6 +454,34 @@ export function BodyMap({ selectedAreas, onAreasChange, sexo }: BodyMapProps) {
               );
             })}
           </View>
+        </View>
+      )}
+
+      {editable && (
+        <View style={styles.calibrationPanel}>
+          <View style={styles.calibrationHeader}>
+            <Text style={styles.calibrationTitle}>Calibracao dos pontos</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Copiar JSON de calibracao"
+              style={styles.exportButton}
+              onPress={exportCalibration}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="copy-outline" size={18} color={COLORS.white} />
+              <Text style={styles.exportButtonText}>Copiar JSON</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.calibrationHint}>
+            Arraste um ponto para ajustar xPercent/yPercent. O JSON tambem e enviado
+            ao console.
+          </Text>
+          <TextInput
+            value={calibrationJson}
+            editable={false}
+            multiline
+            style={styles.calibrationOutput}
+          />
         </View>
       )}
     </View>
@@ -575,27 +503,16 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
   },
-  imageFrame: {
+  mapSurface: {
     width: "100%",
+    flexDirection: "row",
+    gap: SPACING.xs,
+    padding: SPACING.xs,
     overflow: "hidden",
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.gray200,
     borderRadius: BORDER_RADIUS.md,
-  },
-  bodyImage: {
-    width: "100%",
-    height: "100%",
-  },
-  bodyImageAsset: {
-    borderRadius: BORDER_RADIUS.md,
-  },
-  touchLayer: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
   },
   selectedContainer: {
     marginTop: SPACING.md,
@@ -647,20 +564,23 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   intensityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.22)",
   },
   removeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.28)",
+  },
+  disabledControl: {
+    opacity: 0.45,
   },
   observationInput: {
     minHeight: 44,
@@ -671,6 +591,57 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.16)",
     color: COLORS.white,
     fontSize: FONTS.sizes.sm,
+    textAlignVertical: "top",
+  },
+  calibrationPanel: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.gray300,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.gray50,
+    gap: SPACING.sm,
+  },
+  calibrationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
+  },
+  calibrationTitle: {
+    flex: 1,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  calibrationHint: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+  },
+  exportButton: {
+    minHeight: 36,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    backgroundColor: COLORS.secondary,
+  },
+  exportButtonText: {
+    color: COLORS.white,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  calibrationOutput: {
+    minHeight: 150,
+    maxHeight: 240,
+    borderWidth: 1,
+    borderColor: COLORS.gray300,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.white,
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
     textAlignVertical: "top",
   },
 });

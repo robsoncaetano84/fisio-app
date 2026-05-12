@@ -32,11 +32,11 @@ const REGION_INFERENCE_RULES: Array<{
   { regex: /(torac|torax)/, region: 'TORACICA' },
   { regex: /(lomb|abdomen)/, region: 'LOMBAR' },
   { regex: /(sacro|iliac|pelve)/, region: 'SACROILIACA' },
-  { regex: /(quadril|coxa)/, region: 'QUADRIL' },
+  { regex: /(quadril|glute|coxa)/, region: 'QUADRIL' },
   { regex: /(joelho|poplit)/, region: 'JOELHO' },
   { regex: /(tornoz|pe\b|pé)/, region: 'TORNOZELO_PE' },
   { regex: /(ombro|braco|braço)/, region: 'OMBRO' },
-  { regex: /(cotovelo)/, region: 'COTOVELO' },
+  { regex: /(cotovelo|antebraco|antebraço)/, region: 'COTOVELO' },
   { regex: /(punho|mao|mão)/, region: 'PUNHO_MAO' },
 ];
 
@@ -599,7 +599,7 @@ export class CharlesService {
 
     const regiaoKey = regioes.join(' ').toLowerCase();
     let cadeiaProvavel: string | null = null;
-    if (/(lombar|sacroiliaca|quadril|joelho|tornozelo_pe)/.test(regiaoKey)) {
+    if (/(lombar|sacro|sacroiliaca|quadril|gluteo|joelho|tornozelo_pe)/.test(regiaoKey)) {
       cadeiaProvavel = 'CADEIA_LOWER';
     } else if (/(cervical|ombro|cotovelo|punho_mao|toracica)/.test(regiaoKey)) {
       cadeiaProvavel = 'CADEIA_UPPER';

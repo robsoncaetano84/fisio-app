@@ -32,6 +32,7 @@ const REGION_KEYWORDS: Array<{ keyword: string; region: ClinicalRegion }> = [
   { keyword: "sacro", region: "SACROILIACA" },
   { keyword: "iliac", region: "SACROILIACA" },
   { keyword: "pelve", region: "SACROILIACA" },
+  { keyword: "glute", region: "QUADRIL" },
   { keyword: "quadril", region: "QUADRIL" },
   { keyword: "coxa", region: "QUADRIL" },
   { keyword: "joelho", region: "JOELHO" },
@@ -41,6 +42,7 @@ const REGION_KEYWORDS: Array<{ keyword: string; region: ClinicalRegion }> = [
   { keyword: "ombro", region: "OMBRO" },
   { keyword: "braco", region: "OMBRO" },
   { keyword: "cotovelo", region: "COTOVELO" },
+  { keyword: "antebraco", region: "COTOVELO" },
   { keyword: "punho", region: "PUNHO_MAO" },
   { keyword: "mao", region: "PUNHO_MAO" },
 ];
@@ -52,8 +54,10 @@ const AREA_REGION_MAP: Record<string, ClinicalRegion> = {
   torax: "TORACICA",
   coluna_toracica: "TORACICA",
   coluna_lombar: "LOMBAR",
+  sacro: "SACROILIACA",
   abdomen: "LOMBAR",
   quadril: "QUADRIL",
+  gluteo: "QUADRIL",
   coxa: "QUADRIL",
   posterior_coxa: "QUADRIL",
   joelho: "JOELHO",
@@ -64,6 +68,7 @@ const AREA_REGION_MAP: Record<string, ClinicalRegion> = {
   ombro: "OMBRO",
   braco: "OMBRO",
   cotovelo: "COTOVELO",
+  antebraco: "COTOVELO",
   punho_mao: "PUNHO_MAO",
 };
 
