@@ -353,7 +353,6 @@ export function BodyMap({
         | undefined;
       maybeNavigator?.clipboard?.writeText(calibrationJson).catch(() => undefined);
     }
-    console.log(calibrationJson);
   };
 
   return (

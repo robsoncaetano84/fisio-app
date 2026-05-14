@@ -35,17 +35,6 @@ export type BodyMapPointOverrides = Partial<
   Record<BodySex, Partial<Record<BodyView, Record<string, BodyMapPointOverride>>>>
 >;
 
-export const EXPECTED_BODY_MAP_ASSETS = {
-  masculino: {
-    anterior: "src/assets/body-map/matriz-masculino-anterior-centralizada.png",
-    posterior: "src/assets/body-map/matriz-masculino-posterior-centralizada.png",
-  },
-  feminino: {
-    anterior: "src/assets/body-map/matriz-feminino-anterior-centralizada.png",
-    posterior: "src/assets/body-map/matriz-feminino-posterior-centralizada.png",
-  },
-} as const;
-
 export const BODY_MAP_PANEL_ASPECT_RATIO = 512 / 1064;
 
 const DEFAULT_VISIBLE_RADIUS = 8;

@@ -1,13 +1,10 @@
-﻿import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, extname } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { extname, join } from "node:path";
 
 const ROOT = process.argv[2] || "src";
 const EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".md"]);
-// Detect classic mojibake sequences and replacement chars.
-// Examples: "AÃ§Ã£o", "NÃ£o", "intera��es".
 const SUSPECT_REGEX =
-  /Ã[\u0080-\u00FF]|Â[\u0080-\u00FF]|â[\u0080-\u00FF]|\uFFFD/g;
-// Detect text that can leak to UI as literal unicode escapes.
+  /(?:\u00c3[\u0080-\u00ff]|\u00c2[\u0080-\u00ff]|\u00e2[\u0080-\u00ff]|\uFFFD)/g;
 const DOUBLE_ESCAPED_UNICODE_REGEX = /\\\\u00[0-9a-fA-F]{2}/g;
 
 function walk(dir, files = []) {
