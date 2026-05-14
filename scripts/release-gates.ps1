@@ -70,47 +70,50 @@ if (-not $ReportPath) {
 $results = New-Object System.Collections.Generic.List[object]
 
 Invoke-Step -Name "Mobile encoding check" -WorkingDirectory $mobileDir -Mandatory $true -Results $results -Action {
-  npm run check:encoding
+  npm.cmd run check:encoding
 }
 
 Invoke-Step -Name "Mobile validate:critical" -WorkingDirectory $mobileDir -Mandatory $true -Results $results -Action {
-  npm run validate:critical
+  npm.cmd run validate:critical
 }
 
 Invoke-Step -Name "Backend encoding check" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run check:encoding
+  npm.cmd run check:encoding
 }
 
 Invoke-Step -Name "Backend build" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run -s build
+  if (Test-Path "dist") {
+    Remove-Item -LiteralPath "dist" -Recurse -Force
+  }
+  npm.cmd run -s build
 }
 
 Invoke-Step -Name "Backend laudo spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/laudos/laudos.service.spec.ts
+  npm.cmd run test -- modules/laudos/laudos.service.spec.ts
 }
 
 Invoke-Step -Name "Backend CRM RBAC spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/crm/crm.service.spec.ts
+  npm.cmd run test -- modules/crm/crm.service.spec.ts
 }
 
 Invoke-Step -Name "Backend CRM controller sensitive spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/crm/crm.controller.spec.ts
+  npm.cmd run test -- modules/crm/crm.controller.spec.ts
 }
 
 Invoke-Step -Name "Backend governance protocol+consent spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/clinical-governance/clinical-governance.service.spec.ts
+  npm.cmd run test -- modules/clinical-governance/clinical-governance.service.spec.ts
 }
 
 Invoke-Step -Name "Backend governance controller RBAC spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/clinical-governance/clinical-governance.controller.spec.ts
+  npm.cmd run test -- modules/clinical-governance/clinical-governance.controller.spec.ts
 }
 
 Invoke-Step -Name "Backend Charles controller RBAC spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/charles/charles.controller.spec.ts
+  npm.cmd run test -- modules/charles/charles.controller.spec.ts
 }
 
 Invoke-Step -Name "Backend Charles service deterministic+assistive spec" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
-  npm run test -- modules/charles/charles.service.spec.ts
+  npm.cmd run test -- modules/charles/charles.service.spec.ts
 }
 
 if (-not $SkipSmoke) {
