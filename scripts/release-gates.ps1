@@ -69,8 +69,16 @@ if (-not $ReportPath) {
 
 $results = New-Object System.Collections.Generic.List[object]
 
+Invoke-Step -Name "Mobile encoding check" -WorkingDirectory $mobileDir -Mandatory $true -Results $results -Action {
+  npm run check:encoding
+}
+
 Invoke-Step -Name "Mobile validate:critical" -WorkingDirectory $mobileDir -Mandatory $true -Results $results -Action {
   npm run validate:critical
+}
+
+Invoke-Step -Name "Backend encoding check" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
+  npm run check:encoding
 }
 
 Invoke-Step -Name "Backend build" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
