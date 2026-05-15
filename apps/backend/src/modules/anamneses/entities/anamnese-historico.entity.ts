@@ -36,4 +36,3 @@ export class AnamneseHistorico extends BaseEntity {
   @Column({ name: 'payload', type: 'jsonb' })
   payload: Record<string, unknown>;
 }
-

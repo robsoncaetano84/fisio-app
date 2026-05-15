@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddAnamneseClinicalExtensions1778400000000
-  implements MigrationInterface
-{
+export class AddAnamneseClinicalExtensions1778400000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       DO $$
@@ -62,4 +60,3 @@ export class AddAnamneseClinicalExtensions1778400000000
     );
   }
 }
-

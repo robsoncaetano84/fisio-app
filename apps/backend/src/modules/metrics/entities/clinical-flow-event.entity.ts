@@ -11,10 +11,14 @@ export type ClinicalFlowEventType =
   | 'STAGE_OPENED'
   | 'STAGE_COMPLETED'
   | 'STAGE_ABANDONED'
-  | 'STAGE_BLOCKED';
+  | 'STAGE_BLOCKED'
+  | 'STAGE_AUTOSAVED';
 
 @Entity('clinical_flow_events')
-@Index('idx_clinical_flow_events_prof_occurred_at', ['professionalId', 'occurredAt'])
+@Index('idx_clinical_flow_events_prof_occurred_at', [
+  'professionalId',
+  'occurredAt',
+])
 @Index('idx_clinical_flow_events_prof_patient_occurred_at', [
   'professionalId',
   'patientId',
@@ -49,10 +53,19 @@ export class ClinicalFlowEvent {
   @Column({ name: 'duration_ms', type: 'int', nullable: true })
   durationMs: number | null;
 
-  @Column({ name: 'blocked_reason', type: 'varchar', length: 80, nullable: true })
+  @Column({
+    name: 'blocked_reason',
+    type: 'varchar',
+    length: 80,
+    nullable: true,
+  })
   blockedReason: string | null;
 
-  @Column({ name: 'occurred_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'occurred_at',
+    type: 'timestamptz',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   occurredAt: Date;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

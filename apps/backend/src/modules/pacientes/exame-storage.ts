@@ -24,7 +24,9 @@ const ensureLocalUploadsDir = () => {
   }
 };
 
-const parseSupabaseUri = (uri: string): { bucket: string; objectKey: string } | null => {
+const parseSupabaseUri = (
+  uri: string,
+): { bucket: string; objectKey: string } | null => {
   if (!uri.startsWith('supabase://')) {
     return null;
   }
@@ -101,7 +103,9 @@ export const persistExameFile = async (params: {
   };
 };
 
-export const readExameFile = async (caminhoArquivo: string): Promise<Buffer> => {
+export const readExameFile = async (
+  caminhoArquivo: string,
+): Promise<Buffer> => {
   const supabaseRef = parseSupabaseUri(caminhoArquivo);
   if (!supabaseRef) {
     return fs.readFile(caminhoArquivo);
@@ -109,7 +113,9 @@ export const readExameFile = async (caminhoArquivo: string): Promise<Buffer> => 
 
   const config = getSupabaseConfig();
   if (!config) {
-    throw new BadGatewayException('Storage Supabase não configurado para leitura do arquivo.');
+    throw new BadGatewayException(
+      'Storage Supabase não configurado para leitura do arquivo.',
+    );
   }
 
   const encodedKey = supabaseRef.objectKey
@@ -128,14 +134,18 @@ export const readExameFile = async (caminhoArquivo: string): Promise<Buffer> => 
 
   if (!response.ok) {
     const payload = await response.text().catch(() => '');
-    throw new BadGatewayException(`Falha ao baixar arquivo do storage: ${response.status} ${payload}`);
+    throw new BadGatewayException(
+      `Falha ao baixar arquivo do storage: ${response.status} ${payload}`,
+    );
   }
 
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 };
 
-export const deleteExameFile = async (caminhoArquivo: string): Promise<void> => {
+export const deleteExameFile = async (
+  caminhoArquivo: string,
+): Promise<void> => {
   const supabaseRef = parseSupabaseUri(caminhoArquivo);
   if (!supabaseRef) {
     await fs.unlink(caminhoArquivo).catch(() => undefined);

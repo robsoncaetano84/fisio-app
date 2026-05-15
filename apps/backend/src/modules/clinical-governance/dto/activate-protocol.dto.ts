@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class ActivateProtocolDto {
   @IsString()
@@ -15,4 +21,3 @@ export class ActivateProtocolDto {
   @IsObject()
   definition?: Record<string, any>;
 }
-

@@ -22,6 +22,10 @@ import {
   CondutaStatus,
 } from '../entities/evolucao.entity';
 
+type CreateEvolucaoValidationContext = {
+  ajustes?: string;
+};
+
 export class CreateEvolucaoDto {
   @IsNotEmpty({ message: 'ID do paciente e obrigatorio' })
   @IsUUID()
@@ -39,7 +43,7 @@ export class CreateEvolucaoDto {
   @IsString()
   objetivo?: string;
 
-  @ValidateIf((o) => !o.ajustes)
+  @ValidateIf((o: CreateEvolucaoValidationContext) => !o.ajustes)
   @IsNotEmpty({ message: 'Avaliacao clinica e obrigatoria' })
   @IsString()
   avaliacao?: string;

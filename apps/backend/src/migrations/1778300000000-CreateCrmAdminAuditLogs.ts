@@ -39,4 +39,3 @@ export class CreateCrmAdminAuditLogs1778300000000 implements MigrationInterface 
     await queryRunner.query(`DROP TABLE IF EXISTS "crm_admin_audit_logs"`);
   }
 }
-

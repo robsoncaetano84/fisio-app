@@ -9,7 +9,10 @@ import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
 import { ActivateProtocolDto } from './dto/activate-protocol.dto';
 import { LogAiSuggestionDto } from './dto/log-ai-suggestion.dto';
 import { UpsertConsentDto } from './dto/upsert-consent.dto';
-import { ClinicalAuditActionType, ClinicalAuditLog } from './entities/clinical-audit-log.entity';
+import {
+  ClinicalAuditActionType,
+  ClinicalAuditLog,
+} from './entities/clinical-audit-log.entity';
 import {
   ConsentPurpose,
   ConsentPurposeLog,
@@ -82,7 +85,9 @@ export class ClinicalGovernanceService {
       current.version === dto.version &&
       current.name.trim().toLowerCase() === dto.name.trim().toLowerCase()
     ) {
-      throw new BadRequestException('Protocolo ja ativo com mesma versao e nome');
+      throw new BadRequestException(
+        'Protocolo ja ativo com mesma versao e nome',
+      );
     }
 
     if (current) {
@@ -130,10 +135,12 @@ export class ClinicalGovernanceService {
         throw new BadRequestException('Usuario nao encontrado');
       }
 
-      const activeProtocol = await tx.getRepository(ClinicalProtocolVersion).findOne({
-        where: { isActive: true },
-        order: { activatedAt: 'DESC', createdAt: 'DESC' },
-      });
+      const activeProtocol = await tx
+        .getRepository(ClinicalProtocolVersion)
+        .findOne({
+          where: { isActive: true },
+          order: { activatedAt: 'DESC', createdAt: 'DESC' },
+        });
 
       this.applyConsentToUser(user, dto.purpose, dto.accepted, now);
       await userRepo.save(user);
@@ -163,7 +170,9 @@ export class ClinicalGovernanceService {
   }
 
   async getMyConsents(usuario: Usuario) {
-    const user = await this.usuarioRepository.findOne({ where: { id: usuario.id } });
+    const user = await this.usuarioRepository.findOne({
+      where: { id: usuario.id },
+    });
     if (!user) throw new BadRequestException('Usuario nao encontrado');
 
     const latestLogs = await this.consentRepository.find({
@@ -213,8 +222,12 @@ export class ClinicalGovernanceService {
       .orderBy('a.created_at', 'DESC')
       .take(take);
 
-    if (params.actionType) qb.andWhere('a.action_type = :actionType', { actionType: params.actionType });
-    if (params.patientId) qb.andWhere('a.patient_id = :patientId', { patientId: params.patientId });
+    if (params.actionType)
+      qb.andWhere('a.action_type = :actionType', {
+        actionType: params.actionType,
+      });
+    if (params.patientId)
+      qb.andWhere('a.patient_id = :patientId', { patientId: params.patientId });
 
     const rows = await qb.getMany();
     await this.writeAudit({
@@ -234,7 +247,11 @@ export class ClinicalGovernanceService {
 
   async getAiSuggestionSummary(
     usuario: Usuario,
-    params?: { windowDays?: number; professionalId?: string; patientId?: string },
+    params?: {
+      windowDays?: number;
+      professionalId?: string;
+      patientId?: string;
+    },
   ) {
     this.assertAdmin(usuario);
     const safeWindowDays = Number.isFinite(params?.windowDays)
@@ -247,7 +264,9 @@ export class ClinicalGovernanceService {
     const qb = this.auditRepository
       .createQueryBuilder('a')
       .where('a.created_at >= :since', { since: since.toISOString() })
-      .andWhere('a.resource_type = :resourceType', { resourceType: 'AI_SUGGESTION' })
+      .andWhere('a.resource_type = :resourceType', {
+        resourceType: 'AI_SUGGESTION',
+      })
       .andWhere('a.action IN (:...actions)', {
         actions: ['orchestrator.ai_suggestion.read', 'ai.suggestion.applied'],
       });
@@ -281,7 +300,9 @@ export class ClinicalGovernanceService {
     >();
 
     const resolveStage = (value?: string | null): StageKey => {
-      const normalized = String(value || '').trim().toUpperCase();
+      const normalized = String(value || '')
+        .trim()
+        .toUpperCase();
       if (normalized === 'EXAME_FISICO') return 'EXAME_FISICO';
       if (normalized === 'EVOLUCAO') return 'EVOLUCAO';
       if (normalized === 'LAUDO') return 'LAUDO';
@@ -290,20 +311,25 @@ export class ClinicalGovernanceService {
     };
 
     for (const row of rows) {
-      const metadata = (row.metadata || {}) as Record<string, any>;
+      const metadata = row.metadata || {};
       const stage = resolveStage(metadata.stage);
-      const suggestionType = String(metadata.suggestionType || '').toUpperCase();
+      const suggestionType = String(
+        metadata.suggestionType || '',
+      ).toUpperCase();
       const isRead = row.action === 'orchestrator.ai_suggestion.read';
       const isConfirmed =
         suggestionType.endsWith('_CONFIRMED') ||
         suggestionType.endsWith('_REVIEWED');
       const dateKey = (() => {
-        const parsed = new Date((row as any).createdAt || since);
+        const parsed = new Date(row.createdAt || since);
         const safe = Number.isNaN(parsed.getTime()) ? since : parsed;
         return safe.toISOString().slice(0, 10);
       })();
-      const timelineBucket =
-        timelineMap.get(dateKey) || { reads: 0, applied: 0, confirmed: 0 };
+      const timelineBucket = timelineMap.get(dateKey) || {
+        reads: 0,
+        applied: 0,
+        confirmed: 0,
+      };
 
       if (isRead) {
         totalReads += 1;
@@ -324,8 +350,10 @@ export class ClinicalGovernanceService {
       timelineMap.set(dateKey, timelineBucket);
     }
 
-    const adoptionRate = totalReads > 0 ? Number((totalApplied / totalReads).toFixed(4)) : 0;
-    const confirmationRate = totalApplied > 0 ? Number((totalConfirmed / totalApplied).toFixed(4)) : 0;
+    const adoptionRate =
+      totalReads > 0 ? Number((totalApplied / totalReads).toFixed(4)) : 0;
+    const confirmationRate =
+      totalApplied > 0 ? Number((totalConfirmed / totalApplied).toFixed(4)) : 0;
 
     await this.writeAudit({
       actor: usuario,
@@ -439,7 +467,8 @@ export class ClinicalGovernanceService {
   ) {
     if (purpose === 'TERMS_REQUIRED') user.consentTermsRequired = accepted;
     if (purpose === 'PRIVACY_REQUIRED') user.consentPrivacyRequired = accepted;
-    if (purpose === 'RESEARCH_OPTIONAL') user.consentResearchOptional = accepted;
+    if (purpose === 'RESEARCH_OPTIONAL')
+      user.consentResearchOptional = accepted;
     if (purpose === 'AI_OPTIONAL') user.consentAiOptional = accepted;
     if (purpose === 'PROFESSIONAL_LGPD_REQUIRED') {
       user.consentProfessionalLgpdRequired = accepted;

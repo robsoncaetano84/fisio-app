@@ -56,7 +56,11 @@ export class AddPacienteVinculoStatus1776100000000 implements MigrationInterface
       DROP COLUMN IF EXISTS "cadastro_origem"
     `);
 
-    await queryRunner.query(`DROP TYPE IF EXISTS "pacientes_vinculo_status_enum"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "pacientes_cadastro_origem_enum"`);
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "pacientes_vinculo_status_enum"`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "pacientes_cadastro_origem_enum"`,
+    );
   }
 }

@@ -41,4 +41,3 @@ export class ClinicalProtocolVersion {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

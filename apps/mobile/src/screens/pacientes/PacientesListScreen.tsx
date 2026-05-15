@@ -26,7 +26,15 @@ import { usePacienteStore } from "../../stores/pacienteStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
 import { useAuthStore } from "../../stores/authStore";
 import { useToast } from "../../components/ui";
-import { api, cachedGet, trackEvent, quickActionIcon } from "../../services";
+import {
+  api,
+  cachedGet,
+  getClinicalFlowGuard,
+  trackEvent,
+  quickActionIcon,
+  type ClinicalFlowAction,
+  type ClinicalFlowGuard,
+} from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { useQuickActions } from "../../hooks/useQuickActions";
@@ -421,19 +429,19 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
       }
 
       if (quickFilter === "PENDING") {
-        const missingLink = false;
+        const missingLink = !p.pacienteUsuarioId;
         const missingAnamnese = !hasAnamneseByPacienteId.has(p.id);
         const pendingSession = days === null || (typeof days === "number" && days > 7);
         if (!(missingLink || missingAnamnese || pendingSession)) return false;
       }
 
 
-      if (
-        quickAction &&
-        (quickAction === "EVOLUCAO" || quickAction === "EXAME_FISICO") &&
-        !hasAnamneseByPacienteId.has(p.id)
-      ) {
-        return false;
+      if (quickAction) {
+        const guard = getClinicalFlowGuard(quickAction, {
+          hasVinculoAtivo: !!p.pacienteUsuarioId,
+          hasAnamnese: hasAnamneseByPacienteId.has(p.id),
+        });
+        if (guard) return false;
       }
 
       return true;
@@ -524,19 +532,97 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
     [navigation, quickAction],
   );
 
-  const executeQuickAction = useCallback(
-    (action: PacientesListQuickAction, pacienteId: string, source: "card" | "cta") => {
-      selectPatient(action, pacienteId, source, () => clearQuickActionMode("selected")).catch(
-        () => undefined,
-      );
+  const buildClinicalFlowState = useCallback(
+    (paciente: Paciente) => ({
+      hasVinculoAtivo: !!paciente.pacienteUsuarioId,
+      hasAnamnese: hasAnamneseByPacienteId.has(paciente.id),
+    }),
+    [hasAnamneseByPacienteId],
+  );
+
+  const getClinicalFlowGuardMessage = useCallback(
+    (action: ClinicalFlowAction, guard: ClinicalFlowGuard) => {
+      if (guard.reason === "MISSING_LINK") {
+        if (action === "ANAMNESE") return t("patients.guardLinkBeforeAnamnesis");
+        if (action === "EXAME_FISICO") {
+          return t("patients.guardLinkBeforePhysicalExam");
+        }
+        return t("patients.guardLinkBeforeEvolution");
+      }
+      if (action === "EXAME_FISICO") {
+        return t("patients.guardAnamnesisBeforePhysicalExam");
+      }
+      return t("patients.guardAnamnesisBeforeEvolution");
     },
-    [clearQuickActionMode, selectPatient],
+    [t],
+  );
+
+  const redirectToClinicalFlowStep = useCallback(
+    (
+      step: ClinicalFlowGuard["redirectStep"],
+      paciente: Paciente,
+    ) => {
+      if (step === "VINCULO") {
+        navigation.navigate("PacienteForm", { pacienteId: paciente.id });
+        return;
+      }
+      if (step === "ANAMNESE") {
+        navigation.navigate("AnamneseForm", { pacienteId: paciente.id });
+        return;
+      }
+      if (step === "EXAME_FISICO") {
+        navigation.navigate("ExameFisicoForm", { pacienteId: paciente.id });
+      }
+    },
+    [navigation],
+  );
+
+  const blockClinicalFlowAction = useCallback(
+    (
+      action: PacientesListQuickAction,
+      paciente: Paciente,
+      source: "card" | "cta",
+      guard: ClinicalFlowGuard,
+    ) => {
+      showToast({
+        type: "info",
+        message: getClinicalFlowGuardMessage(action, guard),
+      });
+      trackEvent("clinical_flow_blocked", {
+        stage: action,
+        reason: guard.analyticsReason,
+        pacienteId: paciente.id,
+        source: "PacientesList",
+        selectionSource: source,
+      }).catch(() => undefined);
+      redirectToClinicalFlowStep(guard.redirectStep, paciente);
+    },
+    [getClinicalFlowGuardMessage, redirectToClinicalFlowStep, showToast],
+  );
+
+  const executeQuickAction = useCallback(
+    (action: PacientesListQuickAction, paciente: Paciente, source: "card" | "cta") => {
+      const guard = getClinicalFlowGuard(action, buildClinicalFlowState(paciente));
+      if (guard) {
+        blockClinicalFlowAction(action, paciente, source, guard);
+        return;
+      }
+      selectPatient(action, paciente.id, source, () =>
+        clearQuickActionMode("selected"),
+      ).catch(() => undefined);
+    },
+    [
+      blockClinicalFlowAction,
+      buildClinicalFlowState,
+      clearQuickActionMode,
+      selectPatient,
+    ],
   );
 
   const handlePacientePress = useCallback(
     (paciente: Paciente) => {
       if (quickAction) {
-        executeQuickAction(quickAction, paciente.id, "card");
+        executeQuickAction(quickAction, paciente, "card");
         return;
       }
       navigation.navigate("PacienteDetails", { pacienteId: paciente.id });
@@ -547,73 +633,69 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
   const handleAnamnesePress = useCallback(
     (paciente: Paciente) => {
       if (quickAction === "ANAMNESE") {
-        executeQuickAction("ANAMNESE", paciente.id, "cta");
+        executeQuickAction("ANAMNESE", paciente, "cta");
+        return;
+      }
+      const guard = getClinicalFlowGuard("ANAMNESE", buildClinicalFlowState(paciente));
+      if (guard) {
+        blockClinicalFlowAction("ANAMNESE", paciente, "cta", guard);
         return;
       }
       navigation.navigate("AnamneseForm", { pacienteId: paciente.id });
     },
-    [navigation, quickAction, executeQuickAction, showToast, t],
+    [
+      blockClinicalFlowAction,
+      buildClinicalFlowState,
+      navigation,
+      quickAction,
+      executeQuickAction,
+    ],
   );
 
   const handleEvolucaoPress = useCallback(
     (paciente: Paciente) => {
-      if (!hasAnamneseByPacienteId.has(paciente.id)) {
-        showToast({
-          type: "info",
-          message: t("patients.guardAnamnesisBeforeEvolution"),
-        });
-        trackEvent("clinical_flow_blocked", {
-          stage: "EVOLUCAO",
-          reason: "MISSING_ANAMNESE",
-          pacienteId: paciente.id,
-          source: "PacientesList",
-        }).catch(() => undefined);
+      const guard = getClinicalFlowGuard("EVOLUCAO", buildClinicalFlowState(paciente));
+      if (guard) {
+        blockClinicalFlowAction("EVOLUCAO", paciente, "cta", guard);
         return;
       }
       if (quickAction === "EVOLUCAO") {
-        executeQuickAction("EVOLUCAO", paciente.id, "cta");
+        executeQuickAction("EVOLUCAO", paciente, "cta");
         return;
       }
       navigation.navigate("EvolucaoForm", { pacienteId: paciente.id });
     },
     [
+      blockClinicalFlowAction,
+      buildClinicalFlowState,
       navigation,
       quickAction,
       executeQuickAction,
-      hasAnamneseByPacienteId,
-      showToast,
-      t,
     ],
   );
 
   const handleExameFisicoPress = useCallback(
     (paciente: Paciente) => {
-      if (!hasAnamneseByPacienteId.has(paciente.id)) {
-        showToast({
-          type: "info",
-          message: t("patients.guardAnamnesisBeforePhysicalExam"),
-        });
-        trackEvent("clinical_flow_blocked", {
-          stage: "EXAME_FISICO",
-          reason: "MISSING_ANAMNESE",
-          pacienteId: paciente.id,
-          source: "PacientesList",
-        }).catch(() => undefined);
+      const guard = getClinicalFlowGuard(
+        "EXAME_FISICO",
+        buildClinicalFlowState(paciente),
+      );
+      if (guard) {
+        blockClinicalFlowAction("EXAME_FISICO", paciente, "cta", guard);
         return;
       }
       if (quickAction === "EXAME_FISICO") {
-        executeQuickAction("EXAME_FISICO", paciente.id, "cta");
+        executeQuickAction("EXAME_FISICO", paciente, "cta");
         return;
       }
       navigation.navigate("ExameFisicoForm", { pacienteId: paciente.id });
     },
     [
+      blockClinicalFlowAction,
+      buildClinicalFlowState,
       navigation,
       quickAction,
       executeQuickAction,
-      hasAnamneseByPacienteId,
-      showToast,
-      t,
     ],
   );
 

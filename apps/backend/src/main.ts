@@ -4,7 +4,7 @@
 // ==========================================
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { NextFunction, Request, Response } from 'express';
+import { Express, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import * as fs from 'fs';
 import { randomUUID } from 'crypto';
@@ -51,7 +51,7 @@ async function bootstrap() {
   const app = httpsOptions
     ? await NestFactory.create(AppModule, { httpsOptions })
     : await NestFactory.create(AppModule);
-  const expressApp = app.getHttpAdapter().getInstance();
+  const expressApp = app.getHttpAdapter().getInstance() as Express;
 
   // Root health response for platform probes (Render checks "/" with GET/HEAD).
   expressApp.get('/', (_req: Request, res: Response) => {
@@ -89,34 +89,41 @@ async function bootstrap() {
       },
     }),
   );
-  app.use((req: Request & { requestId?: string }, res: Response, next: NextFunction) => {
-    const startedAt = Date.now();
-    const requestId =
-      (req.headers['x-request-id'] as string | undefined)?.trim() || randomUUID();
+  app.use(
+    (
+      req: Request & { requestId?: string },
+      res: Response,
+      next: NextFunction,
+    ) => {
+      const startedAt = Date.now();
+      const requestId =
+        (req.headers['x-request-id'] as string | undefined)?.trim() ||
+        randomUUID();
 
-    req.requestId = requestId;
-    res.setHeader('X-Request-Id', requestId);
+      req.requestId = requestId;
+      res.setHeader('X-Request-Id', requestId);
 
-    res.on('finish', () => {
-      const durationMs = Date.now() - startedAt;
-      const path = redactSensitiveUrl(req.originalUrl || req.url);
-      const message = `${req.method} ${path} -> ${res.statusCode} ${durationMs}ms (requestId=${requestId})`;
+      res.on('finish', () => {
+        const durationMs = Date.now() - startedAt;
+        const path = redactSensitiveUrl(req.originalUrl || req.url);
+        const message = `${req.method} ${path} -> ${res.statusCode} ${durationMs}ms (requestId=${requestId})`;
 
-      if (res.statusCode >= 500) {
-        bootstrapLogger.error(message);
-        return;
-      }
+        if (res.statusCode >= 500) {
+          bootstrapLogger.error(message);
+          return;
+        }
 
-      if (res.statusCode >= 400) {
-        bootstrapLogger.warn(message);
-        return;
-      }
+        if (res.statusCode >= 400) {
+          bootstrapLogger.warn(message);
+          return;
+        }
 
-      bootstrapLogger.log(message);
-    });
+        bootstrapLogger.log(message);
+      });
 
-    next();
-  });
+      next();
+    },
+  );
   app.enableCors({
     origin: corsOrigins && corsOrigins.length > 0 ? corsOrigins : allowAllCors,
     credentials: true,
@@ -133,4 +140,4 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

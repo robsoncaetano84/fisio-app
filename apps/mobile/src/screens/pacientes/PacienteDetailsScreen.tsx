@@ -31,9 +31,16 @@ import {
   api,
   getAuditEntries,
   getClinicalOrchestratorNextAction,
+  clinicalFlowReadinessCopyKeys,
+  getClinicalFlowGuard,
+  getClinicalFlowNextStep,
+  getClinicalFlowStageStatus,
   recordAuditAction,
   toAuditRef,
   trackEvent,
+  type ClinicalFlowAction,
+  type ClinicalFlowGuard,
+  type ClinicalFlowStageStatus,
   type ClinicalOrchestratorNextActionResponse,
 } from "../../services";
 import {
@@ -83,8 +90,6 @@ interface PacienteExameItem {
   updatedAt: string;
   downloadUrl: string;
 }
-
-type ClinicalStageStatus = "NOT_STARTED" | "IN_PROGRESS" | "DONE" | "BLOCKED";
 
 type NextBestActionCode =
   | "SEND_CHECKIN_REMINDER"
@@ -813,43 +818,58 @@ export function PacienteDetailsScreen({
   const hasLaudoPlano = !!laudoSnapshot?.id;
   const hasVinculoAtivo = !!paciente.pacienteUsuarioId;
 
-  const resolveStageStatus = (
-    done: boolean,
-    gateReady: boolean,
-  ): ClinicalStageStatus => {
-    if (done) return "DONE";
-    if (!gateReady) return "BLOCKED";
-    return "IN_PROGRESS";
-  };
+  const clinicalFlowState = useMemo(
+    () => ({
+      hasVinculoAtivo,
+      hasAnamnese,
+      hasExameFisico,
+      hasEvolucao,
+      hasLaudoPlano,
+    }),
+    [
+      hasVinculoAtivo,
+      hasAnamnese,
+      hasExameFisico,
+      hasEvolucao,
+      hasLaudoPlano,
+    ],
+  );
 
   const localClinicalFlowItems = [
     {
       key: "anamnese",
       label: "Anamnese",
-      status: resolveStageStatus(hasAnamnese, hasVinculoAtivo),
+      status: getClinicalFlowStageStatus("ANAMNESE", clinicalFlowState, {
+        requirePhysicalExamForEvolution: true,
+      }),
     },
     {
       key: "exame",
       label: "Exame físico",
-      status: resolveStageStatus(hasExameFisico, hasVinculoAtivo && hasAnamnese),
+      status: getClinicalFlowStageStatus("EXAME_FISICO", clinicalFlowState, {
+        requirePhysicalExamForEvolution: true,
+      }),
     },
     {
       key: "evolucao",
       label: "Evolução",
-      status: resolveStageStatus(
-        hasEvolucao,
-        hasVinculoAtivo && hasAnamnese && hasExameFisico,
-      ),
+      status: getClinicalFlowStageStatus("EVOLUCAO", clinicalFlowState, {
+        requirePhysicalExamForEvolution: true,
+      }),
     },
     {
       key: "laudo",
       label: "Laudo",
-      status: resolveStageStatus(hasLaudoPlano, hasVinculoAtivo && hasAnamnese),
+      status: getClinicalFlowStageStatus("LAUDO", clinicalFlowState, {
+        requirePhysicalExamForEvolution: true,
+      }),
     },
     {
       key: "plano",
       label: "Plano",
-      status: resolveStageStatus(hasLaudoPlano, hasVinculoAtivo && hasAnamnese),
+      status: getClinicalFlowStageStatus("PLANO", clinicalFlowState, {
+        requirePhysicalExamForEvolution: true,
+      }),
     },
   ] as const;
 
@@ -878,13 +898,13 @@ export function PacienteDetailsScreen({
     const items = (Object.keys(labels) as Array<keyof typeof labels>).map((key) => ({
       key,
       label: labels[key],
-      status: "NOT_STARTED" as ClinicalStageStatus,
+      status: "NOT_STARTED" as ClinicalFlowStageStatus,
     }));
 
     for (const stage of stages) {
       const mappedKey = stageKeyMap[String(stage.stage || "").toUpperCase()];
       if (!mappedKey) continue;
-      let status: ClinicalStageStatus = "NOT_STARTED";
+      let status: ClinicalFlowStageStatus = "NOT_STARTED";
       if (stage.status === "COMPLETED") status = "DONE";
       else if (stage.status === "BLOCKED") status = "BLOCKED";
       else if (mappedKey === nextKey && !orchestratorNextAction?.blocked) status = "IN_PROGRESS";
@@ -900,7 +920,74 @@ export function PacienteDetailsScreen({
       clinicalFlowItems.length) *
     100;
 
+  const getClinicalFlowGuardMessage = (
+    guard: ClinicalFlowGuard,
+  ): string => {
+    if (guard.reason === "MISSING_LINK") {
+      return guard.action === "ANAMNESE"
+        ? t("patientDetails.guardCreateLinkBeforeAnamnesis")
+        : t("patientDetails.guardCreateLinkFirst");
+    }
+    if (guard.reason === "MISSING_EXAME_FISICO") {
+      return t("patientDetails.guardPhysicalExamBeforeEvolution");
+    }
+    if (guard.action === "LAUDO" || guard.action === "PLANO") {
+      return t("patientDetails.guardLinkAndAnamnesisBeforeReport");
+    }
+    if (guard.action === "EXAME_FISICO") {
+      return t("patientDetails.guardAnamnesisBeforePhysicalExam");
+    }
+    return t("patientDetails.guardAnamnesisBeforeEvolution");
+  };
+
+  const redirectToClinicalFlowStep = (
+    step: "VINCULO" | "ANAMNESE" | "EXAME_FISICO",
+  ) => {
+    if (step === "VINCULO") {
+      navigation.navigate("PacienteForm", { pacienteId: paciente.id });
+      return;
+    }
+    if (step === "ANAMNESE") {
+      navigation.navigate("AnamneseForm", { pacienteId: paciente.id });
+      return;
+    }
+    navigation.navigate("ExameFisicoForm", { pacienteId: paciente.id });
+  };
+
+  const blockClinicalFlowAction = (
+    action: ClinicalFlowAction,
+    guard: ClinicalFlowGuard,
+  ) => {
+    trackEvent("clinical_flow_blocked", {
+      stage: action,
+      reason: guard.analyticsReason,
+      pacienteId,
+      source: "PacienteDetails",
+    }).catch(() => undefined);
+    showToast({
+      type: "error",
+      message: getClinicalFlowGuardMessage(guard),
+    });
+    if (
+      guard.redirectStep === "VINCULO" ||
+      guard.redirectStep === "ANAMNESE" ||
+      guard.redirectStep === "EXAME_FISICO"
+    ) {
+      redirectToClinicalFlowStep(guard.redirectStep);
+    }
+  };
+
+  const guardClinicalFlowAction = (action: ClinicalFlowAction): boolean => {
+    const guard = getClinicalFlowGuard(action, clinicalFlowState, {
+      requirePhysicalExamForEvolution: true,
+    });
+    if (!guard) return false;
+    blockClinicalFlowAction(action, guard);
+    return true;
+  };
+
   const handleOpenAnamnese = () => {
+    if (guardClinicalFlowAction("ANAMNESE")) return;
     trackEvent("clinical_flow_stage_opened", {
       stage: "ANAMNESE",
       pacienteId,
@@ -912,19 +999,7 @@ export function PacienteDetailsScreen({
   };
 
   const handleOpenExameFisico = () => {
-    if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "EXAME_FISICO",
-        reason: "MISSING_ANAMNESE",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("patientDetails.guardAnamnesisBeforePhysicalExam"),
-      });
-      navigation.navigate("AnamneseForm", { pacienteId: paciente.id });
-      return;
-    }
+    if (guardClinicalFlowAction("EXAME_FISICO")) return;
     trackEvent("clinical_flow_stage_opened", {
       stage: "EXAME_FISICO",
       pacienteId,
@@ -933,32 +1008,7 @@ export function PacienteDetailsScreen({
   };
 
   const handleOpenEvolucao = () => {
-    if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "EVOLUCAO",
-        reason: "MISSING_ANAMNESE",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("patientDetails.guardAnamnesisBeforeEvolution"),
-      });
-      navigation.navigate("AnamneseForm", { pacienteId: paciente.id });
-      return;
-    }
-    if (!hasExameFisico) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "EVOLUCAO",
-        reason: "MISSING_EXAME_FISICO",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("patientDetails.guardPhysicalExamBeforeEvolution"),
-      });
-      navigation.navigate("ExameFisicoForm", { pacienteId: paciente.id });
-      return;
-    }
+    if (guardClinicalFlowAction("EVOLUCAO")) return;
     trackEvent("clinical_flow_stage_opened", {
       stage: "EVOLUCAO",
       pacienteId,
@@ -970,18 +1020,7 @@ export function PacienteDetailsScreen({
   };
 
   const handleOpenLaudo = () => {
-    if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "LAUDO",
-        reason: "MISSING_ANAMNESE",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("patientDetails.guardLinkAndAnamnesisBeforeReport"),
-      });
-      return;
-    }
+    if (guardClinicalFlowAction("LAUDO")) return;
     trackEvent("clinical_flow_stage_opened", {
       stage: "LAUDO",
       pacienteId,
@@ -990,18 +1029,7 @@ export function PacienteDetailsScreen({
   };
 
   const handleOpenPlano = () => {
-    if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "PLANO",
-        reason: "MISSING_ANAMNESE",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("patientDetails.guardLinkAndAnamnesisBeforeReport"),
-      });
-      return;
-    }
+    if (guardClinicalFlowAction("PLANO")) return;
     trackEvent("clinical_flow_stage_opened", {
       stage: "PLANO",
       pacienteId,
@@ -1010,70 +1038,29 @@ export function PacienteDetailsScreen({
   };
 
   const readiness = useMemo(() => {
-    if (!hasVinculoAtivo) {
-      return {
-        title: "Paciente sem vínculo de app",
-        description:
-          "Vincule o paciente no app para liberar o fluxo clínico completo.",
-        actionLabel: "Vincular paciente",
-        action: () => navigation.navigate("PacienteForm", { pacienteId: paciente.id }),
-      };
-    }
-
-    if (!hasAnamnese) {
-      return {
-        title: "Pronto para iniciar anamnese",
-        description: "Próximo passo recomendado: preencher a anamnese.",
-        actionLabel: "Continuar fluxo · Anamnese",
-        action: handleOpenAnamnese,
-      };
-    }
-
-    if (!hasExameFisico) {
-      return {
-        title: "Pronto para exame físico",
-        description:
-          "Anamnese concluída. Próximo passo recomendado: exame físico.",
-        actionLabel: "Continuar fluxo · Exame físico",
-        action: handleOpenExameFisico,
-      };
-    }
-
-    if (!hasEvolucao) {
-      return {
-        title: "Pronto para registrar evolução",
-        description:
-          "Exame físico concluído. Próximo passo recomendado: evolução.",
-        actionLabel: "Continuar fluxo · Evolução",
-        action: handleOpenEvolucao,
-      };
-    }
-
-    if (!hasLaudoPlano) {
-      return {
-        title: "Pronto para laudo e plano",
-        description:
-          "Fluxo base concluído. Gere laudo/plano para fechar a sessão.",
-        actionLabel: "Continuar fluxo · Laudo/Plano",
-        action: handleOpenLaudo,
-      };
-    }
-
+    const nextStep = getClinicalFlowNextStep(clinicalFlowState);
+    const copy = clinicalFlowReadinessCopyKeys[nextStep];
+    const actionByStep: Record<typeof nextStep, () => void> = {
+      VINCULO: () => navigation.navigate("PacienteForm", { pacienteId: paciente.id }),
+      ANAMNESE: handleOpenAnamnese,
+      EXAME_FISICO: handleOpenExameFisico,
+      EVOLUCAO: handleOpenEvolucao,
+      LAUDO: handleOpenLaudo,
+      PLANO: handleOpenPlano,
+      MONITORAMENTO: () =>
+        navigation.navigate("PacienteAdesao", { pacienteId: paciente.id }),
+    };
     return {
-      title: "Sessão pronta para fechamento",
-      description:
-        "Fluxo clínico concluído. Revise adesão/check-ins e pendências da sessão.",
-      actionLabel: "Abrir adesão e checks",
-      action: () => navigation.navigate("PacienteAdesao", { pacienteId: paciente.id }),
+      title: t(copy.title),
+      description: t(copy.description),
+      actionLabel: t(copy.action),
+      action: actionByStep[nextStep],
     };
   }, [
-    hasVinculoAtivo,
-    hasAnamnese,
-    hasExameFisico,
-    hasEvolucao,
-    hasLaudoPlano,
+    clinicalFlowState,
     navigation,
     paciente.id,
+    t,
   ]);
 
   const adesao = useMemo(() => {

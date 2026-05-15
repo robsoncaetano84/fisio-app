@@ -101,25 +101,39 @@ describe('MetricsService', () => {
           mk('STAGE_COMPLETED', 'ANAMNESE', { durationMs: 120000 }),
           mk('STAGE_OPENED', 'EXAME_FISICO'),
           mk('STAGE_ABANDONED', 'EXAME_FISICO'),
-          mk('STAGE_BLOCKED', 'EVOLUCAO', { blockedReason: 'MISSING_ANAMNESE' }),
-          mk('STAGE_BLOCKED', 'EVOLUCAO', { blockedReason: 'MISSING_ANAMNESE' }),
-          mk('STAGE_BLOCKED', 'EXAME_FISICO', { blockedReason: 'MISSING_REQUIRED_FIELDS' }),
+          mk('STAGE_AUTOSAVED', 'EXAME_FISICO'),
+          mk('STAGE_BLOCKED', 'EVOLUCAO', {
+            blockedReason: 'MISSING_ANAMNESE',
+          }),
+          mk('STAGE_BLOCKED', 'EVOLUCAO', {
+            blockedReason: 'MISSING_ANAMNESE',
+          }),
+          mk('STAGE_BLOCKED', 'EXAME_FISICO', {
+            blockedReason: 'MISSING_REQUIRED_FIELDS',
+          }),
         ];
       }),
       count: jest.fn(async () => 0),
     };
 
     const service = makeService(repo);
-    const summary = await service.getClinicalFlowSummary('prof-1', 'USER' as never, 7);
+    const summary = await service.getClinicalFlowSummary(
+      'prof-1',
+      'USER' as never,
+      7,
+    );
 
     expect(summary.windowDays).toBe(7);
     expect(summary.opened).toBe(2);
     expect(summary.completed).toBe(1);
     expect(summary.abandoned).toBe(1);
     expect(summary.blocked).toBe(3);
+    expect(summary.autosaved).toBe(1);
     expect(summary.abandonmentRate).toBe(50);
     expect(summary.avgDurationMsByStage.ANAMNESE).toBe(120000);
     expect(summary.avgDurationMsByStage.EXAME_FISICO).toBe(0);
+    expect(summary.eventsByStage.EXAME_FISICO.autosaved).toBe(1);
+    expect(summary.eventsByStage.EVOLUCAO.blocked).toBe(2);
     expect(summary.topBlockedReasons[0]).toEqual({
       reason: 'MISSING_ANAMNESE',
       count: 2,

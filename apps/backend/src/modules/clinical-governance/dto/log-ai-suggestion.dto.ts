@@ -1,4 +1,11 @@
-import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class LogAiSuggestionDto {
   @IsString()
@@ -31,4 +38,3 @@ export class LogAiSuggestionDto {
   @MaxLength(120)
   patientId?: string;
 }
-

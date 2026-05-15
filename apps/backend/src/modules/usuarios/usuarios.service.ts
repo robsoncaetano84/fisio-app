@@ -47,7 +47,9 @@ export class UsuariosService {
     const conselhoUf = createUsuarioDto.conselhoUf?.trim().toUpperCase();
     const conselhoProf =
       createUsuarioDto.conselhoProf?.trim() ||
-      (conselhoSigla && conselhoUf ? `${conselhoSigla}-${conselhoUf}` : undefined);
+      (conselhoSigla && conselhoUf
+        ? `${conselhoSigla}-${conselhoUf}`
+        : undefined);
 
     const usuario = this.usuarioRepository.create({
       ...createUsuarioDto,
@@ -73,11 +75,11 @@ export class UsuariosService {
           ? !!createUsuarioDto.consentAiOptional
           : false,
       consentAcceptedAt:
-        ((role === UserRole.PACIENTE &&
+        (role === UserRole.PACIENTE &&
           createUsuarioDto.consentTermsRequired &&
           createUsuarioDto.consentPrivacyRequired) ||
-          (role !== UserRole.PACIENTE &&
-            createUsuarioDto.consentProfessionalLgpdRequired)) 
+        (role !== UserRole.PACIENTE &&
+          createUsuarioDto.consentProfessionalLgpdRequired)
           ? new Date()
           : null,
       consentProfessionalLgpdRequired:
@@ -205,21 +207,22 @@ export class UsuariosService {
       }
 
       if (dto.conselhoSigla !== undefined) {
-        usuario.conselhoSigla = conselhoSigla || "";
+        usuario.conselhoSigla = conselhoSigla || '';
       }
       if (dto.conselhoUf !== undefined) {
-        usuario.conselhoUf = conselhoUf || "";
+        usuario.conselhoUf = conselhoUf || '';
       }
       if (dto.registroProf !== undefined) {
-        usuario.registroProf = dto.registroProf.trim() || "";
+        usuario.registroProf = dto.registroProf.trim() || '';
       }
       if (dto.especialidade !== undefined) {
-        usuario.especialidade = dto.especialidade.trim() || "";
+        usuario.especialidade = dto.especialidade.trim() || '';
       }
 
       const finalSigla = usuario.conselhoSigla?.trim().toUpperCase();
       const finalUf = usuario.conselhoUf?.trim().toUpperCase();
-      usuario.conselhoProf = finalSigla && finalUf ? `${finalSigla}-${finalUf}` : "";
+      usuario.conselhoProf =
+        finalSigla && finalUf ? `${finalSigla}-${finalUf}` : '';
     }
 
     if (usuario.role === UserRole.PACIENTE && hasPatientConsentField) {

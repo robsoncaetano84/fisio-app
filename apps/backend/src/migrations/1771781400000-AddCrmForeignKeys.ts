@@ -104,9 +104,15 @@ export class AddCrmForeignKeys1771781400000 implements MigrationInterface {
       `ALTER TABLE "crm_tasks" DROP CONSTRAINT IF EXISTS "FK_crm_tasks_lead"`,
     );
 
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_interactions_responsavel_usuario_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_leads_responsavel_usuario_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_tasks_responsavel_usuario_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_crm_interactions_responsavel_usuario_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_crm_leads_responsavel_usuario_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_crm_tasks_responsavel_usuario_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_crm_tasks_lead_id"`);
   }
 }

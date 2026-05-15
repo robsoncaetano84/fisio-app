@@ -106,8 +106,8 @@ describe('CrmService permissions', () => {
     expect(() =>
       service.assertMasterAdminPermission(user, 'dashboard.read'),
     ).not.toThrow();
-    expect(() =>
-      service.assertMasterAdminPermission(user, 'crm.read'),
-    ).toThrow(ForbiddenException);
+    expect(() => service.assertMasterAdminPermission(user, 'crm.read')).toThrow(
+      ForbiddenException,
+    );
   });
 });

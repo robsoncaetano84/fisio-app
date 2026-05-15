@@ -99,9 +99,10 @@ export class CrmController {
         sensitiveReason,
         metadata: metadata || {},
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'unknown';
         this.logger.warn(
-          `failed_persist_crm_admin_audit action=${action} actor=${usuario.id} error=${error?.message || 'unknown'}`,
+          `failed_persist_crm_admin_audit action=${action} actor=${usuario.id} error=${message}`,
         );
       });
   }

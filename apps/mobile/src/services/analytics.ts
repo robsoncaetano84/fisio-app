@@ -92,15 +92,25 @@ type StoredAnalyticsEvent = {
 
 type ClinicalStage = "ANAMNESE" | "EXAME_FISICO" | "EVOLUCAO";
 
+type ClinicalFlowStageEventCounts = {
+  opened: number;
+  completed: number;
+  abandoned: number;
+  blocked: number;
+  autosaved: number;
+};
+
 export type ClinicalFlowSummary = {
   windowDays: number;
   opened: number;
   completed: number;
   abandoned: number;
   blocked: number;
+  autosaved: number;
   abandonmentRate: number;
   avgDurationMsByStage: Record<ClinicalStage, number>;
   topBlockedReasons: Array<{ reason: string; count: number }>;
+  eventsByStage?: Record<ClinicalStage, ClinicalFlowStageEventCounts>;
 };
 export type PatientCheckEngagementSummary = {
   windowDays: number;
@@ -113,8 +123,10 @@ const ANALYTICS_STORAGE_KEY = "analytics:events:v1";
 const ANALYTICS_MAX_EVENTS = 500;
 const REMOTE_ANALYTICS_TIMEOUT_MS = 3000;
 const REMOTE_SUMMARY_RETRY_AFTER_404_MS = 5 * 60 * 1000;
+const REMOTE_AUTOSAVE_MIN_INTERVAL_MS = 60 * 1000;
 let remoteSummaryDisabledUntil = 0;
 let remoteCheckEngagementDisabledUntil = 0;
+const autosaveRemoteSentAtByKey = new Map<string, number>();
 
 const REDACTED = "[REDACTED]";
 const MAX_SANITIZE_DEPTH = 5;
@@ -282,9 +294,28 @@ const isKnownStage = (value: unknown): value is ClinicalStage =>
 
 type RemoteClinicalFlowEvent = {
   stage: ClinicalStage;
-  eventType: "STAGE_OPENED" | "STAGE_COMPLETED" | "STAGE_ABANDONED" | "STAGE_BLOCKED";
+  eventType:
+    | "STAGE_OPENED"
+    | "STAGE_COMPLETED"
+    | "STAGE_ABANDONED"
+    | "STAGE_BLOCKED"
+    | "STAGE_AUTOSAVED";
   durationMs?: number;
   blockedReason?: string;
+};
+
+const shouldSendAutosaveRemote = (
+  stage: ClinicalStage,
+  payload: AnalyticsEnvelope,
+): boolean => {
+  const patientKey =
+    typeof payload.pacienteId === "string" ? payload.pacienteId : "unknown";
+  const key = `${stage}:${patientKey}`;
+  const now = Date.now();
+  const lastSentAt = autosaveRemoteSentAtByKey.get(key) || 0;
+  if (now - lastSentAt < REMOTE_AUTOSAVE_MIN_INTERVAL_MS) return false;
+  autosaveRemoteSentAtByKey.set(key, now);
+  return true;
 };
 
 const mapClinicalFlowEventToRemote = (
@@ -308,6 +339,13 @@ const mapClinicalFlowEventToRemote = (
         ? payload.reason.trim().slice(0, 80)
         : "UNKNOWN";
     return { stage, eventType: "STAGE_BLOCKED", blockedReason: reason };
+  }
+
+  if (
+    event === "clinical_form_autosave_saved" &&
+    shouldSendAutosaveRemote(stage, payload)
+  ) {
+    return { stage, eventType: "STAGE_AUTOSAVED" };
   }
 
   if (event === "session_completed") {
@@ -450,6 +488,30 @@ async function getLocalClinicalFlowSummary(
   let completed = 0;
   let abandoned = 0;
   let blocked = 0;
+  let autosaved = 0;
+  const eventsByStage: Record<ClinicalStage, ClinicalFlowStageEventCounts> = {
+    ANAMNESE: {
+      opened: 0,
+      completed: 0,
+      abandoned: 0,
+      blocked: 0,
+      autosaved: 0,
+    },
+    EXAME_FISICO: {
+      opened: 0,
+      completed: 0,
+      abandoned: 0,
+      blocked: 0,
+      autosaved: 0,
+    },
+    EVOLUCAO: {
+      opened: 0,
+      completed: 0,
+      abandoned: 0,
+      blocked: 0,
+      autosaved: 0,
+    },
+  };
 
   const stageDurationSums: Record<ClinicalStage, number> = {
     ANAMNESE: 0,
@@ -466,13 +528,16 @@ async function getLocalClinicalFlowSummary(
   entries.forEach((entry) => {
     const payload = entry.payload || {};
     const stage = payload.stage;
+    const stageEvents = isKnownStage(stage) ? eventsByStage[stage] : null;
 
     if (entry.event === "clinical_flow_stage_opened") {
       opened += 1;
+      if (stageEvents) stageEvents.opened += 1;
     }
 
     if (entry.event === "session_completed" && isKnownStage(stage)) {
       completed += 1;
+      eventsByStage[stage].completed += 1;
       const durationMs =
         typeof payload.durationMs === "number" && payload.durationMs >= 0
           ? Math.round(payload.durationMs)
@@ -485,15 +550,22 @@ async function getLocalClinicalFlowSummary(
 
     if (entry.event === "clinical_flow_stage_abandoned") {
       abandoned += 1;
+      if (stageEvents) stageEvents.abandoned += 1;
     }
 
     if (entry.event === "clinical_flow_blocked") {
       blocked += 1;
+      if (stageEvents) stageEvents.blocked += 1;
       const reason =
         typeof payload.reason === "string" && payload.reason.trim().length > 0
           ? payload.reason.trim()
           : "UNKNOWN";
       blockedReasons.set(reason, (blockedReasons.get(reason) || 0) + 1);
+    }
+
+    if (entry.event === "clinical_form_autosave_saved") {
+      autosaved += 1;
+      if (stageEvents) stageEvents.autosaved += 1;
     }
   });
 
@@ -529,9 +601,11 @@ async function getLocalClinicalFlowSummary(
     completed,
     abandoned,
     blocked,
+    autosaved,
     abandonmentRate,
     avgDurationMsByStage,
     topBlockedReasons,
+    eventsByStage,
   };
 }
 

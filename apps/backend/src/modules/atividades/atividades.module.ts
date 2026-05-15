@@ -10,8 +10,10 @@ import { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { AtividadesController } from './atividades.controller';
+import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
 import { AtividadesService } from './atividades.service';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
+import { OpenAiModule } from '../ai/openai.module';
 
 @Module({
   imports: [
@@ -23,9 +25,10 @@ import { NotificacoesModule } from '../notificacoes/notificacoes.module';
       Anamnese,
     ]),
     NotificacoesModule,
+    OpenAiModule,
   ],
   controllers: [AtividadesController],
-  providers: [AtividadesService],
+  providers: [AtividadesService, AtividadeAiSuggestionService],
   exports: [AtividadesService],
 })
 export class AtividadesModule {}

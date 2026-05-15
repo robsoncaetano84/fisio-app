@@ -1,4 +1,10 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateCrmAdminProfessionalDto {
   @IsOptional()
@@ -25,4 +31,3 @@ export class UpdateCrmAdminProfessionalDto {
   @IsBoolean()
   ativo?: boolean;
 }
-

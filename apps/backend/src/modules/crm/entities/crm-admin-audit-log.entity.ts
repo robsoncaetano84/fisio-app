@@ -17,10 +17,14 @@ export class CrmAdminAuditLog extends BaseEntity {
   @Column({ name: 'include_sensitive', type: 'boolean', default: false })
   includeSensitive: boolean;
 
-  @Column({ name: 'sensitive_reason', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'sensitive_reason',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   sensitiveReason: string | null;
 
   @Column({ name: 'metadata', type: 'jsonb', nullable: true })
   metadata: Record<string, unknown> | null;
 }
-

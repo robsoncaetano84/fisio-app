@@ -32,7 +32,12 @@ export class ConsentPurposeLog {
   @Column({ name: 'accepted_at', type: 'timestamp', nullable: true })
   acceptedAt: Date | null;
 
-  @Column({ name: 'protocol_version', type: 'varchar', length: 40, nullable: true })
+  @Column({
+    name: 'protocol_version',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
   protocolVersion: string | null;
 
   @Column({ type: 'varchar', length: 40, default: 'APP' })
@@ -44,4 +49,3 @@ export class ConsentPurposeLog {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

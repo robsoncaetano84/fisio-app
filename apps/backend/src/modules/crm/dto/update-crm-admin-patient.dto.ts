@@ -63,4 +63,3 @@ export class UpdateCrmAdminPatientDto {
   @IsBoolean()
   ativo?: boolean;
 }
-

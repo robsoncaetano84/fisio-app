@@ -5,6 +5,10 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
+type CountRow = {
+  total?: number | string | null;
+};
+
 @Injectable()
 export class HealthService {
   constructor(private readonly dataSource: DataSource) {}
@@ -45,15 +49,19 @@ export class HealthService {
   }
 
   async getOperationalMetrics() {
-    const [pendingRows, semAnamneseRows, semEvolucaoRows, exames24hRows] =
-      await Promise.all([
-        this.dataSource.query(`
+    const [
+      solicitacoesAnamnesePendentes,
+      pacientesSemAnamnese,
+      pacientesSemEvolucao,
+      uploadsExamesUltimas24h,
+    ] = await Promise.all([
+      this.queryCount(`
           SELECT COUNT(*)::int AS total
           FROM pacientes p
           WHERE p.ativo = true
             AND p.anamnese_solicitacao_pendente = true
         `),
-        this.dataSource.query(`
+      this.queryCount(`
           SELECT COUNT(*)::int AS total
           FROM pacientes p
           WHERE p.ativo = true
@@ -63,7 +71,7 @@ export class HealthService {
               WHERE a.paciente_id = p.id
             )
         `),
-        this.dataSource.query(`
+      this.queryCount(`
           SELECT COUNT(*)::int AS total
           FROM pacientes p
           WHERE p.ativo = true
@@ -73,21 +81,29 @@ export class HealthService {
               WHERE e.paciente_id = p.id
             )
         `),
-        this.dataSource.query(`
+      this.queryCount(`
           SELECT COUNT(*)::int AS total
           FROM paciente_exames pe
           WHERE pe.created_at >= NOW() - INTERVAL '24 hours'
         `),
-      ]);
+    ]);
 
     return {
       timestamp: new Date().toISOString(),
       metrics: {
-        solicitacoesAnamnesePendentes: Number(pendingRows?.[0]?.total || 0),
-        pacientesSemAnamnese: Number(semAnamneseRows?.[0]?.total || 0),
-        pacientesSemEvolucao: Number(semEvolucaoRows?.[0]?.total || 0),
-        uploadsExamesUltimas24h: Number(exames24hRows?.[0]?.total || 0),
+        solicitacoesAnamnesePendentes,
+        pacientesSemAnamnese,
+        pacientesSemEvolucao,
+        uploadsExamesUltimas24h,
       },
     };
+  }
+
+  private async queryCount(sql: string): Promise<number> {
+    const rows: unknown = await this.dataSource.query(sql);
+    if (!Array.isArray(rows)) return 0;
+
+    const [first] = rows as CountRow[];
+    return Number(first?.total ?? 0) || 0;
   }
 }

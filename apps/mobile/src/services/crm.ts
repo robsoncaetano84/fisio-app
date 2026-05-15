@@ -88,8 +88,22 @@ export type CrmClinicalDashboardSummary = {
       EXAME_FISICO: number;
       EVOLUCAO: number;
     };
+    openedTotal?: number;
+    abandonedTotal?: number;
     completedTotal?: number;
     blockedTotal?: number;
+    autosaveTotal?: number;
+    eventosPorEtapa?: Record<
+      "ANAMNESE" | "EXAME_FISICO" | "EVOLUCAO",
+      {
+        opened: number;
+        abandoned: number;
+        completed: number;
+        blocked: number;
+        autosaved: number;
+      }
+    >;
+    topBlockedReasons?: Array<{ reason: string; count: number }>;
   };
   filtros?: {
     professionalId?: string | null;

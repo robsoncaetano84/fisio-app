@@ -33,6 +33,32 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.prescribeActivity": "Prescrever Atividade",
   "patientDetails.recordEvolution": "Registrar Evolução",
   "patientDetails.readinessSummary": "Resumo de prontidão",
+  "patientDetails.readinessLinkTitle": "Paciente sem vínculo de app",
+  "patientDetails.readinessLinkDescription":
+    "Vincule o paciente no app para liberar o fluxo clínico completo.",
+  "patientDetails.readinessLinkAction": "Vincular paciente",
+  "patientDetails.readinessAnamnesisTitle": "Pronto para iniciar anamnese",
+  "patientDetails.readinessAnamnesisDescription":
+    "Próximo passo recomendado: preencher a anamnese.",
+  "patientDetails.readinessAnamnesisAction": "Continuar fluxo · Anamnese",
+  "patientDetails.readinessPhysicalExamTitle": "Pronto para exame físico",
+  "patientDetails.readinessPhysicalExamDescription":
+    "Anamnese concluída. Próximo passo recomendado: exame físico.",
+  "patientDetails.readinessPhysicalExamAction":
+    "Continuar fluxo · Exame físico",
+  "patientDetails.readinessEvolutionTitle": "Pronto para registrar evolução",
+  "patientDetails.readinessEvolutionDescription":
+    "Exame físico concluído. Próximo passo recomendado: evolução.",
+  "patientDetails.readinessEvolutionAction": "Continuar fluxo · Evolução",
+  "patientDetails.readinessReportPlanTitle": "Pronto para laudo e plano",
+  "patientDetails.readinessReportPlanDescription":
+    "Fluxo base concluído. Gere laudo/plano para fechar a sessão.",
+  "patientDetails.readinessReportPlanAction": "Continuar fluxo · Laudo/Plano",
+  "patientDetails.readinessPlanAction": "Continuar fluxo · Plano",
+  "patientDetails.readinessMonitoringTitle": "Sessão pronta para fechamento",
+  "patientDetails.readinessMonitoringDescription":
+    "Fluxo clínico concluído. Revise adesão/check-ins e pendências da sessão.",
+  "patientDetails.readinessMonitoringAction": "Abrir adesão e checks",
   "patientDetails.clinicalFlowSteps": "Fluxo clínico em etapas",
   "patientDetails.flowStatusDone": "Concluído",
   "patientDetails.flowStatusInProgress": "Em andamento",
@@ -145,6 +171,32 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.prescribeActivity": "Prescribe Activity",
   "patientDetails.recordEvolution": "Record Evolution",
   "patientDetails.readinessSummary": "Readiness summary",
+  "patientDetails.readinessLinkTitle": "Patient has no app link",
+  "patientDetails.readinessLinkDescription":
+    "Link the patient in the app to unlock the full clinical flow.",
+  "patientDetails.readinessLinkAction": "Link patient",
+  "patientDetails.readinessAnamnesisTitle": "Ready to start anamnesis",
+  "patientDetails.readinessAnamnesisDescription":
+    "Recommended next step: fill out the anamnesis.",
+  "patientDetails.readinessAnamnesisAction": "Continue flow · Anamnesis",
+  "patientDetails.readinessPhysicalExamTitle": "Ready for physical exam",
+  "patientDetails.readinessPhysicalExamDescription":
+    "Anamnesis completed. Recommended next step: physical exam.",
+  "patientDetails.readinessPhysicalExamAction":
+    "Continue flow · Physical exam",
+  "patientDetails.readinessEvolutionTitle": "Ready to record evolution",
+  "patientDetails.readinessEvolutionDescription":
+    "Physical exam completed. Recommended next step: evolution.",
+  "patientDetails.readinessEvolutionAction": "Continue flow · Evolution",
+  "patientDetails.readinessReportPlanTitle": "Ready for report and plan",
+  "patientDetails.readinessReportPlanDescription":
+    "Base flow completed. Generate report/plan to close the session.",
+  "patientDetails.readinessReportPlanAction": "Continue flow · Report/Plan",
+  "patientDetails.readinessPlanAction": "Continue flow · Plan",
+  "patientDetails.readinessMonitoringTitle": "Session ready for closing",
+  "patientDetails.readinessMonitoringDescription":
+    "Clinical flow completed. Review adherence/check-ins and session pending items.",
+  "patientDetails.readinessMonitoringAction": "Open adherence and checks",
   "patientDetails.clinicalFlowSteps": "Clinical flow in stages",
   "patientDetails.flowStatusDone": "Completed",
   "patientDetails.flowStatusInProgress": "In progress",
@@ -257,6 +309,32 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.prescribeActivity": "Prescribir Actividad",
   "patientDetails.recordEvolution": "Registrar Evolución",
   "patientDetails.readinessSummary": "Resumen de preparación",
+  "patientDetails.readinessLinkTitle": "Paciente sin vínculo de app",
+  "patientDetails.readinessLinkDescription":
+    "Vincula el paciente en la app para liberar el flujo clínico completo.",
+  "patientDetails.readinessLinkAction": "Vincular paciente",
+  "patientDetails.readinessAnamnesisTitle": "Listo para iniciar anamnesis",
+  "patientDetails.readinessAnamnesisDescription":
+    "Próximo paso recomendado: completar la anamnesis.",
+  "patientDetails.readinessAnamnesisAction": "Continuar flujo · Anamnesis",
+  "patientDetails.readinessPhysicalExamTitle": "Listo para examen físico",
+  "patientDetails.readinessPhysicalExamDescription":
+    "Anamnesis concluida. Próximo paso recomendado: examen físico.",
+  "patientDetails.readinessPhysicalExamAction":
+    "Continuar flujo · Examen físico",
+  "patientDetails.readinessEvolutionTitle": "Listo para registrar evolución",
+  "patientDetails.readinessEvolutionDescription":
+    "Examen físico concluido. Próximo paso recomendado: evolución.",
+  "patientDetails.readinessEvolutionAction": "Continuar flujo · Evolución",
+  "patientDetails.readinessReportPlanTitle": "Listo para informe y plan",
+  "patientDetails.readinessReportPlanDescription":
+    "Flujo base concluido. Genera informe/plan para cerrar la sesión.",
+  "patientDetails.readinessReportPlanAction": "Continuar flujo · Informe/Plan",
+  "patientDetails.readinessPlanAction": "Continuar flujo · Plan",
+  "patientDetails.readinessMonitoringTitle": "Sesión lista para cierre",
+  "patientDetails.readinessMonitoringDescription":
+    "Flujo clínico concluido. Revisa adherencia/check-ins y pendientes de la sesión.",
+  "patientDetails.readinessMonitoringAction": "Abrir adherencia y checks",
   "patientDetails.clinicalFlowSteps": "Flujo clínico por etapas",
   "patientDetails.flowStatusDone": "Completado",
   "patientDetails.flowStatusInProgress": "En curso",

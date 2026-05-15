@@ -2,7 +2,11 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // A NA MN ES ES.S ER VI CE
 // ==========================================
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Anamnese, MotivoBusca } from './entities/anamnese.entity';
@@ -29,7 +33,10 @@ export class AnamnesesService {
     createAnamneseDto: CreateAnamneseDto,
     usuarioId: string,
   ): Promise<Anamnese> {
-    await this.pacientesService.findOne(createAnamneseDto.pacienteId, usuarioId);
+    await this.pacientesService.findOne(
+      createAnamneseDto.pacienteId,
+      usuarioId,
+    );
     this.validateClinicalMinimum(createAnamneseDto);
     const anamnese = this.anamneseRepository.create(createAnamneseDto);
     const saved = await this.anamneseRepository.save(anamnese);
@@ -46,9 +53,8 @@ export class AnamnesesService {
     createAnamneseDto: Omit<CreateAnamneseDto, 'pacienteId'>,
     usuarioId: string,
   ): Promise<Anamnese> {
-    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
-      usuarioId,
-    );
+    const paciente =
+      await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
 
     this.validateClinicalMinimum(createAnamneseDto);
     const anamnese = this.anamneseRepository.create({
@@ -77,10 +83,11 @@ export class AnamnesesService {
     });
   }
 
-  async findLatestByPacienteUsuario(usuarioId: string): Promise<Anamnese | null> {
-    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
-      usuarioId,
-    );
+  async findLatestByPacienteUsuario(
+    usuarioId: string,
+  ): Promise<Anamnese | null> {
+    const paciente =
+      await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
 
     return this.anamneseRepository.findOne({
       where: { pacienteId: paciente.id },
@@ -98,9 +105,8 @@ export class AnamnesesService {
       throw new NotFoundException('Anamnese não encontrada');
     }
 
-    const isMasterAdmin = await this.pacientesService.isMasterAdminByUsuarioId(
-      usuarioId,
-    );
+    const isMasterAdmin =
+      await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
     if (!isMasterAdmin && anamnese.paciente.usuarioId !== usuarioId) {
       throw new NotFoundException('Anamnese não encontrada');
     }
@@ -112,9 +118,8 @@ export class AnamnesesService {
     id: string,
     usuarioId: string,
   ): Promise<Anamnese> {
-    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
-      usuarioId,
-    );
+    const paciente =
+      await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
 
     const anamnese = await this.anamneseRepository.findOne({
       where: { id, pacienteId: paciente.id },
@@ -183,9 +188,8 @@ export class AnamnesesService {
     usuarioId: string,
     limit = 50,
   ): Promise<AnamneseHistorico[]> {
-    const paciente = await this.pacientesService.findOrCreateSelfPacienteForUsuario(
-      usuarioId,
-    );
+    const paciente =
+      await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
     const normalizedLimit = this.normalizeLimit(limit, 50, 200);
 
     return this.anamneseHistoricoRepository.find({
@@ -203,7 +207,10 @@ export class AnamnesesService {
   }
 
   private validateClinicalMinimum(
-    payload: Partial<CreateAnamneseDto> | Partial<UpdateAnamneseDto> | Partial<Anamnese>,
+    payload:
+      | Partial<CreateAnamneseDto>
+      | Partial<UpdateAnamneseDto>
+      | Partial<Anamnese>,
   ): void {
     if (payload.motivoBusca !== MotivoBusca.SINTOMA_EXISTENTE) return;
 
@@ -211,7 +218,8 @@ export class AnamnesesService {
     if (!payload.inicioProblema) missing.push('inicioProblema');
     if (!payload.mecanismoLesao) missing.push('mecanismoLesao');
     if (!String(payload.fatorAlivio || '').trim()) missing.push('fatorAlivio');
-    if (!String(payload.fatoresPiora || '').trim()) missing.push('fatoresPiora');
+    if (!String(payload.fatoresPiora || '').trim())
+      missing.push('fatoresPiora');
 
     if (missing.length > 0) {
       throw new BadRequestException(
@@ -248,13 +256,8 @@ export class AnamnesesService {
   }
 
   private buildSnapshotPayload(anamnese: Anamnese): Record<string, unknown> {
-    const {
-      id,
-      pacienteId,
-      createdAt,
-      updatedAt,
-      ...campos
-    } = anamnese as unknown as Record<string, unknown>;
+    const { id, pacienteId, createdAt, updatedAt, ...campos } =
+      anamnese as unknown as Record<string, unknown>;
 
     return {
       anamneseId: id,
@@ -273,4 +276,3 @@ export class AnamnesesService {
     return integer;
   }
 }
-

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateLaudoExameHistorico1779300000000
-  implements MigrationInterface
-{
+export class CreateLaudoExameHistorico1779300000000 implements MigrationInterface {
   name = 'CreateLaudoExameHistorico1779300000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -73,4 +71,3 @@ export class CreateLaudoExameHistorico1779300000000
     `);
   }
 }
-

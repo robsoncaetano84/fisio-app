@@ -5,6 +5,7 @@ import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Atividade } from '../atividades/entities/atividade.entity';
 import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
 import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
+import { parseStructuredExame } from '../laudos/laudo-exame-fisico-structured.util';
 import {
   Paciente,
   PacienteVinculoStatus,
@@ -20,13 +21,51 @@ import {
 import { PatientCheckClickEvent } from './entities/patient-check-click-event.entity';
 
 const STAGES: ClinicalFlowStage[] = ['ANAMNESE', 'EXAME_FISICO', 'EVOLUCAO'];
-const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
 const STATUS_TO_EVENT_TYPE: Record<string, ClinicalFlowEventType> = {
   OPENED: 'STAGE_OPENED',
   COMPLETED: 'STAGE_COMPLETED',
   ABANDONED: 'STAGE_ABANDONED',
   BLOCKED: 'STAGE_BLOCKED',
+  AUTOSAVE: 'STAGE_AUTOSAVED',
+  AUTOSAVED: 'STAGE_AUTOSAVED',
 };
+
+type StageEventCounts = {
+  opened: number;
+  completed: number;
+  abandoned: number;
+  blocked: number;
+  autosaved: number;
+};
+
+function createEmptyStageEventCounts(): Record<
+  ClinicalFlowStage,
+  StageEventCounts
+> {
+  return {
+    ANAMNESE: {
+      opened: 0,
+      completed: 0,
+      abandoned: 0,
+      blocked: 0,
+      autosaved: 0,
+    },
+    EXAME_FISICO: {
+      opened: 0,
+      completed: 0,
+      abandoned: 0,
+      blocked: 0,
+      autosaved: 0,
+    },
+    EVOLUCAO: {
+      opened: 0,
+      completed: 0,
+      abandoned: 0,
+      blocked: 0,
+      autosaved: 0,
+    },
+  };
+}
 
 type MetricsSummaryFilters = {
   professionalId?: string;
@@ -122,6 +161,8 @@ export class MetricsService {
     let completed = 0;
     let abandoned = 0;
     let blocked = 0;
+    let autosaved = 0;
+    const eventsByStage = createEmptyStageEventCounts();
 
     const stageDurationSums: Record<ClinicalFlowStage, number> = {
       ANAMNESE: 0,
@@ -136,19 +177,32 @@ export class MetricsService {
     const blockedReasons = new Map<string, number>();
 
     entries.forEach((entry) => {
-      if (entry.eventType === 'STAGE_OPENED') opened += 1;
+      const stageEvents = eventsByStage[entry.stage];
+      if (entry.eventType === 'STAGE_OPENED') {
+        opened += 1;
+        stageEvents.opened += 1;
+      }
       if (entry.eventType === 'STAGE_COMPLETED') {
         completed += 1;
+        stageEvents.completed += 1;
         if (typeof entry.durationMs === 'number' && entry.durationMs >= 0) {
           stageDurationSums[entry.stage] += Math.round(entry.durationMs);
           stageDurationCounts[entry.stage] += 1;
         }
       }
-      if (entry.eventType === 'STAGE_ABANDONED') abandoned += 1;
+      if (entry.eventType === 'STAGE_ABANDONED') {
+        abandoned += 1;
+        stageEvents.abandoned += 1;
+      }
       if (entry.eventType === 'STAGE_BLOCKED') {
         blocked += 1;
+        stageEvents.blocked += 1;
         const reason = entry.blockedReason || 'UNKNOWN';
         blockedReasons.set(reason, (blockedReasons.get(reason) || 0) + 1);
+      }
+      if (entry.eventType === 'STAGE_AUTOSAVED') {
+        autosaved += 1;
+        stageEvents.autosaved += 1;
       }
     });
 
@@ -167,7 +221,9 @@ export class MetricsService {
           : 0,
       EVOLUCAO:
         stageDurationCounts.EVOLUCAO > 0
-          ? Math.round(stageDurationSums.EVOLUCAO / stageDurationCounts.EVOLUCAO)
+          ? Math.round(
+              stageDurationSums.EVOLUCAO / stageDurationCounts.EVOLUCAO,
+            )
           : 0,
     };
 
@@ -176,7 +232,8 @@ export class MetricsService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
 
-    const abandonmentRate = opened > 0 ? Math.round((abandoned / opened) * 100) : 0;
+    const abandonmentRate =
+      opened > 0 ? Math.round((abandoned / opened) * 100) : 0;
 
     return {
       windowDays: days,
@@ -184,9 +241,11 @@ export class MetricsService {
       completed,
       abandoned,
       blocked,
+      autosaved,
       abandonmentRate,
       avgDurationMsByStage,
       topBlockedReasons,
+      eventsByStage,
       trackedStages: STAGES,
       filters: {
         professionalId: scopedProfessionalId || null,
@@ -215,7 +274,10 @@ export class MetricsService {
     actorId: string,
     actorRole: UserRole,
     windowDays = 7,
-    filters?: Pick<MetricsSummaryFilters, 'professionalId' | 'patientId' | 'status'>,
+    filters?: Pick<
+      MetricsSummaryFilters,
+      'professionalId' | 'patientId' | 'status'
+    >,
   ) {
     const days = Number.isFinite(windowDays)
       ? Math.min(90, Math.max(1, Math.floor(windowDays)))
@@ -227,7 +289,10 @@ export class MetricsService {
       filters?.professionalId,
     );
     const patientId = String(filters?.patientId || '').trim() || undefined;
-    const status = String(filters?.status || '').trim().toUpperCase() || undefined;
+    const status =
+      String(filters?.status || '')
+        .trim()
+        .toUpperCase() || undefined;
     const scopedPatientIds = await this.resolveScopedPatientIds({
       scopedProfessionalId,
       patientId,
@@ -255,8 +320,8 @@ export class MetricsService {
           ...(scopedPatientIds
             ? { patientId: In(scopedPatientIds) }
             : patientId
-            ? { patientId }
-            : {}),
+              ? { patientId }
+              : {}),
           occurredAt: MoreThanOrEqual(since),
         },
       }),
@@ -266,8 +331,8 @@ export class MetricsService {
           ...(scopedPatientIds
             ? { pacienteId: In(scopedPatientIds) }
             : patientId
-            ? { pacienteId: patientId }
-            : {}),
+              ? { pacienteId: patientId }
+              : {}),
           createdAt: MoreThanOrEqual(since),
         },
       }),
@@ -308,7 +373,10 @@ export class MetricsService {
       filters?.professionalId,
     );
     const patientId = String(filters?.patientId || '').trim() || undefined;
-    const status = String(filters?.status || '').trim().toUpperCase() || undefined;
+    const status =
+      String(filters?.status || '')
+        .trim()
+        .toUpperCase() || undefined;
     const scopedPatientIds = await this.resolveScopedPatientIds({
       scopedProfessionalId,
       patientId,
@@ -350,7 +418,9 @@ export class MetricsService {
       qb.andWhere('paciente.id = :patientId', { patientId });
     }
     if (scopedPatientIds) {
-      qb.andWhere('paciente.id IN (:...patientIds)', { patientIds: scopedPatientIds });
+      qb.andWhere('paciente.id IN (:...patientIds)', {
+        patientIds: scopedPatientIds,
+      });
     }
     const laudos = await qb.getMany();
 
@@ -366,11 +436,13 @@ export class MetricsService {
     let totalAvaliados = 0;
 
     for (const laudo of laudos) {
-      const parsed = this.parseStructuredExame(laudo.exameFisico);
+      const parsed = parseStructuredExame(laudo.exameFisico);
       if (!parsed) continue;
       laudosComExameEstruturado += 1;
 
-      const perfil = String(parsed?.cruzamentoFinal?.perfilScoring || '').trim();
+      const perfil = String(
+        parsed?.cruzamentoFinal?.perfilScoring || '',
+      ).trim();
       if (perfil) {
         profileDist.set(perfil, (profileDist.get(perfil) || 0) + 1);
       }
@@ -435,7 +507,9 @@ export class MetricsService {
       totalAvaliados,
       totalPositivos,
       taxaPositividadeGeral:
-        totalAvaliados > 0 ? Math.round((totalPositivos / totalAvaliados) * 100) : 0,
+        totalAvaliados > 0
+          ? Math.round((totalPositivos / totalAvaliados) * 100)
+          : 0,
       porRegiao,
       topTestesPositivos,
       perfisScoring,
@@ -474,12 +548,7 @@ export class MetricsService {
         ativo: true,
         ...(scopedProfessionalId ? { usuarioId: scopedProfessionalId } : {}),
       },
-      select: [
-        'id',
-        'createdAt',
-        'pacienteUsuarioId',
-        'vinculoStatus',
-      ],
+      select: ['id', 'createdAt', 'pacienteUsuarioId', 'vinculoStatus'],
     });
     if (!pacientes.length) return [];
     const pacienteIds = pacientes.map((p) => p.id);
@@ -510,7 +579,9 @@ export class MetricsService {
       .andWhere('a.pacienteId IN (:...pacienteIds)', { pacienteIds })
       .groupBy('a.pacienteId')
       .getRawMany<{ pacienteId: string }>();
-    const hasActiveActivity = new Set(atividadesAtivas.map((r) => r.pacienteId));
+    const hasActiveActivity = new Set(
+      atividadesAtivas.map((r) => r.pacienteId),
+    );
 
     const now = Date.now();
     const activityWindowMs = Math.max(1, windowDays) * 24 * 60 * 60 * 1000;
@@ -537,24 +608,14 @@ export class MetricsService {
         (status === 'NOVO_PACIENTE' && isNovoPaciente) ||
         (status === 'AGUARDANDO_VINCULO' && aguardandoVinculo) ||
         (status === 'ANAMNESE_PENDENTE' && !hasAnamnesePaciente) ||
-        (status === 'EM_TRATAMENTO' && hasAnamnesePaciente && !tratamentoConcluido) ||
+        (status === 'EM_TRATAMENTO' &&
+          hasAnamnesePaciente &&
+          !tratamentoConcluido) ||
         (status === 'ALTA' && tratamentoConcluido);
       if (matchesStatus) {
         filteredIds.push(paciente.id);
       }
     }
     return filteredIds;
-  }
-
-  private parseStructuredExame(rawValue?: string | null): any | null {
-    const raw = String(rawValue || '').trim();
-    if (!raw.startsWith(STRUCTURED_EXAME_PREFIX)) return null;
-    const json = raw.slice(STRUCTURED_EXAME_PREFIX.length);
-    if (!json) return null;
-    try {
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
   }
 }

@@ -1,11 +1,20 @@
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 type ClinicalFlowStage = 'ANAMNESE' | 'EXAME_FISICO' | 'EVOLUCAO';
 type ClinicalFlowEventType =
   | 'STAGE_OPENED'
   | 'STAGE_COMPLETED'
   | 'STAGE_ABANDONED'
-  | 'STAGE_BLOCKED';
+  | 'STAGE_BLOCKED'
+  | 'STAGE_AUTOSAVED';
 
 export class CreateClinicalFlowEventDto {
   @IsEnum({
@@ -20,6 +29,7 @@ export class CreateClinicalFlowEventDto {
     STAGE_COMPLETED: 'STAGE_COMPLETED',
     STAGE_ABANDONED: 'STAGE_ABANDONED',
     STAGE_BLOCKED: 'STAGE_BLOCKED',
+    STAGE_AUTOSAVED: 'STAGE_AUTOSAVED',
   })
   eventType: ClinicalFlowEventType;
 

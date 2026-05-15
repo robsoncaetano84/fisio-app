@@ -10,9 +10,8 @@ config();
 
 const dbSsl = (process.env.DB_SSL || '').trim().toLowerCase() === 'true';
 const dbSslRejectUnauthorized =
-  (process.env.DB_SSL_REJECT_UNAUTHORIZED || '')
-    .trim()
-    .toLowerCase() !== 'false';
+  (process.env.DB_SSL_REJECT_UNAUTHORIZED || '').trim().toLowerCase() !==
+  'false';
 
 export default new DataSource({
   type: 'postgres',

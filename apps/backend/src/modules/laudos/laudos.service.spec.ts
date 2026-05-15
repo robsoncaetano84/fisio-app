@@ -1,239 +1,239 @@
-import { BadRequestException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { LaudoStatus } from './entities/laudo.entity';
 import { LaudosService } from './laudos.service';
 
-describe('LaudosService - structured exame validation and parsing', () => {
-  const makeService = () =>
-    new LaudosService(
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
+describe('LaudosService', () => {
+  const makeRepository = () => ({
+    findOne: jest.fn(),
+    create: jest.fn((input) => input),
+    save: jest.fn(async (input) => input),
+    remove: jest.fn(),
+  });
+
+  const makeSuggestionContext = () => ({
+    paciente: {
+      nomeCompleto: 'Maria Silva',
+      dataNascimento: new Date('1990-01-01T00:00:00.000Z'),
+      sexo: 'FEMININO',
+      profissao: 'Atleta',
+    },
+    anamneses: [],
+    evolucoes: [],
+    exames: [],
+    exameFisicoResumo: null,
+  });
+
+  const makeService = () => {
+    const laudoRepository = makeRepository();
+    const pacientesService = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'paciente-1',
+        usuarioId: 'profissional-1',
+        nomeCompleto: 'Maria Silva',
+      }),
+      isMasterAdminByUsuarioId: jest.fn(),
+    };
+    const usuariosService = {
+      findById: jest.fn(),
+    };
+    const laudoReferencesService = {
+      getSuggestedReferences: jest.fn(),
+    };
+    const laudoPdfService = {
+      buildPdfBuffer: jest.fn(),
+    };
+    const laudoAiSuggestionService = {
+      generateSuggestion: jest.fn(),
+    };
+    const laudoExameFisicoService = {
+      findLatestByPacienteId: jest.fn(),
+      registerInitial: jest.fn(),
+      registerProfessionalUpdate: jest.fn(),
+      hydrateLaudo: jest.fn(async (laudo) => laudo),
+      findHistoryByLaudoId: jest.fn(),
+    };
+    const laudoAiGenerationQuotaService = {
+      acquireDailySlot: jest.fn(),
+    };
+    const laudoClinicalContextService = {
+      buildSuggestionContext: jest
+        .fn()
+        .mockResolvedValue(makeSuggestionContext()),
+      findLatestAnamnese: jest.fn(),
+    };
+
+    const service = new LaudosService(
+      laudoRepository as any,
+      pacientesService as any,
+      usuariosService as any,
+      laudoReferencesService as any,
+      laudoPdfService as any,
+      laudoAiSuggestionService as any,
+      laudoExameFisicoService as any,
+      laudoAiGenerationQuotaService as any,
+      laudoClinicalContextService as any,
     );
 
-  const prefix = '__EXAME_FISICO_STRUCTURED_V2__';
-  const legacyPrefix = '__EXAME_FISICO_STRUCTURED_V1__';
+    return {
+      service,
+      laudoRepository,
+      pacientesService,
+      laudoAiSuggestionService,
+      laudoExameFisicoService,
+      laudoAiGenerationQuotaService,
+      laudoClinicalContextService,
+    };
+  };
 
-  const buildPayload = (overrides?: Record<string, unknown>) => ({
-    version: 2,
-    avaliacaoRegioes: [
-      {
-        regiao: 'LOMBAR',
-        titulo: 'Coluna lombar',
-        testes: [
-          { nome: 'Lasègue (SLR)', resultado: 'NEGATIVO', selecionado: true },
-          { nome: 'Slump test', resultado: 'NAO_TESTADO', selecionado: true },
-        ],
-      },
-    ],
-    redFlags: {
-      criticalTriggered: false,
-      referralDestination: '',
-      referralReason: '',
-    },
-    raciocinioClinico: {
-      origemProvavelDor: 'Origem mecânico-funcional lombar.',
-      estruturaEnvolvida: 'Complexo lombo-pélvico',
-      tipoLesao: 'Mecanica',
-      fatorBiomecanicoAssociado: 'Sobrecarga em flexão + carga',
-      relacaoComEsporte: 'Crossfit recreativo',
-    },
-    diagnosticoFuncionalIa: {
-      disfuncaoPrincipal: 'Déficit de estabilidade lombar em carga.',
-      cadeiaEnvolvida: 'Cadeia lombo-pelvica',
-    },
-    condutaIa: {
-      tecnicaManualIndicada: 'Mobilização lombar de baixa irritabilidade.',
-      ajusteArticular: 'Ajuste segmentar apenas se restrição objetiva.',
-      exercicioCorretivo: 'Estabilidade lombo-pélvica progressiva.',
-      liberacaoMiofascial: 'Liberação miofascial em cadeia posterior.',
-      progressaoEsportiva: 'Retorno progressivo por dor e função.',
-    },
-    cruzamentoFinal: {
-      hipotesePrincipal: 'Disfunção funcional lombar.',
-      hipotesesSecundarias: 'Componente neural a confirmar.',
-      inconsistencias: 'Sem inconsistências críticas.',
-      condutaDirecionada: 'Controle de dor + estabilidade + progressão.',
-      prioridade: 'MEDIA',
-      confiancaHipotese: 'MODERADA',
-      scoreEvidencia: 3,
-    },
-    ...overrides,
-  });
+  const makeLaudo = () =>
+    ({
+      id: 'laudo-1',
+      pacienteId: 'paciente-1',
+      diagnosticoFuncional: 'Diagnostico anterior',
+      condutas: 'Conduta anterior',
+      exameFisico: 'Exame fisico inicial',
+      status: LaudoStatus.VALIDADO_PROFISSIONAL,
+      validadoPorUsuarioId: 'profissional-1',
+      validadoEm: new Date('2026-01-01T00:00:00.000Z'),
+      sugestaoSource: null,
+      examesConsiderados: null,
+      examesComLeituraIa: null,
+      sugestaoGeradaEm: null,
+    }) as any;
 
-  it('does not throw for non-structured plain text exame', () => {
-    const service = makeService();
-    expect(() =>
-      (service as any).validateStructuredExameInput('texto livre de exame fisico'),
-    ).not.toThrow();
-  });
+  it('delegates laudo access scope to pacientes service', async () => {
+    const { service, laudoRepository, pacientesService } = makeService();
+    const laudo = makeLaudo();
+    laudoRepository.findOne.mockResolvedValue(laudo);
 
-  it('does not throw for malformed structured payload (fallback behavior)', () => {
-    const service = makeService();
-    expect(() =>
-      (service as any).validateStructuredExameInput(`${prefix}{invalid-json`),
-    ).not.toThrow();
-  });
-
-  it('throws when structured payload has no POSITIVO/NEGATIVO regional test', () => {
-    const service = makeService();
-    const payload = buildPayload({
-      avaliacaoRegioes: [
-        {
-          regiao: 'LOMBAR',
-          testes: [
-            { nome: 'Lasègue (SLR)', resultado: 'NAO_TESTADO' },
-            { nome: 'Slump test', resultado: 'NAO_TESTADO' },
-          ],
-        },
-      ],
-    });
-    expect(() =>
-      (service as any).validateStructuredExameInput(`${prefix}${JSON.stringify(payload)}`),
-    ).toThrow(BadRequestException);
-  });
-
-  it('does not throw when at least one regional test is POSITIVO', () => {
-    const service = makeService();
-    const payload = buildPayload({
-      avaliacaoRegioes: [
-        {
-          regiao: 'JOELHO',
-          testes: [
-            { nome: 'Lachman', resultado: 'NEGATIVO' },
-            { nome: 'Estresse em valgo', resultado: 'POSITIVO' },
-          ],
-        },
-      ],
-    });
-    expect(() =>
-      (service as any).validateStructuredExameInput(`${prefix}${JSON.stringify(payload)}`),
-    ).not.toThrow();
-  });
-
-  it('parses structured payload with valid prefix', () => {
-    const service = makeService();
-    const payload = buildPayload();
-    const parsed = (service as any).parseStructuredExame(
-      `${prefix}${JSON.stringify(payload)}`,
+    await expect(service.findOne('laudo-1', 'profissional-2')).resolves.toBe(
+      laudo,
     );
-    expect(parsed).toBeTruthy();
-    expect(parsed.version).toBe(2);
-    expect(parsed.raciocinioClinico?.tipoLesao).toBe('Mecanica');
-  });
 
-  it('keeps reading legacy structured V1 payloads', () => {
-    const service = makeService();
-    const payload = buildPayload({ version: 1 });
-    const parsed = (service as any).parseStructuredExame(
-      `${legacyPrefix}${JSON.stringify(payload)}`,
+    expect(laudoRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'laudo-1' },
+    });
+    expect(pacientesService.findOne).toHaveBeenCalledWith(
+      'paciente-1',
+      'profissional-2',
     );
-    expect(parsed).toBeTruthy();
-    expect(parsed.version).toBe(1);
+    expect(pacientesService.isMasterAdminByUsuarioId).not.toHaveBeenCalled();
   });
 
-  it('returns null when parsing payload without prefix', () => {
-    const service = makeService();
-    const payload = buildPayload();
-    const parsed = (service as any).parseStructuredExame(JSON.stringify(payload));
-    expect(parsed).toBeNull();
+  it('hides laudo when paciente scope denies access', async () => {
+    const { service, laudoRepository, pacientesService } = makeService();
+    laudoRepository.findOne.mockResolvedValue(makeLaudo());
+    pacientesService.findOne.mockRejectedValue(
+      new NotFoundException('Paciente nao encontrado'),
+    );
+
+    await expect(service.findOne('laudo-1', 'profissional-2')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
-  it('formats structured exam text with key IA sections', () => {
-    const service = makeService();
-    const payload = buildPayload();
-    const formatted = (service as any).formatExameFisicoForDisplay(
-      `${prefix}${JSON.stringify(payload)}`,
-    ) as string;
-    expect(formatted).toContain('Raciocinio clinico');
-    expect(formatted).toContain('Diagnostico funcional');
-    expect(formatted).toContain('Conduta direcionada');
-  });
-
-  it('scenario A (joelho esportivo): accepts valid regional tests', () => {
-    const service = makeService();
-    const payload = buildPayload({
-      avaliacaoRegioes: [
-        {
-          regiao: 'JOELHO',
-          testes: [
-            { nome: 'Lachman', resultado: 'NEGATIVO' },
-            { nome: 'Estresse em valgo', resultado: 'POSITIVO' },
-            { nome: 'McMurray', resultado: 'NEGATIVO' },
-          ],
-        },
-        {
-          regiao: 'QUADRIL',
-          testes: [{ nome: 'Trendelenburg', resultado: 'POSITIVO' }],
-        },
-      ],
-      raciocinioClinico: {
-        origemProvavelDor: 'Sobrecarga mecânica de joelho em gesto esportivo.',
-        estruturaEnvolvida: 'Compartimento femorotibial medial e controle de quadril.',
-        tipoLesao: 'Mecanica',
-        fatorBiomecanicoAssociado: 'Valgo dinâmico em aterrissagem.',
-        relacaoComEsporte: 'Futebol recreativo',
-      },
+  it('rejects changes to a registered initial physical exam', async () => {
+    const { service, laudoRepository, laudoExameFisicoService } = makeService();
+    laudoRepository.findOne.mockResolvedValue(makeLaudo());
+    laudoExameFisicoService.findLatestByPacienteId.mockResolvedValue({
+      exameFisico: 'Exame fisico inicial',
     });
-    expect(() =>
-      (service as any).validateStructuredExameInput(`${prefix}${JSON.stringify(payload)}`),
-    ).not.toThrow();
+
+    await expect(
+      service.update(
+        'laudo-1',
+        { exameFisico: 'Exame fisico alterado' } as any,
+        'profissional-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
   });
 
-  it('scenario B (lombar neural): accepts with neural positive tests', () => {
-    const service = makeService();
-    const payload = buildPayload({
-      avaliacaoRegioes: [
-        {
-          regiao: 'LOMBAR',
-          testes: [
-            { nome: 'Lasègue (SLR)', resultado: 'POSITIVO' },
-            { nome: 'Slump test', resultado: 'POSITIVO' },
-            { nome: 'Schober', resultado: 'NEGATIVO' },
-          ],
-        },
-      ],
-      raciocinioClinico: {
-        origemProvavelDor: 'Componente neural lombossacro pós-carga axial.',
-        estruturaEnvolvida: 'Raiz neural lombar e tecido mecanossensível.',
-        tipoLesao: 'Neural',
-        fatorBiomecanicoAssociado: 'Flexão com carga e fadiga lombo-pélvica.',
-        relacaoComEsporte: 'Crossfit',
-      },
+  it('resets professional validation after a regular update', async () => {
+    const { service, laudoRepository, laudoExameFisicoService } = makeService();
+    const laudo = makeLaudo();
+    laudoRepository.findOne.mockResolvedValue(laudo);
+    laudoRepository.save.mockImplementation(async (input) => input);
+    laudoExameFisicoService.findLatestByPacienteId.mockResolvedValue({
+      exameFisico: 'Exame fisico inicial',
     });
-    expect(() =>
-      (service as any).validateStructuredExameInput(`${prefix}${JSON.stringify(payload)}`),
-    ).not.toThrow();
+
+    const result = await service.update(
+      'laudo-1',
+      { diagnosticoFuncional: 'Diagnostico revisado' } as any,
+      'profissional-1',
+    );
+
+    expect(result).toMatchObject({
+      diagnosticoFuncional: 'Diagnostico revisado',
+      status: LaudoStatus.RASCUNHO_IA,
+      validadoPorUsuarioId: null,
+      validadoEm: null,
+    });
+    expect(laudoRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: LaudoStatus.RASCUNHO_IA,
+        validadoPorUsuarioId: null,
+        validadoEm: null,
+      }),
+    );
   });
 
-  it('scenario C (ombro esportivo): accepts with shoulder positives', () => {
-    const service = makeService();
-    const payload = buildPayload({
-      avaliacaoRegioes: [
-        {
-          regiao: 'OMBRO',
-          testes: [
-            { nome: 'Neer', resultado: 'POSITIVO' },
-            { nome: 'Hawkins-Kennedy', resultado: 'POSITIVO' },
-            { nome: 'Drop arm', resultado: 'NEGATIVO' },
-            { nome: 'Jobe (Empty can)', resultado: 'POSITIVO' },
-          ],
-        },
-      ],
-      raciocinioClinico: {
-        origemProvavelDor: 'Sobrecarga de ombro por gesto acima da cabeça.',
-        estruturaEnvolvida: 'Espaço subacromial e manguito rotador.',
-        tipoLesao: 'Inflamatoria',
-        fatorBiomecanicoAssociado: 'Déficit de controle escapular em saque.',
-        relacaoComEsporte: 'Voleibol',
-      },
+  it('does not call AI when daily generation quota is unavailable', async () => {
+    const {
+      service,
+      laudoRepository,
+      laudoAiSuggestionService,
+      laudoAiGenerationQuotaService,
+    } = makeService();
+    laudoRepository.findOne.mockResolvedValue(null);
+    laudoAiGenerationQuotaService.acquireDailySlot.mockResolvedValue(false);
+
+    await service.generateAndSaveByPaciente('paciente-1', 'profissional-1');
+
+    expect(laudoAiSuggestionService.generateSuggestion).not.toHaveBeenCalled();
+    expect(laudoRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        status: LaudoStatus.RASCUNHO_IA,
+        sugestaoSource: 'rules',
+        examesConsiderados: 0,
+        examesComLeituraIa: 0,
+        sugestaoGeradaEm: expect.any(Date),
+      }),
+    );
+  });
+
+  it('uses AI suggestion when daily generation quota is available', async () => {
+    const {
+      service,
+      laudoRepository,
+      laudoAiSuggestionService,
+      laudoAiGenerationQuotaService,
+      laudoClinicalContextService,
+    } = makeService();
+    laudoRepository.findOne.mockResolvedValue(null);
+    laudoAiGenerationQuotaService.acquireDailySlot.mockResolvedValue(true);
+    laudoAiSuggestionService.generateSuggestion.mockResolvedValue({
+      diagnosticoFuncional: 'Diagnostico por IA',
+      condutas: 'Condutas por IA',
     });
-    expect(() =>
-      (service as any).validateStructuredExameInput(`${prefix}${JSON.stringify(payload)}`),
-    ).not.toThrow();
+
+    await service.generateAndSaveByPaciente('paciente-1', 'profissional-1');
+
+    expect(
+      laudoClinicalContextService.buildSuggestionContext,
+    ).toHaveBeenCalledWith('paciente-1', 'profissional-1');
+    expect(laudoAiSuggestionService.generateSuggestion).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(laudoRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pacienteId: 'paciente-1',
+        diagnosticoFuncional: 'Diagnostico por IA',
+        condutas: 'Condutas por IA',
+        sugestaoSource: 'ai',
+      }),
+    );
   });
 });

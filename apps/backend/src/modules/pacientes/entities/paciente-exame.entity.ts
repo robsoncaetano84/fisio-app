@@ -35,4 +35,3 @@ export class PacienteExame extends BaseEntity {
   @Column({ name: 'data_exame', type: 'date', nullable: true })
   dataExame: Date | null;
 }
-

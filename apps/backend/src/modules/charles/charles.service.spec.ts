@@ -56,7 +56,9 @@ describe('CharlesService - deterministic orchestrator', () => {
 
     const result = await service.getNextAction('pac-1', user);
     expect(result.blocked).toBe(true);
-    expect(result.blockers.some((b) => b.code === 'RED_FLAG_CRITICA')).toBe(true);
+    expect(result.blockers.some((b) => b.code === 'RED_FLAG_CRITICA')).toBe(
+      true,
+    );
     expect(result.nextAction.reason.toLowerCase()).toContain('red flag');
     expect(result.stages.find((s) => s.stage === 'EXAME_FISICO')?.status).toBe(
       'BLOCKED',
@@ -78,7 +80,9 @@ describe('CharlesService - deterministic orchestrator', () => {
 
     const result = await service.getNextAction('pac-1', user);
     expect(result.blocked).toBe(false);
-    expect(result.blockers.some((b) => b.code === 'RED_FLAG_CRITICA')).toBe(false);
+    expect(result.blockers.some((b) => b.code === 'RED_FLAG_CRITICA')).toBe(
+      false,
+    );
     expect(result.stages.find((s) => s.stage === 'EXAME_FISICO')?.status).toBe(
       'PENDING',
     );

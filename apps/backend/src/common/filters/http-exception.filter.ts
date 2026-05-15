@@ -30,6 +30,10 @@ function redactSensitiveUrl(value: string): string {
   );
 }
 
+function isServerStatus(statusCode: number): boolean {
+  return statusCode >= 500;
+}
+
 @Catch()
 export class GlobalHttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalHttpExceptionFilter.name);
@@ -48,7 +52,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
     const path = redactSensitiveUrl(request?.originalUrl || request?.url || '');
     const method = request?.method || '';
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let status: number = HttpStatus.INTERNAL_SERVER_ERROR;
     let error = 'Internal Server Error';
     let message: string | string[] = 'Erro interno do servidor';
 
@@ -58,15 +62,12 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (
-        exceptionResponse &&
-        typeof exceptionResponse === 'object'
-      ) {
+      } else if (exceptionResponse && typeof exceptionResponse === 'object') {
         const body = exceptionResponse as Record<string, unknown>;
         message = (body.message as string | string[]) ?? exception.message;
         error =
           (body.error as string) ??
-          (status >= 500 ? 'Internal Server Error' : 'Bad Request');
+          (isServerStatus(status) ? 'Internal Server Error' : 'Bad Request');
       } else {
         message = exception.message;
       }
@@ -74,7 +75,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    const isServerError = status >= 500;
+    const isServerError = isServerStatus(status);
     if (isServerError) {
       captureException(exception, {
         path,

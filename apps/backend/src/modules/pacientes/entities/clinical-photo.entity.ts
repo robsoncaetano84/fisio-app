@@ -88,6 +88,10 @@ export class ClinicalPhoto extends BaseEntity {
   @Column({ name: 'ai_raw', type: 'jsonb', nullable: true })
   aiRaw: Record<string, unknown> | null;
 
-  @Column({ name: 'confirmado_por_profissional', type: 'boolean', default: false })
+  @Column({
+    name: 'confirmado_por_profissional',
+    type: 'boolean',
+    default: false,
+  })
   confirmadoPorProfissional: boolean;
 }

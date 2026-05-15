@@ -1,8 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import * as ImagePicker from "expo-image-picker";
-import { AppState, View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import {
+  AppState,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
@@ -20,17 +26,12 @@ import {
   enrichStructuredExameWithClinicalLogic,
   getExameFisicoDorSuggestion,
   getClinicalOrchestratorNextAction,
-  analyzeClinicalPhoto,
   logClinicalAiSuggestion,
-  listClinicalPhotos,
   parseStructuredExame,
   renderStructuredExameToText,
   serializeStructuredExame,
   trackEvent,
   updateRedFlagAnswer,
-  uploadClinicalPhoto,
-  type ClinicalPhotoType,
-  type ClinicalPhotoView,
 } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
 import {
@@ -41,19 +42,46 @@ import {
   shouldShowChainField,
 } from "../../utils/clinicalRegionContext";
 import { FEATURE_FLAGS } from "../../constants/featureFlags";
-import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING } from "../../constants/theme";
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONTS,
+  SHADOWS,
+  SPACING,
+} from "../../constants/theme";
 import { RootStackParamList } from "../../types";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
-  DorClassificacaoPrincipal,
   DorClassificationSuggestion,
-  DorSubtipoClinico,
   ExameFisicoStructured,
   inferDorClassificationFromAnamnese,
   RedFlagKey,
   RegionalTestGroup,
   TestResult,
 } from "../../services/physicalExamModel";
+import {
+  buildHipomobilidadeSummary,
+  prettyEnum,
+  prettyEvidenceField,
+  resolveInputSuggestionPresentation,
+  sanitizeExamForForm,
+  type HipomobilidadeSegmentarField,
+} from "./ExameFisicoFormScreen.utils";
+import {
+  CADEIA_OPTIONS,
+  CONDUTA_PRESETS,
+  CONFIANCA_OPTIONS,
+  DOR_PRINCIPAL_OPTIONS,
+  DOR_SUBTIPO_OPTIONS,
+  EXAM_PRESETS,
+  PRIORIDADE_OPTIONS,
+  RED_FLAG_LABELS,
+  SCORING_PROFILE_OPTIONS,
+  TEST_RESULT_OPTIONS,
+  TIPO_LESAO_OPTIONS,
+  type ExamPreset,
+} from "./ExameFisicoFormScreen.constants";
+import { useClinicalPhotoWorkflow } from "./useClinicalPhotoWorkflow";
 
 type ExameFisicoFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ExameFisicoForm">;
@@ -61,317 +89,10 @@ type ExameFisicoFormScreenProps = {
 };
 type IconName = keyof typeof Ionicons.glyphMap;
 
-const DOR_PRINCIPAL_OPTIONS: DorClassificacaoPrincipal[] = [
-  "NOCICEPTIVA",
-  "NEUROPATICA",
-  "NOCIPLASTICA",
-  "INFLAMATORIA",
-  "VISCERAL",
-];
-
-const DOR_SUBTIPO_OPTIONS: DorSubtipoClinico[] = [
-  "MECANICA",
-  "DISCAL",
-  "NEURAL",
-  "REFERIDA",
-  "INFLAMATORIA",
-  "MIOFASCIAL",
-  "FACETARIA",
-  "NAO_MECANICA",
-];
-
-const PRIORIDADE_OPTIONS: ExameFisicoStructured["cruzamentoFinal"]["prioridade"][] = [
-  "BAIXA",
-  "MEDIA",
-  "ALTA",
-  "ENCAMINHAMENTO_IMEDIATO",
-];
-
-const CONFIANCA_OPTIONS: ExameFisicoStructured["cruzamentoFinal"]["confiancaHipotese"][] = [
-  "BAIXA",
-  "MODERADA",
-  "ALTA",
-];
-
-const SCORING_PROFILE_OPTIONS: ExameFisicoStructured["cruzamentoFinal"]["perfilScoring"][] = [
-  "GERAL",
-  "COLUNA",
-  "MEMBRO_INFERIOR",
-  "MEMBRO_SUPERIOR",
-  "ESPORTIVO",
-];
-
-const RED_FLAG_LABELS: Record<RedFlagKey, string> = {
-  CAUDA_EQUINA: "Cauda equina",
-  FRATURA: "Fratura",
-  INFECCAO: "Infecção",
-  ONCOLOGICO: "Oncológico",
-  NAO_MECANICA: "Dor não mecânica",
-  DEFICIT_NEURO_PROGRESSIVO: "Déficit neuro progressivo",
-  VASCULAR: "Vascular",
-};
-
-const TEST_RESULT_OPTIONS: Array<{ label: string; value: TestResult }> = [
-  { label: "NAO_TESTADO", value: "NAO_TESTADO" },
-  { label: "Negativo", value: "NEGATIVO" },
-  { label: "Positivo", value: "POSITIVO" },
-];
-
-type ExamPreset = {
-  id: string;
-  label: string;
-  regions: RegionalTestGroup["regiao"][];
-};
-
-const EXAM_PRESETS: ExamPreset[] = [
-  { id: "COLUNA", label: "Coluna", regions: ["CERVICAL", "TORACICA", "LOMBAR", "SACROILIACA"] },
-  { id: "MMII", label: "Membro inferior", regions: ["QUADRIL", "JOELHO", "TORNOZELO_PE"] },
-  { id: "MMSS", label: "Membro superior", regions: ["OMBRO", "COTOVELO", "PUNHO_MAO"] },
-  { id: "ESPORTIVO", label: "Esportivo", regions: ["LOMBAR", "QUADRIL", "JOELHO", "TORNOZELO_PE"] },
-];
-
-const TIPO_LESAO_OPTIONS = [
-  "Mecanica",
-  "Inflamatoria",
-  "Neural",
-  "Mista",
-];
-
-const CADEIA_OPTIONS = [
-  "Cadeia axial superior",
-  "Cadeia lombo-pelvica",
-  "Cadeia de membro inferior",
-  "Cadeia de membro superior",
-  "Cadeia funcional global",
-];
-
-const CONDUTA_PRESETS = {
-  tecnicaManual: [
-    "Mobilizacao articular",
-    "Tecnicas de tecido mole",
-    "Manipulacao de baixa amplitude",
-    "Sem tecnica manual no momento",
-  ],
-  ajusteArticular: [
-    "Ajuste segmentar cervical",
-    "Ajuste segmentar toracico",
-    "Ajuste segmentar lombo-pelvico",
-    "Nao indicado no momento",
-  ],
-  exercicio: [
-    "Controle motor",
-    "Estabilidade lombo-pelvica",
-    "Fortalecimento progressivo",
-    "Mobilidade funcional",
-  ],
-  miofascial: [
-    "Liberacao miofascial",
-    "Liberacao de cadeia posterior",
-    "Liberacao de cadeia anterior",
-    "Nao indicado no momento",
-  ],
-  progressao: [
-    "Progressao por dor e funcao",
-    "Progressao por tolerancia a carga",
-    "Progressao por controle motor",
-    "Manter fase atual",
-  ],
-};
-
-const prettyEnum = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase());
-
-const prettyEvidenceField = (value: string) =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase());
-
-const EXAM_FIELD_SUGGESTION_HINTS: Record<string, string> = {
-  "observacao.postura": "Avaliar alinhamento global e estrategias posturais.",
-  "observacao.assimetria": "Comparar hemicorpos e desvios relevantes.",
-  "observacao.padraoMovimento": "Observar estrategia antalgica durante tarefas funcionais.",
-  "movimento.ativo": "Testar movimentos ativos da regiao",
-  "movimento.passivo": "Comparar amplitude e qualidade com ativo.",
-  "movimento.resistido": "Testar grupos motores principais e reproducao de sintomas.",
-  "movimento.reproduzDor": "Identificar movimento-chave que reproduz dor.",
-  "palpacao.pontosDolorosos": "Mapear pontos dolorosos por regiao e profundidade.",
-  "palpacao.muscular": "Identificar hipertonia, dor a pressao e consistencia tecidual.",
-  "palpacao.articular": "Avaliar dor segmentar e mobilidade acessoria.",
-  "palpacao.dinamicaVertebral": "Palpacao dinamica para disfuncao segmentar e resposta a movimento.",
-  "testes.biomecanicos": "Selecionar testes funcionais de carga e controle motor.",
-  "testes.ortopedicos": "Selecionar conforme hipotese principal e diferencial.",
-  "testes.imagem": "Correlacionar exames de imagem com quadro clinico (se disponiveis).",
-  "cadeiaCinetica.quadril": "Avaliar mobilidade e controle coxofemoral.",
-  "cadeiaCinetica.pelve": "Avaliar alinhamento e dissociacao pelvica.",
-  "cadeiaCinetica.colunaToracica": "Avaliar mobilidade toracica e impacto em cadeia.",
-  "cadeiaCinetica.pe": "Avaliar apoio plantar e estrategia de propulsao.",
-};
-
-const EXAM_FIELD_SUGGESTION_LABELS: Record<string, string> = {
-  "observacao.postura": "Avaliar alinhamento global e compensações",
-  "observacao.assimetria": "Comparar hemicorpos e desvios relevantes",
-  "observacao.padraoMovimento": "Observar estratégia antálgica durante tarefas funcionais",
-  "movimento.ativo": "Testar movimentos ativos da região principal",
-  "movimento.passivo": "Comparar amplitude e qualidade com ativo",
-  "movimento.resistido": "Testar grupos motores principais e reprodução de sintomas",
-  "movimento.reproduzDor": "Identificar movimento-chave que reproduz dor",
-  "palpacao.pontosDolorosos": "Mapear pontos dolorosos por região e profundidade",
-  "palpacao.muscular": "Identificar hipertonia, dor à pressão e consistência tecidual",
-  "palpacao.articular": "Avaliar dor segmentar e mobilidade acessória",
-  "palpacao.dinamicaVertebral": "Palpação dinâmica para disfunção segmentar e resposta a movimento",
-  "testes.biomecanicos": "Selecionar testes funcionais de carga e controle motor",
-  "testes.ortopedicos": "Selecionar conforme hipótese principal e diferencial",
-  "testes.imagem": "Correlacionar exame de imagem com quadro clínico",
-  "cadeiaCinetica.quadril": "Avaliar mobilidade e controle coxofemoral",
-  "cadeiaCinetica.pelve": "Avaliar alinhamento e dissociação pélvica",
-  "cadeiaCinetica.colunaToracica": "Avaliar mobilidade torácica e impacto em cadeia",
-  "cadeiaCinetica.pe": "Avaliar apoio plantar e estratégia de propulsão",
-};
-
-const isNoInfoText = (value?: string | null) => {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase();
-  return (
-    normalized === "nao informado" ||
-    normalized === "não informado" ||
-    normalized === "nao definida" ||
-    normalized === "não definida" ||
-    normalized === "n/a"
-  );
-};
-
-const normalizeNoInfoText = (value?: string | null) => {
-  const parsed = String(value || "").trim();
-  if (!parsed) return "";
-  return isNoInfoText(parsed) ? "" : parsed;
-};
-
-const resolveInputSuggestionPresentation = (
-  fieldKey: string,
-  baseLabel: string,
-  currentValue?: string,
-) => {
-  const raw = String(currentValue || "").trim();
-  const hintStart = EXAM_FIELD_SUGGESTION_HINTS[fieldKey];
-  const hintLabel = EXAM_FIELD_SUGGESTION_LABELS[fieldKey];
-  if (!raw || !hintStart || !hintLabel) {
-    return { label: baseLabel, value: currentValue ?? "" };
-  }
-
-  const startsWithHint = raw.toLowerCase().startsWith(hintStart.toLowerCase());
-  if (!startsWithHint) {
-    return { label: baseLabel, value: currentValue ?? "" };
-  }
-
-  return { label: `${baseLabel} (${hintLabel})`, value: "" };
-};
-
-type HipomobilidadeSegmentarField =
-  | "cervical"
-  | "toracica"
-  | "lombar"
-  | "sacro"
-  | "iliacoDireito"
-  | "iliacoEsquerdo";
-
-const buildHipomobilidadeSummary = (segmentar: {
-  cervical?: string;
-  toracica?: string;
-  lombar?: string;
-  sacro?: string;
-  iliacoDireito?: string;
-  iliacoEsquerdo?: string;
-}) => {
-  const pairs: Array<[string, string]> = [
-    ["Cervical", normalizeNoInfoText(segmentar.cervical)],
-    ["Toracica", normalizeNoInfoText(segmentar.toracica)],
-    ["Lombar", normalizeNoInfoText(segmentar.lombar)],
-    ["Sacro", normalizeNoInfoText(segmentar.sacro)],
-    ["Iliaco D", normalizeNoInfoText(segmentar.iliacoDireito)],
-    ["Iliaco E", normalizeNoInfoText(segmentar.iliacoEsquerdo)],
-  ];
-  const filled = pairs
-    .filter(([, value]) => value.length > 0)
-    .map(([label, value]) => `${label}: ${value}`);
-  return filled.join(" | ");
-};
-
-const sanitizeExamForForm = (
-  source: ExameFisicoStructured,
-): ExameFisicoStructured => {
-  const hipomobilidadeSegmentar = {
-    cervical: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.cervical),
-    toracica: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.toracica),
-    lombar: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.lombar),
-    sacro: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.sacro),
-    iliacoDireito: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.iliacoDireito),
-    iliacoEsquerdo: normalizeNoInfoText(source.palpacao.hipomobilidadeSegmentar.iliacoEsquerdo),
-  };
-
-  return {
-    ...source,
-    version: 2,
-    observacao: {
-      ...source.observacao,
-      edema: normalizeNoInfoText(source.observacao.edema),
-      atrofiaMuscular: normalizeNoInfoText(source.observacao.atrofiaMuscular),
-      marcha: normalizeNoInfoText(source.observacao.marcha),
-    },
-    movimento: {
-      ativo: source.movimento.ativo,
-      passivo: source.movimento.passivo,
-      resistido: source.movimento.resistido,
-      reproduzDor: source.movimento.reproduzDor,
-      qualidadeMovimento: normalizeNoInfoText(source.movimento.qualidadeMovimento),
-    },
-    padraoDor: {
-      local: source.padraoDor.local,
-      irradiada: source.padraoDor.irradiada,
-    },
-    palpacao: {
-      pontosDolorosos: normalizeNoInfoText(source.palpacao.pontosDolorosos),
-      muscular: source.palpacao.muscular,
-      articular: source.palpacao.articular,
-      dinamicaVertebral: source.palpacao.dinamicaVertebral,
-      temperatura: normalizeNoInfoText(source.palpacao.temperatura),
-      tonusMuscular: normalizeNoInfoText(source.palpacao.tonusMuscular),
-      hipomobilidadeArticular: buildHipomobilidadeSummary(hipomobilidadeSegmentar),
-      hipomobilidadeSegmentar,
-    },
-    testes: {
-      biomecanicos: source.testes.biomecanicos,
-      ortopedicos: source.testes.ortopedicos,
-      imagem: source.testes.imagem,
-    },
-    raciocinioClinico: {
-      ...source.raciocinioClinico,
-      origemProvavelDor: normalizeNoInfoText(source.raciocinioClinico.origemProvavelDor),
-      estruturaEnvolvida: normalizeNoInfoText(source.raciocinioClinico.estruturaEnvolvida),
-      tipoLesao: normalizeNoInfoText(source.raciocinioClinico.tipoLesao),
-      fatorBiomecanicoAssociado: normalizeNoInfoText(source.raciocinioClinico.fatorBiomecanicoAssociado),
-      relacaoComEsporte: normalizeNoInfoText(source.raciocinioClinico.relacaoComEsporte),
-    },
-    diagnosticoFuncionalIa: {
-      disfuncaoPrincipal: normalizeNoInfoText(source.diagnosticoFuncionalIa.disfuncaoPrincipal),
-      cadeiaEnvolvida: normalizeNoInfoText(source.diagnosticoFuncionalIa.cadeiaEnvolvida),
-    },
-    condutaIa: {
-      ...source.condutaIa,
-      tecnicaManualIndicada: normalizeNoInfoText(source.condutaIa.tecnicaManualIndicada),
-      ajusteArticular: normalizeNoInfoText(source.condutaIa.ajusteArticular),
-      exercicioCorretivo: normalizeNoInfoText(source.condutaIa.exercicioCorretivo),
-      liberacaoMiofascial: normalizeNoInfoText(source.condutaIa.liberacaoMiofascial),
-      progressaoEsportiva: normalizeNoInfoText(source.condutaIa.progressaoEsportiva),
-    },
-  };
-};
-
-export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScreenProps) {
+export function ExameFisicoFormScreen({
+  route,
+  navigation,
+}: ExameFisicoFormScreenProps) {
   const { t } = useLanguage();
   const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const VOICE_ENABLED = FEATURE_FLAGS.speechToText;
@@ -399,12 +120,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const [serverDorSuggestion, setServerDorSuggestion] =
     useState<ExameFisicoDorSuggestionResponse | null>(null);
   const [classificationConfirmed, setClassificationConfirmed] = useState(true);
-  const [posturePhotosCount, setPosturePhotosCount] = useState(0);
-  const [movementPhotosCount, setMovementPhotosCount] = useState(0);
-  const [loadingPosturePhotos, setLoadingPosturePhotos] = useState(false);
-  const [loadingMovementPhotos, setLoadingMovementPhotos] = useState(false);
-  const [uploadingPosturePhoto, setUploadingPosturePhoto] = useState(false);
-  const [uploadingMovementPhoto, setUploadingMovementPhoto] = useState(false);
+  const {
+    posturePhotosCount,
+    movementPhotosCount,
+    loadingPosturePhotos,
+    loadingMovementPhotos,
+    uploadingPosturePhoto,
+    uploadingMovementPhoto,
+    handleUploadClinicalPhoto,
+  } = useClinicalPhotoWorkflow({ pacienteId, showToast });
   const autoDorSuggestionAppliedRef = useRef(false);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
@@ -418,12 +142,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         .anamneses.filter((item) => item.pacienteId === pacienteId);
       if (!anamneseList.length) return undefined;
       return [...anamneseList].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )[0];
     },
     [pacienteId],
   );
-  const latestAnamnese = useMemo(() => getLatestAnamnese(), [getLatestAnamnese, anamneses]);
+  const latestAnamnese = useMemo(
+    () => getLatestAnamnese(),
+    [getLatestAnamnese, anamneses],
+  );
   const dorSuggestion: DorClassificationSuggestion = useMemo(
     () => inferDorClassificationFromAnamnese(latestAnamnese),
     [latestAnamnese],
@@ -460,7 +188,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     if (!exam) return;
     if (autoDorSuggestionAppliedRef.current) return;
     if (exam.dorPrincipal || exam.dorSubtipo) return;
-    if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo) return;
+    if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo)
+      return;
 
     autoDorSuggestionAppliedRef.current = true;
     setExam((prev) =>
@@ -486,24 +215,23 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     }).catch(() => undefined);
   }, [AI_REVIEW_REQUIRED, effectiveDorSuggestion, exam, pacienteId]);
 
-  useEffect(() => {
-    loadClinicalPhotosCount().catch(() => undefined);
-  }, [pacienteId]);
-
   const orchestratorFocusedRegions = useMemo(() => {
     const hints = [
       ...(orchestratorNextAction?.context?.regioesPrioritarias || []),
       ...(orchestratorNextAction?.context?.regioesRelacionadas || []),
     ];
-    return inferClinicalRegionsFromHints(
-      hints,
-    );
+    return inferClinicalRegionsFromHints(hints);
   }, [orchestratorNextAction]);
   const relevantRegions = useMemo(() => {
     const fromAnamnese = resolveRelevantClinicalRegions(latestAnamnese);
-    return Array.from(new Set([...orchestratorFocusedRegions, ...fromAnamnese]));
+    return Array.from(
+      new Set([...orchestratorFocusedRegions, ...fromAnamnese]),
+    );
   }, [latestAnamnese, orchestratorFocusedRegions]);
-  const relevantRegionSet = useMemo(() => new Set(relevantRegions), [relevantRegions]);
+  const relevantRegionSet = useMemo(
+    () => new Set(relevantRegions),
+    [relevantRegions],
+  );
   const cadeiaProvavel = useMemo(() => {
     return mapClinicalChainCodeToLabel(
       orchestratorNextAction?.context?.cadeiaProvavel,
@@ -512,123 +240,25 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
   const visibleRegionalGroups = useMemo(() => {
     if (!exam) return [];
     if (showAllRegions || !relevantRegionSet.size) return exam.avaliacaoRegioes;
-    return exam.avaliacaoRegioes.filter((group) => relevantRegionSet.has(group.regiao));
+    return exam.avaliacaoRegioes.filter((group) =>
+      relevantRegionSet.has(group.regiao),
+    );
   }, [exam, relevantRegionSet, showAllRegions]);
   const regionalProgress = useMemo(() => {
-    if (!visibleRegionalGroups.length) return { tested: 0, total: 0, pending: 0 };
+    if (!visibleRegionalGroups.length)
+      return { tested: 0, total: 0, pending: 0 };
     const total = visibleRegionalGroups.reduce(
       (acc, group) => acc + group.testes.length,
       0,
     );
     const tested = visibleRegionalGroups.reduce(
       (acc, group) =>
-        acc + group.testes.filter((test) => test.resultado !== "NAO_TESTADO").length,
+        acc +
+        group.testes.filter((test) => test.resultado !== "NAO_TESTADO").length,
       0,
     );
     return { tested, total, pending: Math.max(total - tested, 0) };
   }, [visibleRegionalGroups]);
-
-  const loadClinicalPhotosCount = async () => {
-    setLoadingPosturePhotos(true);
-    setLoadingMovementPhotos(true);
-    try {
-      const photos = await listClinicalPhotos(pacienteId);
-      const postureTotal = photos.filter(
-        (item) => String(item.tipo || "").startsWith("FOTO_POSTURAL"),
-      ).length;
-      const movementTotal = photos.filter(
-        (item) => String(item.tipo || "") === "FOTO_MOVIMENTO_ADM",
-      ).length;
-      setPosturePhotosCount(postureTotal);
-      setMovementPhotosCount(movementTotal);
-    } catch {
-      setPosturePhotosCount(0);
-      setMovementPhotosCount(0);
-    } finally {
-      setLoadingPosturePhotos(false);
-      setLoadingMovementPhotos(false);
-    }
-  };
-
-  const handleUploadClinicalPhoto = async (
-    tipo: ClinicalPhotoType,
-    vista: ClinicalPhotoView,
-    source: "camera" | "gallery",
-  ) => {
-    try {
-      if (source === "camera") {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) {
-          showToast({ type: "error", message: "Permita acesso a camera para registrar a foto." });
-          return;
-        }
-      } else {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) {
-          showToast({ type: "error", message: "Permita acesso a galeria para selecionar a foto." });
-          return;
-        }
-      }
-
-      const result =
-        source === "camera"
-          ? await ImagePicker.launchCameraAsync({
-              mediaTypes: ["images"],
-              quality: 0.85,
-              allowsEditing: false,
-            })
-          : await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ["images"],
-              quality: 0.9,
-              allowsEditing: false,
-            });
-      if (result.canceled || !result.assets?.length) return;
-
-      const file = result.assets[0];
-      if (!file?.uri) {
-        showToast({ type: "error", message: "Arquivo invalido." });
-        return;
-      }
-
-      const inferredMime = file.mimeType || "image/jpeg";
-      if (!inferredMime.startsWith("image/")) {
-        showToast({ type: "error", message: "Envie apenas imagem (png, jpg, webp)." });
-        return;
-      }
-
-      if (String(tipo).startsWith("FOTO_POSTURAL")) {
-        setUploadingPosturePhoto(true);
-      } else {
-        setUploadingMovementPhoto(true);
-      }
-
-      const uploaded = await uploadClinicalPhoto(pacienteId, file, {
-        tipo,
-        vista,
-        observacao: String(tipo).startsWith("FOTO_POSTURAL")
-          ? "Foto de observacao postural padronizada"
-          : "Foto de movimento/ADM padronizada",
-      });
-      const analyzed = await analyzeClinicalPhoto(pacienteId, uploaded.id);
-      if (analyzed.aiAnalise) {
-        await logClinicalAiSuggestion({
-          stage: "EXAME_FISICO",
-          suggestionType: "VISUAL_ANALYSIS",
-          confidence: analyzed.qualityScore && analyzed.qualityScore >= 70 ? "MODERADA" : "BAIXA",
-          reason: analyzed.aiAnalise.slice(0, 400),
-          evidenceFields: ["clinicalPhoto", "aiAnalise", "qualityScore"],
-          patientId: pacienteId,
-        }).catch(() => undefined);
-      }
-      showToast({ type: "success", message: "Foto registrada e analisada." });
-      await loadClinicalPhotosCount();
-    } catch {
-      showToast({ type: "error", message: "Nao foi possivel enviar a foto." });
-    } finally {
-      setUploadingPosturePhoto(false);
-      setUploadingMovementPhoto(false);
-    }
-  };
 
   const generateSuggestion = async (force = false) => {
     if (generating) return;
@@ -641,9 +271,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         latest,
         { overwrite: true },
       );
-      setExam((prev) =>
-        force || !prev ? sanitizeExamForForm(next) : prev,
-      );
+      setExam((prev) => (force || !prev ? sanitizeExamForForm(next) : prev));
       setErrors({});
     } finally {
       setGenerating(false);
@@ -661,7 +289,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       await fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
       const latestAnamnese = getLatestAnamnese();
 
-      const laudo = await fetchLaudoByPaciente(pacienteId, false).catch(() => null);
+      const laudo = await fetchLaudoByPaciente(pacienteId, false).catch(
+        () => null,
+      );
       if (!active) return;
 
       if (laudo?.id) {
@@ -676,9 +306,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               overwrite: false,
             },
           );
-          setExam(
-            sanitizeExamForForm(loadedExam),
-          );
+          setExam(sanitizeExamForForm(loadedExam));
         }
       }
 
@@ -860,13 +488,17 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     const next = { ...exam } as any;
     const segments = path.split(".");
     let current = next;
-    for (let i = 0; i < segments.length - 1; i++) current = current[segments[i]];
+    for (let i = 0; i < segments.length - 1; i++)
+      current = current[segments[i]];
     current[segments[segments.length - 1]] = value;
     setExam(next);
     if (path === "movimento.reproduzDor" && errors.movimentoReproduzDor) {
       setErrors((prev) => ({ ...prev, movimentoReproduzDor: "" }));
     }
-    if (path === "cruzamentoFinal.hipotesePrincipal" && errors.hipotesePrincipal) {
+    if (
+      path === "cruzamentoFinal.hipotesePrincipal" &&
+      errors.hipotesePrincipal
+    ) {
       setErrors((prev) => ({ ...prev, hipotesePrincipal: "" }));
     }
     if (path === "cruzamentoFinal.condutaDirecionada" && errors.conduta) {
@@ -1034,10 +666,7 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     );
   };
 
-  const setRegionalAdm = (
-    regiao: RegionalTestGroup["regiao"],
-    adm: string,
-  ) => {
+  const setRegionalAdm = (regiao: RegionalTestGroup["regiao"], adm: string) => {
     if (!exam) return;
     const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) =>
       grupo.regiao === regiao ? { ...grupo, adm } : grupo,
@@ -1104,7 +733,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       );
     }
     if (!exam.cruzamentoFinal.hipotesePrincipal.trim()) {
-      nextErrors.hipotesePrincipal = t("clinical.validation.primaryHypothesisRequired");
+      nextErrors.hipotesePrincipal = t(
+        "clinical.validation.primaryHypothesisRequired",
+      );
     }
     if (!exam.cruzamentoFinal.condutaDirecionada.trim()) {
       nextErrors.conduta = t("clinical.validation.condutaDirectionRequired");
@@ -1150,12 +781,17 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     return Object.keys(nextErrors).length === 0;
   };
 
-  const getValidationFields = (source: ExameFisicoStructured | null): string[] => {
+  const getValidationFields = (
+    source: ExameFisicoStructured | null,
+  ): string[] => {
     if (!source) return ["exam"];
     const fields: string[] = [];
-    if (!source.movimento.reproduzDor.trim()) fields.push("movimentoReproduzDor");
-    if (!source.cruzamentoFinal.hipotesePrincipal.trim()) fields.push("hipotesePrincipal");
-    if (!source.cruzamentoFinal.condutaDirecionada.trim()) fields.push("conduta");
+    if (!source.movimento.reproduzDor.trim())
+      fields.push("movimentoReproduzDor");
+    if (!source.cruzamentoFinal.hipotesePrincipal.trim())
+      fields.push("hipotesePrincipal");
+    if (!source.cruzamentoFinal.condutaDirecionada.trim())
+      fields.push("conduta");
     const hasAtLeastOneRegionalResult = source.avaliacaoRegioes.some((grupo) =>
       grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
     );
@@ -1163,8 +799,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     const groupsForAdmValidation =
       showAllRegions || !relevantRegionSet.size
         ? source.avaliacaoRegioes
-        : source.avaliacaoRegioes.filter((grupo) => relevantRegionSet.has(grupo.regiao));
-    if (groupsForAdmValidation.some((grupo) => !String(grupo.adm || "").trim())) {
+        : source.avaliacaoRegioes.filter((grupo) =>
+            relevantRegionSet.has(grupo.regiao),
+          );
+    if (
+      groupsForAdmValidation.some((grupo) => !String(grupo.adm || "").trim())
+    ) {
       fields.push("admRegioes");
     }
     if (source.redFlags.criticalTriggered) {
@@ -1197,26 +837,41 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
     setHasAttemptedSave(true);
     if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", { stage: "EXAME_FISICO", reason: "MISSING_ANAMNESE", pacienteId }).catch(() => undefined);
-      showToast({ type: "error", message: "Preencha a anamnese antes do exame físico." });
+      trackEvent("clinical_flow_blocked", {
+        stage: "EXAME_FISICO",
+        reason: "MISSING_ANAMNESE",
+        pacienteId,
+      }).catch(() => undefined);
+      showToast({
+        type: "error",
+        message: "Preencha a anamnese antes do exame físico.",
+      });
       navigation.navigate("AnamneseForm", { pacienteId });
       return;
     }
     if (!exam || !validateForm()) {
       const failedFields = getValidationFields(exam);
-      trackEvent("clinical_flow_blocked", { stage: "EXAME_FISICO", reason: "MISSING_REQUIRED_FIELDS", pacienteId }).catch(() => undefined);
+      trackEvent("clinical_flow_blocked", {
+        stage: "EXAME_FISICO",
+        reason: "MISSING_REQUIRED_FIELDS",
+        pacienteId,
+      }).catch(() => undefined);
       trackEvent("clinical_form_validation_error", {
         stage: "EXAME_FISICO",
         pacienteId,
         fields: failedFields,
       }).catch(() => undefined);
-      showToast({ type: "error", message: "Revise os campos obrigatórios para salvar." });
+      showToast({
+        type: "error",
+        message: "Revise os campos obrigatórios para salvar.",
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const effectiveExam: ExameFisicoStructured = exam.redFlags.criticalTriggered
+      const effectiveExam: ExameFisicoStructured = exam.redFlags
+        .criticalTriggered
         ? {
             ...exam,
             cruzamentoFinal: {
@@ -1258,10 +913,14 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
       if (effectiveExam.redFlags.criticalTriggered) {
         showToast({
           type: "success",
-          message: "Triagem crítica salva. Fluxo clínico deve seguir para encaminhamento imediato.",
+          message:
+            "Triagem crítica salva. Fluxo clínico deve seguir para encaminhamento imediato.",
         });
       } else {
-        showToast({ type: "success", message: "Exame físico salvo com sucesso." });
+        showToast({
+          type: "success",
+          message: "Exame físico salvo com sucesso.",
+        });
       }
       trackEvent("session_completed", {
         stage: "EXAME_FISICO",
@@ -1314,7 +973,10 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           return;
         }
       }
-      showToast({ type: "error", message: message || "Não foi possível salvar o exame físico." });
+      showToast({
+        type: "error",
+        message: message || "Não foi possível salvar o exame físico.",
+      });
     } finally {
       setLoading(false);
     }
@@ -1325,7 +987,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo) {
       showToast({
         type: "error",
-        message: "Nao foi possivel sugerir classificacao de dor com os dados atuais da anamnese.",
+        message:
+          "Nao foi possivel sugerir classificacao de dor com os dados atuais da anamnese.",
       });
       return;
     }
@@ -1395,7 +1058,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
     );
   }
 
-  const redFlagCount = exam.redFlags.answers.filter((item) => item.positive).length;
+  const redFlagCount = exam.redFlags.answers.filter(
+    (item) => item.positive,
+  ).length;
   const observacaoPosturaInput = resolveInputSuggestionPresentation(
     "observacao.postura",
     "Postura",
@@ -1489,7 +1154,10 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {VOICE_ENABLED && activeField && isRecording ? (
           <View style={styles.voiceBanner}>
             <Ionicons name="mic-outline" size={16} color={COLORS.primary} />
@@ -1501,10 +1169,14 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         <View style={styles.section}>
           <Text style={styles.title}>Exame físico orientado por decisão</Text>
           <Text style={styles.subtitle}>
-            Etapas: observação, movimento, palpação, testes, cadeia cinética e cruzamento final.
+            Etapas: observação, movimento, palpação, testes, cadeia cinética e
+            cruzamento final.
           </Text>
           {lastDraftSavedAt ? (
-            <Text style={styles.draftInfo}>Última edição: {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}</Text>
+            <Text style={styles.draftInfo}>
+              Última edição:{" "}
+              {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}
+            </Text>
           ) : null}
         </View>
 
@@ -1537,22 +1209,29 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 style={styles.classificationConfirmButton}
                 onPress={handleConfirmClassification}
               >
-                <Text style={styles.classificationConfirmButtonText}>Confirmar</Text>
+                <Text style={styles.classificationConfirmButtonText}>
+                  Confirmar
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
           <View style={styles.classificationSuggestionCard}>
             <View style={styles.classificationSuggestionHeader}>
-              <Text style={styles.classificationSuggestionLabel}>Sugestão da anamnese</Text>
+              <Text style={styles.classificationSuggestionLabel}>
+                Sugestão da anamnese
+              </Text>
               <TouchableOpacity
                 style={styles.classificationSuggestionButton}
                 onPress={handleApplyDorSuggestion}
               >
-                <Text style={styles.classificationSuggestionButtonText}>Sugerir por IA</Text>
+                <Text style={styles.classificationSuggestionButtonText}>
+                  Sugerir por IA
+                </Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.classificationSuggestionText}>
-              {effectiveDorSuggestion.principal && effectiveDorSuggestion.subtipo
+              {effectiveDorSuggestion.principal &&
+              effectiveDorSuggestion.subtipo
                 ? `${prettyEnum(effectiveDorSuggestion.principal)} / ${prettyEnum(effectiveDorSuggestion.subtipo)}`
                 : "Sem inferência segura"}
             </Text>
@@ -1566,11 +1245,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             ) : null}
             {effectiveDorSuggestion.evidenceFields.length > 0 ? (
               <View style={styles.classificationEvidenceGroup}>
-                <Text style={styles.classificationEvidenceLabel}>Evidências</Text>
+                <Text style={styles.classificationEvidenceLabel}>
+                  Evidências
+                </Text>
                 <View style={styles.classificationEvidenceChips}>
                   {effectiveDorSuggestion.evidenceFields.map((field) => (
                     <View key={field} style={styles.classificationEvidenceChip}>
-                      <Text style={styles.classificationEvidenceChipText}>{prettyEvidenceField(field)}</Text>
+                      <Text style={styles.classificationEvidenceChipText}>
+                        {prettyEvidenceField(field)}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -1587,14 +1270,25 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             {DOR_PRINCIPAL_OPTIONS.map((item) => (
               <TouchableOpacity
                 key={item}
-                style={[styles.chip, exam.dorPrincipal === item && styles.chipSelected]}
+                style={[
+                  styles.chip,
+                  exam.dorPrincipal === item && styles.chipSelected,
+                ]}
                 onPress={() => {
                   setExam({ ...exam, source: "manual", dorPrincipal: item });
                   setClassificationConfirmed(true);
-                  setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+                  setErrors((prev) => ({
+                    ...prev,
+                    classificationConfirmation: "",
+                  }));
                 }}
               >
-                <Text style={[styles.chipText, exam.dorPrincipal === item && styles.chipTextSelected]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.dorPrincipal === item && styles.chipTextSelected,
+                  ]}
+                >
                   {prettyEnum(item)}
                 </Text>
               </TouchableOpacity>
@@ -1604,14 +1298,25 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             {DOR_SUBTIPO_OPTIONS.map((item) => (
               <TouchableOpacity
                 key={item}
-                style={[styles.chip, exam.dorSubtipo === item && styles.chipSelected]}
+                style={[
+                  styles.chip,
+                  exam.dorSubtipo === item && styles.chipSelected,
+                ]}
                 onPress={() => {
                   setExam({ ...exam, source: "manual", dorSubtipo: item });
                   setClassificationConfirmed(true);
-                  setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
+                  setErrors((prev) => ({
+                    ...prev,
+                    classificationConfirmation: "",
+                  }));
                 }}
               >
-                <Text style={[styles.chipText, exam.dorSubtipo === item && styles.chipTextSelected]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    exam.dorSubtipo === item && styles.chipTextSelected,
+                  ]}
+                >
                   {prettyEnum(item)}
                 </Text>
               </TouchableOpacity>
@@ -1621,7 +1326,10 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Triagem de sinais de alerta</Text>
-          <Text style={styles.subtitle}>Bloco obrigatório. Se crítico, o fluxo clínico deve ser interrompido para encaminhamento.</Text>
+          <Text style={styles.subtitle}>
+            Bloco obrigatório. Se crítico, o fluxo clínico deve ser interrompido
+            para encaminhamento.
+          </Text>
           {exam.redFlags.answers.map((item) => (
             <View key={item.key} style={styles.flagRow}>
               <View style={styles.flagHeader}>
@@ -1630,13 +1338,19 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               </View>
               <View style={styles.flagActions}>
                 <TouchableOpacity
-                  style={[styles.flagButton, !item.positive && styles.flagButtonActiveSafe]}
+                  style={[
+                    styles.flagButton,
+                    !item.positive && styles.flagButtonActiveSafe,
+                  ]}
                   onPress={() => toggleRedFlag(item.key, false)}
                 >
                   <Text style={styles.flagButtonText}>Não</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.flagButton, item.positive && styles.flagButtonActiveAlert]}
+                  style={[
+                    styles.flagButton,
+                    item.positive && styles.flagButtonActiveAlert,
+                  ]}
                   onPress={() => toggleRedFlag(item.key, true)}
                 >
                   <Text style={styles.flagButtonText}>Sim</Text>
@@ -1645,18 +1359,27 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             </View>
           ))}
 
-          <Text style={styles.statusText}>Red flags positivas: {redFlagCount}</Text>
+          <Text style={styles.statusText}>
+            Red flags positivas: {redFlagCount}
+          </Text>
           {exam.redFlags.criticalTriggered ? (
             <View style={styles.alertBox}>
               <Text style={styles.alertTitle}>ALERTA CRÍTICO</Text>
-              <Text style={styles.alertText}>Encaminhamento imediato é obrigatório antes de seguir com conduta terapêutica.</Text>
+              <Text style={styles.alertText}>
+                Encaminhamento imediato é obrigatório antes de seguir com
+                conduta terapêutica.
+              </Text>
               <Input
                 label="Destino de encaminhamento"
                 value={exam.redFlags.referralDestination || ""}
                 onChangeText={(value) =>
                   setExam({
                     ...exam,
-                    redFlags: { ...exam.redFlags, referralDestination: value, referralRequired: true },
+                    redFlags: {
+                      ...exam.redFlags,
+                      referralDestination: value,
+                      referralRequired: true,
+                    },
                   })
                 }
                 placeholder="Ex.: Pronto atendimento / ortopedia"
@@ -1668,7 +1391,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 onChangeText={(value) =>
                   setExam({
                     ...exam,
-                    redFlags: { ...exam.redFlags, referralReason: value, referralRequired: true },
+                    redFlags: {
+                      ...exam.redFlags,
+                      referralReason: value,
+                      referralRequired: true,
+                    },
                   })
                 }
                 placeholder="Descreva sinais e motivo do encaminhamento"
@@ -1691,7 +1418,10 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             </Text>
             <View style={styles.photoActions}>
               <TouchableOpacity
-                style={[styles.actionChip, uploadingPosturePhoto && styles.actionChipDisabled]}
+                style={[
+                  styles.actionChip,
+                  uploadingPosturePhoto && styles.actionChipDisabled,
+                ]}
                 onPress={() =>
                   handleUploadClinicalPhoto(
                     "FOTO_POSTURAL_FRONTAL",
@@ -1702,13 +1432,20 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 disabled={uploadingPosturePhoto}
                 activeOpacity={0.8}
               >
-                <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+                <Ionicons
+                  name="camera-outline"
+                  size={16}
+                  color={COLORS.primary}
+                />
                 <Text style={styles.actionChipText}>
                   {uploadingPosturePhoto ? "Enviando..." : "Camera"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionChip, uploadingPosturePhoto && styles.actionChipDisabled]}
+                style={[
+                  styles.actionChip,
+                  uploadingPosturePhoto && styles.actionChipDisabled,
+                ]}
                 onPress={() =>
                   handleUploadClinicalPhoto(
                     "FOTO_POSTURAL_FRONTAL",
@@ -1719,7 +1456,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 disabled={uploadingPosturePhoto}
                 activeOpacity={0.8}
               >
-                <Ionicons name="images-outline" size={16} color={COLORS.primary} />
+                <Ionicons
+                  name="images-outline"
+                  size={16}
+                  color={COLORS.primary}
+                />
                 <Text style={styles.actionChipText}>Galeria</Text>
               </TouchableOpacity>
             </View>
@@ -1736,16 +1477,32 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("observacao.assimetria", v)}
             {...getVoiceInputProps("observacao.assimetria")}
           />
-          <Input label="Proteção" value={exam.observacao.protecao} onChangeText={(v) => setField("observacao.protecao", v)} />
+          <Input
+            label="Proteção"
+            value={exam.observacao.protecao}
+            onChangeText={(v) => setField("observacao.protecao", v)}
+          />
           <Input
             label={observacaoPadraoInput.label}
             value={observacaoPadraoInput.value}
             onChangeText={(v) => setField("observacao.padraoMovimento", v)}
             {...getVoiceInputProps("observacao.padraoMovimento")}
           />
-          <Input label="Edema" value={exam.observacao.edema} onChangeText={(v) => setField("observacao.edema", v)} />
-          <Input label="Atrofia muscular" value={exam.observacao.atrofiaMuscular} onChangeText={(v) => setField("observacao.atrofiaMuscular", v)} />
-          <Input label="Alterações de marcha" value={exam.observacao.marcha} onChangeText={(v) => setField("observacao.marcha", v)} />
+          <Input
+            label="Edema"
+            value={exam.observacao.edema}
+            onChangeText={(v) => setField("observacao.edema", v)}
+          />
+          <Input
+            label="Atrofia muscular"
+            value={exam.observacao.atrofiaMuscular}
+            onChangeText={(v) => setField("observacao.atrofiaMuscular", v)}
+          />
+          <Input
+            label="Alterações de marcha"
+            value={exam.observacao.marcha}
+            onChangeText={(v) => setField("observacao.marcha", v)}
+          />
 
           <Input
             label={movimentoAtivoInput.label}
@@ -1761,27 +1518,49 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             </Text>
             <View style={styles.photoActions}>
               <TouchableOpacity
-                style={[styles.actionChip, uploadingMovementPhoto && styles.actionChipDisabled]}
+                style={[
+                  styles.actionChip,
+                  uploadingMovementPhoto && styles.actionChipDisabled,
+                ]}
                 onPress={() =>
-                  handleUploadClinicalPhoto("FOTO_MOVIMENTO_ADM", "MOVIMENTO", "camera")
+                  handleUploadClinicalPhoto(
+                    "FOTO_MOVIMENTO_ADM",
+                    "MOVIMENTO",
+                    "camera",
+                  )
                 }
                 disabled={uploadingMovementPhoto}
                 activeOpacity={0.8}
               >
-                <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+                <Ionicons
+                  name="camera-outline"
+                  size={16}
+                  color={COLORS.primary}
+                />
                 <Text style={styles.actionChipText}>
                   {uploadingMovementPhoto ? "Enviando..." : "Camera"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionChip, uploadingMovementPhoto && styles.actionChipDisabled]}
+                style={[
+                  styles.actionChip,
+                  uploadingMovementPhoto && styles.actionChipDisabled,
+                ]}
                 onPress={() =>
-                  handleUploadClinicalPhoto("FOTO_MOVIMENTO_ADM", "MOVIMENTO", "gallery")
+                  handleUploadClinicalPhoto(
+                    "FOTO_MOVIMENTO_ADM",
+                    "MOVIMENTO",
+                    "gallery",
+                  )
                 }
                 disabled={uploadingMovementPhoto}
                 activeOpacity={0.8}
               >
-                <Ionicons name="images-outline" size={16} color={COLORS.primary} />
+                <Ionicons
+                  name="images-outline"
+                  size={16}
+                  color={COLORS.primary}
+                />
                 <Text style={styles.actionChipText}>Galeria</Text>
               </TouchableOpacity>
             </View>
@@ -1814,8 +1593,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Padrao de dor e palpacao</Text>
-          <Input label="Local" value={exam.padraoDor.local} onChangeText={(v) => setField("padraoDor.local", v)} />
-          <Input label="Irradiada" value={exam.padraoDor.irradiada} onChangeText={(v) => setField("padraoDor.irradiada", v)} />
+          <Input
+            label="Local"
+            value={exam.padraoDor.local}
+            onChangeText={(v) => setField("padraoDor.local", v)}
+          />
+          <Input
+            label="Irradiada"
+            value={exam.padraoDor.irradiada}
+            onChangeText={(v) => setField("padraoDor.irradiada", v)}
+          />
 
           <Input
             label={palpacaoPontosDolorososInput.label}
@@ -1842,7 +1629,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)}
             {...getVoiceInputProps("palpacao.dinamicaVertebral")}
           />
-          <Input label="Temperatura local" value={exam.palpacao.temperatura} onChangeText={(v) => setField("palpacao.temperatura", v)} />
+          <Input
+            label="Temperatura local"
+            value={exam.palpacao.temperatura}
+            onChangeText={(v) => setField("palpacao.temperatura", v)}
+          />
           <Input
             label="Tônus muscular"
             value={exam.palpacao.tonusMuscular}
@@ -1917,7 +1708,6 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             onChangeText={(v) => setField("testes.imagem", v)}
           />
 
-
           {shouldShowChainField("quadril", relevantRegions) ? (
             <Input
               label={cadeiaQuadrilInput.label}
@@ -1950,18 +1740,51 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
         <View style={styles.section}>
           <Text style={styles.blockTitle}>Testes funcionais (esportivo)</Text>
-          <Input label="Agachamento" value={exam.testesFuncionais.agachamento} onChangeText={(v) => setField("testesFuncionais.agachamento", v)} />
-          <Input label="Agachamento unilateral" value={exam.testesFuncionais.agachamentoUnilateral} onChangeText={(v) => setField("testesFuncionais.agachamentoUnilateral", v)} />
-          <Input label="Salto" value={exam.testesFuncionais.salto} onChangeText={(v) => setField("testesFuncionais.salto", v)} />
-          <Input label="Corrida (se aplicável)" value={exam.testesFuncionais.corrida} onChangeText={(v) => setField("testesFuncionais.corrida", v)} />
-          <Input label="Teste de estabilidade" value={exam.testesFuncionais.estabilidade} onChangeText={(v) => setField("testesFuncionais.estabilidade", v)} />
-          <Input label="Controle motor" value={exam.testesFuncionais.controleMotor} onChangeText={(v) => setField("testesFuncionais.controleMotor", v)} />
+          <Input
+            label="Agachamento"
+            value={exam.testesFuncionais.agachamento}
+            onChangeText={(v) => setField("testesFuncionais.agachamento", v)}
+          />
+          <Input
+            label="Agachamento unilateral"
+            value={exam.testesFuncionais.agachamentoUnilateral}
+            onChangeText={(v) =>
+              setField("testesFuncionais.agachamentoUnilateral", v)
+            }
+          />
+          <Input
+            label="Salto"
+            value={exam.testesFuncionais.salto}
+            onChangeText={(v) => setField("testesFuncionais.salto", v)}
+          />
+          <Input
+            label="Corrida (se aplicável)"
+            value={exam.testesFuncionais.corrida}
+            onChangeText={(v) => setField("testesFuncionais.corrida", v)}
+          />
+          <Input
+            label="Teste de estabilidade"
+            value={exam.testesFuncionais.estabilidade}
+            onChangeText={(v) => setField("testesFuncionais.estabilidade", v)}
+          />
+          <Input
+            label="Controle motor"
+            value={exam.testesFuncionais.controleMotor}
+            onChangeText={(v) => setField("testesFuncionais.controleMotor", v)}
+          />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Avaliacao por regioes (marque o resultado de cada teste)</Text>
+          <Text style={styles.blockTitle}>
+            Avaliacao por regioes (marque o resultado de cada teste)
+          </Text>
           {orchestratorNextAction?.blocked ? (
-            <View style={[styles.orchestratorNoticeCard, styles.orchestratorBlockedCard]}>
+            <View
+              style={[
+                styles.orchestratorNoticeCard,
+                styles.orchestratorBlockedCard,
+              ]}
+            >
               <Text style={styles.orchestratorNoticeTitle}>
                 Fluxo com bloqueio clínico detectado
               </Text>
@@ -1971,9 +1794,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               </Text>
             </View>
           ) : null}
-          {!orchestratorNextAction?.blocked && orchestratorNextAction?.alerts?.length ? (
+          {!orchestratorNextAction?.blocked &&
+          orchestratorNextAction?.alerts?.length ? (
             <View style={styles.orchestratorNoticeCard}>
-              <Text style={styles.orchestratorNoticeTitle}>Alerta do orquestrador</Text>
+              <Text style={styles.orchestratorNoticeTitle}>
+                Alerta do orquestrador
+              </Text>
               <Text style={styles.orchestratorNoticeText}>
                 {orchestratorNextAction.alerts[0]?.message}
               </Text>
@@ -1982,8 +1808,11 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           {relevantRegions.length ? (
             <View style={styles.contextHeaderRow}>
               <Text style={styles.contextHintText}>
-                Foco clínico: {relevantRegions.map((r) => CLINICAL_REGION_LABELS[r]).join(", ")}
-                {cadeiaProvavel ? ` • ${cadeiaProvavel}` : ""}
+                Foco clínico:{" "}
+                {relevantRegions
+                  .map((r) => CLINICAL_REGION_LABELS[r])
+                  .join(", ")}
+                {cadeiaProvavel ? ` â€¢ ${cadeiaProvavel}` : ""}
               </Text>
               <TouchableOpacity
                 style={styles.contextToggleChip}
@@ -1996,11 +1825,12 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             </View>
           ) : null}
           <Text style={styles.regionProgressText}>
-            Progresso: {regionalProgress.tested}/{regionalProgress.total} testados •{" "}
-            {regionalProgress.pending} pendente(s)
+            Progresso: {regionalProgress.tested}/{regionalProgress.total}{" "}
+            testados â€¢ {regionalProgress.pending} pendente(s)
           </Text>
           <Text style={styles.sectionHint}>
-            Atalhos: aplique uma bateria sugerida e depois marque positivo/negativo.
+            Atalhos: aplique uma bateria sugerida e depois marque
+            positivo/negativo.
           </Text>
           <View style={styles.presetRow}>
             {EXAM_PRESETS.map((preset) => (
@@ -2020,103 +1850,121 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             const pendingCount = Math.max(grupo.testes.length - testedCount, 0);
             const hasPending = pendingCount > 0;
             return (
-            <View
-              key={grupo.regiao}
-              style={[
-                styles.regionCard,
-                testedCount === 0 && styles.regionCardPending,
-              ]}
-            >
-              <View style={styles.regionTitleRow}>
-                <Text style={styles.regionTitle}>{grupo.titulo}</Text>
-                <View style={styles.regionHeaderActions}>
-                  <Text
-                    style={[
-                      styles.regionStatusChip,
-                      hasPending ? styles.regionStatusChipPending : styles.regionStatusChipDone,
-                    ]}
-                  >
-                    {hasPending
-                      ? `${pendingCount} não testado(s)`
-                      : "Região testada"}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.regionApplyChip}
-                    onPress={() => applyRegionBasicPreset(grupo.regiao)}
-                  >
-                    <Text style={styles.regionApplyChipText}>Aplicar bateria basica</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <Input
-                label={`ADM - ${grupo.titulo}`}
-                value={grupo.adm}
-                onChangeText={(value) => setRegionalAdm(grupo.regiao, value)}
-                multiline
-                numberOfLines={2}
-                placeholder="Registre amplitude de movimento objetiva da articulacao/regiao"
-              />
-              {grupo.testes.map((teste) => (
-                <View
-                  key={`${grupo.regiao}-${teste.nome}`}
-                  style={[
-                    styles.regionTestRow,
-                    teste.selecionado && styles.regionTestRowSelected,
-                  ]}
-                >
-                  <View style={styles.regionTestHeader}>
-                    <Text style={styles.regionTestName}>{teste.nome}</Text>
-                    <TouchableOpacity
+              <View
+                key={grupo.regiao}
+                style={[
+                  styles.regionCard,
+                  testedCount === 0 && styles.regionCardPending,
+                ]}
+              >
+                <View style={styles.regionTitleRow}>
+                  <Text style={styles.regionTitle}>{grupo.titulo}</Text>
+                  <View style={styles.regionHeaderActions}>
+                    <Text
                       style={[
-                        styles.regionSuggestToggle,
-                        teste.selecionado && styles.regionSuggestToggleSelected,
+                        styles.regionStatusChip,
+                        hasPending
+                          ? styles.regionStatusChipPending
+                          : styles.regionStatusChipDone,
                       ]}
-                      onPress={() =>
-                        setRegionalTestSelected(grupo.regiao, teste.nome, !teste.selecionado)
-                      }
                     >
-                      <Text
-                        style={[
-                          styles.regionSuggestToggleText,
-                          teste.selecionado && styles.regionSuggestToggleTextSelected,
-                        ]}
-                      >
-                        {teste.selecionado ? "No protocolo" : "Adicionar"}
+                      {hasPending
+                        ? `${pendingCount} não testado(s)`
+                        : "Região testada"}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.regionApplyChip}
+                      onPress={() => applyRegionBasicPreset(grupo.regiao)}
+                    >
+                      <Text style={styles.regionApplyChipText}>
+                        Aplicar bateria basica
                       </Text>
                     </TouchableOpacity>
                   </View>
-                  <View style={styles.regionTestOptions}>
-                    {TEST_RESULT_OPTIONS.map((option) => (
+                </View>
+                <Input
+                  label={`ADM - ${grupo.titulo}`}
+                  value={grupo.adm}
+                  onChangeText={(value) => setRegionalAdm(grupo.regiao, value)}
+                  multiline
+                  numberOfLines={2}
+                  placeholder="Registre amplitude de movimento objetiva da articulacao/regiao"
+                />
+                {grupo.testes.map((teste) => (
+                  <View
+                    key={`${grupo.regiao}-${teste.nome}`}
+                    style={[
+                      styles.regionTestRow,
+                      teste.selecionado && styles.regionTestRowSelected,
+                    ]}
+                  >
+                    <View style={styles.regionTestHeader}>
+                      <Text style={styles.regionTestName}>{teste.nome}</Text>
                       <TouchableOpacity
-                        key={`${grupo.regiao}-${teste.nome}-${option.value}`}
                         style={[
-                          styles.regionOption,
-                          teste.resultado === option.value && styles.regionOptionSelected,
+                          styles.regionSuggestToggle,
+                          teste.selecionado &&
+                            styles.regionSuggestToggleSelected,
                         ]}
                         onPress={() =>
-                          setRegionalTestResult(grupo.regiao, teste.nome, option.value)
+                          setRegionalTestSelected(
+                            grupo.regiao,
+                            teste.nome,
+                            !teste.selecionado,
+                          )
                         }
                       >
                         <Text
                           style={[
-                            styles.regionOptionText,
-                            teste.resultado === option.value &&
-                              styles.regionOptionTextSelected,
+                            styles.regionSuggestToggleText,
+                            teste.selecionado &&
+                              styles.regionSuggestToggleTextSelected,
                           ]}
                         >
-                    {option.label === "NAO_TESTADO"
-                      ? t("clinical.status.notTested")
-                      : option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                          {teste.selecionado ? "No protocolo" : "Adicionar"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.regionTestOptions}>
+                      {TEST_RESULT_OPTIONS.map((option) => (
+                        <TouchableOpacity
+                          key={`${grupo.regiao}-${teste.nome}-${option.value}`}
+                          style={[
+                            styles.regionOption,
+                            teste.resultado === option.value &&
+                              styles.regionOptionSelected,
+                          ]}
+                          onPress={() =>
+                            setRegionalTestResult(
+                              grupo.regiao,
+                              teste.nome,
+                              option.value,
+                            )
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.regionOptionText,
+                              teste.resultado === option.value &&
+                                styles.regionOptionTextSelected,
+                            ]}
+                          >
+                            {option.label === "NAO_TESTADO"
+                              ? t("clinical.status.notTested")
+                              : option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
-          )})}
+                ))}
+              </View>
+            );
+          })}
           {errors.avaliacaoRegioes ? (
-            <Text style={styles.validationErrorText}>{errors.avaliacaoRegioes}</Text>
+            <Text style={styles.validationErrorText}>
+              {errors.avaliacaoRegioes}
+            </Text>
           ) : null}
           {errors.admRegioes ? (
             <Text style={styles.validationErrorText}>{errors.admRegioes}</Text>
@@ -2128,13 +1976,17 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input
             label="Hipótese principal"
             value={exam.cruzamentoFinal.hipotesePrincipal}
-            onChangeText={(v) => setField("cruzamentoFinal.hipotesePrincipal", v)}
+            onChangeText={(v) =>
+              setField("cruzamentoFinal.hipotesePrincipal", v)
+            }
             error={errors.hipotesePrincipal}
           />
           <Input
             label="Hipóteses secundárias"
             value={exam.cruzamentoFinal.hipotesesSecundarias}
-            onChangeText={(v) => setField("cruzamentoFinal.hipotesesSecundarias", v)}
+            onChangeText={(v) =>
+              setField("cruzamentoFinal.hipotesesSecundarias", v)
+            }
             multiline
             numberOfLines={3}
             {...getVoiceInputProps("cruzamentoFinal.hipotesesSecundarias")}
@@ -2150,7 +2002,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input
             label="Direção de conduta"
             value={exam.cruzamentoFinal.condutaDirecionada}
-            onChangeText={(v) => setField("cruzamentoFinal.condutaDirecionada", v)}
+            onChangeText={(v) =>
+              setField("cruzamentoFinal.condutaDirecionada", v)
+            }
             multiline
             numberOfLines={4}
             {...getVoiceInputProps("cruzamentoFinal.condutaDirecionada")}
@@ -2162,18 +2016,26 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             {PRIORIDADE_OPTIONS.map((item) => (
               <TouchableOpacity
                 key={item}
-                style={[styles.chip, exam.cruzamentoFinal.prioridade === item && styles.chipSelected]}
+                style={[
+                  styles.chip,
+                  exam.cruzamentoFinal.prioridade === item &&
+                    styles.chipSelected,
+                ]}
                 onPress={() =>
                   setExam({
                     ...exam,
-                    cruzamentoFinal: { ...exam.cruzamentoFinal, prioridade: item },
+                    cruzamentoFinal: {
+                      ...exam.cruzamentoFinal,
+                      prioridade: item,
+                    },
                   })
                 }
               >
                 <Text
                   style={[
                     styles.chipText,
-                    exam.cruzamentoFinal.prioridade === item && styles.chipTextSelected,
+                    exam.cruzamentoFinal.prioridade === item &&
+                      styles.chipTextSelected,
                   ]}
                 >
                   {prettyEnum(item)}
@@ -2184,11 +2046,15 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Raciocinio clinico (IA + profissional)</Text>
+          <Text style={styles.blockTitle}>
+            Raciocinio clinico (IA + profissional)
+          </Text>
           <Input
             label="Origem provável da dor"
             value={exam.raciocinioClinico.origemProvavelDor}
-            onChangeText={(v) => setField("raciocinioClinico.origemProvavelDor", v)}
+            onChangeText={(v) =>
+              setField("raciocinioClinico.origemProvavelDor", v)
+            }
             multiline
             numberOfLines={3}
             {...getVoiceInputProps("raciocinioClinico.origemProvavelDor")}
@@ -2196,7 +2062,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input
             label="Estrutura envolvida"
             value={exam.raciocinioClinico.estruturaEnvolvida}
-            onChangeText={(v) => setField("raciocinioClinico.estruturaEnvolvida", v)}
+            onChangeText={(v) =>
+              setField("raciocinioClinico.estruturaEnvolvida", v)
+            }
           />
           <Input
             label="Tipo de lesão (mecânica/inflamatória/neural)"
@@ -2209,7 +2077,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 key={`tipo-lesao-${item}`}
                 style={[
                   styles.chip,
-                  exam.raciocinioClinico.tipoLesao === item && styles.chipSelected,
+                  exam.raciocinioClinico.tipoLesao === item &&
+                    styles.chipSelected,
                 ]}
                 onPress={() => setField("raciocinioClinico.tipoLesao", item)}
               >
@@ -2233,12 +2102,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             }
             multiline
             numberOfLines={3}
-            {...getVoiceInputProps("raciocinioClinico.fatorBiomecanicoAssociado")}
+            {...getVoiceInputProps(
+              "raciocinioClinico.fatorBiomecanicoAssociado",
+            )}
           />
           <Input
             label="Relação com atividade/gesto"
             value={exam.raciocinioClinico.relacaoComEsporte}
-            onChangeText={(v) => setField("raciocinioClinico.relacaoComEsporte", v)}
+            onChangeText={(v) =>
+              setField("raciocinioClinico.relacaoComEsporte", v)
+            }
             multiline
             numberOfLines={3}
             {...getVoiceInputProps("raciocinioClinico.relacaoComEsporte")}
@@ -2260,7 +2133,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
           <Input
             label="Cadeia envolvida"
             value={exam.diagnosticoFuncionalIa.cadeiaEnvolvida}
-            onChangeText={(v) => setField("diagnosticoFuncionalIa.cadeiaEnvolvida", v)}
+            onChangeText={(v) =>
+              setField("diagnosticoFuncionalIa.cadeiaEnvolvida", v)
+            }
           />
           <View style={styles.optionsRow}>
             {CADEIA_OPTIONS.map((item) => (
@@ -2271,7 +2146,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                   exam.diagnosticoFuncionalIa.cadeiaEnvolvida === item &&
                     styles.chipSelected,
                 ]}
-                onPress={() => setField("diagnosticoFuncionalIa.cadeiaEnvolvida", item)}
+                onPress={() =>
+                  setField("diagnosticoFuncionalIa.cadeiaEnvolvida", item)
+                }
               >
                 <Text
                   style={[
@@ -2288,7 +2165,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>{t("clinical.sections.targetedTherapeuticConduct")}</Text>
+          <Text style={styles.blockTitle}>
+            {t("clinical.sections.targetedTherapeuticConduct")}
+          </Text>
           <Input
             label="Técnica manual indicada"
             value={exam.condutaIa.tecnicaManualIndicada}
@@ -2306,7 +2185,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                   exam.condutaIa.tecnicaManualIndicada === item &&
                     styles.chipSelected,
                 ]}
-                onPress={() => setField("condutaIa.tecnicaManualIndicada", item)}
+                onPress={() =>
+                  setField("condutaIa.tecnicaManualIndicada", item)
+                }
               >
                 <Text
                   style={[
@@ -2334,7 +2215,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 key={`conduta-aj-${item}`}
                 style={[
                   styles.chip,
-                  exam.condutaIa.ajusteArticular === item && styles.chipSelected,
+                  exam.condutaIa.ajusteArticular === item &&
+                    styles.chipSelected,
                 ]}
                 onPress={() => setField("condutaIa.ajusteArticular", item)}
               >
@@ -2446,7 +2328,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
 
           <Text style={styles.label}>Confiança da hipótese</Text>
           <Text style={styles.subtitle}>
-            Calculada pelos testes positivos/sugeridos e passível de ajuste clínico manual.
+            Calculada pelos testes positivos/sugeridos e passível de ajuste
+            clínico manual.
           </Text>
           <View style={styles.optionsRow}>
             {CONFIANCA_OPTIONS.map((item) => (
@@ -2454,7 +2337,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 key={item}
                 style={[
                   styles.chip,
-                  exam.cruzamentoFinal.confiancaHipotese === item && styles.chipSelected,
+                  exam.cruzamentoFinal.confiancaHipotese === item &&
+                    styles.chipSelected,
                 ]}
                 onPress={() =>
                   setExam({
@@ -2488,7 +2372,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
                 key={item}
                 style={[
                   styles.chip,
-                  exam.cruzamentoFinal.perfilScoring === item && styles.chipSelected,
+                  exam.cruzamentoFinal.perfilScoring === item &&
+                    styles.chipSelected,
                 ]}
                 onPress={() => {
                   const latest = getLatestAnamnese();
@@ -2527,8 +2412,16 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>{t("clinical.sections.clinicalPreview")}</Text>
-          <Input value={renderStructuredExameToText(exam)} multiline numberOfLines={12} editable={false} style={{ height: 300, textAlignVertical: "top" }} />
+          <Text style={styles.blockTitle}>
+            {t("clinical.sections.clinicalPreview")}
+          </Text>
+          <Input
+            value={renderStructuredExameToText(exam)}
+            multiline
+            numberOfLines={12}
+            editable={false}
+            style={{ height: 300, textAlignVertical: "top" }}
+          />
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.actionChip}
@@ -2572,7 +2465,9 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionChipText}>{t("clinical.actions.clearDraft")}</Text>
+              <Text style={styles.actionChipText}>
+                {t("clinical.actions.clearDraft")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2584,8 +2479,8 @@ export function ExameFisicoFormScreen({ route, navigation }: ExameFisicoFormScre
             recordedExamLocked
               ? "Voltar"
               : exam.redFlags.criticalTriggered
-              ? t("clinical.actions.saveTriageAndRefer")
-              : t("clinical.actions.savePhysicalExam")
+                ? t("clinical.actions.saveTriageAndRefer")
+                : t("clinical.actions.savePhysicalExam")
           }
           onPress={handleSave}
           loading={loading}
@@ -3151,9 +3046,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-
-
-
-
-

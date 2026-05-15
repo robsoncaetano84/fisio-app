@@ -32,4 +32,3 @@ export class CreateClinicalFlowEvents1778100000000 implements MigrationInterface
     await queryRunner.query(`DROP TABLE IF EXISTS "clinical_flow_events"`);
   }
 }
-

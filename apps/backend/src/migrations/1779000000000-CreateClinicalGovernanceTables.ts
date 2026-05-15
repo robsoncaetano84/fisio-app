@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateClinicalGovernanceTables1779000000000
-  implements MigrationInterface
-{
+export class CreateClinicalGovernanceTables1779000000000 implements MigrationInterface {
   name = 'CreateClinicalGovernanceTables1779000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -125,7 +123,8 @@ export class CreateClinicalGovernanceTables1779000000000
     await queryRunner.query(
       `DROP INDEX IF EXISTS "idx_clinical_protocol_versions_active"`,
     );
-    await queryRunner.query(`DROP TABLE IF EXISTS "clinical_protocol_versions"`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS "clinical_protocol_versions"`,
+    );
   }
 }
-

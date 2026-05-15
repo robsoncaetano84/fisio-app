@@ -18,8 +18,6 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
-  StyleProp,
-  ViewStyle,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -41,6 +39,7 @@ import {
   syncOfflineCheckins,
   trackEvent,
   getPatientCheckEngagementSummary,
+  isClinicalFlowActionReady,
   openQuickActionSelection,
   cachedGet,
 } from "../services";
@@ -51,86 +50,23 @@ import {
   BORDER_RADIUS,
   SHADOWS,
 } from "../constants/theme";
-import { AtividadeUpdate, RootStackParamList, UserRole } from "../types";
+import {
+  AtividadeUpdate,
+  PacientesListQuickAction,
+  RootStackParamList,
+  UserRole,
+} from "../types";
 import { useLanguage } from "../i18n/LanguageProvider";
+import { QuickAction, StatCard } from "./HomeScreen.components";
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
 };
 
-interface QuickActionProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  color: string;
-  onPress: () => void;
-  onLongPress?: () => void;
-  containerStyle?: StyleProp<ViewStyle>;
-}
-
-function QuickAction({
-  icon,
-  title,
-  subtitle,
-  color,
-  onPress,
-  onLongPress,
-  containerStyle,
-}: QuickActionProps) {
-  return (
-    <TouchableOpacity
-      style={[styles.quickAction, containerStyle]}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      delayLongPress={250}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel={`${title}. ${subtitle}`}
-    >
-      <View style={[styles.quickActionIcon, { backgroundColor: color }]}>
-        <Ionicons name={icon} size={28} color={COLORS.white} />
-      </View>
-      <Text style={styles.quickActionTitle}>{title}</Text>
-      <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
-    </TouchableOpacity>
-  );
-}
-
-interface StatCardProps {
-  value: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress?: () => void;
-}
-
 type HomeRiskActionCode =
   | "OPEN_ADHERENCE"
   | "OPEN_PATIENT_DETAILS"
   | "RECORD_EVOLUTION";
-
-function StatCard({ value, label, icon, onPress }: StatCardProps) {
-  if (onPress) {
-    return (
-      <TouchableOpacity
-        style={styles.statCard}
-        onPress={onPress}
-        activeOpacity={0.8}
-      >
-        <Ionicons name={icon} size={24} color={COLORS.primary} />
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </TouchableOpacity>
-    );
-  }
-
-  return (
-    <View style={styles.statCard}>
-      <Ionicons name={icon} size={24} color={COLORS.primary} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
   const { usuario, logout } = useAuthStore();
@@ -1098,14 +1034,25 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   }, [anamneses]);
 
   const findSmartPacienteForQuickAction = useCallback(
-    (action: "ANAMNESE" | "EVOLUCAO" | "EXAME_FISICO") => {
+    (action: PacientesListQuickAction) => {
       const availablePacientes = pacientes;
+      const isReadyForAction = (pacienteId: string) => {
+        const paciente = availablePacientes.find((p) => p.id === pacienteId);
+        if (!paciente) return false;
+        return isClinicalFlowActionReady(action, {
+          hasVinculoAtivo: !!paciente.pacienteUsuarioId,
+          hasAnamnese: pacientesComAnamnese.has(paciente.id),
+        });
+      };
+      const availableLinkedPacientes = availablePacientes.filter(
+        (p) => !!p.pacienteUsuarioId,
+      );
       const availableComAnamnese = availablePacientes.filter((p) =>
-        pacientesComAnamnese.has(p.id),
+        isReadyForAction(p.id),
       );
 
       if (action === "ANAMNESE") {
-        const pendingAnamnese = availablePacientes.find(
+        const pendingAnamnese = availableLinkedPacientes.find(
           (p) => !pacientesComAnamnese.has(p.id),
         );
         if (pendingAnamnese) {
@@ -1114,7 +1061,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             reason: "missing_anamnese" as const,
           };
         }
-        const fallback = availablePacientes[0];
+        const fallback = availableLinkedPacientes[0];
         return fallback
           ? { pacienteId: fallback.id, reason: "linked_fallback" as const }
           : null;
@@ -1221,8 +1168,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           });
 
           if (canUseShortcut && lastPacienteId) {
-            const hasAnamnese = pacientesComAnamnese.has(lastPacienteId);
-            const canUseByFlow = hasAnamnese;
+            const canUseByFlow = isClinicalFlowActionReady(action, {
+              hasVinculoAtivo: !!pacientes.find((p) => p.id === lastPacienteId)
+                ?.pacienteUsuarioId,
+              hasAnamnese: pacientesComAnamnese.has(lastPacienteId),
+            });
             if (canUseByFlow) {
               targetPacienteId = lastPacienteId;
             }
@@ -2543,26 +2493,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     marginTop: SPACING.sm,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.gray50,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    marginHorizontal: SPACING.xs,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.gray100,
-  },
-  statValue: {
-    fontSize: FONTS.sizes.xl,
-    fontWeight: "bold",
-    color: COLORS.textPrimary,
-    marginTop: SPACING.xs,
-  },
-  statLabel: {
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
   sectionTitle: {
     fontSize: FONTS.sizes.base,
     fontWeight: "700",
@@ -2590,18 +2520,6 @@ const styles = StyleSheet.create({
   quickActionsGridCompact: {
     justifyContent: "flex-start",
     gap: SPACING.sm,
-  },
-  quickAction: {
-    width: "48%",
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.base,
-    marginBottom: SPACING.sm,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.gray200,
-    ...SHADOWS.sm,
   },
   quickActionPrimary: {
     width: "100%",
@@ -2634,27 +2552,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONTS.sizes.xs,
     fontWeight: "700",
-  },
-  quickActionIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING.xs,
-  },
-  quickActionTitle: {
-    fontSize: FONTS.sizes.md,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  quickActionSubtitle: {
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    fontWeight: "600",
-    marginTop: 2,
-    textAlign: "center",
   },
   recentSection: {
     backgroundColor: COLORS.white,

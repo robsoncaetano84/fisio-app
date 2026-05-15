@@ -16,6 +16,13 @@ import {
 } from 'class-validator';
 import { UserRole } from '../entities/usuario.entity';
 
+type CreateUsuarioValidationContext = {
+  role?: UserRole;
+  consentResearchOptional?: boolean;
+  consentAiOptional?: boolean;
+  ajustes?: string;
+};
+
 export class CreateUsuarioDto {
   @IsNotEmpty({ message: 'Nome e obrigatorio' })
   @IsString()
@@ -32,12 +39,16 @@ export class CreateUsuarioDto {
   })
   senha: string;
 
-  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @ValidateIf(
+    (o: CreateUsuarioValidationContext) => o.role !== UserRole.PACIENTE,
+  )
   @IsNotEmpty({ message: 'Conselho profissional e obrigatorio' })
   @IsString()
   conselhoSigla?: string;
 
-  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @ValidateIf(
+    (o: CreateUsuarioValidationContext) => o.role !== UserRole.PACIENTE,
+  )
   @IsNotEmpty({ message: 'UF do conselho e obrigatoria' })
   @Matches(/^[A-Z]{2}$/, { message: 'UF do conselho invalida' })
   conselhoUf?: string;
@@ -46,7 +57,9 @@ export class CreateUsuarioDto {
   @IsString()
   conselhoProf?: string;
 
-  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @ValidateIf(
+    (o: CreateUsuarioValidationContext) => o.role !== UserRole.PACIENTE,
+  )
   @IsNotEmpty({ message: 'Registro profissional e obrigatorio' })
   @IsString()
   registroProf?: string;
@@ -59,30 +72,37 @@ export class CreateUsuarioDto {
   @IsEnum(UserRole)
   role?: UserRole;
 
-  @ValidateIf((o) => o.role === UserRole.PACIENTE)
+  @ValidateIf(
+    (o: CreateUsuarioValidationContext) => o.role === UserRole.PACIENTE,
+  )
   @IsBoolean()
   @Equals(true, { message: 'Aceite dos termos de uso e obrigatorio' })
   consentTermsRequired?: boolean;
 
-  @ValidateIf((o) => o.role === UserRole.PACIENTE)
+  @ValidateIf(
+    (o: CreateUsuarioValidationContext) => o.role === UserRole.PACIENTE,
+  )
   @IsBoolean()
   @Equals(true, { message: 'Aceite da politica de privacidade e obrigatorio' })
   consentPrivacyRequired?: boolean;
 
   @ValidateIf(
-    (o) =>
+    (o: CreateUsuarioValidationContext) =>
       o.role === UserRole.PACIENTE && o.consentResearchOptional !== undefined,
   )
   @IsBoolean()
   consentResearchOptional?: boolean;
 
   @ValidateIf(
-    (o) => o.role === UserRole.PACIENTE && o.consentAiOptional !== undefined,
+    (o: CreateUsuarioValidationContext) =>
+      o.role === UserRole.PACIENTE && o.consentAiOptional !== undefined,
   )
   @IsBoolean()
   consentAiOptional?: boolean;
 
-  @ValidateIf((o) => o.role !== UserRole.PACIENTE)
+  @ValidateIf(
+    (o: CreateUsuarioValidationContext) => o.role !== UserRole.PACIENTE,
+  )
   @IsBoolean()
   @Equals(true, {
     message:

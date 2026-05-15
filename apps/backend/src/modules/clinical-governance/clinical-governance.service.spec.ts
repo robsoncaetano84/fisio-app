@@ -209,7 +209,10 @@ describe('ClinicalGovernanceService', () => {
       {
         action: 'orchestrator.ai_suggestion.read',
         createdAt: '2026-04-22T10:00:00.000Z',
-        metadata: { stage: 'EXAME_FISICO', suggestionType: 'CLASSIFICACAO_DOR' },
+        metadata: {
+          stage: 'EXAME_FISICO',
+          suggestionType: 'CLASSIFICACAO_DOR',
+        },
       },
       {
         action: 'orchestrator.ai_suggestion.read',
@@ -219,12 +222,18 @@ describe('ClinicalGovernanceService', () => {
       {
         action: 'ai.suggestion.applied',
         createdAt: '2026-04-22T10:03:00.000Z',
-        metadata: { stage: 'EXAME_FISICO', suggestionType: 'CLASSIFICACAO_DOR_CONFIRMED' },
+        metadata: {
+          stage: 'EXAME_FISICO',
+          suggestionType: 'CLASSIFICACAO_DOR_CONFIRMED',
+        },
       },
       {
         action: 'ai.suggestion.applied',
         createdAt: '2026-04-23T11:00:00.000Z',
-        metadata: { stage: 'EVOLUCAO', suggestionType: 'SOAP_SUGGESTION_REVIEWED' },
+        metadata: {
+          stage: 'EVOLUCAO',
+          suggestionType: 'SOAP_SUGGESTION_REVIEWED',
+        },
       },
       {
         action: 'ai.suggestion.applied',
@@ -237,7 +246,9 @@ describe('ClinicalGovernanceService', () => {
     qb.getMany.mockResolvedValue(mockedRows);
     auditRepository.createQueryBuilder.mockReturnValue(qb);
 
-    const result = await service.getAiSuggestionSummary(admin, { windowDays: 7 });
+    const result = await service.getAiSuggestionSummary(admin, {
+      windowDays: 7,
+    });
 
     expect(result.windowDays).toBe(7);
     expect(result.totals).toMatchObject({
@@ -271,9 +282,12 @@ describe('ClinicalGovernanceService', () => {
   it('blocks ai suggestion summary for non-admin users', async () => {
     const { service } = makeService();
     await expect(
-      service.getAiSuggestionSummary({ id: 'user-1', role: UserRole.USER } as any, {
-        windowDays: 7,
-      }),
+      service.getAiSuggestionSummary(
+        { id: 'user-1', role: UserRole.USER } as any,
+        {
+          windowDays: 7,
+        },
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 

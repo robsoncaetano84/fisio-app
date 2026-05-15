@@ -29,13 +29,17 @@ import {
   PacienteVinculoStatus,
   Sexo,
 } from '../pacientes/entities/paciente.entity';
-import {
-  ProfissionalPacienteVinculo,
-  ProfissionalPacienteVinculoOrigem,
-  ProfissionalPacienteVinculoStatus,
-} from '../pacientes/entities/profissional-paciente-vinculo.entity';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { CreatePacienteConviteRapidoDto } from './dto/create-paciente-convite-rapido.dto';
+import {
+  buildAuthFeatureFlags,
+  type AuthFeatureFlagsResponse,
+} from './auth-feature-flags.util';
+import {
+  sanitizeDigits,
+  shouldReplaceQuickInviteName,
+} from '../pacientes/paciente-quick-invite.util';
+import { PacienteVinculoService } from '../pacientes/paciente-vinculo.service';
 
 export interface JwtPayload {
   sub: string;
@@ -72,13 +76,7 @@ export interface LoginResponse {
   };
 }
 
-export interface AuthFeatureFlagsResponse {
-  speechToText: boolean;
-  requireAiSuggestionConfirmation: boolean;
-  crmAdminWeb: boolean;
-  clinicalOrchestrator: boolean;
-  generatedAt: string;
-}
+export type { AuthFeatureFlagsResponse } from './auth-feature-flags.util';
 
 @Injectable()
 export class AuthService {
@@ -90,80 +88,21 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly authLogsService: AuthLogsService,
     private readonly lockoutService: LockoutService,
+    private readonly pacienteVinculoService: PacienteVinculoService,
     @InjectRepository(Paciente)
     private readonly pacienteRepository: Repository<Paciente>,
-    @InjectRepository(ProfissionalPacienteVinculo)
-    private readonly vinculoRepository: Repository<ProfissionalPacienteVinculo>,
   ) {}
 
   private normalizeLoginIdentifier(identificador: string): string {
     return (identificador || '').trim().toLowerCase();
   }
 
-  private parseBoolean(
-    value: string | undefined,
-    defaultValue: boolean,
-  ): boolean {
-    if (value == null || value.trim() === '') return defaultValue;
-    const normalized = value.trim().toLowerCase();
-    return ['1', 'true', 'yes', 'on'].includes(normalized);
-  }
-
-  private parseFeatureFlagsByEmailConfig(): Record<
-    string,
-    Partial<AuthFeatureFlagsResponse>
-  > {
-    const raw = (
-      this.configService.get<string>('FEATURE_FLAGS_BY_EMAIL') || ''
-    ).trim();
-    if (!raw) return {};
-    try {
-      const parsed = JSON.parse(raw) as Record<
-        string,
-        Partial<AuthFeatureFlagsResponse>
-      >;
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-
   getFeatureFlagsForUser(usuario: Usuario): AuthFeatureFlagsResponse {
-    const defaults: AuthFeatureFlagsResponse = {
-      speechToText: this.parseBoolean(
-        this.configService.get<string>('ENABLE_SPEECH_TO_TEXT'),
-        true,
-      ),
-      requireAiSuggestionConfirmation: this.parseBoolean(
-        this.configService.get<string>('REQUIRE_AI_SUGGESTION_CONFIRMATION'),
-        true,
-      ),
-      crmAdminWeb: this.parseBoolean(
-        this.configService.get<string>('ENABLE_CRM_ADMIN_WEB'),
-        true,
-      ),
-      clinicalOrchestrator: this.parseBoolean(
-        this.configService.get<string>('ENABLE_CLINICAL_ORCHESTRATOR'),
-        true,
-      ),
-      generatedAt: new Date().toISOString(),
-    };
-
-    const overrides = this.parseFeatureFlagsByEmailConfig();
-    const emailKey = (usuario.email || '').trim().toLowerCase();
-    const userOverride = overrides[emailKey] || overrides['*'] || {};
-
-    const merged: AuthFeatureFlagsResponse = {
-      ...defaults,
-      ...userOverride,
-      generatedAt: new Date().toISOString(),
-    };
-
-    if (usuario.role !== UserRole.ADMIN) {
-      merged.crmAdminWeb = false;
-    }
-
-    return merged;
+    return buildAuthFeatureFlags({
+      email: usuario.email,
+      role: usuario.role,
+      getConfig: (key) => this.configService.get<string>(key),
+    });
   }
 
   async validateUser(
@@ -176,7 +115,7 @@ export class AuthService {
     if (normalized.includes('@')) {
       usuario = await this.usuariosService.findByEmail(normalized);
     } else {
-      const cpfDigits = this.sanitizeDigits(normalized);
+      const cpfDigits = sanitizeDigits(normalized);
       if (cpfDigits.length === 11) {
         const pacientes = await this.pacienteRepository
           .createQueryBuilder('paciente')
@@ -389,7 +328,7 @@ export class AuthService {
         success: true,
       });
       return this.buildLoginResponse(usuario);
-    } catch (error) {
+    } catch {
       this.logger.warn('Refresh token invalido');
       this.logger.log(
         JSON.stringify({
@@ -441,15 +380,6 @@ export class AuthService {
       );
     }
     return inviteSecret;
-  }
-
-  private mapPacienteOrigemToVinculoOrigem(
-    paciente: Paciente,
-  ): ProfissionalPacienteVinculoOrigem {
-    if (paciente.cadastroOrigem === PacienteCadastroOrigem.CONVITE_RAPIDO) {
-      return ProfissionalPacienteVinculoOrigem.CONVITE_RAPIDO;
-    }
-    return ProfissionalPacienteVinculoOrigem.CADASTRO_ASSISTIDO;
   }
 
   private async resolveInviteContext(
@@ -507,162 +437,6 @@ export class AuthService {
     };
   }
 
-  private async vincularPacienteUsuarioAoCadastro(
-    pacienteParaVinculo: Paciente,
-    pacienteUsuario: Usuario,
-  ): Promise<Paciente> {
-    return this.pacienteRepository.manager.transaction(async (manager) => {
-      const pacienteRepo = manager.getRepository(Paciente);
-      const vinculoRepo = manager.getRepository(ProfissionalPacienteVinculo);
-
-      const pacienteLocked = await pacienteRepo
-        .createQueryBuilder('paciente')
-        .where('paciente.id = :id', { id: pacienteParaVinculo.id })
-        .setLock('pessimistic_write')
-        .getOne();
-
-      if (!pacienteLocked) {
-        throw new BadRequestException('Paciente do convite nao encontrado');
-      }
-
-      let pacienteDestino = pacienteLocked;
-
-      if (pacienteLocked.pacienteUsuarioId) {
-        if (pacienteLocked.pacienteUsuarioId === pacienteUsuario.id) {
-          pacienteLocked.vinculoStatus =
-            pacienteLocked.cadastroOrigem ===
-            PacienteCadastroOrigem.CONVITE_RAPIDO
-              ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
-              : PacienteVinculoStatus.VINCULADO;
-          if (!pacienteLocked.conviteAceitoEm) {
-            pacienteLocked.conviteAceitoEm = new Date();
-          }
-          pacienteDestino = await pacienteRepo.save(pacienteLocked);
-        } else {
-          throw new BadRequestException('Paciente ja possui usuario vinculado');
-        }
-      } else {
-        const vinculoExistente = await pacienteRepo.findOne({
-          where: { pacienteUsuarioId: pacienteUsuario.id },
-        });
-
-        if (vinculoExistente && vinculoExistente.id !== pacienteLocked.id) {
-          const cadastroAutonomoDoPaciente =
-            vinculoExistente.ativo &&
-            vinculoExistente.usuarioId === pacienteUsuario.id;
-
-          if (!cadastroAutonomoDoPaciente) {
-            throw new BadRequestException(
-              'Usuario paciente ja vinculado a outro cadastro',
-            );
-          }
-
-          vinculoExistente.usuarioId = pacienteLocked.usuarioId;
-          vinculoExistente.cadastroOrigem = pacienteLocked.cadastroOrigem;
-          vinculoExistente.vinculoStatus =
-            pacienteLocked.cadastroOrigem ===
-            PacienteCadastroOrigem.CONVITE_RAPIDO
-              ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
-              : PacienteVinculoStatus.VINCULADO;
-          vinculoExistente.conviteAceitoEm = new Date();
-
-          if (
-            this.shouldReplaceQuickInviteName(vinculoExistente.nomeCompleto) &&
-            pacienteLocked.nomeCompleto
-          ) {
-            vinculoExistente.nomeCompleto = pacienteLocked.nomeCompleto;
-          }
-          if (!vinculoExistente.contatoEmail && pacienteLocked.contatoEmail) {
-            vinculoExistente.contatoEmail = pacienteLocked.contatoEmail;
-          }
-          if (
-            !vinculoExistente.contatoWhatsapp &&
-            pacienteLocked.contatoWhatsapp
-          ) {
-            vinculoExistente.contatoWhatsapp = pacienteLocked.contatoWhatsapp;
-          }
-
-          pacienteDestino = await pacienteRepo.save(vinculoExistente);
-
-          pacienteLocked.ativo = false;
-          pacienteLocked.pacienteUsuarioId = null;
-          pacienteLocked.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
-          pacienteLocked.conviteAceitoEm = null;
-          await pacienteRepo.save(pacienteLocked);
-        } else {
-          const vinculoAtivoTabela = await vinculoRepo.findOne({
-            where: {
-              pacienteUsuarioId: pacienteUsuario.id,
-              status: ProfissionalPacienteVinculoStatus.ATIVO,
-            },
-          });
-
-          if (
-            vinculoAtivoTabela &&
-            vinculoAtivoTabela.pacienteId !== pacienteLocked.id
-          ) {
-            throw new BadRequestException(
-              'Usuario paciente ja vinculado a outro cadastro',
-            );
-          }
-
-          pacienteLocked.pacienteUsuarioId = pacienteUsuario.id;
-          pacienteLocked.vinculoStatus =
-            pacienteLocked.cadastroOrigem ===
-            PacienteCadastroOrigem.CONVITE_RAPIDO
-              ? PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO
-              : PacienteVinculoStatus.VINCULADO;
-          pacienteLocked.conviteAceitoEm = new Date();
-          pacienteDestino = await pacienteRepo.save(pacienteLocked);
-        }
-      }
-
-      await vinculoRepo.update(
-        {
-          pacienteId: pacienteDestino.id,
-          status: ProfissionalPacienteVinculoStatus.ATIVO,
-        },
-        {
-          status: ProfissionalPacienteVinculoStatus.ENCERRADO,
-          endedAt: new Date(),
-        },
-      );
-
-      await vinculoRepo.update(
-        {
-          pacienteUsuarioId: pacienteUsuario.id,
-          status: ProfissionalPacienteVinculoStatus.ATIVO,
-        },
-        {
-          status: ProfissionalPacienteVinculoStatus.ENCERRADO,
-          endedAt: new Date(),
-        },
-      );
-
-      await vinculoRepo.save(
-        vinculoRepo.create({
-          profissionalId: pacienteDestino.usuarioId,
-          pacienteId: pacienteDestino.id,
-          pacienteUsuarioId: pacienteUsuario.id,
-          status: ProfissionalPacienteVinculoStatus.ATIVO,
-          origem: this.mapPacienteOrigemToVinculoOrigem(pacienteDestino),
-          endedAt: null,
-        }),
-      );
-
-      return pacienteDestino;
-    });
-  }
-
-  private sanitizeDigits(value?: string): string {
-    return (value || '').replace(/\D/g, '').trim();
-  }
-
-  private shouldReplaceQuickInviteName(nomeCompleto: string): boolean {
-    const normalized = (nomeCompleto || '').trim().toLowerCase();
-    return !normalized || normalized === 'paciente convite rapido';
-  }
-
   private async syncQuickInvitePacienteDados(
     pacienteParaVinculo: Paciente,
     pacienteUsuario: Usuario,
@@ -676,7 +450,7 @@ export class AuthService {
 
     let changed = false;
 
-    if (this.shouldReplaceQuickInviteName(pacienteParaVinculo.nomeCompleto)) {
+    if (shouldReplaceQuickInviteName(pacienteParaVinculo.nomeCompleto)) {
       pacienteParaVinculo.nomeCompleto = pacienteUsuario.nome;
       changed = true;
     }
@@ -724,7 +498,7 @@ export class AuthService {
       throw new ForbiddenException('Apenas profissionais podem gerar convite');
     }
 
-    const whatsappDigits = this.sanitizeDigits(dto.whatsapp);
+    const whatsappDigits = sanitizeDigits(dto.whatsapp);
     const email = dto.email?.trim().toLowerCase() || '';
 
     if (!whatsappDigits && !email) {
@@ -848,10 +622,11 @@ export class AuthService {
     const { profissional, pacienteParaVinculo } =
       await this.resolveInviteContext(conviteToken);
 
-    const pacienteVinculado = await this.vincularPacienteUsuarioAoCadastro(
-      pacienteParaVinculo,
-      pacienteUsuario,
-    );
+    const pacienteVinculado =
+      await this.pacienteVinculoService.vincularPacienteUsuarioAoCadastro(
+        pacienteParaVinculo,
+        pacienteUsuario,
+      );
     await this.syncQuickInvitePacienteDados(pacienteVinculado, pacienteUsuario);
 
     return {
@@ -901,10 +676,11 @@ export class AuthService {
 
     const pacienteUsuario = await this.usuariosService.create(createUsuarioDto);
 
-    const pacienteVinculado = await this.vincularPacienteUsuarioAoCadastro(
-      pacienteParaVinculo,
-      pacienteUsuario,
-    );
+    const pacienteVinculado =
+      await this.pacienteVinculoService.vincularPacienteUsuarioAoCadastro(
+        pacienteParaVinculo,
+        pacienteUsuario,
+      );
     await this.syncQuickInvitePacienteDados(pacienteVinculado, pacienteUsuario);
     const pacienteId: string | null = pacienteVinculado.id;
 

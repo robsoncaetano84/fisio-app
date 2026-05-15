@@ -106,4 +106,3 @@ describe('CrmController sensitive access', () => {
     );
   });
 });
-

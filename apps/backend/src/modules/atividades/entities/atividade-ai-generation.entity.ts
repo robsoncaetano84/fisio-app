@@ -1,7 +1,16 @@
-﻿import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+﻿import {
+  BaseEntity,
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  Unique,
+} from 'typeorm';
 
 @Entity('atividade_ai_generations')
-@Unique('uq_atividade_ai_generations_paciente_dia', ['pacienteId', 'generatedOn'])
+@Unique('uq_atividade_ai_generations_paciente_dia', [
+  'pacienteId',
+  'generatedOn',
+])
 export class AtividadeAiGeneration extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

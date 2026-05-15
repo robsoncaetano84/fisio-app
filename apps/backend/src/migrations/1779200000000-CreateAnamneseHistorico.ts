@@ -71,4 +71,3 @@ export class CreateAnamneseHistorico1779200000000 implements MigrationInterface 
     `);
   }
 }
-

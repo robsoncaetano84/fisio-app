@@ -32,13 +32,24 @@ import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
+import {
+  parseCrmAdminPermissionsConfig,
+  resolveCrmAdminPermissions,
+  type CrmAdminPermission,
+} from './crm-admin-permissions.util';
+import {
+  mapCrmAdminPatient,
+  mapCrmAdminProfessional,
+} from './crm-admin.mapper';
+import {
+  buildCrmClinicalDashboardSummary,
+  buildEmptyCrmClinicalDashboardSummary,
+  type CrmClinicalDashboardBlockedReasonRow,
+  type CrmClinicalDashboardFlowRow,
+} from './crm-clinical-dashboard-summary.util';
+import { mapCrmInteraction, mapCrmLead, mapCrmTask } from './crm-entity.mapper';
 
-export type CrmAdminPermission =
-  | 'dashboard.read'
-  | 'crm.read'
-  | 'crm.write'
-  | 'audit.read'
-  | 'sensitive.read';
+export type { CrmAdminPermission } from './crm-admin-permissions.util';
 
 @Injectable()
 export class CrmService {
@@ -73,29 +84,6 @@ export class CrmService {
     private readonly crmAdminAuditLogRepository: Repository<CrmAdminAuditLog>,
   ) {}
 
-  private maskEmail(email?: string | null): string | null {
-    if (!email) return null;
-    const [localPart, domain] = email.split('@');
-    if (!localPart || !domain) return '***';
-    const head = localPart.slice(0, 2);
-    return `${head}***@${domain}`;
-  }
-
-  private maskPhone(phone?: string | null): string | null {
-    if (!phone) return null;
-    const digits = String(phone).replace(/\D/g, '');
-    if (digits.length <= 4) return '***';
-    return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
-  }
-
-  private maskRichText(
-    value?: string | null,
-    includeSensitive?: boolean,
-  ): string | null {
-    if (!value) return null;
-    return includeSensitive ? value : '[mascarado]';
-  }
-
   assertMasterAdmin(usuario: Usuario): void {
     if (usuario.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Acesso restrito ao administrador master');
@@ -126,55 +114,7 @@ export class CrmService {
       return this.permissionsCache;
     }
 
-    const allowed = new Set<CrmAdminPermission>([
-      'dashboard.read',
-      'crm.read',
-      'crm.write',
-      'audit.read',
-      'sensitive.read',
-    ]);
-
-    const map = new Map<string, Set<CrmAdminPermission>>();
-
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      for (const [emailKey, permissionsRaw] of Object.entries(parsed || {})) {
-        const email = emailKey.trim().toLowerCase();
-        if (!email) continue;
-        const permissions = Array.isArray(permissionsRaw)
-          ? permissionsRaw
-          : typeof permissionsRaw === 'string'
-            ? String(permissionsRaw).split('|')
-            : [];
-        const normalized = new Set<CrmAdminPermission>();
-        permissions.forEach((item) => {
-          const permission = String(item).trim() as CrmAdminPermission;
-          if (allowed.has(permission)) normalized.add(permission);
-        });
-        if (normalized.size > 0) map.set(email, normalized);
-      }
-    } catch {
-      const pairs = raw
-        .split(';')
-        .map((chunk) => chunk.trim())
-        .filter(Boolean);
-      pairs.forEach((pair) => {
-        const [emailRaw, permissionsRaw] = pair.split('=');
-        const email = (emailRaw || '').trim().toLowerCase();
-        if (!email) return;
-        const normalized = new Set<CrmAdminPermission>();
-        (permissionsRaw || '')
-          .split('|')
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .forEach((item) => {
-            const permission = item as CrmAdminPermission;
-            if (allowed.has(permission)) normalized.add(permission);
-          });
-        if (normalized.size > 0) map.set(email, normalized);
-      });
-    }
-
+    const map = parseCrmAdminPermissionsConfig(raw);
     this.permissionsCacheRaw = raw;
     this.permissionsCache = map;
     return map;
@@ -188,13 +128,10 @@ export class CrmService {
     const permissionMap = this.parsePermissionsConfig();
     if (permissionMap.size === 0) return;
 
-    const email = (usuario.email || '').trim().toLowerCase();
-    const direct = permissionMap.get(email);
-    const wildcard = permissionMap.get('*');
-    const merged = new Set<CrmAdminPermission>([
-      ...(wildcard || []),
-      ...(direct || []),
-    ]);
+    const merged = resolveCrmAdminPermissions({
+      permissionMap,
+      email: usuario.email,
+    });
 
     if (!merged.has(permission)) {
       throw new ForbiddenException(
@@ -355,22 +292,9 @@ export class CrmService {
       })
       .map((prof) => {
         const counts = countsMap.get(prof.id);
-        return {
-          id: prof.id,
-          nome: prof.nome,
-          email: params?.includeSensitive
-            ? prof.email
-            : this.maskEmail(prof.email),
-          registroProf: prof.registroProf || null,
-          especialidade: prof.especialidade || null,
-          ativo: prof.ativo,
-          role: prof.role,
-          createdAt: prof.createdAt,
-          updatedAt: prof.updatedAt,
-          pacientesTotal: counts?.total || 0,
-          pacientesAtivos: counts?.ativos || 0,
-          lastPacienteUpdate: counts?.lastPacienteUpdate || null,
-        };
+        return mapCrmAdminProfessional(prof, counts, {
+          includeSensitive: params?.includeSensitive,
+        });
       });
   }
 
@@ -463,58 +387,11 @@ export class CrmService {
       }
     });
 
-    return pacientes.map((p) => {
-      const lastAnamnese = latestAnamneseByPaciente.get(p.id);
-      const emocional = lastAnamnese
-        ? {
-            nivelEstresse: lastAnamnese.nivelEstresse ?? null,
-            energiaDiaria: lastAnamnese.energiaDiaria ?? null,
-            apoioEmocional: lastAnamnese.apoioEmocional ?? null,
-            qualidadeSono: lastAnamnese.qualidadeSono ?? null,
-            humorPredominante: lastAnamnese.humorPredominante || null,
-            vulnerabilidade:
-              (lastAnamnese.nivelEstresse ?? 0) >= 8 ||
-              (typeof lastAnamnese.energiaDiaria === 'number' &&
-                lastAnamnese.energiaDiaria <= 3) ||
-              (typeof lastAnamnese.apoioEmocional === 'number' &&
-                lastAnamnese.apoioEmocional <= 3) ||
-              (typeof lastAnamnese.qualidadeSono === 'number' &&
-                lastAnamnese.qualidadeSono <= 3),
-            updatedAt: lastAnamnese.createdAt,
-          }
-        : null;
-
-      return {
-        id: p.id,
-        nomeCompleto: p.nomeCompleto,
-        cpf: params?.includeSensitive ? p.cpf : this.maskPhone(p.cpf),
-        dataNascimento: p.dataNascimento,
-        sexo: p.sexo,
-        estadoCivil: p.estadoCivil || null,
-        contatoEmail: params?.includeSensitive
-          ? p.contatoEmail || null
-          : this.maskEmail(p.contatoEmail),
-        contatoWhatsapp: params?.includeSensitive
-          ? p.contatoWhatsapp || null
-          : this.maskPhone(p.contatoWhatsapp),
-        enderecoCidade: p.enderecoCidade || null,
-        enderecoUf: p.enderecoUf || null,
-        profissao: p.profissao || null,
-        ativo: p.ativo,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-        usuarioId: p.usuarioId,
-        profissionalNome: p.usuario?.nome || null,
-        profissionalEmail: params?.includeSensitive
-          ? p.usuario?.email || null
-          : this.maskEmail(p.usuario?.email || null),
-        pacienteUsuarioId: p.pacienteUsuarioId,
-        pacienteUsuarioEmail: params?.includeSensitive
-          ? p.pacienteUsuario?.email || null
-          : this.maskEmail(p.pacienteUsuario?.email || null),
-        emocional,
-      };
-    });
+    return pacientes.map((p) =>
+      mapCrmAdminPatient(p, latestAnamneseByPaciente.get(p.id), {
+        includeSensitive: params?.includeSensitive,
+      }),
+    );
   }
 
   async updateAdminProfessional(
@@ -651,6 +528,28 @@ export class CrmService {
     };
   }
 
+  private applyClinicalFlowDashboardFilters(
+    qb: SelectQueryBuilder<ClinicalFlowEvent>,
+    params: {
+      since: Date;
+      professionalId?: string;
+      patientId?: string;
+    },
+  ): SelectQueryBuilder<ClinicalFlowEvent> {
+    qb.where('e.occurredAt >= :since', { since: params.since });
+    if (params.professionalId) {
+      qb.andWhere('e.professionalId = :professionalId', {
+        professionalId: params.professionalId,
+      });
+    }
+    if (params.patientId) {
+      qb.andWhere('e.patientId = :patientId', {
+        patientId: params.patientId,
+      });
+    }
+    return qb;
+  }
+
   async getClinicalDashboardSummary(params?: {
     windowDays?: number;
     semEvolucaoDias?: number;
@@ -668,8 +567,7 @@ export class CrmService {
     );
     const now = Date.now();
     const activityWindowMs = windowDays * 24 * 60 * 60 * 1000;
-    const semEvolucaoWindowMs = semEvolucaoDias * 24 * 60 * 60 * 1000;
-    const inactiveClosedWindowMs = 30 * 24 * 60 * 60 * 1000;
+    const since = new Date(now - activityWindowMs);
 
     const professionalId =
       String(params?.professionalId || '').trim() || undefined;
@@ -686,32 +584,7 @@ export class CrmService {
     });
     const pacienteIds = pacientes.map((p) => p.id);
     if (!pacienteIds.length) {
-      return {
-        pipeline: {
-          novoPaciente: 0,
-          aguardandoVinculo: 0,
-          anamnesePendente: 0,
-          emTratamento: 0,
-          alta: 0,
-        },
-        alertas: {
-          semCheckin: 0,
-          semEvolucao: 0,
-          conviteNaoAceito: 0,
-          anamnesePendente: 0,
-        },
-        metricas: {
-          abandonoRate: 0,
-          conclusaoPlanoRate: 0,
-          pacientesEmAtencao: 0,
-          tempoMedioPorEtapaMs: {
-            ANAMNESE: 0,
-            EXAME_FISICO: 0,
-            EVOLUCAO: 0,
-          },
-          blockedTotal: 0,
-        },
-      };
+      return buildEmptyCrmClinicalDashboardSummary();
     }
 
     const latestAnamneses = await this.anamneseRepository
@@ -773,111 +646,35 @@ export class CrmService {
       pacientesComAtividade.map((row) => row.pacienteId),
     );
 
-    let novoPaciente = 0;
-    let aguardandoVinculo = 0;
-    let anamnesePendente = 0;
-    let emTratamento = 0;
-    let alta = 0;
-    let semCheckin = 0;
-    let semEvolucao = 0;
-    let conviteNaoAceito = 0;
-    let pacientesEmAtencao = 0;
-
-    for (const paciente of pacientes) {
+    const patientSignals = pacientes.map((paciente) => {
       const hasAnamnese = anamneseByPaciente.has(paciente.id);
       const lastEvolucao = evolucaoByPaciente.get(paciente.id);
       const lastLaudo = laudoByPaciente.get(paciente.id);
-      const createdAtMs = new Date(paciente.createdAt).getTime();
-      const lastEvolucaoMs = lastEvolucao?.data
-        ? new Date(lastEvolucao.data).getTime()
-        : NaN;
-      const lastLaudoUpdatedMs = lastLaudo?.updatedAt
-        ? new Date(lastLaudo.updatedAt).getTime()
-        : NaN;
       const hasActiveActivity = atividadePacienteIds.has(paciente.id);
       const hasAltaDocumento =
         lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
         !!lastLaudo.criteriosAlta;
-      const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;
       const aguardandoVinculoPaciente =
         !paciente.pacienteUsuarioId ||
         paciente.vinculoStatus === PacienteVinculoStatus.SEM_VINCULO ||
         paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO;
 
-      // Filtro opcional por status operacional do paciente no pipeline.
-      if (statusFilter && statusFilter !== 'ALL' && statusFilter !== 'TODOS') {
-        const matchesStatus =
-          (statusFilter === 'NOVO_PACIENTE' &&
-            !hasAnamnese &&
-            now - createdAtMs <= activityWindowMs) ||
-          (statusFilter === 'AGUARDANDO_VINCULO' &&
-            aguardandoVinculoPaciente) ||
-          (statusFilter === 'ANAMNESE_PENDENTE' && !hasAnamnese) ||
-          (statusFilter === 'EM_TRATAMENTO' &&
-            hasAnamnese &&
-            !tratamentoConcluido) ||
-          (statusFilter === 'ALTA' && tratamentoConcluido);
-        if (!matchesStatus) {
-          continue;
-        }
-      }
+      return {
+        id: paciente.id,
+        createdAt: paciente.createdAt,
+        hasAnamnese,
+        lastEvolucaoAt: lastEvolucao?.data || null,
+        lastLaudoUpdatedAt: lastLaudo?.updatedAt || null,
+        hasAltaDocumento,
+        hasActiveActivity,
+        lastCheckinAt: checkinByPaciente.get(paciente.id) || null,
+        aguardandoVinculo: aguardandoVinculoPaciente,
+        conviteEnviado:
+          paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO,
+      };
+    });
 
-      if (!hasAnamnese && now - createdAtMs <= activityWindowMs) {
-        novoPaciente += 1;
-      }
-      if (aguardandoVinculoPaciente) {
-        aguardandoVinculo += 1;
-      }
-      if (!hasAnamnese) {
-        anamnesePendente += 1;
-      }
-      if (hasAnamnese && !tratamentoConcluido) {
-        emTratamento += 1;
-      }
-      if (tratamentoConcluido) {
-        alta += 1;
-      }
-
-      const lastCheckinRaw = checkinByPaciente.get(paciente.id);
-      const lastCheckinMs = lastCheckinRaw
-        ? new Date(lastCheckinRaw).getTime()
-        : NaN;
-      const lastClinicalEventMs = Math.max(
-        Number.isNaN(lastCheckinMs) ? -1 : lastCheckinMs,
-        Number.isNaN(lastEvolucaoMs) ? -1 : lastEvolucaoMs,
-        Number.isNaN(lastLaudoUpdatedMs) ? -1 : lastLaudoUpdatedMs,
-      );
-      const inativoEncerrado =
-        tratamentoConcluido &&
-        lastClinicalEventMs > 0 &&
-        now - lastClinicalEventMs > inactiveClosedWindowMs;
-
-      // Pacientes em alta/encerrados não entram mais em atenção operacional.
-      if (tratamentoConcluido || inativoEncerrado) {
-        continue;
-      }
-
-      if (hasActiveActivity) {
-        if (
-          Number.isNaN(lastCheckinMs) ||
-          now - lastCheckinMs > activityWindowMs
-        ) {
-          semCheckin += 1;
-        }
-      }
-      if (
-        Number.isNaN(lastEvolucaoMs) ||
-        now - lastEvolucaoMs > semEvolucaoWindowMs
-      ) {
-        semEvolucao += 1;
-        pacientesEmAtencao += 1;
-      }
-      if (paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO) {
-        conviteNaoAceito += 1;
-      }
-    }
-
-    const flowRows = await this.clinicalFlowEventRepository
+    const flowRowsQb = this.clinicalFlowEventRepository
       .createQueryBuilder('e')
       .select('e.stage', 'stage')
       .addSelect('AVG(e.durationMs)', 'avgDuration')
@@ -897,81 +694,45 @@ export class CrmService {
         `SUM(CASE WHEN e.eventType = 'STAGE_BLOCKED' THEN 1 ELSE 0 END)`,
         'blocked',
       )
-      .where('e.occurredAt >= :since', {
-        since: new Date(now - activityWindowMs),
-      })
-      .andWhere(
-        professionalId ? 'e.professionalId = :professionalId' : '1=1',
-        professionalId ? { professionalId } : {},
-      )
-      .andWhere(
-        patientId ? 'e.patientId = :patientId' : '1=1',
-        patientId ? { patientId } : {},
-      )
+      .addSelect(
+        `SUM(CASE WHEN e.eventType = 'STAGE_AUTOSAVED' THEN 1 ELSE 0 END)`,
+        'autosaved',
+      );
+
+    const flowRows = await this.applyClinicalFlowDashboardFilters(flowRowsQb, {
+      since,
+      professionalId,
+      patientId,
+    })
       .groupBy('e.stage')
-      .getRawMany<{
-        stage: 'ANAMNESE' | 'EXAME_FISICO' | 'EVOLUCAO';
-        avgDuration: string | null;
-        opened: string;
-        abandoned: string;
-        completed: string;
-        blocked: string;
-      }>();
+      .getRawMany<CrmClinicalDashboardFlowRow>();
 
-    const tempoMedioPorEtapaMs = {
-      ANAMNESE: 0,
-      EXAME_FISICO: 0,
-      EVOLUCAO: 0,
-    };
-    let openedTotal = 0;
-    let abandonedTotal = 0;
-    let completedTotal = 0;
-    let blockedTotal = 0;
-    flowRows.forEach((row) => {
-      tempoMedioPorEtapaMs[row.stage] = Number(row.avgDuration || 0);
-      openedTotal += Number(row.opened || 0);
-      abandonedTotal += Number(row.abandoned || 0);
-      completedTotal += Number(row.completed || 0);
-      blockedTotal += Number(row.blocked || 0);
+    const blockedReasonExpression =
+      "COALESCE(NULLIF(e.blocked_reason, ''), 'UNKNOWN')";
+    const blockedReasonRows = await this.applyClinicalFlowDashboardFilters(
+      this.clinicalFlowEventRepository
+        .createQueryBuilder('e')
+        .select(blockedReasonExpression, 'reason')
+        .addSelect('COUNT(*)', 'count'),
+      { since, professionalId, patientId },
+    )
+      .andWhere(`e.eventType = 'STAGE_BLOCKED'`)
+      .groupBy(blockedReasonExpression)
+      .orderBy('COUNT(*)', 'DESC')
+      .limit(5)
+      .getRawMany<CrmClinicalDashboardBlockedReasonRow>();
+
+    return buildCrmClinicalDashboardSummary({
+      patients: patientSignals,
+      flowRows,
+      blockedReasonRows,
+      now,
+      windowDays,
+      semEvolucaoDias,
+      statusFilter,
+      professionalId,
+      patientId,
     });
-
-    const abandonoRate =
-      openedTotal > 0
-        ? Number(((abandonedTotal / openedTotal) * 100).toFixed(1))
-        : 0;
-    const conclusaoPlanoRate =
-      pacienteIds.length > 0
-        ? Number(((alta / pacienteIds.length) * 100).toFixed(1))
-        : 0;
-
-    return {
-      pipeline: {
-        novoPaciente,
-        aguardandoVinculo,
-        anamnesePendente,
-        emTratamento,
-        alta,
-      },
-      alertas: {
-        semCheckin,
-        semEvolucao,
-        conviteNaoAceito,
-        anamnesePendente,
-      },
-      metricas: {
-        abandonoRate,
-        conclusaoPlanoRate,
-        pacientesEmAtencao,
-        tempoMedioPorEtapaMs,
-        completedTotal,
-        blockedTotal,
-      },
-      filtros: {
-        professionalId: professionalId || null,
-        patientId: patientId || null,
-        status: statusFilter || null,
-      },
-    };
   }
 
   async listLeads(params?: {
@@ -981,7 +742,7 @@ export class CrmService {
   }) {
     const leads = await this.buildLeadQuery(params).getMany();
     return leads.map((lead) =>
-      this.mapLead(lead, { includeSensitive: params?.includeSensitive }),
+      mapCrmLead(lead, { includeSensitive: params?.includeSensitive }),
     );
   }
 
@@ -1001,7 +762,7 @@ export class CrmService {
 
     return {
       items: items.map((lead) =>
-        this.mapLead(lead, { includeSensitive: params?.includeSensitive }),
+        mapCrmLead(lead, { includeSensitive: params?.includeSensitive }),
       ),
       total,
       page,
@@ -1015,7 +776,7 @@ export class CrmService {
       where: { id, ativo: true },
     });
     if (!lead) throw new NotFoundException('Lead não encontrado');
-    return this.mapLead(lead, { includeSensitive: params?.includeSensitive });
+    return mapCrmLead(lead, { includeSensitive: params?.includeSensitive });
   }
 
   async createLead(dto: CreateCrmLeadDto, usuario: Usuario) {
@@ -1030,7 +791,7 @@ export class CrmService {
       observacoes: dto.observacoes?.trim() || null,
       ativo: true,
     });
-    return this.mapLead(await this.crmLeadRepository.save(entity), {
+    return mapCrmLead(await this.crmLeadRepository.save(entity), {
       includeSensitive: true,
     });
   }
@@ -1052,7 +813,7 @@ export class CrmService {
     if (dto.observacoes !== undefined)
       lead.observacoes = dto.observacoes?.trim() || null;
 
-    return this.mapLead(await this.crmLeadRepository.save(lead), {
+    return mapCrmLead(await this.crmLeadRepository.save(lead), {
       includeSensitive: true,
     });
   }
@@ -1075,7 +836,7 @@ export class CrmService {
     if (params?.limit) qb.take(Math.max(1, Math.min(params.limit, 100)));
     const tasks = await qb.getMany();
     return tasks.map((task) =>
-      this.mapTask(task, { includeSensitive: params?.includeSensitive }),
+      mapCrmTask(task, { includeSensitive: params?.includeSensitive }),
     );
   }
 
@@ -1095,7 +856,7 @@ export class CrmService {
       .getManyAndCount();
     return {
       items: items.map((task) =>
-        this.mapTask(task, { includeSensitive: params?.includeSensitive }),
+        mapCrmTask(task, { includeSensitive: params?.includeSensitive }),
       ),
       total,
       page,
@@ -1115,7 +876,7 @@ export class CrmService {
       status: dto.status ?? CrmTaskStatus.PENDENTE,
       ativo: true,
     });
-    return this.mapTask(await this.crmTaskRepository.save(entity), {
+    return mapCrmTask(await this.crmTaskRepository.save(entity), {
       includeSensitive: true,
     });
   }
@@ -1136,7 +897,7 @@ export class CrmService {
       task.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
     if (dto.status !== undefined) task.status = dto.status;
 
-    return this.mapTask(await this.crmTaskRepository.save(task), {
+    return mapCrmTask(await this.crmTaskRepository.save(task), {
       includeSensitive: true,
     });
   }
@@ -1157,7 +918,7 @@ export class CrmService {
     await this.ensureLeadExists(leadId);
     const items = await this.buildInteractionQuery({ leadId }).getMany();
     return items.map((item) =>
-      this.mapInteraction(item, { includeSensitive: params?.includeSensitive }),
+      mapCrmInteraction(item, { includeSensitive: params?.includeSensitive }),
     );
   }
 
@@ -1178,7 +939,7 @@ export class CrmService {
       .getManyAndCount();
     return {
       items: items.map((item) =>
-        this.mapInteraction(item, {
+        mapCrmInteraction(item, {
           includeSensitive: params?.includeSensitive,
         }),
       ),
@@ -1201,12 +962,9 @@ export class CrmService {
       occurredAt: dto.occurredAt ? new Date(dto.occurredAt) : new Date(),
       ativo: true,
     });
-    return this.mapInteraction(
-      await this.crmInteractionRepository.save(entity),
-      {
-        includeSensitive: true,
-      },
-    );
+    return mapCrmInteraction(await this.crmInteractionRepository.save(entity), {
+      includeSensitive: true,
+    });
   }
 
   async updateInteraction(id: string, dto: UpdateCrmInteractionDto) {
@@ -1228,7 +986,7 @@ export class CrmService {
     if (dto.occurredAt !== undefined && dto.occurredAt)
       item.occurredAt = new Date(dto.occurredAt);
 
-    return this.mapInteraction(await this.crmInteractionRepository.save(item), {
+    return mapCrmInteraction(await this.crmInteractionRepository.save(item), {
       includeSensitive: true,
     });
   }
@@ -1308,61 +1066,6 @@ export class CrmService {
       );
     }
     return qb;
-  }
-
-  private mapLead(lead: CrmLead, params?: { includeSensitive?: boolean }) {
-    return {
-      id: lead.id,
-      nome: lead.nome,
-      empresa: lead.empresa,
-      canal: lead.canal,
-      stage: lead.stage,
-      responsavelNome: lead.responsavelNome,
-      responsavelUsuarioId: lead.responsavelUsuarioId,
-      valorPotencial: Number(lead.valorPotencial || 0),
-      observacoes: this.maskRichText(
-        lead.observacoes,
-        params?.includeSensitive,
-      ),
-      ativo: lead.ativo,
-      createdAt: lead.createdAt,
-      updatedAt: lead.updatedAt,
-    };
-  }
-
-  private mapTask(task: CrmTask, params?: { includeSensitive?: boolean }) {
-    return {
-      id: task.id,
-      titulo: task.titulo,
-      descricao: this.maskRichText(task.descricao, params?.includeSensitive),
-      leadId: task.leadId,
-      responsavelNome: task.responsavelNome,
-      responsavelUsuarioId: task.responsavelUsuarioId,
-      dueAt: task.dueAt,
-      status: task.status,
-      ativo: task.ativo,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-    };
-  }
-
-  private mapInteraction(
-    item: CrmInteraction,
-    params?: { includeSensitive?: boolean },
-  ) {
-    return {
-      id: item.id,
-      leadId: item.leadId,
-      tipo: item.tipo,
-      resumo: item.resumo,
-      detalhes: this.maskRichText(item.detalhes, params?.includeSensitive),
-      responsavelNome: item.responsavelNome,
-      responsavelUsuarioId: item.responsavelUsuarioId,
-      occurredAt: item.occurredAt,
-      ativo: item.ativo,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
   }
 
   private async ensureLeadExists(id: string): Promise<void> {

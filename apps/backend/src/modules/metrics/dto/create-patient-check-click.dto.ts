@@ -10,4 +10,3 @@ export class CreatePatientCheckClickDto {
   @MaxLength(40)
   source?: string;
 }
-

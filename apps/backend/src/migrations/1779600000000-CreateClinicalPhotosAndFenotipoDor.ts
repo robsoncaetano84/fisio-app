@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateClinicalPhotosAndFenotipoDor1779600000000
-  implements MigrationInterface
-{
+export class CreateClinicalPhotosAndFenotipoDor1779600000000 implements MigrationInterface {
   name = 'CreateClinicalPhotosAndFenotipoDor1779600000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -89,7 +87,9 @@ export class CreateClinicalPhotosAndFenotipoDor1779600000000
     await queryRunner.query(
       `DROP INDEX IF EXISTS "idx_clinical_photo_comparisons_paciente_created"`,
     );
-    await queryRunner.query(`DROP TABLE IF EXISTS "clinical_photo_comparisons"`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS "clinical_photo_comparisons"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_clinical_photos_tipo"`);
     await queryRunner.query(
       `DROP INDEX IF EXISTS "idx_clinical_photos_usuario_created"`,

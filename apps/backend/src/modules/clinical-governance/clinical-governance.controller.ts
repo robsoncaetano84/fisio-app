@@ -22,9 +22,7 @@ type ClinicalAuditActionTypeValue = 'READ' | 'EDIT' | 'APPROVAL';
 @UseGuards(JwtAuthGuard)
 @Roles(UserRole.ADMIN, UserRole.USER, UserRole.PACIENTE)
 export class ClinicalGovernanceController {
-  constructor(
-    private readonly governanceService: ClinicalGovernanceService,
-  ) {}
+  constructor(private readonly governanceService: ClinicalGovernanceService) {}
 
   @Get('protocol/active')
   getActiveProtocol(@CurrentUser() usuario: Usuario) {
@@ -55,13 +53,19 @@ export class ClinicalGovernanceController {
   }
 
   @Post('consent/my')
-  upsertMyConsent(@CurrentUser() usuario: Usuario, @Body() dto: UpsertConsentDto) {
+  upsertMyConsent(
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: UpsertConsentDto,
+  ) {
     return this.governanceService.upsertMyConsent(usuario, dto);
   }
 
   @Post('ai-suggestions/log')
   @Roles(UserRole.ADMIN, UserRole.USER)
-  logAiSuggestion(@CurrentUser() usuario: Usuario, @Body() dto: LogAiSuggestionDto) {
+  logAiSuggestion(
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: LogAiSuggestionDto,
+  ) {
     return this.governanceService.logAiSuggestion(usuario, dto);
   }
 
@@ -84,7 +88,8 @@ export class ClinicalGovernanceController {
   @Roles(UserRole.ADMIN)
   getAiSuggestionSummary(
     @CurrentUser() usuario: Usuario,
-    @Query('windowDays', new ParseIntPipe({ optional: true })) windowDays?: number,
+    @Query('windowDays', new ParseIntPipe({ optional: true }))
+    windowDays?: number,
     @Query('professionalId') professionalId?: string,
     @Query('patientId') patientId?: string,
   ) {

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreatePatientCheckClickEvents1778200000000
-  implements MigrationInterface
-{
+export class CreatePatientCheckClickEvents1778200000000 implements MigrationInterface {
   name = 'CreatePatientCheckClickEvents1778200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -32,4 +30,3 @@ export class CreatePatientCheckClickEvents1778200000000
     `);
   }
 }
-

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddProfessionalLgpdConsentToUsuarios1777001000000
-  implements MigrationInterface
-{
+export class AddProfessionalLgpdConsentToUsuarios1777001000000 implements MigrationInterface {
   name = 'AddProfessionalLgpdConsentToUsuarios1777001000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -17,4 +15,3 @@ export class AddProfessionalLgpdConsentToUsuarios1777001000000
     );
   }
 }
-

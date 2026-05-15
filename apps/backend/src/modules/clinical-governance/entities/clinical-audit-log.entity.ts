@@ -31,7 +31,12 @@ export class ClinicalAuditLog {
   @Column({ type: 'varchar', length: 80 })
   action: string;
 
-  @Column({ name: 'resource_type', type: 'varchar', length: 80, nullable: true })
+  @Column({
+    name: 'resource_type',
+    type: 'varchar',
+    length: 80,
+    nullable: true,
+  })
   resourceType: string | null;
 
   @Column({ name: 'resource_id', type: 'varchar', length: 120, nullable: true })
@@ -43,4 +48,3 @@ export class ClinicalAuditLog {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

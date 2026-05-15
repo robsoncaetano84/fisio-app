@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddPacienteConsentimentosToUsuarios1777000000000
-  implements MigrationInterface
-{
+export class AddPacienteConsentimentosToUsuarios1777000000000 implements MigrationInterface {
   name = 'AddPacienteConsentimentosToUsuarios1777000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -41,4 +39,3 @@ export class AddPacienteConsentimentosToUsuarios1777000000000
     );
   }
 }
-

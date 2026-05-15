@@ -13,11 +13,8 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
-import {
-  AuthFeatureFlagsResponse,
-  AuthService,
-  LoginResponse,
-} from './auth.service';
+import { AuthService } from './auth.service';
+import type { AuthFeatureFlagsResponse, LoginResponse } from './auth.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -49,7 +46,11 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Req() req: Request,
   ): Promise<LoginResponse> {
-    const identificador = (loginDto.identificador || loginDto.email || '').trim();
+    const identificador = (
+      loginDto.identificador ||
+      loginDto.email ||
+      ''
+    ).trim();
     if (!identificador) {
       throw new BadRequestException('E-mail ou CPF é obrigatório');
     }
@@ -118,16 +119,16 @@ export class AuthController {
   @Public()
   @Post('registro-paciente-convite')
   @Throttle({ default: { ttl: 60, limit: 10 } })
-  async registroPacientePorConvite(
-    @Body() dto: RegistroPacientePorConviteDto,
-  ) {
+  async registroPacientePorConvite(@Body() dto: RegistroPacientePorConviteDto) {
     return this.authService.registrarPacientePorConvite(dto);
   }
 
   @Public()
   @Get('paciente-convite-dados')
   @Throttle({ default: { ttl: 60, limit: 20 } })
-  async obterDadosConvitePaciente(@Query('conviteToken') conviteToken?: string) {
+  async obterDadosConvitePaciente(
+    @Query('conviteToken') conviteToken?: string,
+  ) {
     if (!conviteToken?.trim()) {
       throw new BadRequestException('Convite invalido');
     }
@@ -147,7 +148,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@CurrentUser() usuario: Usuario) {
+  me(@CurrentUser() usuario: Usuario) {
     return {
       id: usuario.id,
       nome: usuario.nome,
@@ -170,9 +171,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('feature-flags')
-  async getFeatureFlags(
-    @CurrentUser() usuario: Usuario,
-  ): Promise<AuthFeatureFlagsResponse> {
+  getFeatureFlags(@CurrentUser() usuario: Usuario): AuthFeatureFlagsResponse {
     return this.authService.getFeatureFlagsForUser(usuario);
   }
 

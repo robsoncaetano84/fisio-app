@@ -2,173 +2,48 @@ import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PacientesService } from '../pacientes/pacientes.service';
-import { Anamnese, TipoDor } from '../anamneses/entities/anamnese.entity';
+import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
-import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { ClinicalGovernanceService } from '../clinical-governance/clinical-governance.service';
 import { OpenAiService } from '../ai/openai.service';
+import {
+  buildDorClassificationSuggestionAuditPayload,
+  buildEvolucaoSoapSuggestionAuditPayload,
+  buildNextActionAuditPayload,
+} from './charles-audit.util';
+import {
+  buildCharlesNextActionResponse,
+  type CharlesNextActionResponse,
+} from './charles-next-action.util';
+import { inferDorClassificationFromAnamnese } from './charles-dor-classification.util';
+import {
+  mapDorClassificationSuggestionResponse,
+  mapEvolucaoSoapSuggestionResponse,
+  type CharlesEvolucaoSoapSuggestionResponse,
+  type CharlesExameFisicoDorSuggestionResponse,
+} from './charles-suggestion-response.mapper';
+import {
+  buildEvolucaoSoapAiPrompt,
+  CHARLES_SOAP_AI_OPERATION,
+  inferEvolucaoSoapSuggestion,
+  mergeSoapSuggestions,
+  sanitizeAiSoapSuggestion,
+  type CharlesSoapSuggestionDraft,
+} from './charles-soap-suggestion.util';
 
-const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
-const CLINICAL_REGION_KEYS = [
-  'CERVICAL',
-  'TORACICA',
-  'LOMBAR',
-  'SACROILIACA',
-  'QUADRIL',
-  'JOELHO',
-  'TORNOZELO_PE',
-  'OMBRO',
-  'COTOVELO',
-  'PUNHO_MAO',
-] as const;
-type ClinicalRegionKey = (typeof CLINICAL_REGION_KEYS)[number];
-
-const REGION_INFERENCE_RULES: Array<{
-  regex: RegExp;
-  region: ClinicalRegionKey;
-}> = [
-  { regex: /(cerv|pescoc|cabec)/, region: 'CERVICAL' },
-  { regex: /(torac|torax)/, region: 'TORACICA' },
-  { regex: /(lomb|abdomen)/, region: 'LOMBAR' },
-  { regex: /(sacro|iliac|pelve)/, region: 'SACROILIACA' },
-  { regex: /(quadril|glute|coxa)/, region: 'QUADRIL' },
-  { regex: /(joelho|poplit)/, region: 'JOELHO' },
-  { regex: /(tornoz|pe\b|pé)/, region: 'TORNOZELO_PE' },
-  { regex: /(ombro|braco|braço)/, region: 'OMBRO' },
-  { regex: /(cotovelo|antebraco|antebraço)/, region: 'COTOVELO' },
-  { regex: /(punho|mao|mão)/, region: 'PUNHO_MAO' },
-];
-
-const CHAIN_REGION_MAP: Record<ClinicalRegionKey, ClinicalRegionKey[]> = {
-  CERVICAL: ['CERVICAL', 'TORACICA', 'OMBRO', 'COTOVELO', 'PUNHO_MAO'],
-  TORACICA: ['TORACICA', 'CERVICAL', 'OMBRO', 'LOMBAR'],
-  LOMBAR: ['LOMBAR', 'SACROILIACA', 'QUADRIL', 'JOELHO', 'TORNOZELO_PE'],
-  SACROILIACA: ['SACROILIACA', 'LOMBAR', 'QUADRIL', 'JOELHO', 'TORNOZELO_PE'],
-  QUADRIL: ['QUADRIL', 'SACROILIACA', 'LOMBAR', 'JOELHO', 'TORNOZELO_PE'],
-  JOELHO: ['JOELHO', 'QUADRIL', 'SACROILIACA', 'LOMBAR', 'TORNOZELO_PE'],
-  TORNOZELO_PE: ['TORNOZELO_PE', 'JOELHO', 'QUADRIL', 'SACROILIACA', 'LOMBAR'],
-  OMBRO: ['OMBRO', 'CERVICAL', 'TORACICA', 'COTOVELO', 'PUNHO_MAO'],
-  COTOVELO: ['COTOVELO', 'OMBRO', 'PUNHO_MAO', 'CERVICAL'],
-  PUNHO_MAO: ['PUNHO_MAO', 'COTOVELO', 'OMBRO', 'CERVICAL'],
-};
-
-export type CharlesClinicalStage =
-  | 'ANAMNESE'
-  | 'EXAME_FISICO'
-  | 'EVOLUCAO'
-  | 'LAUDO'
-  | 'PLANO'
-  | 'MONITORAMENTO';
-
-export type CharlesStageStatus = 'PENDING' | 'COMPLETED' | 'BLOCKED';
-
-export interface CharlesStageItem {
-  stage: CharlesClinicalStage;
-  status: CharlesStageStatus;
-  reason: string;
-}
-
-export interface CharlesNextAction {
-  stage: CharlesClinicalStage;
-  reason: string;
-  guidance: string;
-}
-
-export interface CharlesNextActionResponse {
-  orchestrator: 'CLINICAL_ORCHESTRATOR';
-  mode: 'deterministic-v1';
-  requiresProfessionalApproval: true;
-  protocolVersion: string | null;
-  protocolName: string | null;
-  blocked: boolean;
-  paciente: {
-    id: string;
-    nomeCompleto: string;
-  };
-  context: {
-    regioesPrioritarias: string[];
-    regioesRelacionadas: string[];
-    cadeiaProvavel: string | null;
-  };
-  timeline: {
-    anamneseEm: Date | null;
-    exameFisicoEm: Date | null;
-    evolucaoEm: Date | null;
-    laudoEm: Date | null;
-  };
-  blockers: Array<{
-    code: string;
-    severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
-    message: string;
-  }>;
-  alerts: Array<{
-    code: string;
-    severity: 'LOW' | 'MEDIUM' | 'HIGH';
-    message: string;
-  }>;
-  stages: CharlesStageItem[];
-  nextAction: CharlesNextAction;
-}
-
-export interface CharlesExameFisicoDorSuggestionResponse {
-  orchestrator: 'CLINICAL_ORCHESTRATOR';
-  mode: 'assistive-v1';
-  requiresProfessionalApproval: true;
-  patientId: string;
-  stage: 'EXAME_FISICO';
-  suggestionType: 'DOR_CLASSIFICATION';
-  confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
-  reason: string;
-  evidenceFields: string[];
-  protocolVersion: string | null;
-  protocolName: string | null;
-  dorPrincipal:
-    | 'NOCICEPTIVA'
-    | 'NEUROPATICA'
-    | 'NOCIPLASTICA'
-    | 'INFLAMATORIA'
-    | 'VISCERAL'
-    | null;
-  dorSubtipo:
-    | 'MECANICA'
-    | 'DISCAL'
-    | 'NEURAL'
-    | 'REFERIDA'
-    | 'INFLAMATORIA'
-    | 'MIOFASCIAL'
-    | 'FACETARIA'
-    | 'NAO_MECANICA'
-    | null;
-}
-
-export interface CharlesEvolucaoSoapSuggestionResponse {
-  orchestrator: 'CLINICAL_ORCHESTRATOR';
-  mode: 'assistive-v1';
-  requiresProfessionalApproval: true;
-  patientId: string;
-  stage: 'EVOLUCAO';
-  suggestionType: 'EVOLUCAO_SOAP';
-  confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
-  reason: string;
-  evidenceFields: string[];
-  protocolVersion: string | null;
-  protocolName: string | null;
-  subjetivo: string | null;
-  objetivo: string | null;
-  avaliacao: string | null;
-  plano: string | null;
-}
-
-type CharlesSoapSuggestionDraft = {
-  confidence: CharlesEvolucaoSoapSuggestionResponse['confidence'];
-  reason: string;
-  evidenceFields: string[];
-  subjetivo: string | null;
-  objetivo: string | null;
-  avaliacao: string | null;
-  plano: string | null;
-};
+export type {
+  CharlesClinicalStage,
+  CharlesNextAction,
+  CharlesNextActionResponse,
+  CharlesStageItem,
+  CharlesStageStatus,
+} from './charles-next-action.util';
+export type {
+  CharlesEvolucaoSoapSuggestionResponse,
+  CharlesExameFisicoDorSuggestionResponse,
+} from './charles-suggestion-response.mapper';
 
 @Injectable()
 export class CharlesService {
@@ -211,133 +86,20 @@ export class CharlesService {
         this.getActiveProtocolSafe(usuario),
       ]);
 
-    const hasAnamnese = !!latestAnamnese;
-    const hasExameFisico = this.hasStructuredExame(latestLaudo?.exameFisico);
-    const hasEvolucao = !!latestEvolucao;
-    const laudoValidado =
-      latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL;
-    const hasPlanoOuAlta = !!String(latestLaudo?.criteriosAlta || '').trim();
-    const hasCriticalRedFlag = this.hasCriticalRedFlag(
-      latestAnamnese?.redFlags,
+    const response = buildCharlesNextActionResponse({
+      paciente,
+      latestAnamnese,
+      latestEvolucao,
+      latestLaudo,
+      activeProtocol,
+    });
+
+    await this.writeAuditSafe(
+      buildNextActionAuditPayload({
+        actor: usuario,
+        response,
+      }),
     );
-    const context = this.buildClinicalContext(latestAnamnese);
-    const blockers: CharlesNextActionResponse['blockers'] = [];
-    const alerts: CharlesNextActionResponse['alerts'] = [];
-
-    if (hasCriticalRedFlag) {
-      blockers.push({
-        code: 'RED_FLAG_CRITICA',
-        severity: 'CRITICAL',
-        message:
-          'Red flag critica detectada na anamnese. Continuidade do ciclo deve ser bloqueada ate encaminhamento.',
-      });
-    }
-    if ((latestAnamnese?.yellowFlags || []).length >= 2) {
-      alerts.push({
-        code: 'YELLOW_FLAGS_RELEVANTES',
-        severity: 'MEDIUM',
-        message:
-          'Paciente com yellow flags relevantes; manter acompanhamento de adesao e abordagem biopsicossocial.',
-      });
-    }
-
-    let stages: CharlesStageItem[] = [
-      {
-        stage: 'ANAMNESE',
-        status: hasAnamnese ? 'COMPLETED' : 'PENDING',
-        reason: hasAnamnese
-          ? 'Anamnese registrada.'
-          : 'Ainda nao existe anamnese para este paciente.',
-      },
-      {
-        stage: 'EXAME_FISICO',
-        status: hasExameFisico ? 'COMPLETED' : 'PENDING',
-        reason: hasExameFisico
-          ? 'Exame fisico estruturado encontrado no laudo mais recente.'
-          : 'Exame fisico ainda nao preenchido.',
-      },
-      {
-        stage: 'EVOLUCAO',
-        status: hasEvolucao ? 'COMPLETED' : 'PENDING',
-        reason: hasEvolucao
-          ? 'Evolucao registrada.'
-          : 'Sem evolucao registrada para o ciclo atual.',
-      },
-      {
-        stage: 'LAUDO',
-        status: laudoValidado ? 'COMPLETED' : 'PENDING',
-        reason: laudoValidado
-          ? 'Laudo validado pelo profissional.'
-          : 'Laudo ainda em rascunho ou nao validado.',
-      },
-      {
-        stage: 'PLANO',
-        status: hasPlanoOuAlta ? 'COMPLETED' : 'PENDING',
-        reason: hasPlanoOuAlta
-          ? 'Plano/criterios de alta definidos.'
-          : 'Defina criterios de alta e plano final do ciclo.',
-      },
-    ];
-
-    if (hasCriticalRedFlag) {
-      stages = stages.map((item) => {
-        if (item.status === 'COMPLETED') return item;
-        return {
-          ...item,
-          status: 'BLOCKED',
-          reason:
-            'Etapa bloqueada por red flag critica ate encaminhamento e reavaliacao.',
-        };
-      });
-    }
-
-    const nextAction = this.resolveNextAction({
-      hasAnamnese,
-      hasExameFisico,
-      hasEvolucao,
-      laudoValidado,
-      hasPlanoOuAlta,
-      hasCriticalRedFlag,
-    });
-
-    const response: CharlesNextActionResponse = {
-      orchestrator: 'CLINICAL_ORCHESTRATOR',
-      mode: 'deterministic-v1',
-      requiresProfessionalApproval: true,
-      protocolVersion: activeProtocol?.version || null,
-      protocolName: activeProtocol?.name || null,
-      blocked: blockers.length > 0,
-      paciente: {
-        id: paciente.id,
-        nomeCompleto: paciente.nomeCompleto,
-      },
-      context,
-      timeline: {
-        anamneseEm: latestAnamnese?.createdAt || null,
-        exameFisicoEm: hasExameFisico ? latestLaudo?.updatedAt || null : null,
-        evolucaoEm: latestEvolucao?.data || null,
-        laudoEm: latestLaudo?.updatedAt || null,
-      },
-      blockers,
-      alerts,
-      stages,
-      nextAction,
-    };
-
-    await this.writeAuditSafe({
-      actor: usuario,
-      actionType: 'READ',
-      action: 'orchestrator.next_action.read',
-      resourceType: 'CLINICAL_ORCHESTRATOR',
-      resourceId: paciente.id,
-      patientId: paciente.id,
-      metadata: {
-        nextStage: response.nextAction.stage,
-        mode: response.mode,
-        protocolVersion: response.protocolVersion,
-        protocolName: response.protocolName,
-      },
-    });
 
     return response;
   }
@@ -354,41 +116,23 @@ export class CharlesService {
       where: { pacienteId: paciente.id },
       order: { createdAt: 'DESC' },
     });
-    const suggestion = this.inferDorClassificationFromAnamnese(latestAnamnese);
+    const suggestion = inferDorClassificationFromAnamnese(latestAnamnese);
     const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
-    await this.writeAuditSafe({
-      actor: usuario,
-      actionType: 'READ',
-      action: 'orchestrator.ai_suggestion.read',
-      resourceType: 'AI_SUGGESTION',
-      resourceId: 'EXAME_FISICO:DOR_CLASSIFICATION',
-      patientId: paciente.id,
-      metadata: {
-        stage: 'EXAME_FISICO',
-        suggestionType: 'DOR_CLASSIFICATION',
-        confidence: suggestion.confidence,
-        evidenceFields: suggestion.evidenceFields,
-        protocolVersion: activeProtocol?.version || null,
-        protocolName: activeProtocol?.name || null,
-      },
-    });
+    await this.writeAuditSafe(
+      buildDorClassificationSuggestionAuditPayload({
+        actor: usuario,
+        patientId: paciente.id,
+        suggestion,
+        activeProtocol,
+      }),
+    );
 
-    return {
-      orchestrator: 'CLINICAL_ORCHESTRATOR',
-      mode: 'assistive-v1',
-      requiresProfessionalApproval: true,
+    return mapDorClassificationSuggestionResponse({
       patientId: paciente.id,
-      stage: 'EXAME_FISICO',
-      suggestionType: 'DOR_CLASSIFICATION',
-      confidence: suggestion.confidence,
-      reason: suggestion.reason,
-      evidenceFields: suggestion.evidenceFields,
-      protocolVersion: activeProtocol?.version || null,
-      protocolName: activeProtocol?.name || null,
-      dorPrincipal: suggestion.principal,
-      dorSubtipo: suggestion.subtipo,
-    };
+      suggestion,
+      activeProtocol,
+    });
   }
 
   async getEvolucaoSoapSuggestion(
@@ -414,7 +158,7 @@ export class CharlesService {
       }),
     ]);
 
-    const fallbackSuggestion = this.inferEvolucaoSoapSuggestion({
+    const fallbackSuggestion = inferEvolucaoSoapSuggestion({
       anamnese: latestAnamnese,
       evolucao: latestEvolucao,
       laudo: latestLaudo,
@@ -427,44 +171,24 @@ export class CharlesService {
       fallback: fallbackSuggestion,
     });
     const suggestion = aiSuggestion
-      ? this.mergeSoapSuggestions(fallbackSuggestion, aiSuggestion)
+      ? mergeSoapSuggestions(fallbackSuggestion, aiSuggestion)
       : fallbackSuggestion;
     const activeProtocol = await this.getActiveProtocolSafe(usuario);
 
-    await this.writeAuditSafe({
-      actor: usuario,
-      actionType: 'READ',
-      action: 'orchestrator.ai_suggestion.read',
-      resourceType: 'AI_SUGGESTION',
-      resourceId: 'EVOLUCAO:SOAP',
-      patientId: paciente.id,
-      metadata: {
-        stage: 'EVOLUCAO',
-        suggestionType: 'EVOLUCAO_SOAP',
-        confidence: suggestion.confidence,
-        evidenceFields: suggestion.evidenceFields,
-        protocolVersion: activeProtocol?.version || null,
-        protocolName: activeProtocol?.name || null,
-      },
-    });
+    await this.writeAuditSafe(
+      buildEvolucaoSoapSuggestionAuditPayload({
+        actor: usuario,
+        patientId: paciente.id,
+        suggestion,
+        activeProtocol,
+      }),
+    );
 
-    return {
-      orchestrator: 'CLINICAL_ORCHESTRATOR',
-      mode: 'assistive-v1',
-      requiresProfessionalApproval: true,
+    return mapEvolucaoSoapSuggestionResponse({
       patientId: paciente.id,
-      stage: 'EVOLUCAO',
-      suggestionType: 'EVOLUCAO_SOAP',
-      confidence: suggestion.confidence,
-      reason: suggestion.reason,
-      evidenceFields: suggestion.evidenceFields,
-      protocolVersion: activeProtocol?.version || null,
-      protocolName: activeProtocol?.name || null,
-      subjetivo: suggestion.subjetivo,
-      objetivo: suggestion.objetivo,
-      avaliacao: suggestion.avaliacao,
-      plano: suggestion.plano,
-    };
+      suggestion,
+      activeProtocol,
+    });
   }
 
   private async getActiveProtocolSafe(
@@ -492,557 +216,6 @@ export class CharlesService {
     }
   }
 
-  private hasStructuredExame(raw?: string | null): boolean {
-    const value = String(raw || '').trim();
-    if (!value) return false;
-    return value.startsWith(STRUCTURED_EXAME_PREFIX) || value.length > 20;
-  }
-
-  private resolveNextAction(args: {
-    hasAnamnese: boolean;
-    hasExameFisico: boolean;
-    hasEvolucao: boolean;
-    laudoValidado: boolean;
-    hasPlanoOuAlta: boolean;
-    hasCriticalRedFlag: boolean;
-  }): CharlesNextAction {
-    if (args.hasCriticalRedFlag) {
-      return {
-        stage: 'MONITORAMENTO',
-        reason: 'Red flag critica detectada.',
-        guidance:
-          'Interromper continuidade do fluxo e encaminhar paciente para avaliacao medica/servico de urgencia conforme protocolo.',
-      };
-    }
-    if (!args.hasAnamnese) {
-      return {
-        stage: 'ANAMNESE',
-        reason: 'Sem anamnese registrada.',
-        guidance: 'Registrar anamnese completa para iniciar o ciclo clinico.',
-      };
-    }
-    if (!args.hasExameFisico) {
-      return {
-        stage: 'EXAME_FISICO',
-        reason: 'Sem exame fisico estruturado.',
-        guidance:
-          'Preencher exame fisico orientado por regiao e cadeia relacionada.',
-      };
-    }
-    if (!args.hasEvolucao) {
-      return {
-        stage: 'EVOLUCAO',
-        reason: 'Sem evolucao clinica apos exame.',
-        guidance: 'Registrar evolucao inicial e check-in da sessao.',
-      };
-    }
-    if (!args.laudoValidado) {
-      return {
-        stage: 'LAUDO',
-        reason: 'Laudo ainda nao validado.',
-        guidance: 'Revisar e validar laudo/plano com aprovacao profissional.',
-      };
-    }
-    if (!args.hasPlanoOuAlta) {
-      return {
-        stage: 'PLANO',
-        reason: 'Plano final sem criterios de alta.',
-        guidance: 'Definir criterios de alta e direcionamento do plano.',
-      };
-    }
-    return {
-      stage: 'MONITORAMENTO',
-      reason: 'Ciclo clinico concluido.',
-      guidance:
-        'Manter monitoramento por check-ins e reavaliacao conforme necessidade.',
-    };
-  }
-
-  private hasCriticalRedFlag(redFlags?: unknown): boolean {
-    if (!Array.isArray(redFlags) || redFlags.length === 0) return false;
-
-    const ignored = new Set([
-      'SEM_RED_FLAG_CRITICA',
-      'NO_RED_FLAG',
-      'NONE',
-      'NENHUMA',
-      'NAO',
-      'NÃO',
-      'NAO_INFORMADO',
-      'NÃO_INFORMADO',
-    ]);
-
-    return redFlags.some((item) => {
-      const raw = String(item || '').trim();
-      if (!raw) return false;
-      const normalized = raw
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '_')
-        .toUpperCase();
-      return !ignored.has(normalized);
-    });
-  }
-
-  private buildClinicalContext(anamnese?: Anamnese | null): {
-    regioesPrioritarias: string[];
-    regioesRelacionadas: string[];
-    cadeiaProvavel: string | null;
-  } {
-    const regioesSet = new Set<ClinicalRegionKey>();
-    for (const area of anamnese?.areasAfetadas || []) {
-      const raw = String(area.regiao || '').trim();
-      const normalized = this.normalizeClinicalRegion(raw);
-      if (normalized) regioesSet.add(normalized);
-    }
-    const regioes = Array.from(regioesSet);
-
-    const regiaoKey = regioes.join(' ').toLowerCase();
-    let cadeiaProvavel: string | null = null;
-    if (/(lombar|sacro|sacroiliaca|quadril|gluteo|joelho|tornozelo_pe)/.test(regiaoKey)) {
-      cadeiaProvavel = 'CADEIA_LOWER';
-    } else if (/(cervical|ombro|cotovelo|punho_mao|toracica)/.test(regiaoKey)) {
-      cadeiaProvavel = 'CADEIA_UPPER';
-    } else if (regioes.length > 0) {
-      cadeiaProvavel = 'CADEIA_LOCAL';
-    }
-
-    const relacionadas = new Set<ClinicalRegionKey>();
-    for (const regiao of regioes) {
-      for (const related of CHAIN_REGION_MAP[regiao] || [regiao]) {
-        relacionadas.add(related);
-      }
-    }
-
-    return {
-      regioesPrioritarias: regioes,
-      regioesRelacionadas: Array.from(relacionadas),
-      cadeiaProvavel,
-    };
-  }
-
-  private normalizeClinicalRegion(rawRegion: string): ClinicalRegionKey | null {
-    const normalized = String(rawRegion || '')
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toUpperCase();
-
-    if (!normalized) return null;
-    if ((CLINICAL_REGION_KEYS as readonly string[]).includes(normalized)) {
-      return normalized as ClinicalRegionKey;
-    }
-    if (
-      normalized === 'SACRO' ||
-      normalized === 'ILIACO' ||
-      normalized === 'PELVIS'
-    ) {
-      return 'SACROILIACA';
-    }
-    if (normalized === 'PUNHO' || normalized === 'MAO') {
-      return 'PUNHO_MAO';
-    }
-    if (normalized === 'TORNOZELO' || normalized === 'PE') {
-      return 'TORNOZELO_PE';
-    }
-
-    const lower = normalized.toLowerCase();
-    for (const rule of REGION_INFERENCE_RULES) {
-      if (rule.regex.test(lower)) return rule.region;
-    }
-    return null;
-  }
-
-  private inferDorClassificationFromAnamnese(anamnese?: Anamnese | null): {
-    principal: CharlesExameFisicoDorSuggestionResponse['dorPrincipal'];
-    subtipo: CharlesExameFisicoDorSuggestionResponse['dorSubtipo'];
-    confidence: CharlesExameFisicoDorSuggestionResponse['confidence'];
-    reason: string;
-    evidenceFields: string[];
-  } {
-    if (!anamnese) {
-      return {
-        principal: null,
-        subtipo: null,
-        confidence: 'BAIXA',
-        reason: 'Sem anamnese disponivel para inferencia.',
-        evidenceFields: [],
-      };
-    }
-
-    if (anamnese.tipoDor === TipoDor.NEUROPATICA) {
-      return {
-        principal: 'NEUROPATICA',
-        subtipo: 'NEURAL',
-        confidence: 'ALTA',
-        reason:
-          'Classificacao inferida diretamente do tipo de dor da anamnese.',
-        evidenceFields: ['tipoDor'],
-      };
-    }
-    if (anamnese.tipoDor === TipoDor.INFLAMATORIA) {
-      return {
-        principal: 'INFLAMATORIA',
-        subtipo: 'INFLAMATORIA',
-        confidence: 'ALTA',
-        reason:
-          'Classificacao inferida diretamente do tipo de dor da anamnese.',
-        evidenceFields: ['tipoDor'],
-      };
-    }
-    if (anamnese.tipoDor === TipoDor.MECANICA) {
-      return {
-        principal: 'NOCICEPTIVA',
-        subtipo: 'MECANICA',
-        confidence: 'ALTA',
-        reason:
-          'Classificacao inferida diretamente do tipo de dor da anamnese.',
-        evidenceFields: ['tipoDor'],
-      };
-    }
-    if (anamnese.tipoDor === TipoDor.MISTA) {
-      return {
-        principal: 'NOCIPLASTICA',
-        subtipo: 'MIOFASCIAL',
-        confidence: 'ALTA',
-        reason:
-          'Classificacao inferida diretamente do tipo de dor da anamnese.',
-        evidenceFields: ['tipoDor'],
-      };
-    }
-
-    const normalizeText = (value?: string | null) =>
-      String(value || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
-    const hasAny = (value: string, tokens: string[]) =>
-      tokens.some((token) => value.includes(token));
-    const sintomas = normalizeText(anamnese.descricaoSintomas);
-    const piora = normalizeText(anamnese.fatoresPiora);
-    const atividadesPiora = normalizeText(anamnese.atividadesQuePioram);
-    const alivio = normalizeText(anamnese.fatorAlivio);
-    const sinaisCentral = normalizeText(anamnese.sinaisSensibilizacaoCentral);
-    const evento = normalizeText(anamnese.eventoEspecifico);
-    const lesoesPrevias = normalizeText(anamnese.lesoesPrevias);
-    const sono = normalizeText(anamnese.horasSonoMedia);
-    const observacoesEstiloVida = normalizeText(anamnese.observacoesEstiloVida);
-    const yellowFlags = (anamnese.yellowFlags || [])
-      .map((flag) => normalizeText(flag))
-      .join(' ');
-    const affectedAreas = anamnese.areasAfetadas || [];
-    const hasIrradiacao =
-      anamnese.irradiacao === true ||
-      String(anamnese.localIrradiacao || '').trim().length > 0;
-    const hasInflammatoryBehavior =
-      anamnese.dorRepouso === true || anamnese.dorNoturna === true;
-
-    const nociceptiveEvidence: string[] = [];
-    const neuropathicEvidence: string[] = [];
-    const nociplasticEvidence: string[] = [];
-    const fenotipoDorEvidencias = anamnese.fenotipoDorEvidencias || {};
-    const hasFenotipoEvidence = (key: string) =>
-      fenotipoDorEvidencias[key] === true;
-
-    if (hasFenotipoEvidence('dorLocalizada')) {
-      nociceptiveEvidence.push('dor localizada');
-    }
-    if (hasFenotipoEvidence('pioraMovimentoEsforco')) {
-      nociceptiveEvidence.push('piora com movimento/esforco');
-    }
-    if (hasFenotipoEvidence('melhoraRepouso')) {
-      nociceptiveEvidence.push('melhora com repouso');
-    }
-    if (hasFenotipoEvidence('inicioAposEsforcoLesao')) {
-      nociceptiveEvidence.push('inicio apos esforco/lesao');
-    }
-    if (hasFenotipoEvidence('dorReproduzidaPalpacao')) {
-      nociceptiveEvidence.push('dor reproduzida por pressao/palpacao');
-    }
-
-    if (hasFenotipoEvidence('irradiacaoTrajeto')) {
-      neuropathicEvidence.push('dor irradiada');
-    }
-    if (hasFenotipoEvidence('choqueFormigamentoQueimacao')) {
-      neuropathicEvidence.push('choque/formigamento/queimacao');
-    }
-    if (hasFenotipoEvidence('dormenciaAlteracaoToque')) {
-      neuropathicEvidence.push('dormencia ou alteracao ao toque');
-    }
-    if (hasFenotipoEvidence('pioraPosicaoNeural')) {
-      neuropathicEvidence.push('piora com posicoes especificas');
-    }
-
-    if (hasFenotipoEvidence('dorMultirregionalMigratoria')) {
-      nociplasticEvidence.push('dor difusa/multirregional');
-    }
-    if (hasFenotipoEvidence('dorDesproporcionalPersistente')) {
-      nociplasticEvidence.push('dor desproporcional ou persistente');
-    }
-    if (hasFenotipoEvidence('sonoRuimNaoReparador')) {
-      nociplasticEvidence.push('sono ruim/nao reparador');
-    }
-    if (hasFenotipoEvidence('cansacoFrequente')) {
-      nociplasticEvidence.push('cansaco/fadiga frequente');
-    }
-    if (hasFenotipoEvidence('estresseElevado')) {
-      nociplasticEvidence.push('estresse elevado');
-    }
-    if (hasFenotipoEvidence('examesNormaisDorPersistente')) {
-      nociplasticEvidence.push('exames normais com dor persistente');
-    }
-
-    if (
-      affectedAreas.length === 1 ||
-      hasAny(sintomas, ['localiz', 'pontual', 'exatamente onde', 'apontar'])
-    ) {
-      nociceptiveEvidence.push('dor localizada');
-    }
-    if (
-      hasAny(`${piora} ${atividadesPiora}`, [
-        'moviment',
-        'esforc',
-        'carga',
-        'agach',
-        'correr',
-        'saltar',
-        'subir escada',
-        'levantar peso',
-      ])
-    ) {
-      nociceptiveEvidence.push('piora com movimento/esforco');
-    }
-    if (hasAny(alivio, ['repous', 'descans', 'parar', 'sem carga'])) {
-      nociceptiveEvidence.push('melhora com repouso');
-    }
-    if (
-      String(anamnese.inicioProblema) === 'APOS_EVENTO' ||
-      String(anamnese.mecanismoLesao) === 'TRAUMA' ||
-      String(anamnese.mecanismoLesao) === 'SOBRECARGA' ||
-      hasAny(`${evento} ${lesoesPrevias}`, [
-        'trauma',
-        'queda',
-        'torcao',
-        'lesao',
-        'esforc',
-        'sobrecarga',
-      ])
-    ) {
-      nociceptiveEvidence.push('inicio apos esforco/lesao');
-    }
-    if (hasAny(sintomas, ['apert', 'pressao', 'palpac', 'toque reproduz'])) {
-      nociceptiveEvidence.push('dor reproduzida por pressao/palpacao');
-    }
-
-    if (hasIrradiacao) {
-      neuropathicEvidence.push('dor irradiada');
-    }
-    if (
-      hasAny(`${sintomas} ${piora}`, [
-        'choque',
-        'formig',
-        'queima',
-        'dorm',
-        'parestes',
-        'agulhada',
-      ])
-    ) {
-      neuropathicEvidence.push('choque/formigamento/queimacao/dormencia');
-    }
-    if (
-      hasAny(`${sintomas} ${piora}`, [
-        'desce',
-        'sobe',
-        'corre',
-        'irradia',
-        'braco',
-        'perna',
-      ])
-    ) {
-      neuropathicEvidence.push('trajeto neural referido');
-    }
-    if (
-      hasAny(`${piora} ${atividadesPiora}`, [
-        'sentar',
-        'dobrar',
-        'virar',
-        'flexao',
-        'extensao',
-        'postura',
-      ])
-    ) {
-      neuropathicEvidence.push('piora com posicoes especificas');
-    }
-
-    if (
-      affectedAreas.length > 1 ||
-      hasAny(`${sintomas} ${sinaisCentral}`, [
-        'dor difusa',
-        'dor generalizada',
-        'varias regioes',
-        'muda de lugar',
-        'migratoria',
-      ])
-    ) {
-      nociplasticEvidence.push('dor difusa/multirregional');
-    }
-    if (
-      hasAny(`${sintomas} ${sinaisCentral}`, [
-        'desproporcional',
-        'maior do que o esperado',
-        'nao melhora',
-        'persistente',
-        'sensibilizacao',
-        'hipersens',
-      ])
-    ) {
-      nociplasticEvidence.push('dor desproporcional ou persistente');
-    }
-    if (
-      (typeof anamnese.qualidadeSono === 'number' &&
-        anamnese.qualidadeSono <= 4) ||
-      hasAny(`${sono} ${observacoesEstiloVida}`, [
-        'sono ruim',
-        'acorda cansado',
-        'insonia',
-      ])
-    ) {
-      nociplasticEvidence.push('sono ruim/nao reparador');
-    }
-    if (
-      (typeof anamnese.nivelEstresse === 'number' &&
-        anamnese.nivelEstresse >= 7) ||
-      (typeof anamnese.energiaDiaria === 'number' &&
-        anamnese.energiaDiaria <= 4) ||
-      hasAny(`${sinaisCentral} ${yellowFlags} ${observacoesEstiloVida}`, [
-        'estresse',
-        'cansaco',
-        'fadiga',
-        'catastrof',
-        'medo',
-      ])
-    ) {
-      nociplasticEvidence.push('estresse/fadiga/yellow flags');
-    }
-    if (
-      hasAny(`${sintomas} ${sinaisCentral}`, ['exame normal', 'exames normais'])
-    ) {
-      nociplasticEvidence.push('exames normais com dor persistente');
-    }
-
-    const candidates = [
-      {
-        principal: 'NOCICEPTIVA' as const,
-        subtipo: 'MECANICA' as const,
-        evidence: nociceptiveEvidence,
-        reason:
-          'Fenotipo mecanico: terapia manual, carga progressiva e controle inflamatorio conforme irritabilidade.',
-        fields: [
-          'areasAfetadas',
-          'descricaoSintomas',
-          'fatoresPiora',
-          'fatorAlivio',
-          'inicioProblema',
-          'mecanismoLesao',
-          'fenotipoDorEvidencias',
-        ],
-      },
-      {
-        principal: 'NEUROPATICA' as const,
-        subtipo: 'NEURAL' as const,
-        evidence: neuropathicEvidence,
-        reason:
-          'Fenotipo neural: terapia manual, mobilizacao neural, descompressao e modulacao conforme exame fisico.',
-        fields: [
-          'irradiacao',
-          'localIrradiacao',
-          'descricaoSintomas',
-          'fatoresPiora',
-          'fenotipoDorEvidencias',
-        ],
-      },
-      {
-        principal: 'NOCIPLASTICA' as const,
-        subtipo: 'MIOFASCIAL' as const,
-        evidence: nociplasticEvidence,
-        reason:
-          'Fenotipo de modulacao central: educacao em dor, exercicio graduado e estrategias de regulacao do sistema nervoso.',
-        fields: [
-          'sinaisSensibilizacaoCentral',
-          'descricaoSintomas',
-          'qualidadeSono',
-          'nivelEstresse',
-          'energiaDiaria',
-          'yellowFlags',
-          'fenotipoDorEvidencias',
-        ],
-      },
-    ].sort((a, b) => b.evidence.length - a.evidence.length);
-
-    const best = candidates[0];
-    const second = candidates[1];
-    if (
-      best.evidence.length >= 2 &&
-      best.evidence.length > second.evidence.length
-    ) {
-      return {
-        principal: best.principal,
-        subtipo: best.subtipo,
-        confidence: best.evidence.length >= 4 ? 'ALTA' : 'MODERADA',
-        reason: `${best.reason} Evidencias: ${best.evidence.join('; ')}.`,
-        evidenceFields: best.fields,
-      };
-    }
-
-    if (
-      best.evidence.length >= 2 &&
-      best.evidence.length === second.evidence.length
-    ) {
-      return {
-        principal: 'NOCIPLASTICA',
-        subtipo: 'MIOFASCIAL',
-        confidence: 'MODERADA',
-        reason: `Fenotipo misto/inconsistente com sinais de sensibilizacao. Integrar exame fisico antes de fechar conduta. Evidencias: ${best.evidence
-          .concat(second.evidence)
-          .join('; ')}.`,
-        evidenceFields: Array.from(new Set(best.fields.concat(second.fields))),
-      };
-    }
-
-    if (
-      hasInflammatoryBehavior ||
-      sintomas.includes('rigidez matinal') ||
-      sinaisCentral.includes('inflama')
-    ) {
-      return {
-        principal: 'INFLAMATORIA',
-        subtipo: 'INFLAMATORIA',
-        confidence: 'MODERADA',
-        reason: 'Padrao em repouso/noturno sugere componente inflamatorio.',
-        evidenceFields: ['dorRepouso', 'dorNoturna', 'descricaoSintomas'],
-      };
-    }
-
-    if (piora.length > 0 || alivio.length > 0) {
-      return {
-        principal: 'NOCICEPTIVA',
-        subtipo: 'MECANICA',
-        confidence: 'MODERADA',
-        reason: 'Fatores de piora/alivio com movimento sugerem dor mecanica.',
-        evidenceFields: ['fatoresPiora', 'fatorAlivio'],
-      };
-    }
-
-    return {
-      principal: null,
-      subtipo: null,
-      confidence: 'BAIXA',
-      reason:
-        'Dados insuficientes na anamnese para sugerir classificacao com seguranca.',
-      evidenceFields: [],
-    };
-  }
-
   private async generateEvolucaoSoapWithOpenAI(args: {
     paciente: {
       dataNascimento?: Date | null;
@@ -1068,29 +241,7 @@ export class CharlesService {
       12000,
       120000,
     );
-    const systemPrompt =
-      'Voce e Charles, um assistente clinico de apoio a fisioterapeutas. Gere sugestoes SOAP prudentes, rastreaveis e revisaveis. Nao invente dados ausentes e nunca substitua validacao profissional.';
-    const userPrompt = `
-Retorne SOMENTE JSON valido com as chaves:
-confidence ("BAIXA" | "MODERADA" | "ALTA"),
-reason (string ate 240 caracteres),
-evidenceFields (array de strings escolhidas dos campos do contexto),
-subjetivo (string ou null),
-objetivo (string ou null),
-avaliacao (string ou null),
-plano (string ou null).
-
-Regras:
-- Escreva em portugues do Brasil, direto para o prontuario do profissional.
-- Use SOAP: S deve refletir relato/sintomas; O deve pedir ou registrar medidas objetivas; A deve correlacionar evolucao, irritabilidade, funcao e hipotese; P deve orientar proxima conduta.
-- Se houver sinais de alerta ou lacunas, registre no campo avaliacao ou plano de forma prudente.
-- Nao use nome do paciente, nao prometa cura e nao mencione que foi gerado por IA.
-- Se os dados forem insuficientes, retorne confidence "BAIXA" e mantenha null nos campos que nao puder sustentar.
-- Preserve revisao profissional: textos devem ser rascunhos editaveis.
-
-Contexto clinico:
-${JSON.stringify(this.buildEvolucaoSoapAiContext(args), null, 2)}
-`;
+    const { systemPrompt, userPrompt } = buildEvolucaoSoapAiPrompt(args);
 
     const response = await this.openAiService.createJsonResponse({
       model,
@@ -1098,284 +249,10 @@ ${JSON.stringify(this.buildEvolucaoSoapAiContext(args), null, 2)}
       userContent: userPrompt,
       temperature: 0.2,
       timeoutMs,
-      operation: 'charles.evolucao_soap',
+      operation: CHARLES_SOAP_AI_OPERATION,
     });
     if (!response) return null;
 
-    return this.sanitizeAiSoapSuggestion(response.parsed);
-  }
-
-  private buildEvolucaoSoapAiContext(args: {
-    paciente: {
-      dataNascimento?: Date | null;
-      sexo?: string | null;
-      profissao?: string | null;
-    };
-    anamnese?: Anamnese | null;
-    evolucao?: Evolucao | null;
-    laudo?: Laudo | null;
-    fallback: CharlesSoapSuggestionDraft;
-  }) {
-    const anamnese = args.anamnese;
-    const evolucao = args.evolucao;
-    const laudo = args.laudo;
-
-    return {
-      paciente: {
-        idade: this.getAgeInYears(args.paciente.dataNascimento),
-        sexo: args.paciente.sexo || null,
-        profissao: this.truncateClinicalText(args.paciente.profissao, 120),
-      },
-      anamnese: anamnese
-        ? {
-            motivoBusca: this.truncateClinicalText(anamnese.motivoBusca, 500),
-            areasAfetadas: anamnese.areasAfetadas || [],
-            intensidadeDor: anamnese.intensidadeDor,
-            descricaoSintomas: this.truncateClinicalText(
-              anamnese.descricaoSintomas,
-              900,
-            ),
-            inicioProblema: anamnese.inicioProblema || null,
-            mecanismoLesao: anamnese.mecanismoLesao || null,
-            fatorAlivio: this.truncateClinicalText(anamnese.fatorAlivio, 500),
-            fatoresPiora: this.truncateClinicalText(anamnese.fatoresPiora, 500),
-            atividadesQuePioram: this.truncateClinicalText(
-              anamnese.atividadesQuePioram,
-              500,
-            ),
-            limitacoesFuncionais: this.truncateClinicalText(
-              anamnese.limitacoesFuncionais,
-              700,
-            ),
-            metaPrincipalPaciente: this.truncateClinicalText(
-              anamnese.metaPrincipalPaciente,
-              500,
-            ),
-            tipoDor: anamnese.tipoDor || null,
-            irradiacao: anamnese.irradiacao,
-            localIrradiacao: this.truncateClinicalText(
-              anamnese.localIrradiacao,
-              300,
-            ),
-            redFlags: anamnese.redFlags || [],
-            yellowFlags: anamnese.yellowFlags || [],
-            qualidadeSono: anamnese.qualidadeSono,
-            nivelEstresse: anamnese.nivelEstresse,
-          }
-        : null,
-      evolucaoAnterior: evolucao
-        ? {
-            data: evolucao.data,
-            subjetivo: this.truncateClinicalText(evolucao.subjetivo, 700),
-            objetivo: this.truncateClinicalText(evolucao.objetivo, 700),
-            avaliacao: this.truncateClinicalText(evolucao.avaliacao, 700),
-            plano: this.truncateClinicalText(evolucao.plano, 700),
-            checkinDor: evolucao.checkinDor,
-            checkinDificuldade: evolucao.checkinDificuldade,
-            dorStatus: evolucao.dorStatus,
-            funcaoStatus: evolucao.funcaoStatus,
-            adesaoStatus: evolucao.adesaoStatus,
-            statusEvolucao: evolucao.statusEvolucao,
-            condutaStatus: evolucao.condutaStatus,
-            observacoes: this.truncateClinicalText(evolucao.observacoes, 700),
-          }
-        : null,
-      laudo: laudo
-        ? {
-            diagnosticoFuncional: this.truncateClinicalText(
-              laudo.diagnosticoFuncional,
-              900,
-            ),
-            condutas: this.truncateClinicalText(laudo.condutas, 900),
-            planoTratamentoIA: this.truncateClinicalText(
-              laudo.planoTratamentoIA,
-              900,
-            ),
-            criteriosAlta: this.truncateClinicalText(laudo.criteriosAlta, 700),
-            exameFisico: this.truncateClinicalText(laudo.exameFisico, 1400),
-            status: laudo.status,
-          }
-        : null,
-      sugestaoDeterministicaFallback: args.fallback,
-      camposPermitidosParaEvidenceFields: [
-        'anamnese.descricaoSintomas',
-        'anamnese.areasAfetadas',
-        'anamnese.intensidadeDor',
-        'anamnese.fatoresPiora',
-        'anamnese.fatorAlivio',
-        'anamnese.limitacoesFuncionais',
-        'anamnese.metaPrincipalPaciente',
-        'anamnese.redFlags',
-        'anamnese.yellowFlags',
-        'evolucaoAnterior',
-        'laudo.diagnosticoFuncional',
-        'laudo.exameFisico',
-        'laudo.condutas',
-        'laudo.planoTratamentoIA',
-      ],
-    };
-  }
-
-  private sanitizeAiSoapSuggestion(
-    parsed: Record<string, unknown>,
-  ): CharlesSoapSuggestionDraft | null {
-    const subjetivo = this.normalizeAiText(parsed.subjetivo, 900);
-    const objetivo = this.normalizeAiText(parsed.objetivo, 900);
-    const avaliacao = this.normalizeAiText(parsed.avaliacao, 900);
-    const plano = this.normalizeAiText(parsed.plano, 900);
-    if (!subjetivo && !objetivo && !avaliacao && !plano) return null;
-
-    return {
-      confidence: this.normalizeConfidence(parsed.confidence),
-      reason:
-        this.normalizeAiText(parsed.reason, 240) ||
-        'Sugestao SOAP contextual baseada nos dados clinicos disponiveis.',
-      evidenceFields: this.normalizeEvidenceFields(parsed.evidenceFields),
-      subjetivo,
-      objetivo,
-      avaliacao,
-      plano,
-    };
-  }
-
-  private mergeSoapSuggestions(
-    fallback: CharlesSoapSuggestionDraft,
-    aiSuggestion: CharlesSoapSuggestionDraft,
-  ): CharlesSoapSuggestionDraft {
-    return {
-      confidence: aiSuggestion.confidence || fallback.confidence,
-      reason: aiSuggestion.reason || fallback.reason,
-      evidenceFields: Array.from(
-        new Set([...aiSuggestion.evidenceFields, ...fallback.evidenceFields]),
-      ).slice(0, 10),
-      subjetivo: aiSuggestion.subjetivo || fallback.subjetivo,
-      objetivo: aiSuggestion.objetivo || fallback.objetivo,
-      avaliacao: aiSuggestion.avaliacao || fallback.avaliacao,
-      plano: aiSuggestion.plano || fallback.plano,
-    };
-  }
-
-  private normalizeAiText(value: unknown, maxLen: number): string | null {
-    if (typeof value !== 'string') return null;
-    const normalized = value
-      .trim()
-      .replace(/\s+\n/g, '\n')
-      .replace(/[ \t]+/g, ' ');
-    if (!normalized) return null;
-    return normalized.slice(0, maxLen);
-  }
-
-  private truncateClinicalText(value: unknown, maxLen: number): string | null {
-    if (typeof value !== 'string') return null;
-    const normalized = value.trim();
-    if (!normalized) return null;
-    return normalized.slice(0, maxLen);
-  }
-
-  private normalizeConfidence(
-    value: unknown,
-  ): CharlesEvolucaoSoapSuggestionResponse['confidence'] {
-    const normalized = String(value || '')
-      .trim()
-      .toUpperCase();
-    if (normalized === 'ALTA') return 'ALTA';
-    if (normalized === 'MODERADA') return 'MODERADA';
-    return 'BAIXA';
-  }
-
-  private normalizeEvidenceFields(value: unknown): string[] {
-    if (!Array.isArray(value)) return [];
-    return value
-      .filter((item): item is string => typeof item === 'string')
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .slice(0, 8);
-  }
-
-  private getAgeInYears(dataNascimento?: Date | null): number | null {
-    if (!dataNascimento) return null;
-    const birth = new Date(dataNascimento);
-    if (Number.isNaN(birth.getTime())) return null;
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const monthDiff = now.getMonth() - birth.getMonth();
-    const dayDiff = now.getDate() - birth.getDate();
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      age -= 1;
-    }
-    return age;
-  }
-
-  private inferEvolucaoSoapSuggestion(args: {
-    anamnese?: Anamnese | null;
-    evolucao?: Evolucao | null;
-    laudo?: Laudo | null;
-  }): CharlesSoapSuggestionDraft {
-    const anamnese = args.anamnese;
-    const evolucao = args.evolucao;
-    const laudo = args.laudo;
-
-    const queixa =
-      String(anamnese?.descricaoSintomas || '').trim() ||
-      String(anamnese?.metaPrincipalPaciente || '').trim();
-    const piora = String(anamnese?.fatoresPiora || '').trim();
-    const alivio = String(anamnese?.fatorAlivio || '').trim();
-    const areas = (anamnese?.areasAfetadas || [])
-      .map((a) => String(a.regiao || '').trim())
-      .filter(Boolean);
-    const exameTemplated = this.hasStructuredExame(laudo?.exameFisico);
-    const hadPreviousEvolution = !!evolucao;
-
-    if (!queixa && !areas.length && !exameTemplated) {
-      return {
-        confidence: 'BAIXA',
-        reason:
-          'Dados insuficientes (anamnese e exame fisico) para sugerir preenchimento de evolucao.',
-        evidenceFields: [],
-        subjetivo: null,
-        objetivo: null,
-        avaliacao: null,
-        plano: null,
-      };
-    }
-
-    const regionHint = areas.length
-      ? `regiao ${areas.join(', ')}`
-      : 'regiao principal';
-    const dorHint = queixa ? queixa : 'queixa relatada pelo paciente';
-
-    const subjetivo = hadPreviousEvolution
-      ? 'Paciente refere evolucao em relacao a sessao anterior; validar tolerancia funcional e sintomas residuais.'
-      : `Paciente relata ${dorHint}${piora ? `. Piora com ${piora}` : ''}${alivio ? ` e alivio com ${alivio}` : ''}.`;
-
-    const objetivo = exameTemplated
-      ? `Reavaliar achados objetivos da ${regionHint}, comparar ADM/forca/testes funcionais com baseline do exame fisico.`
-      : `Registrar medidas objetivas da ${regionHint} (ADM, forca, teste funcional e dor evocada).`;
-
-    const avaliacao = hadPreviousEvolution
-      ? 'Evolucao clinica em acompanhamento; confirmar se houve ganho funcional e reducao da irritabilidade.'
-      : 'Quadro em fase inicial de evolucao; correlacionar resposta da sessao com hipotese funcional.';
-
-    const plano =
-      'Manter conduta ativa com progressao graduada, reforcar orientacoes domiciliares e agendar nova reavaliacao.';
-
-    const evidenceFields: string[] = [];
-    if (queixa) evidenceFields.push('queixaPrincipal/descricaoSintomas');
-    if (areas.length) evidenceFields.push('areasAfetadas');
-    if (piora) evidenceFields.push('fatoresPiora');
-    if (alivio) evidenceFields.push('fatorAlivio');
-    if (exameTemplated) evidenceFields.push('laudo.exameFisico');
-    if (hadPreviousEvolution) evidenceFields.push('evolucaoAnterior');
-
-    return {
-      confidence: evidenceFields.length >= 3 ? 'MODERADA' : 'BAIXA',
-      reason:
-        'Sugestao textual de evolucao (SOAP) baseada em anamnese, exame fisico e historico mais recente.',
-      evidenceFields,
-      subjetivo,
-      objetivo,
-      avaliacao,
-      plano,
-    };
+    return sanitizeAiSoapSuggestion(response.parsed);
   }
 }

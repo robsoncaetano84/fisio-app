@@ -48,13 +48,16 @@ export class AddOperationalIndexes1776600000000 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX IF EXISTS "IDX_PACIENTE_EXAME_PACIENTE_CREATED"`,
     );
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_EVOLUCAO_PACIENTE_DATA"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_EVOLUCAO_PACIENTE_DATA"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_ANAMNESE_PACIENTE"`);
     await queryRunner.query(
       `DROP INDEX IF EXISTS "IDX_PACIENTE_SOLICITACAO_ANAMNESE"`,
     );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_PACIENTE_USUARIO_NOME"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_PACIENTE_USUARIO_ATIVO"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_PACIENTE_USUARIO_ATIVO"`,
+    );
   }
 }
-

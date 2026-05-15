@@ -2,15 +2,18 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // R OL ES.G UA RD
 // ==========================================
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { UserRole } from '../../usuarios/entities/usuario.entity';
+
+type AuthenticatedRequest = Request & {
+  user?: {
+    role?: UserRole;
+  };
+};
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -35,8 +38,8 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as { role?: UserRole } | undefined;
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const user = request.user;
 
     if (!user?.role) {
       return false;

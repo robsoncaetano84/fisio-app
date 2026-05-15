@@ -4,4 +4,3 @@ export class GetCharlesNextActionDto {
   @IsUUID()
   pacienteId: string;
 }
-

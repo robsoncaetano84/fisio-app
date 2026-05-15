@@ -46,6 +46,7 @@ if (-not $token) {
       conselhoUf = "SP"
       especialidade = $Especialidade
       role = $Role
+      consentProfessionalLgpdRequired = $true
     } | ConvertTo-Json
     Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/registro" -ContentType "application/json" -Body $registroBody | Out-Null
   } catch {
@@ -60,6 +61,7 @@ if (-not $token) {
         conselhoUf = "SP"
         especialidade = $Especialidade
         role = $Role
+        consentProfessionalLgpdRequired = $true
       } | ConvertTo-Json
       Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/registro" -ContentType "application/json" -Body $registroBody | Out-Null
     } else {

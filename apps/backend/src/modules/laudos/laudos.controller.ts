@@ -114,10 +114,7 @@ export class LaudosController {
   @Get('self/pdf-laudo')
   @Throttle({ default: { ttl: 60, limit: 30 } })
   @Roles(UserRole.PACIENTE)
-  async myPdfLaudo(
-    @CurrentUser() usuario: Usuario,
-    @Res() res: Response,
-  ) {
+  async myPdfLaudo(@CurrentUser() usuario: Usuario, @Res() res: Response) {
     const pdf = await this.laudosService.buildPdfBufferByPacienteUsuario(
       usuario.id,
       'laudo',
@@ -130,10 +127,7 @@ export class LaudosController {
   @Get('self/pdf-plano')
   @Throttle({ default: { ttl: 60, limit: 30 } })
   @Roles(UserRole.PACIENTE)
-  async myPdfPlano(
-    @CurrentUser() usuario: Usuario,
-    @Res() res: Response,
-  ) {
+  async myPdfPlano(@CurrentUser() usuario: Usuario, @Res() res: Response) {
     const pdf = await this.laudosService.buildPdfBufferByPacienteUsuario(
       usuario.id,
       'plano',

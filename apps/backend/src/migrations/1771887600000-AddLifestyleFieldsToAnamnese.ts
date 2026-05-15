@@ -4,9 +4,7 @@
 // ==========================================
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddLifestyleFieldsToAnamnese1771887600000
-  implements MigrationInterface
-{
+export class AddLifestyleFieldsToAnamnese1771887600000 implements MigrationInterface {
   name = 'AddLifestyleFieldsToAnamnese1771887600000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

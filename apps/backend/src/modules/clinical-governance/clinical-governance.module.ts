@@ -21,4 +21,3 @@ import { ConsentPurposeLog } from './entities/consent-purpose-log.entity';
   exports: [ClinicalGovernanceService],
 })
 export class ClinicalGovernanceModule {}
-

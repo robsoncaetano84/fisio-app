@@ -10,9 +10,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { createHash } from 'crypto';
 import { Atividade } from './entities/atividade.entity';
-import { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity';
 import {
   AtividadeCheckin,
   DificuldadeExecucao,
@@ -28,6 +26,7 @@ import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dt
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
 import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
+import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
 
 @Injectable()
 export class AtividadesService {
@@ -41,6 +40,7 @@ export class AtividadesService {
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
     private readonly notificacoesService: NotificacoesService,
+    private readonly atividadeAiSuggestionService: AtividadeAiSuggestionService,
   ) {}
 
   async create(dto: CreateAtividadeDto, usuarioId: string): Promise<Atividade> {
@@ -580,272 +580,6 @@ export class AtividadesService {
       order: { createdAt: 'DESC' },
     });
 
-    const fallback = this.buildRuleSuggestion(dto, anamnese);
-    const ai = await this.generateWithOpenAI({
-      paciente: {
-        nomeCompleto: paciente.nomeCompleto,
-        idade: this.getAgeInYears(paciente.dataNascimento),
-        sexo: paciente.sexo,
-        profissao: paciente.profissao || '',
-      },
-      anamnese: anamnese
-        ? {
-            motivoBusca: anamnese.motivoBusca,
-            intensidadeDor: anamnese.intensidadeDor,
-            descricaoSintomas: anamnese.descricaoSintomas,
-            tempoProblema: anamnese.tempoProblema,
-            fatorAlivio: anamnese.fatorAlivio,
-            limitacoesFuncionais: anamnese.limitacoesFuncionais,
-            atividadesQuePioram: anamnese.atividadesQuePioram,
-            metaPrincipalPaciente: anamnese.metaPrincipalPaciente,
-            qualidadeSono: anamnese.qualidadeSono,
-            nivelEstresse: anamnese.nivelEstresse,
-            observacoesEstiloVida: anamnese.observacoesEstiloVida,
-          }
-        : null,
-      rascunhoAtual: {
-        titulo: dto.titulo || '',
-        descricao: dto.descricao || '',
-      },
-    });
-
-    if (!ai) return fallback;
-
-    const referencias = this.normalizeReferences(ai.referencias);
-    const descricaoComReferencias = this.appendReferencesToDescricao(
-      ai.descricao || fallback.descricao,
-      referencias,
-    );
-
-    return {
-      titulo: ai.titulo || fallback.titulo,
-      descricao: descricaoComReferencias,
-      referencias,
-      source: 'ai',
-      model: ai.model,
-    };
-  }
-
-  private getAgeInYears(dataNascimento?: Date | null): number | null {
-    if (!dataNascimento) return null;
-    const birth = new Date(dataNascimento);
-    if (Number.isNaN(birth.getTime())) return null;
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const monthDiff = now.getMonth() - birth.getMonth();
-    const dayDiff = now.getDate() - birth.getDate();
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      age -= 1;
-    }
-    return age;
-  }
-
-  private extractJsonObject(raw: string): Record<string, unknown> | null {
-    const start = raw.indexOf('{');
-    const end = raw.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) return null;
-    const candidate = raw.slice(start, end + 1);
-    try {
-      return JSON.parse(candidate) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  }
-
-  private sanitizeText(value: unknown, maxLen: number): string | undefined {
-    if (typeof value !== 'string') return undefined;
-    const trimmed = value.trim();
-    if (!trimmed) return undefined;
-    return trimmed.slice(0, maxLen);
-  }
-
-  private getPositiveIntegerEnv(
-    key: string,
-    fallback: number,
-    max: number,
-  ): number {
-    const parsed = Number.parseInt(String(process.env[key] || ''), 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-    return Math.min(parsed, max);
-  }
-
-  private buildRuleSuggestion(
-    dto: GenerateAtividadeAiDto,
-    anamnese: Anamnese | null,
-  ): {
-    titulo: string;
-    descricao: string;
-    referencias: string[];
-    source: 'rules';
-  } {
-    const objetivo = anamnese?.metaPrincipalPaciente?.trim();
-    const limitacoes = anamnese?.limitacoesFuncionais?.trim();
-    const piora = anamnese?.atividadesQuePioram?.trim();
-    const alivio = anamnese?.fatorAlivio?.trim();
-
-    const titulo =
-      dto.titulo?.trim() ||
-      (objetivo ? `Plano inicial: ${objetivo}` : 'Plano terapêutico funcional');
-
-    const referencias = this.getDefaultBibliographicReferences().slice(0, 3);
-    const descricaoBase =
-      dto.descricao?.trim() ||
-      [
-        'Prescrição sugerida com base na anamnese mais recente.',
-        objetivo ? `Meta principal: ${objetivo}.` : undefined,
-        limitacoes ? `Limitações funcionais: ${limitacoes}.` : undefined,
-        piora ? `Atenção para piora com: ${piora}.` : undefined,
-        alivio ? `Estratégias que aliviam: ${alivio}.` : undefined,
-        'Executar com progressão gradual e monitorar resposta clínica.',
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .slice(0, 1000);
-    const descricao = this.appendReferencesToDescricao(
-      descricaoBase,
-      referencias,
-    );
-
-    return {
-      titulo: titulo.slice(0, 140),
-      descricao,
-      referencias,
-      source: 'rules',
-    };
-  }
-
-  private async generateWithOpenAI(input: {
-    paciente: {
-      nomeCompleto: string;
-      idade: number | null;
-      sexo: string;
-      profissao: string;
-    };
-    anamnese: Record<string, unknown> | null;
-    rascunhoAtual: {
-      titulo: string;
-      descricao: string;
-    };
-  }): Promise<{
-    titulo?: string;
-    descricao?: string;
-    referencias?: string[];
-    model?: string;
-  } | null> {
-    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-    if (!apiKey) return null;
-
-    const model = (process.env.OPENAI_ATIVIDADE_MODEL || 'gpt-5-mini').trim();
-    const referenciasCanonicas = this.getDefaultBibliographicReferences();
-    const systemPrompt =
-      'Você é um assistente clínico de fisioterapia tradicional. Gere prescrição de atividade segura, objetiva e executável. Baseie-se em literatura técnica e não invente dados ausentes.';
-    const userPrompt = `
-Retorne SOMENTE JSON válido com as chaves:
-titulo (string até 140 chars),
-descricao (string até 1000 chars),
-referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referências abaixo, sem inventar novas).
-
-Lista de referências permitidas:
-${referenciasCanonicas.map((r, index) => `${index + 1}. ${r}`).join('\n')}
-
-Contexto clínico:
-${JSON.stringify(input, null, 2)}
-`;
-
-    try {
-      const controller = new AbortController();
-      const timeoutMs = this.getPositiveIntegerEnv(
-        'OPENAI_ATIVIDADE_TIMEOUT_MS',
-        8000,
-        120000,
-      );
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          input: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.2,
-        }),
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId));
-
-      if (!response.ok) return null;
-
-      const data = (await response.json()) as {
-        output_text?: string;
-        output?: Array<{ content?: Array<{ text?: string }> }>;
-      };
-
-      const outputText =
-        data.output_text ||
-        data.output
-          ?.flatMap((item) => item.content || [])
-          .map((c) => c.text || '')
-          .join('\n') ||
-        '';
-
-      const parsed = this.extractJsonObject(outputText);
-      if (!parsed) return null;
-
-      return {
-        titulo: this.sanitizeText(parsed.titulo, 140),
-        descricao: this.sanitizeText(parsed.descricao, 1000),
-        referencias: Array.isArray(parsed.referencias)
-          ? parsed.referencias
-              .filter((item): item is string => typeof item === 'string')
-              .map((item) => item.trim())
-              .filter(Boolean)
-          : undefined,
-        model,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  private getDefaultBibliographicReferences(): string[] {
-    return [
-      'Kisner C, Colby LA, Borstad J. Exercicios terapeuticos: fundamentos e tecnicas.',
-      'Hall CM, Brody LT. Exercicio terapeutico: recuperacao funcional.',
-      'Magee DJ. Avaliacao musculoesqueletica.',
-      'APTA/JOSPT. Clinical Practice Guidelines for Physical Therapy (musculoskeletal conditions).',
-      'World Physiotherapy. Standards and policy statements for physiotherapy practice.',
-    ];
-  }
-
-  private normalizeReferences(referencias?: string[]): string[] {
-    const allowed = new Set(this.getDefaultBibliographicReferences());
-    if (!referencias?.length)
-      return this.getDefaultBibliographicReferences().slice(0, 2);
-
-    const unique = Array.from(
-      new Set(
-        referencias
-          .map((item) => item.trim())
-          .filter((item) => allowed.has(item)),
-      ),
-    );
-
-    if (!unique.length)
-      return this.getDefaultBibliographicReferences().slice(0, 2);
-    return unique.slice(0, 4);
-  }
-
-  private appendReferencesToDescricao(
-    descricao: string,
-    referencias: string[],
-  ): string {
-    const base = (descricao || '').trim();
-    if (!referencias.length) return base.slice(0, 1000);
-    const blocoReferencias = ` Referencias: ${referencias.join(' | ')}`;
-    return `${base}${blocoReferencias}`.slice(0, 1000);
+    return this.atividadeAiSuggestionService.generate(dto, paciente, anamnese);
   }
 }

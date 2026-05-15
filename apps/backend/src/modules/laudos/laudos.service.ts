@@ -9,91 +9,46 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import PDFDocument from 'pdfkit';
 import { Laudo } from './entities/laudo.entity';
 import { LaudoStatus } from './entities/laudo.entity';
 import { CreateLaudoDto } from './dto/create-laudo.dto';
 import { UpdateLaudoDto } from './dto/update-laudo.dto';
 import { CreateExameFisicoDto } from './dto/create-exame-fisico.dto';
 import { PacientesService } from '../pacientes/pacientes.service';
-import { Anamnese } from '../anamneses/entities/anamnese.entity';
-import { Evolucao } from '../evolucoes/entities/evolucao.entity';
-import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
 import { sanitizePartialUpdate } from './laudo-patch.util';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
-import { readExameFile } from '../pacientes/exame-storage';
-import {
-  LaudoExameHistorico,
-  LaudoExameHistoricoAcao,
-  LaudoExameHistoricoOrigem,
-} from './entities/laudo-exame-historico.entity';
+import { LaudoExameHistorico } from './entities/laudo-exame-historico.entity';
 import { LaudoExameFisico } from './entities/laudo-exame-fisico.entity';
-
-type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
-
-type LaudoReferenceItem = {
-  id: string;
-  title: string;
-  category: LaudoReferenceCategory;
-  source: string;
-  year?: number;
-  authors?: string;
-  url: string;
-  rationale: string;
-};
-
-type LaudoReferenceProfile = 'GERAL' | 'LOMBAR' | 'CERVICAL' | 'JOELHO';
-
-type LaudoReferenceSuggestionResponse = {
-  profile: LaudoReferenceProfile;
-  disclaimer: string;
-  laudoReferences: LaudoReferenceItem[];
-  planoReferences: LaudoReferenceItem[];
-};
+import {
+  LaudoReferenceSuggestionResponse,
+  LaudoReferencesService,
+} from './laudo-references.service';
+import { LaudoPdfService } from './laudo-pdf.service';
+import { LaudoAiSuggestionService } from './laudo-ai-suggestion.service';
+import { LaudoExameFisicoService } from './laudo-exame-fisico.service';
+import { validateStructuredExameInput } from './laudo-exame-fisico-structured.util';
+import {
+  buildCreateLaudoDraft,
+  buildGenerateLaudoSuggestionInput,
+  buildSuggestionPreview,
+  LaudoSuggestionPreview,
+} from './laudo-suggestion-composer.util';
+import { LaudoAiGenerationQuotaService } from './laudo-ai-generation-quota.service';
+import { LaudoClinicalContextService } from './laudo-clinical-context.service';
 
 @Injectable()
 export class LaudosService {
-  private isTruthyEnv(value?: string): boolean {
-    const normalized = String(value || '')
-      .trim()
-      .toLowerCase();
-    return ['1', 'true', 'yes', 'on'].includes(normalized);
-  }
-
-  private shouldUseExamAi(): boolean {
-    const raw = process.env.OPENAI_EXAM_AI_ENABLED;
-    if (raw == null || String(raw).trim() === '') return true;
-    return this.isTruthyEnv(raw);
-  }
-
-  private getPositiveIntegerEnv(
-    key: string,
-    fallback: number,
-    max: number,
-  ): number {
-    const parsed = Number.parseInt(String(process.env[key] || ''), 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-    return Math.min(parsed, max);
-  }
-
   constructor(
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
-    @InjectRepository(Anamnese)
-    private readonly anamneseRepository: Repository<Anamnese>,
-    @InjectRepository(Evolucao)
-    private readonly evolucaoRepository: Repository<Evolucao>,
-    @InjectRepository(LaudoAiGeneration)
-    private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
-    @InjectRepository(PacienteExame)
-    private readonly pacienteExameRepository: Repository<PacienteExame>,
-    @InjectRepository(LaudoExameHistorico)
-    private readonly laudoExameHistoricoRepository: Repository<LaudoExameHistorico>,
-    @InjectRepository(LaudoExameFisico)
-    private readonly laudoExameFisicoRepository: Repository<LaudoExameFisico>,
     private readonly pacientesService: PacientesService,
     private readonly usuariosService: UsuariosService,
+    private readonly laudoReferencesService: LaudoReferencesService,
+    private readonly laudoPdfService: LaudoPdfService,
+    private readonly laudoAiSuggestionService: LaudoAiSuggestionService,
+    private readonly laudoExameFisicoService: LaudoExameFisicoService,
+    private readonly laudoAiGenerationQuotaService: LaudoAiGenerationQuotaService,
+    private readonly laudoClinicalContextService: LaudoClinicalContextService,
   ) {}
 
   async getSuggestedReferences(
@@ -101,22 +56,10 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<LaudoReferenceSuggestionResponse> {
     await this.pacientesService.findOne(pacienteId, usuarioId);
-    const latestAnamnese = await this.anamneseRepository.findOne({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-    });
+    const latestAnamnese =
+      await this.laudoClinicalContextService.findLatestAnamnese(pacienteId);
 
-    const profile = this.inferReferenceProfile(latestAnamnese);
-    const catalog = this.getReferenceCatalog();
-    const byProfile = catalog[profile];
-
-    return {
-      profile,
-      disclaimer:
-        'Referências sugeridas para apoio à decisão clínica. Não substituem avaliação, raciocínio clínico e validação profissional.',
-      laudoReferences: byProfile.laudoReferences,
-      planoReferences: byProfile.planoReferences,
-    };
+    return this.laudoReferencesService.getSuggestedReferences(latestAnamnese);
   }
 
   async create(
@@ -124,7 +67,7 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<Laudo> {
     await this.pacientesService.findOne(createLaudoDto.pacienteId, usuarioId);
-    this.validateStructuredExameInput(createLaudoDto.exameFisico);
+    validateStructuredExameInput(createLaudoDto.exameFisico);
 
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId: createLaudoDto.pacienteId },
@@ -133,7 +76,9 @@ export class LaudosService {
       throw new BadRequestException('Ja existe laudo para este paciente');
     }
     const existingExameFisico = createLaudoDto.exameFisico?.trim()
-      ? await this.findExameFisicoByPacienteId(createLaudoDto.pacienteId)
+      ? await this.laudoExameFisicoService.findLatestByPacienteId(
+          createLaudoDto.pacienteId,
+        )
       : null;
     if (
       existingExameFisico &&
@@ -159,7 +104,7 @@ export class LaudosService {
     });
     const saved = await this.laudoRepository.save(laudo);
     if (createLaudoDto.exameFisico?.trim()) {
-      await this.registrarExameFisicoInicial(
+      await this.laudoExameFisicoService.registerInitial(
         saved,
         {
           pacienteId: createLaudoDto.pacienteId,
@@ -181,9 +126,9 @@ export class LaudosService {
       createExameFisicoDto.pacienteId,
       usuarioId,
     );
-    this.validateStructuredExameInput(createExameFisicoDto.exameFisico);
+    validateStructuredExameInput(createExameFisicoDto.exameFisico);
 
-    const existing = await this.findExameFisicoByPacienteId(
+    const existing = await this.laudoExameFisicoService.findLatestByPacienteId(
       createExameFisicoDto.pacienteId,
     );
     if (existing) {
@@ -225,7 +170,7 @@ export class LaudosService {
       laudo = await this.laudoRepository.save(laudo);
     }
 
-    return this.registrarExameFisicoInicial(
+    return this.laudoExameFisicoService.registerInitial(
       laudo,
       createExameFisicoDto,
       usuarioId,
@@ -243,9 +188,11 @@ export class LaudosService {
       order: { createdAt: 'DESC' },
     });
     if (existing || !autoGenerate) {
-      return existing ? this.hydrateLaudoExameFisico(existing) : null;
+      return existing
+        ? this.laudoExameFisicoService.hydrateLaudo(existing)
+        : null;
     }
-    return this.hydrateLaudoExameFisico(
+    return this.laudoExameFisicoService.hydrateLaudo(
       await this.generateAndSaveByPaciente(pacienteId, usuarioId),
     );
   }
@@ -253,18 +200,14 @@ export class LaudosService {
   async findOne(id: string, usuarioId: string): Promise<Laudo> {
     const laudo = await this.laudoRepository.findOne({
       where: { id },
-      relations: ['paciente'],
     });
 
     if (!laudo) {
       throw new NotFoundException('Laudo nao encontrado');
     }
-    const isMasterAdmin =
-      await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
-    if (!isMasterAdmin && laudo.paciente.usuarioId !== usuarioId) {
-      throw new NotFoundException('Laudo nao encontrado');
-    }
-    return this.hydrateLaudoExameFisico(laudo);
+
+    await this.pacientesService.findOne(laudo.pacienteId, usuarioId);
+    return this.laudoExameFisicoService.hydrateLaudo(laudo);
   }
 
   async findLatestByPacienteUsuario(usuarioId: string): Promise<Laudo> {
@@ -280,7 +223,7 @@ export class LaudosService {
       throw new NotFoundException('Laudo nao encontrado para este paciente');
     }
 
-    return this.hydrateLaudoExameFisico(laudo);
+    return this.laudoExameFisicoService.hydrateLaudo(laudo);
   }
 
   async findExameFisicoByPaciente(
@@ -288,7 +231,7 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<LaudoExameFisico | null> {
     await this.pacientesService.findOne(pacienteId, usuarioId);
-    return this.findExameFisicoByPacienteId(pacienteId);
+    return this.laudoExameFisicoService.findLatestByPacienteId(pacienteId);
   }
 
   async findExameFisicoHistory(
@@ -297,12 +240,7 @@ export class LaudosService {
     limit = 20,
   ): Promise<LaudoExameHistorico[]> {
     await this.findOne(laudoId, usuarioId);
-    const normalizedLimit = this.normalizeLimit(limit, 20, 100);
-    return this.laudoExameHistoricoRepository.find({
-      where: { laudoId },
-      order: { revisao: 'DESC' },
-      take: normalizedLimit,
-    });
+    return this.laudoExameFisicoService.findHistoryByLaudoId(laudoId, limit);
   }
 
   async update(
@@ -316,10 +254,11 @@ export class LaudosService {
     const exameFisicoAntes = String(laudo.exameFisico || '').trim();
     const exameFisicoRecebido = String(exameFisico || '').trim();
     if (typeof exameFisico === 'string') {
-      this.validateStructuredExameInput(exameFisico);
-      const exameRegistrado = await this.findExameFisicoByPacienteId(
-        laudo.pacienteId,
-      );
+      validateStructuredExameInput(exameFisico);
+      const exameRegistrado =
+        await this.laudoExameFisicoService.findLatestByPacienteId(
+          laudo.pacienteId,
+        );
       if (
         exameRegistrado &&
         exameFisicoRecebido !== String(exameRegistrado.exameFisico || '').trim()
@@ -329,7 +268,7 @@ export class LaudosService {
         );
       }
       if (!exameRegistrado && exameFisicoRecebido) {
-        await this.registrarExameFisicoInicial(
+        await this.laudoExameFisicoService.registerInitial(
           laudo,
           {
             pacienteId: laudo.pacienteId,
@@ -365,11 +304,9 @@ export class LaudosService {
       exameFisicoDepois.length > 0 &&
       exameFisicoDepois !== exameFisicoAntes;
     if (exameFisicoMudou) {
-      await this.registrarHistoricoExameFisico(
+      await this.laudoExameFisicoService.registerProfessionalUpdate(
         saved,
         usuarioId,
-        LaudoExameHistoricoAcao.UPDATE,
-        LaudoExameHistoricoOrigem.PROFISSIONAL,
       );
     }
     return saved;
@@ -392,143 +329,25 @@ export class LaudosService {
     id: string,
     usuarioId: string,
     tipo: 'laudo' | 'plano',
-    options?: {
+    _options?: {
       consultedReferenceIds?: string[];
     },
   ): Promise<Buffer> {
+    void _options;
+
     const laudo = await this.findOne(id, usuarioId);
     const paciente = await this.pacientesService.findOne(
       laudo.pacienteId,
       usuarioId,
     );
     const profissional = await this.usuariosService.findById(usuarioId);
-    const profissionalConselho =
-      profissional.conselhoProf ||
-      (profissional.conselhoSigla && profissional.conselhoUf
-        ? `${profissional.conselhoSigla}-${profissional.conselhoUf}`
-        : '-');
-    const profissionalRegistro = profissional.registroProf || '-';
-
-    const chunks: Buffer[] = [];
-    const doc = new PDFDocument({ size: 'A4', margin: 50, compress: false });
-    doc.font('Helvetica');
-
-    doc.on('data', (chunk: Buffer | Uint8Array) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    return this.laudoPdfService.buildPdfBuffer({
+      laudo,
+      pacienteNome: paciente.nomeCompleto,
+      profissional,
+      tipo,
+      audience: 'professional',
     });
-    const done = new Promise<Buffer>((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-    });
-
-    const emittedAt = new Date();
-    const statusText =
-      laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL
-        ? 'Validado pelo profissional'
-        : 'Rascunho IA';
-
-    doc.save();
-    doc.lineWidth(1).strokeColor('#D1D5DB').rect(35, 35, 525, 770).stroke();
-    doc.restore();
-
-    doc.rect(35, 35, 525, 75).fill('#14532D');
-    doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
-    doc.fontSize(10).fillColor('#DCFCE7').text('Documento clinico', 50, 82);
-
-    doc
-      .fillColor('#111827')
-      .fontSize(17)
-      .text(
-        tipo === 'laudo' ? 'Laudo do Paciente' : 'Plano de Tratamento',
-        50,
-        130,
-      );
-
-    doc
-      .lineWidth(0.5)
-      .strokeColor('#E5E7EB')
-      .moveTo(50, 155)
-      .lineTo(540, 155)
-      .stroke();
-
-    doc
-      .fontSize(10.5)
-      .fillColor('#374151')
-      .text(`Paciente: ${paciente.nomeCompleto}`, 50, 170)
-      .text(
-        `Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`,
-        50,
-        186,
-      )
-      .text(`Status: ${statusText}`, 300, 170)
-      .text(`Profissional: ${profissional.nome}`, 300, 186)
-      .text(`Conselho: ${profissionalConselho}`, 300, 202)
-      .text(`Registro profissional: ${profissionalRegistro}`, 300, 218);
-
-    doc.moveDown(3.2);
-    doc.fillColor('#000');
-
-    if (tipo === 'laudo') {
-      this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
-      if (laudo.exameFisico) {
-        this.addSection(
-          doc,
-          'Exame Fisico',
-          this.formatExameFisicoForDisplay(laudo.exameFisico),
-        );
-      }
-      if (laudo.rascunhoProfissional) {
-        this.addSection(
-          doc,
-          'Notas do Profissional',
-          laudo.rascunhoProfissional,
-        );
-      }
-      this.addSection(
-        doc,
-        'Objetivos de Curto Prazo',
-        laudo.objetivosCurtoPrazo,
-      );
-      this.addSection(
-        doc,
-        'Objetivos de Medio Prazo',
-        laudo.objetivosMedioPrazo,
-      );
-      this.addSection(
-        doc,
-        'Frequencia e Duracao',
-        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${laudo.duracaoSemanas ?? '-'} semana(s)`,
-      );
-      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-      this.addSection(
-        doc,
-        'Observacao',
-        laudo.observacoes ||
-          'Documento para uso clinico profissional. Reavaliar periodicamente.',
-      );
-    } else {
-      this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
-      this.addSection(doc, 'Plano de Tratamento', laudo.planoTratamentoIA);
-      this.addSection(
-        doc,
-        'Frequencia Sugerida',
-        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`,
-      );
-      this.addSection(
-        doc,
-        'Duracao Sugerida',
-        `${laudo.duracaoSemanas ?? '-'} semana(s)`,
-      );
-      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-      this.addSection(
-        doc,
-        'Observacao',
-        laudo.observacoes ||
-          'Plano sujeito a ajuste pelo profissional responsavel.',
-      );
-    }
-
-    doc.end();
-    return done;
   }
 
   async buildPdfBufferByPacienteUsuario(
@@ -536,144 +355,27 @@ export class LaudosService {
     tipo: 'laudo' | 'plano',
   ): Promise<Buffer> {
     const laudo = await this.findLatestByPacienteUsuario(usuarioId);
-    const chunks: Buffer[] = [];
-    const doc = new PDFDocument({ size: 'A4', margin: 50, compress: false });
-    doc.font('Helvetica');
-
-    doc.on('data', (chunk: Buffer | Uint8Array) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    });
-    const done = new Promise<Buffer>((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-    });
-
-    const emittedAt = new Date();
     const profissional = await this.usuariosService.findById(
       laudo.paciente.usuarioId,
     );
-    const profissionalConselho =
-      profissional.conselhoProf ||
-      (profissional.conselhoSigla && profissional.conselhoUf
-        ? `${profissional.conselhoSigla}-${profissional.conselhoUf}`
-        : '-');
-    const profissionalRegistro = profissional.registroProf || '-';
-    const statusText =
-      laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL
-        ? 'Validado pelo profissional'
-        : 'Rascunho IA';
 
-    doc.save();
-    doc.lineWidth(1).strokeColor('#D1D5DB').rect(35, 35, 525, 770).stroke();
-    doc.restore();
-
-    doc.rect(35, 35, 525, 75).fill('#14532D');
-    doc.fillColor('#FFFFFF').fontSize(18).text('Synap', 50, 58);
-    doc.fontSize(10).fillColor('#DCFCE7').text('Documento do paciente', 50, 82);
-
-    doc
-      .fillColor('#111827')
-      .fontSize(17)
-      .text(
-        tipo === 'laudo' ? 'Meu Laudo' : 'Meu Plano de Tratamento',
-        50,
-        130,
-      );
-
-    doc
-      .lineWidth(0.5)
-      .strokeColor('#E5E7EB')
-      .moveTo(50, 155)
-      .lineTo(540, 155)
-      .stroke();
-
-    doc
-      .fontSize(10.5)
-      .fillColor('#374151')
-      .text(`Paciente: ${laudo.paciente.nomeCompleto}`, 50, 170)
-      .text(
-        `Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`,
-        50,
-        186,
-      )
-      .text(`Status: ${statusText}`, 300, 170)
-      .text(`Profissional: ${profissional.nome}`, 300, 186)
-      .text(`Conselho: ${profissionalConselho}`, 300, 202)
-      .text(`Registro profissional: ${profissionalRegistro}`, 300, 218);
-
-    doc.moveDown(3.2);
-    doc.fillColor('#000');
-
-    if (tipo === 'laudo') {
-      this.addSection(doc, 'Diagnostico Funcional', laudo.diagnosticoFuncional);
-      if (laudo.exameFisico) {
-        this.addSection(
-          doc,
-          'Exame Fisico',
-          this.formatExameFisicoForDisplay(laudo.exameFisico),
-        );
-      }
-      if (laudo.rascunhoProfissional) {
-        this.addSection(
-          doc,
-          'Notas do Profissional',
-          laudo.rascunhoProfissional,
-        );
-      }
-      this.addSection(
-        doc,
-        'Objetivos de Curto Prazo',
-        laudo.objetivosCurtoPrazo,
-      );
-      this.addSection(
-        doc,
-        'Objetivos de Medio Prazo',
-        laudo.objetivosMedioPrazo,
-      );
-      this.addSection(
-        doc,
-        'Frequencia e Duracao',
-        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana por ${
-          laudo.duracaoSemanas ?? '-'
-        } semana(s)`,
-      );
-      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-      this.addSection(
-        doc,
-        'Observacao',
-        laudo.observacoes ||
-          'Documento para uso clinico profissional. Reavaliar periodicamente.',
-      );
-    } else {
-      this.addSection(doc, 'Condutas Terapeuticas', laudo.condutas);
-      this.addSection(doc, 'Plano de Tratamento', laudo.planoTratamentoIA);
-      this.addSection(
-        doc,
-        'Frequencia Sugerida',
-        `${laudo.frequenciaSemanal ?? '-'} sessao(oes)/semana`,
-      );
-      this.addSection(
-        doc,
-        'Duracao Sugerida',
-        `${laudo.duracaoSemanas ?? '-'} semana(s)`,
-      );
-      this.addSection(doc, 'Criterios de Alta', laudo.criteriosAlta);
-      this.addSection(
-        doc,
-        'Observacao',
-        laudo.observacoes ||
-          'Plano sujeito a ajuste pelo profissional responsavel.',
-      );
-    }
-
-    doc.end();
-    return done;
+    return this.laudoPdfService.buildPdfBuffer({
+      laudo,
+      pacienteNome: laudo.paciente.nomeCompleto,
+      profissional,
+      tipo,
+      audience: 'patient',
+    });
   }
   async generateAndSaveByPaciente(
     pacienteId: string,
     usuarioId: string,
   ): Promise<Laudo> {
-    const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } =
-      await this.buildAiInput(pacienteId, usuarioId);
+    const suggestionContext =
+      await this.laudoClinicalContextService.buildSuggestionContext(
+        pacienteId,
+        usuarioId,
+      );
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId },
       order: { createdAt: 'DESC' },
@@ -681,82 +383,28 @@ export class LaudosService {
     if (existing) {
       return existing;
     }
-    const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
+    const canUseAiToday =
+      await this.laudoAiGenerationQuotaService.acquireDailySlot(pacienteId);
     const aiSuggestion = canUseAiToday
-      ? await this.generateSuggestionWithAI({
-          paciente: {
-            nomeCompleto: paciente.nomeCompleto,
-            idade: this.calculateAge(paciente.dataNascimento),
-            sexo: paciente.sexo,
-            profissao: paciente.profissao ?? '',
-          },
-          anamnese: anamneses[0]
-            ? {
-                motivoBusca: anamneses[0].motivoBusca,
-                areasAfetadas: anamneses[0].areasAfetadas,
-                intensidadeDor: anamneses[0].intensidadeDor,
-                descricaoSintomas: anamneses[0].descricaoSintomas ?? '',
-                tempoProblema: anamneses[0].tempoProblema ?? '',
-                inicioProblema: anamneses[0].inicioProblema ?? '',
-                fatorAlivio: anamneses[0].fatorAlivio ?? '',
-                fatoresPiora: anamneses[0].fatoresPiora ?? '',
-                mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
-                lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
-                usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
-              }
-            : null,
-          evolucoes: evolucoes.map((e) => ({
-            data: e.data,
-            avaliacaoClinica: e.avaliacao ?? '',
-            planoSessao: e.plano ?? '',
-            observacoes: e.observacoes ?? '',
-          })),
-          exameFisicoResumo,
-          exames: exames.map((exame) => ({
-            nomeOriginal: exame.nomeOriginal,
-            tipoExame: exame.tipoExame ?? '',
-            dataExame: exame.dataExame ?? null,
-            mimeType: exame.mimeType,
-            observacao: exame.observacao ?? '',
-            uploadedAt: exame.uploadedAt,
-            aiInterpretacao: exame.aiInterpretacao,
-          })),
-        })
+      ? await this.laudoAiSuggestionService.generateSuggestion(
+          buildGenerateLaudoSuggestionInput(suggestionContext),
+        )
       : {};
 
-    const examesConsiderados = exames.length;
-    const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
-    const suggestionSource: 'ai' | 'rules' = Object.keys(aiSuggestion).length
-      ? 'ai'
-      : 'rules';
-
-    const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
-    const payload: CreateLaudoDto = {
+    const draft = buildCreateLaudoDraft({
       pacienteId,
-      diagnosticoFuncional:
-        aiSuggestion.diagnosticoFuncional ??
-        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
-      objetivosCurtoPrazo: aiSuggestion.objetivosCurtoPrazo,
-      objetivosMedioPrazo: aiSuggestion.objetivosMedioPrazo,
-      frequenciaSemanal: aiSuggestion.frequenciaSemanal,
-      duracaoSemanas: aiSuggestion.duracaoSemanas,
-      condutas:
-        aiSuggestion.condutas ??
-        `Plano inicial de cinesioterapia, educacao em dor e reavaliacao funcional semanal.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
-      planoTratamentoIA:
-        aiSuggestion.planoTratamentoIA ??
-        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional e prevencao de recidiva.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
-      criteriosAlta: aiSuggestion.criteriosAlta,
-    };
+      context: suggestionContext,
+      aiSuggestion,
+    });
 
     const created = this.laudoRepository.create({
-      ...payload,
+      ...draft.payload,
       status: LaudoStatus.RASCUNHO_IA,
       validadoPorUsuarioId: null,
       validadoEm: null,
-      sugestaoSource: suggestionSource,
-      examesConsiderados,
-      examesComLeituraIa,
+      sugestaoSource: draft.source,
+      examesConsiderados: draft.examesConsiderados,
+      examesComLeituraIa: draft.examesComLeituraIa,
       sugestaoGeradaEm: new Date(),
     });
     return this.laudoRepository.save(created);
@@ -765,1143 +413,16 @@ export class LaudosService {
   async generateSuggestionPreview(
     pacienteId: string,
     usuarioId: string,
-  ): Promise<
-    {
-      source: 'ai' | 'rules';
-      examesConsiderados: number;
-      examesComLeituraIa: number;
-      sugestaoGeradaEm: string;
-      confidence: 'BAIXA' | 'MODERADA' | 'ALTA';
-      reason: string;
-      evidenceFields: string[];
-    } & Partial<CreateLaudoDto>
-  > {
-    const { paciente, anamneses, evolucoes, exames, exameFisicoResumo } =
-      await this.buildAiInput(pacienteId, usuarioId);
-    const aiSuggestion = await this.generateSuggestionWithAI({
-      paciente: {
-        nomeCompleto: paciente.nomeCompleto,
-        idade: this.calculateAge(paciente.dataNascimento),
-        sexo: paciente.sexo,
-        profissao: paciente.profissao ?? '',
-      },
-      anamnese: anamneses[0]
-        ? {
-            motivoBusca: anamneses[0].motivoBusca,
-            areasAfetadas: anamneses[0].areasAfetadas,
-            intensidadeDor: anamneses[0].intensidadeDor,
-            descricaoSintomas: anamneses[0].descricaoSintomas ?? '',
-            tempoProblema: anamneses[0].tempoProblema ?? '',
-            inicioProblema: anamneses[0].inicioProblema ?? '',
-            fatorAlivio: anamneses[0].fatorAlivio ?? '',
-            fatoresPiora: anamneses[0].fatoresPiora ?? '',
-            mecanismoLesao: anamneses[0].mecanismoLesao ?? '',
-            lesoesPrevias: anamneses[0].lesoesPrevias ?? '',
-            usoMedicamentos: anamneses[0].usoMedicamentos ?? '',
-          }
-        : null,
-      evolucoes: evolucoes.map((e) => ({
-        data: e.data,
-        avaliacaoClinica: e.avaliacao ?? '',
-        planoSessao: e.plano ?? '',
-        observacoes: e.observacoes ?? '',
-      })),
-      exameFisicoResumo,
-      exames: exames.map((exame) => ({
-        nomeOriginal: exame.nomeOriginal,
-        tipoExame: exame.tipoExame ?? '',
-        dataExame: exame.dataExame ?? null,
-        mimeType: exame.mimeType,
-        observacao: exame.observacao ?? '',
-        uploadedAt: exame.uploadedAt,
-        aiInterpretacao: exame.aiInterpretacao,
-      })),
-    });
-
-    const source = Object.keys(aiSuggestion).length ? 'ai' : 'rules';
-    const examesConsiderados = exames.length;
-    const examesComLeituraIa = exames.filter((e) => !!e.aiInterpretacao).length;
-    const confidence: 'BAIXA' | 'MODERADA' | 'ALTA' =
-      source === 'ai' && examesComLeituraIa > 0
-        ? 'ALTA'
-        : source === 'ai' || examesConsiderados > 0
-          ? 'MODERADA'
-          : 'BAIXA';
-    const reason =
-      source === 'ai'
-        ? 'Sugestao de plano gerada por IA com base no historico clinico.'
-        : 'Sugestao de plano gerada por regras clinicas (fallback).';
-    const evidenceFields = [
-      'anamnese',
-      ...(evolucoes.length > 0 ? ['evolucoes'] : []),
-      ...(exameFisicoResumo ? ['exameFisico'] : []),
-      ...(examesConsiderados > 0 ? ['exames'] : []),
-    ];
-
-    const exameFisicoHint = this.buildExameFisicoHint(exameFisicoResumo);
-    return {
-      source,
-      examesConsiderados,
-      examesComLeituraIa,
-      sugestaoGeradaEm: new Date().toISOString(),
-      confidence,
-      reason,
-      evidenceFields,
-      diagnosticoFuncional:
-        aiSuggestion.diagnosticoFuncional ??
-        `Diagnostico funcional inicial a confirmar em consulta.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
-      objetivosCurtoPrazo:
-        aiSuggestion.objetivosCurtoPrazo ??
-        'Reduzir dor percebida e melhorar controle motor inicial.',
-      objetivosMedioPrazo:
-        aiSuggestion.objetivosMedioPrazo ??
-        'Restabelecer funcao global e autonomia nas atividades diarias.',
-      frequenciaSemanal: aiSuggestion.frequenciaSemanal ?? 2,
-      duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
-      condutas:
-        aiSuggestion.condutas ??
-        `Exercicios terapeuticos progressivos, educacao em dor e reavaliacao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
-      planoTratamentoIA:
-        aiSuggestion.planoTratamentoIA ??
-        `Semana 1-2: controle de dor e mobilidade.\nSemana 3-4: ganho de forca e estabilidade.\nSemana 5+: progressao funcional.${this.buildExamCorrelationSuffix(exames.length)}${exameFisicoHint}`,
-      criteriosAlta:
-        aiSuggestion.criteriosAlta ??
-        'Dor controlada, funcao satisfatoria e independencia para autocuidado.',
-    };
-  }
-  private calculateAge(dataNascimento: Date): number | null {
-    const nascimento = new Date(dataNascimento);
-    if (Number.isNaN(nascimento.getTime())) return null;
-    const hoje = new Date();
-    let idade = hoje.getFullYear() - nascimento.getFullYear();
-    const mes = hoje.getMonth() - nascimento.getMonth();
-    if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
-      idade--;
-    }
-    return idade;
-  }
-
-  private extractJsonObject(raw: string): Record<string, unknown> | null {
-    const start = raw.indexOf('{');
-    const end = raw.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) return null;
-    const candidate = raw.slice(start, end + 1);
-    try {
-      return JSON.parse(candidate) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  }
-
-  private isAiReadableExamMime(mimeType: string): boolean {
-    return mimeType.startsWith('image/') || mimeType === 'application/pdf';
-  }
-
-  private async interpretExamWithAI(input: {
-    nomeOriginal: string;
-    mimeType: string;
-    observacao: string;
-    fileBuffer: Buffer;
-  }): Promise<string | null> {
-    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-    if (!apiKey) return null;
-    if (!this.shouldUseExamAi()) return null;
-    if (!this.isAiReadableExamMime(input.mimeType)) return null;
-
-    const model = (
-      process.env.OPENAI_EXAM_MODEL ||
-      process.env.OPENAI_LAUDO_MODEL ||
-      process.env.OPENAI_MODEL ||
-      'gpt-4.1-mini'
-    ).trim();
-
-    const systemPrompt =
-      'Voce e um assistente clinico para fisioterapia. Leia exames de imagem com prudencia. Nao invente achados.';
-
-    const userPrompt = `Analise este exame (imagem ou PDF) e retorne SOMENTE JSON com:
-achadosPrincipais (array de strings),
-impressaoClinica (string curta),
-sinaisAlarme (array de strings),
-observacoesLimitacao (string curta).
-
-Contexto adicional informado pelo profissional:
-${input.observacao || 'Sem observacao adicional.'}
-`;
-
-    try {
-      const base64 = input.fileBuffer.toString('base64');
-      const dataUrl = `data:${input.mimeType};base64,${base64}`;
-      const content: Array<Record<string, unknown>> = [
-        { type: 'input_text', text: userPrompt },
-      ];
-
-      if (input.mimeType.startsWith('image/')) {
-        content.push({ type: 'input_image', image_url: dataUrl });
-      } else if (input.mimeType === 'application/pdf') {
-        content.push({
-          type: 'input_file',
-          filename: input.nomeOriginal || 'exame.pdf',
-          file_data: dataUrl,
-        });
-      } else {
-        return null;
-      }
-
-      const controller = new AbortController();
-      const timeoutMs = this.getPositiveIntegerEnv(
-        'OPENAI_EXAM_TIMEOUT_MS',
-        30000,
-        120000,
+  ): Promise<LaudoSuggestionPreview> {
+    const suggestionContext =
+      await this.laudoClinicalContextService.buildSuggestionContext(
+        pacienteId,
+        usuarioId,
       );
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          input: [
-            { role: 'system', content: systemPrompt },
-            {
-              role: 'user',
-              content,
-            },
-          ],
-          temperature: 0.1,
-        }),
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId));
-
-      if (!response.ok) return null;
-
-      const data = (await response.json()) as {
-        output_text?: string;
-        output?: Array<{
-          content?: Array<{ text?: string }>;
-        }>;
-      };
-
-      const outputText =
-        data.output_text ||
-        data.output
-          ?.flatMap((item) => item.content || [])
-          .map((c) => c.text || '')
-          .join('\n') ||
-        '';
-
-      const parsed = this.extractJsonObject(outputText);
-      if (!parsed) return null;
-
-      const achados = Array.isArray(parsed.achadosPrincipais)
-        ? parsed.achadosPrincipais
-            .filter((v) => typeof v === 'string')
-            .slice(0, 5)
-            .map((v) => `- ${v}`)
-            .join('\n')
-        : '';
-      const impressao =
-        typeof parsed.impressaoClinica === 'string'
-          ? parsed.impressaoClinica
-          : '';
-      const sinaisAlarme = Array.isArray(parsed.sinaisAlarme)
-        ? parsed.sinaisAlarme
-            .filter((v) => typeof v === 'string')
-            .slice(0, 4)
-            .map((v) => `- ${v}`)
-            .join('\n')
-        : '';
-      const limitacao =
-        typeof parsed.observacoesLimitacao === 'string'
-          ? parsed.observacoesLimitacao
-          : '';
-
-      return [
-        `Exame: ${input.nomeOriginal}`,
-        achados ? `Achados principais:\n${achados}` : '',
-        impressao ? `Impressao clinica: ${impressao}` : '',
-        sinaisAlarme ? `Sinais de alerta:\n${sinaisAlarme}` : '',
-        limitacao ? `Limitacoes: ${limitacao}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n');
-    } catch {
-      return null;
-    }
-  }
-
-  private async buildExamInsights(exames: PacienteExame[]): Promise<
-    Array<{
-      nomeOriginal: string;
-      tipoExame: string;
-      dataExame: Date | null;
-      mimeType: string;
-      observacao: string;
-      uploadedAt: Date;
-      aiInterpretacao?: string;
-    }>
-  > {
-    const recent = exames.slice(0, 3);
-    const result: Array<{
-      nomeOriginal: string;
-      tipoExame: string;
-      dataExame: Date | null;
-      mimeType: string;
-      observacao: string;
-      uploadedAt: Date;
-      aiInterpretacao?: string;
-    }> = [];
-
-    for (const exame of recent) {
-      const base = {
-        nomeOriginal: exame.nomeOriginal,
-        tipoExame: exame.tipoExame ?? '',
-        dataExame: exame.dataExame ?? null,
-        mimeType: exame.mimeType,
-        observacao: exame.observacao ?? '',
-        uploadedAt: exame.createdAt,
-      };
-
-      if (!this.isAiReadableExamMime(exame.mimeType)) {
-        result.push(base);
-        continue;
-      }
-
-      try {
-        const fileBuffer = await readExameFile(exame.caminhoArquivo);
-        const aiInterpretacao = await this.interpretExamWithAI({
-          nomeOriginal: exame.nomeOriginal,
-          mimeType: exame.mimeType,
-          observacao: exame.observacao ?? '',
-          fileBuffer,
-        });
-        result.push({
-          ...base,
-          ...(aiInterpretacao ? { aiInterpretacao } : {}),
-        });
-      } catch {
-        result.push(base);
-      }
-    }
-
-    return result;
-  }
-
-  private async generateSuggestionWithAI(input: {
-    paciente: {
-      nomeCompleto: string;
-      idade: number | null;
-      sexo: string;
-      profissao: string;
-    };
-    anamnese: {
-      motivoBusca: string;
-      areasAfetadas: unknown;
-      intensidadeDor: number;
-      descricaoSintomas: string;
-      tempoProblema: string;
-      inicioProblema: string;
-      fatorAlivio: string;
-      fatoresPiora: string;
-      mecanismoLesao: string;
-      lesoesPrevias: string;
-      usoMedicamentos: string;
-    } | null;
-    evolucoes: Array<{
-      data: Date;
-      avaliacaoClinica: string;
-      planoSessao: string;
-      observacoes: string;
-    }>;
-    exameFisicoResumo?: string | null;
-    exames: Array<{
-      nomeOriginal: string;
-      tipoExame: string;
-      dataExame: Date | null;
-      mimeType: string;
-      observacao: string;
-      uploadedAt: Date;
-      aiInterpretacao?: string;
-    }>;
-  }): Promise<Partial<CreateLaudoDto>> {
-    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-    if (!apiKey) {
-      return {};
-    }
-
-    const model = (
-      process.env.OPENAI_LAUDO_MODEL ||
-      process.env.OPENAI_MODEL ||
-      'gpt-5-mini'
-    ).trim();
-    const systemPrompt =
-      'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo e prudente. Nao invente dados ausentes. Priorize seguranca clinica e rastreabilidade da decisao.';
-    const userPrompt = `
-Retorne SOMENTE JSON valido com as chaves:
-diagnosticoFuncional (string),
-objetivosCurtoPrazo (string),
-objetivosMedioPrazo (string),
-frequenciaSemanal (number 1-7),
-duracaoSemanas (number 1-52),
-condutas (string),
-planoTratamentoIA (string com plano por fases/semanas),
-criteriosAlta (string).
-
-Regras clinicas:
-- Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
-- Use explicitamente os campos da anamnese: inicioProblema, mecanismoLesao, fatorAlivio, fatoresPiora, lesoesPrevias e usoMedicamentos.
-- Se algum desses campos estiver vazio, declare a lacuna clinica em vez de supor informacao.
-- Considere os exames anexados (tipoExame, observacao, dataExame, mimeType e aiInterpretacao quando houver) para orientar diagnostico funcional, condutas e plano.
-- Nao invente achados de imagem nao descritos no contexto.
-- Se houver informacao insuficiente dos exames, explicite a limitacao e mantenha conduta prudente.
-- Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
-- Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
-- Em condutas, para cada intervencao proposta, descreva em texto curto a evidencia clinica correspondente (achado, teste positivo/negativo relevante, deficit funcional ou fator de risco).
-- Em planoTratamentoIA, estruture por fases com: objetivo da fase, condutas, criterio de progressao e evidencia que sustenta a fase.
-- Evite termos vagos; relacione cada bloco a achados (dor, funcao, testes positivos/deficits funcionais).
-- Em diagnosticoFuncional, identifique (quando possivel) origem provavel da dor, estrutura envolvida, tipo de lesao (mecanica/inflamatoria/neural) e fator biomecanico associado.
-
-Resumo do exame fisico estruturado:
-${input.exameFisicoResumo || 'Nao informado'}
-
-Contexto do paciente:
-${JSON.stringify(input, null, 2)}
-`;
-
-    try {
-      const controller = new AbortController();
-      const timeoutMs = this.getPositiveIntegerEnv(
-        'OPENAI_LAUDO_TIMEOUT_MS',
-        15000,
-        120000,
-      );
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          input: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.2,
-        }),
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId));
-
-      if (!response.ok) {
-        return {};
-      }
-
-      const data = (await response.json()) as {
-        output_text?: string;
-        output?: Array<{
-          content?: Array<{ text?: string }>;
-        }>;
-      };
-
-      const outputText =
-        data.output_text ||
-        data.output
-          ?.flatMap((item) => item.content || [])
-          .map((c) => c.text || '')
-          .join('\n') ||
-        '';
-
-      const parsed = this.extractJsonObject(outputText);
-      if (!parsed) {
-        return {};
-      }
-
-      const freq =
-        typeof parsed.frequenciaSemanal === 'number'
-          ? Math.min(7, Math.max(1, Math.round(parsed.frequenciaSemanal)))
-          : undefined;
-      const dur =
-        typeof parsed.duracaoSemanas === 'number'
-          ? Math.min(52, Math.max(1, Math.round(parsed.duracaoSemanas)))
-          : undefined;
-
-      return {
-        diagnosticoFuncional:
-          typeof parsed.diagnosticoFuncional === 'string'
-            ? parsed.diagnosticoFuncional
-            : undefined,
-        objetivosCurtoPrazo:
-          typeof parsed.objetivosCurtoPrazo === 'string'
-            ? parsed.objetivosCurtoPrazo
-            : undefined,
-        objetivosMedioPrazo:
-          typeof parsed.objetivosMedioPrazo === 'string'
-            ? parsed.objetivosMedioPrazo
-            : undefined,
-        frequenciaSemanal: freq,
-        duracaoSemanas: dur,
-        condutas:
-          typeof parsed.condutas === 'string' ? parsed.condutas : undefined,
-        planoTratamentoIA:
-          typeof parsed.planoTratamentoIA === 'string'
-            ? parsed.planoTratamentoIA
-            : undefined,
-        criteriosAlta:
-          typeof parsed.criteriosAlta === 'string'
-            ? parsed.criteriosAlta
-            : undefined,
-      };
-    } catch {
-      return {};
-    }
-  }
-
-  private getUtcDayString(date: Date): string {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private async acquireDailyAiGenerationSlot(
-    pacienteId: string,
-  ): Promise<boolean> {
-    const generatedOn = this.getUtcDayString(new Date());
-    try {
-      const insertResult = await this.laudoAiGenerationRepository
-        .createQueryBuilder()
-        .insert()
-        .into(LaudoAiGeneration)
-        .values({ pacienteId, generatedOn })
-        .orIgnore()
-        .execute();
-      return (insertResult.identifiers?.length ?? 0) > 0;
-    } catch {
-      return false;
-    }
-  }
-
-  private async buildAiInput(pacienteId: string, usuarioId: string) {
-    const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
-    const anamneses = await this.anamneseRepository.find({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-    });
-    const evolucoes = await this.evolucaoRepository.find({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-    });
-    const exames = await this.pacienteExameRepository.find({
-      where: { pacienteId, usuarioId },
-      order: { createdAt: 'DESC' },
-      take: 12,
-    });
-    const latestLaudo = await this.laudoRepository.findOne({
-      where: { pacienteId },
-      order: { updatedAt: 'DESC' },
-    });
-    const examesInterpretados = await this.buildExamInsights(exames);
-    const exameFisico = await this.findExameFisicoByPacienteId(pacienteId);
-    const rawExameFisico = exameFisico?.exameFisico || latestLaudo?.exameFisico;
-    const exameFisicoResumo = rawExameFisico
-      ? this.formatExameFisicoForDisplay(rawExameFisico)
-      : null;
-    return {
-      paciente,
-      anamneses,
-      evolucoes,
-      exames: examesInterpretados,
-      exameFisicoResumo,
-    };
-  }
-
-  private buildExamCorrelationSuffix(examesCount: number): string {
-    if (examesCount <= 0) return '';
-    return ` Correlacionar com ${examesCount} exame(s) anexado(s).`;
-  }
-
-  private buildExameFisicoHint(exameFisicoResumo?: string | null): string {
-    const raw = String(exameFisicoResumo || '').trim();
-    if (!raw) return '';
-    const normalized = raw.replace(/\s+/g, ' ');
-    const short =
-      normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
-    return ` Baseado no exame fisico: ${short}`;
-  }
-
-  private async registrarHistoricoExameFisico(
-    laudo: Laudo,
-    usuarioId: string | null,
-    acao: LaudoExameHistoricoAcao,
-    origem: LaudoExameHistoricoOrigem,
-  ): Promise<void> {
-    const exame = String(laudo.exameFisico || '').trim();
-    if (!exame) return;
-
-    const ultimo = await this.laudoExameHistoricoRepository.findOne({
-      where: { laudoId: laudo.id },
-      order: { revisao: 'DESC' },
-      select: ['id', 'revisao'],
-    });
-
-    const payload = {
-      laudoId: laudo.id,
-      pacienteId: laudo.pacienteId,
-      exameFisico: laudo.exameFisico,
-      status: laudo.status,
-      updatedAt: laudo.updatedAt,
-      createdAt: laudo.createdAt,
-    };
-
-    const historico = this.laudoExameHistoricoRepository.create({
-      laudoId: laudo.id,
-      pacienteId: laudo.pacienteId,
-      revisao: (ultimo?.revisao || 0) + 1,
-      acao,
-      origem,
-      alteradoPorUsuarioId: usuarioId || null,
-      payload,
-    });
-
-    await this.laudoExameHistoricoRepository.save(historico);
-  }
-
-  private async registrarExameFisicoInicial(
-    laudo: Laudo,
-    input: CreateExameFisicoDto,
-    usuarioId: string | null,
-  ): Promise<LaudoExameFisico> {
-    const exame = String(input.exameFisico || '').trim();
-    if (!exame) {
-      throw new BadRequestException('Exame fisico e obrigatorio.');
-    }
-
-    const existing = await this.findExameFisicoByPacienteId(input.pacienteId);
-    if (existing) return existing;
-
-    const created = this.laudoExameFisicoRepository.create({
-      pacienteId: input.pacienteId,
-      laudoId: laudo.id,
-      exameFisico: input.exameFisico,
-      diagnosticoFuncional: input.diagnosticoFuncional || null,
-      condutas: input.condutas || null,
-      registradoPorUsuarioId: usuarioId,
-    });
-    const saved = await this.laudoExameFisicoRepository.save(created);
-
-    laudo.exameFisico = input.exameFisico;
-    await this.laudoRepository.save(laudo);
-    await this.registrarHistoricoExameFisico(
-      laudo,
-      usuarioId,
-      LaudoExameHistoricoAcao.CREATE,
-      LaudoExameHistoricoOrigem.PROFISSIONAL,
+    const aiSuggestion = await this.laudoAiSuggestionService.generateSuggestion(
+      buildGenerateLaudoSuggestionInput(suggestionContext),
     );
 
-    return saved;
-  }
-
-  private async findExameFisicoByPacienteId(
-    pacienteId: string,
-  ): Promise<LaudoExameFisico | null> {
-    return this.laudoExameFisicoRepository.findOne({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  private async hydrateLaudoExameFisico(laudo: Laudo): Promise<Laudo> {
-    const exame = await this.findExameFisicoByPacienteId(laudo.pacienteId);
-    if (exame?.exameFisico) {
-      laudo.exameFisico = exame.exameFisico;
-    }
-    return laudo;
-  }
-
-  private normalizeLimit(value: number, fallback: number, max: number): number {
-    if (!Number.isFinite(value)) return fallback;
-    const integer = Math.floor(value);
-    if (integer < 1) return 1;
-    if (integer > max) return max;
-    return integer;
-  }
-  private readonly structuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V2__';
-  private readonly legacyStructuredExamePrefix = '__EXAME_FISICO_STRUCTURED_V1__';
-
-  private formatExameFisicoForDisplay(value?: string | null): string {
-    const parsed = this.parseStructuredExame(value);
-    if (!parsed) return value?.trim() || 'Nao informado';
-
-    const rfPositivas = (parsed.redFlags?.answers || [])
-      .filter((item: any) => item?.positive)
-      .map(
-        (item: any) => '- ' + String(item.question || item.key || 'Red flag'),
-      )
-      .join('\n');
-
-    const regionalGroups = (parsed.avaliacaoRegioes || []) as Array<{
-      titulo?: string;
-      adm?: string;
-      testes?: Array<{
-        nome?: string;
-        resultado?: string;
-        selecionado?: boolean;
-      }>;
-    }>;
-    const allRegionalTests = regionalGroups.flatMap((group) =>
-      Array.isArray(group?.testes) ? group.testes : [],
-    );
-    const regionalPositiveCount = allRegionalTests.filter(
-      (test) => String(test?.resultado || '') === 'POSITIVO',
-    ).length;
-    const regionalNegativeCount = allRegionalTests.filter(
-      (test) => String(test?.resultado || '') === 'NEGATIVO',
-    ).length;
-    const regionalNotTestedCount = allRegionalTests.filter(
-      (test) => String(test?.resultado || 'NAO_TESTADO') === 'NAO_TESTADO',
-    ).length;
-
-    const lines = [
-      'Classificacao de dor',
-      'Principal: ' + String(parsed.dorPrincipal || 'Nao informado'),
-      'Subtipo clinico: ' + String(parsed.dorSubtipo || 'Nao informado'),
-      '',
-      'Inspecao/observacao',
-      'Postura global: ' +
-        String(parsed.observacao?.postura || 'Nao informado'),
-      'Assimetrias: ' +
-        String(parsed.observacao?.assimetria || 'Nao informado'),
-      'Edema: ' + String(parsed.observacao?.edema || 'Nao informado'),
-      'Atrofia muscular: ' +
-        String(parsed.observacao?.atrofiaMuscular || 'Nao informado'),
-      'Alteracoes de marcha: ' +
-        String(parsed.observacao?.marcha || 'Nao informado'),
-      'Padrao de movimento observado: ' +
-        String(parsed.observacao?.padraoMovimento || 'Nao informado'),
-      '',
-      'Padrao de dor',
-      'Dor local: ' + String(parsed.padraoDor?.local || 'Nao informado'),
-      'Dor irradiada: ' +
-        String(parsed.padraoDor?.irradiada || 'Nao informado'),
-      'Movimento (chave)',
-      'Ativo: ' + String(parsed.movimento?.ativo || 'Nao informado'),
-      'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
-      'Resistido: ' + String(parsed.movimento?.resistido || 'Nao informado'),
-      'Reproduz dor: ' +
-        String(parsed.movimento?.reproduzDor || 'Nao informado'),
-      'Qualidade do movimento: ' +
-        String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
-      'Palpacao',
-      'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
-      'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),
-      'Palpacao dinamica vertebral: ' +
-        String(parsed.palpacao?.dinamicaVertebral || 'Nao informado'),
-      'Pontos dolorosos: ' +
-        String(parsed.palpacao?.pontosDolorosos || 'Nao informado'),
-      'Temperatura: ' + String(parsed.palpacao?.temperatura || 'Nao informado'),
-      'Tonus muscular: ' +
-        String(parsed.palpacao?.tonusMuscular || 'Nao informado'),
-      'Hipomobilidade articular: ' +
-        String(parsed.palpacao?.hipomobilidadeArticular || 'Nao informado'),
-      'Hipomobilidade segmentar - Cervical: ' +
-        String(
-          parsed.palpacao?.hipomobilidadeSegmentar?.cervical || 'Nao informado',
-        ),
-      'Hipomobilidade segmentar - Toracica: ' +
-        String(
-          parsed.palpacao?.hipomobilidadeSegmentar?.toracica || 'Nao informado',
-        ),
-      'Hipomobilidade segmentar - Lombar: ' +
-        String(
-          parsed.palpacao?.hipomobilidadeSegmentar?.lombar || 'Nao informado',
-        ),
-      'Hipomobilidade segmentar - Sacro: ' +
-        String(
-          parsed.palpacao?.hipomobilidadeSegmentar?.sacro || 'Nao informado',
-        ),
-      'Hipomobilidade segmentar - Iliaco D: ' +
-        String(
-          parsed.palpacao?.hipomobilidadeSegmentar?.iliacoDireito ||
-            'Nao informado',
-        ),
-      'Hipomobilidade segmentar - Iliaco E: ' +
-        String(
-          parsed.palpacao?.hipomobilidadeSegmentar?.iliacoEsquerdo ||
-            'Nao informado',
-        ),
-      '',
-      'Testes funcionais',
-      'Agachamento: ' +
-        String(parsed.testesFuncionais?.agachamento || 'Nao informado'),
-      'Agachamento unilateral: ' +
-        String(
-          parsed.testesFuncionais?.agachamentoUnilateral || 'Nao informado',
-        ),
-      'Salto: ' + String(parsed.testesFuncionais?.salto || 'Nao informado'),
-      'Corrida: ' + String(parsed.testesFuncionais?.corrida || 'Nao informado'),
-      'Estabilidade: ' +
-        String(parsed.testesFuncionais?.estabilidade || 'Nao informado'),
-      'Controle motor: ' +
-        String(parsed.testesFuncionais?.controleMotor || 'Nao informado'),
-      '',
-      'Testes',
-      'Biomecanicos: ' + String(parsed.testes?.biomecanicos || 'Nao informado'),
-      'Ortopedicos: ' + String(parsed.testes?.ortopedicos || 'Nao informado'),
-      'Imagem: ' + String(parsed.testes?.imagem || 'Nao informado'),
-      '',
-      'Avaliacao por regioes',
-      `Resumo: ${regionalPositiveCount} positivo(s), ${regionalNegativeCount} negativo(s), ${regionalNotTestedCount} nao testado(s).`,
-      ...regionalGroups.flatMap((group) => {
-        const groupTitle = String(group?.titulo || 'Regiao');
-        const tests = Array.isArray(group?.testes) ? group.testes : [];
-        const selectedOrTested = tests.filter(
-          (test) =>
-            String(test?.resultado || '') !== 'NAO_TESTADO' ||
-            test?.selecionado === true,
-        );
-        const admLine = `- ADM: ${String(group?.adm || 'Nao informado')}`;
-        if (!selectedOrTested.length) {
-          return [groupTitle, admLine, '- Sem testes marcados'];
-        }
-        const entries = selectedOrTested.map((test) => {
-          const name = String(test?.nome || 'Teste');
-          const result = String(test?.resultado || 'NAO_TESTADO');
-          if (result === 'NAO_TESTADO') {
-            return `- ${name}: Selecionado`;
-          }
-          return `- ${name}: ${result === 'POSITIVO' ? 'Positivo' : 'Negativo'}`;
-        });
-        return [groupTitle, admLine, ...entries];
-      }),
-      '',
-      'Cruzamento final',
-      'Hipotese principal: ' +
-        String(parsed.cruzamentoFinal?.hipotesePrincipal || 'Nao informado'),
-      'Hipoteses secundarias: ' +
-        String(parsed.cruzamentoFinal?.hipotesesSecundarias || 'Nao informado'),
-      'Inconsistencias: ' +
-        String(parsed.cruzamentoFinal?.inconsistencias || 'Nao informado'),
-      'Direcao de conduta: ' +
-        String(parsed.cruzamentoFinal?.condutaDirecionada || 'Nao informado'),
-      'Prioridade: ' +
-        String(parsed.cruzamentoFinal?.prioridade || 'Nao informado'),
-      'Confianca da hipotese: ' +
-        String(parsed.cruzamentoFinal?.confiancaHipotese || 'Nao informado'),
-      'Score de evidencia: ' +
-        String(parsed.cruzamentoFinal?.scoreEvidencia ?? 'Nao informado'),
-      'Perfil de scoring: ' +
-        String(parsed.cruzamentoFinal?.perfilScoring || 'Nao informado'),
-      '',
-      'Raciocinio clinico',
-      'Origem provavel da dor: ' +
-        String(parsed.raciocinioClinico?.origemProvavelDor || 'Nao informado'),
-      'Estrutura envolvida: ' +
-        String(parsed.raciocinioClinico?.estruturaEnvolvida || 'Nao informado'),
-      'Tipo de lesao: ' +
-        String(parsed.raciocinioClinico?.tipoLesao || 'Nao informado'),
-      'Fator biomecanico associado: ' +
-        String(
-          parsed.raciocinioClinico?.fatorBiomecanicoAssociado ||
-            'Nao informado',
-        ),
-      'Relacao com atividade/gesto: ' +
-        String(parsed.raciocinioClinico?.relacaoComEsporte || 'Nao informado'),
-      '',
-      'Diagnostico funcional',
-      'Disfuncao principal: ' +
-        String(
-          parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal || 'Nao informado',
-        ),
-      'Cadeia envolvida: ' +
-        String(
-          parsed.diagnosticoFuncionalIa?.cadeiaEnvolvida || 'Nao informado',
-        ),
-      '',
-      'Conduta direcionada',
-      'Tecnica manual indicada: ' +
-        String(parsed.condutaIa?.tecnicaManualIndicada || 'Nao informado'),
-      'Ajuste articular: ' +
-        String(parsed.condutaIa?.ajusteArticular || 'Nao informado'),
-      'Exercicio corretivo: ' +
-        String(parsed.condutaIa?.exercicioCorretivo || 'Nao informado'),
-      'Liberacao miofascial: ' +
-        String(parsed.condutaIa?.liberacaoMiofascial || 'Nao informado'),
-      'Progressao esportiva: ' +
-        String(parsed.condutaIa?.progressaoEsportiva || 'Nao informado'),
-      '',
-      'Red flags positivas',
-      rfPositivas || 'Nenhuma red flag positiva',
-      parsed.redFlags?.criticalTriggered
-        ? 'ALERTA: red flag critica detectada; encaminhamento imediato recomendado.'
-        : 'Sem red flag critica na triagem.',
-      parsed.redFlags?.referralDestination
-        ? 'Destino encaminhamento: ' +
-          String(parsed.redFlags.referralDestination)
-        : '',
-      parsed.redFlags?.referralReason
-        ? 'Justificativa: ' + String(parsed.redFlags.referralReason)
-        : '',
-    ].filter(Boolean);
-
-    return lines.join('\n');
-  }
-
-  private parseStructuredExame(value?: string | null): any | null {
-    const raw = String(value || '').trim();
-    const prefix = raw.startsWith(this.structuredExamePrefix)
-      ? this.structuredExamePrefix
-      : raw.startsWith(this.legacyStructuredExamePrefix)
-        ? this.legacyStructuredExamePrefix
-        : null;
-    if (!prefix) return null;
-    const json = raw.slice(prefix.length);
-    if (!json) return null;
-    try {
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
-  }
-
-  private validateStructuredExameInput(value?: string | null): void {
-    const parsed = this.parseStructuredExame(value);
-    if (!parsed) return;
-
-    const groups = Array.isArray(parsed.avaliacaoRegioes)
-      ? parsed.avaliacaoRegioes
-      : [];
-    const hasRegionalResult = groups.some(
-      (group: any) =>
-        Array.isArray(group?.testes) &&
-        group.testes.some(
-          (test: any) =>
-            String(test?.resultado || '') === 'POSITIVO' ||
-            String(test?.resultado || '') === 'NEGATIVO',
-        ),
-    );
-
-    if (!hasRegionalResult) {
-      throw new BadRequestException(
-        'Marque ao menos um teste regional como positivo ou negativo antes de salvar o exame fisico.',
-      );
-    }
-  }
-
-  private addSection(
-    doc: PDFKit.PDFDocument,
-    title: string,
-    value?: string | null,
-  ) {
-    doc.fontSize(12).fillColor('#1b5e40').text(title);
-    doc.moveDown(0.2);
-    doc
-      .fontSize(11)
-      .fillColor('#111')
-      .text(value?.trim() ? value : 'Nao informado', {
-        align: 'left',
-      });
-    doc.moveDown(0.8);
-  }
-
-  private inferReferenceProfile(
-    anamnese: Anamnese | null,
-  ): LaudoReferenceProfile {
-    if (!anamnese) return 'GERAL';
-
-    const text = [
-      anamnese.descricaoSintomas,
-      anamnese.tempoProblema,
-      anamnese.fatorAlivio,
-      anamnese.fatoresPiora,
-      anamnese.mecanismoLesao,
-      anamnese.atividadesQuePioram,
-      anamnese.lesoesPrevias,
-      anamnese.usoMedicamentos,
-      anamnese.eventoEspecifico,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-
-    const areaText = (anamnese.areasAfetadas || [])
-      .map((a) => String(a.regiao || '').toLowerCase())
-      .join(' ');
-
-    const combined = `${areaText} ${text}`;
-
-    if (
-      combined.includes('lomb') ||
-      combined.includes('coluna lombar') ||
-      combined.includes('lombar')
-    ) {
-      return 'LOMBAR';
-    }
-    if (
-      combined.includes('cervic') ||
-      combined.includes('pesco') ||
-      combined.includes('trap') ||
-      combined.includes('cervical')
-    ) {
-      return 'CERVICAL';
-    }
-    if (
-      combined.includes('joelho') ||
-      combined.includes('poplit') ||
-      combined.includes('patel') ||
-      combined.includes('menisc')
-    ) {
-      return 'JOELHO';
-    }
-
-    return 'GERAL';
-  }
-
-  private getReferenceCatalog(): Record<
-    LaudoReferenceProfile,
-    {
-      laudoReferences: LaudoReferenceItem[];
-      planoReferences: LaudoReferenceItem[];
-    }
-  > {
-    const commonLaudo: LaudoReferenceItem[] = [
-      {
-        id: 'guideline-pain-2021-iasp',
-        title: 'IASP Terminology & Pain Definition Update',
-        category: 'GUIDELINE',
-        source: 'PAIN (IASP)',
-        year: 2021,
-        authors: 'Raja SN et al.',
-        url: 'https://journals.lww.com/pain/fulltext/2020/09000/the_revised_international_association_for_the.8.aspx',
-        rationale:
-          'Base conceitual para avaliação de dor e comunicação clínica.',
-      },
-      {
-        id: 'book-magee-orthopedic-physical-assessment',
-        title: 'Orthopedic Physical Assessment',
-        category: 'LIVRO',
-        source: 'Elsevier',
-        year: 2020,
-        authors: 'David J. Magee',
-        url: 'https://www.elsevier.com/books/orthopedic-physical-assessment/magee/978-0-323-52998-6',
-        rationale:
-          'Referência de avaliação física musculoesquelética e testes clínicos.',
-      },
-    ];
-
-    const commonPlano: LaudoReferenceItem[] = [
-      {
-        id: 'guideline-who-rehab',
-        title: 'WHO Rehabilitation in Health Systems',
-        category: 'GUIDELINE',
-        source: 'World Health Organization',
-        year: 2017,
-        url: 'https://www.who.int/publications/i/item/9789241549974',
-        rationale: 'Princípios de planejamento terapêutico e funcionalidade.',
-      },
-      {
-        id: 'book-therapeutic-exercise-kisner',
-        title: 'Therapeutic Exercise: Foundations and Techniques',
-        category: 'LIVRO',
-        source: 'F.A. Davis',
-        year: 2017,
-        authors: 'Kisner, Colby, Borstad',
-        url: 'https://www.fadavis.com/product/physical-therapy-therapeutic-exercise-kisner-colby-borstad-7',
-        rationale:
-          'Base para prescrição, progressão e dosagem de exercícios terapêuticos.',
-      },
-    ];
-
-    return {
-      GERAL: {
-        laudoReferences: commonLaudo,
-        planoReferences: commonPlano,
-      },
-      LOMBAR: {
-        laudoReferences: [
-          ...commonLaudo,
-          {
-            id: 'guideline-jospt-lbp-2021',
-            title:
-              'Interventions for the Management of Acute and Chronic Low Back Pain',
-            category: 'GUIDELINE',
-            source: 'JOSPT Clinical Practice Guideline',
-            year: 2021,
-            url: 'https://www.jospt.org/doi/10.2519/jospt.2021.0304',
-            rationale: 'Diretriz para condutas e classificação em dor lombar.',
-          },
-        ],
-        planoReferences: [
-          ...commonPlano,
-          {
-            id: 'article-lbp-exercise-cochrane',
-            title: 'Exercise therapy for chronic low back pain',
-            category: 'ARTIGO',
-            source: 'Cochrane Review',
-            year: 2021,
-            url: 'https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD009790.pub2/full',
-            rationale:
-              'Evidência para prescrição de exercício em dor lombar crônica.',
-          },
-        ],
-      },
-      CERVICAL: {
-        laudoReferences: [
-          ...commonLaudo,
-          {
-            id: 'guideline-neckpain-jospt',
-            title: 'Neck Pain Clinical Practice Guidelines',
-            category: 'GUIDELINE',
-            source: 'JOSPT / Orthopaedic Section CPG',
-            year: 2017,
-            url: 'https://www.jospt.org/doi/10.2519/jospt.2017.0302',
-            rationale:
-              'Classificação e manejo fisioterapêutico da cervicalgia.',
-          },
-        ],
-        planoReferences: [
-          ...commonPlano,
-          {
-            id: 'article-neck-pain-exercise-manual-therapy',
-            title: 'Exercise and manual therapy for neck pain',
-            category: 'ARTIGO',
-            source: 'Systematic Review / Clinical Evidence',
-            year: 2015,
-            url: 'https://pubmed.ncbi.nlm.nih.gov/25830800/',
-            rationale: 'Suporte para combinação de exercício e terapia manual.',
-          },
-        ],
-      },
-      JOELHO: {
-        laudoReferences: [
-          ...commonLaudo,
-          {
-            id: 'guideline-knee-pain-patellofemoral-2019',
-            title: 'Patellofemoral Pain Clinical Practice Guideline',
-            category: 'GUIDELINE',
-            source: 'JOSPT Clinical Practice Guideline',
-            year: 2019,
-            url: 'https://www.jospt.org/doi/10.2519/jospt.2019.0302',
-            rationale:
-              'Avaliação e raciocínio clínico para dor patelofemoral/joelho.',
-          },
-        ],
-        planoReferences: [
-          ...commonPlano,
-          {
-            id: 'article-aclr-rehab-consensus',
-            title:
-              'Anterior Cruciate Ligament Rehabilitation: Clinical Practice',
-            category: 'GUIDELINE',
-            source: 'BJSM / Consensus Recommendations',
-            year: 2020,
-            url: 'https://bjsm.bmj.com/content/54/24/1506',
-            rationale:
-              'Referência para progressão funcional e critérios de retorno.',
-          },
-        ],
-      },
-    };
+    return buildSuggestionPreview(suggestionContext, aiSuggestion);
   }
 }

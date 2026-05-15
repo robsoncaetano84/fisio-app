@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddMelhoriaSessaoToAtividadeCheckin1776500000000
-  implements MigrationInterface
-{
+export class AddMelhoriaSessaoToAtividadeCheckin1776500000000 implements MigrationInterface {
   name = 'AddMelhoriaSessaoToAtividadeCheckin1776500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RemoveAnamneseHistoricoFamiliarEsportivo1779500000000
-  implements MigrationInterface
-{
+export class RemoveAnamneseHistoricoFamiliarEsportivo1779500000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE "anamneses" DROP COLUMN IF EXISTS "historico_familiar"`,
