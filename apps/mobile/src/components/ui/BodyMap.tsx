@@ -150,8 +150,10 @@ const viewLabel = (view?: AreaAfetada["vista"]) =>
 
 const areaLabel = (area: AreaAfetada) => REGION_LABELS[area.regiao] || area.regiao;
 
-const areaMetaLabel = (area: AreaAfetada, intensity: number) =>
-  `${sideLabel(area.lado)} ${viewLabel(area.vista)} - dor ${intensity}/10`;
+const areaMetaLabel = (area: AreaAfetada, intensity?: number) =>
+  `${sideLabel(area.lado)} ${viewLabel(area.vista)} - ${
+    typeof intensity === "number" ? `dor ${intensity}/10` : "dor nao informada"
+  }`;
 
 const selectedRegionToPointKey = (region: SelectedBodyRegion) =>
   `${region.sex}:${region.view}:${region.id}`;
@@ -168,7 +170,6 @@ const pointToArea = (point: BodyMapPoint): AreaAfetada => ({
   regiao: point.regionKey || point.id,
   lado: pointSideToAreaSide(point),
   vista: point.view,
-  intensidade: 6,
   observacao: "",
 });
 
@@ -327,7 +328,11 @@ export function BodyMap({
     onAreasChange?.(
       selectedAreas.map((area) => {
         if (areaKey(area) !== selectedKey) return area;
-        const next = Math.max(1, Math.min(10, Number(area.intensidade || 6) + delta));
+        const current =
+          typeof area.intensidade === "number" && Number.isFinite(area.intensidade)
+            ? area.intensidade
+            : 0;
+        const next = Math.max(0, Math.min(10, current + delta));
         return { ...area, intensidade: next };
       }),
     );
@@ -397,7 +402,10 @@ export function BodyMap({
           <View style={styles.selectedList}>
             {selectedDisplayAreas.map((area) => {
               const selectedKey = areaKey(area);
-              const intensity = Number(area.intensidade || 6);
+              const intensity =
+                typeof area.intensidade === "number" && Number.isFinite(area.intensidade)
+                  ? area.intensidade
+                  : undefined;
               return (
                 <View key={selectedKey} style={styles.selectedChip}>
                   <View style={styles.selectedChipHeader}>
