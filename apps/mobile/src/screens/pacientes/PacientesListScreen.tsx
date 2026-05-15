@@ -542,13 +542,6 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
 
   const getClinicalFlowGuardMessage = useCallback(
     (action: ClinicalFlowAction, guard: ClinicalFlowGuard) => {
-      if (guard.reason === "MISSING_LINK") {
-        if (action === "ANAMNESE") return t("patients.guardLinkBeforeAnamnesis");
-        if (action === "EXAME_FISICO") {
-          return t("patients.guardLinkBeforePhysicalExam");
-        }
-        return t("patients.guardLinkBeforeEvolution");
-      }
       if (action === "EXAME_FISICO") {
         return t("patients.guardAnamnesisBeforePhysicalExam");
       }

@@ -105,11 +105,7 @@ export class AnamnesesService {
       throw new NotFoundException('Anamnese não encontrada');
     }
 
-    const isMasterAdmin =
-      await this.pacientesService.isMasterAdminByUsuarioId(usuarioId);
-    if (!isMasterAdmin && anamnese.paciente.usuarioId !== usuarioId) {
-      throw new NotFoundException('Anamnese não encontrada');
-    }
+    await this.pacientesService.findOne(anamnese.pacienteId, usuarioId);
 
     return anamnese;
   }

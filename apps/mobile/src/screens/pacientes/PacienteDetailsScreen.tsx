@@ -923,11 +923,6 @@ export function PacienteDetailsScreen({
   const getClinicalFlowGuardMessage = (
     guard: ClinicalFlowGuard,
   ): string => {
-    if (guard.reason === "MISSING_LINK") {
-      return guard.action === "ANAMNESE"
-        ? t("patientDetails.guardCreateLinkBeforeAnamnesis")
-        : t("patientDetails.guardCreateLinkFirst");
-    }
     if (guard.reason === "MISSING_EXAME_FISICO") {
       return t("patientDetails.guardPhysicalExamBeforeEvolution");
     }

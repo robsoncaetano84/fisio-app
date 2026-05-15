@@ -40,7 +40,7 @@ describe('PacienteScopeService', () => {
     };
   };
 
-  it('builds professional scoped paciente query through active vinculo', () => {
+  it('builds professional scoped paciente query through owner or active vinculo', () => {
     const { service, queryBuilder } = makeService();
 
     expect(service.buildScopedPacientesQuery('profissional-1')).toBe(
@@ -56,7 +56,7 @@ describe('PacienteScopeService', () => {
       },
     );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      '((p.usuarioId = :usuarioId AND p.pacienteUsuarioId IS NULL) OR vScope.id IS NOT NULL)',
+      '(p.usuarioId = :usuarioId OR vScope.id IS NOT NULL)',
       {
         usuarioId: 'profissional-1',
         vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,

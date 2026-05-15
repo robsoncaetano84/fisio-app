@@ -11,7 +11,6 @@ export type ClinicalFlowNextStep =
   | "MONITORAMENTO";
 
 export type ClinicalFlowBlockReason =
-  | "MISSING_LINK"
   | "MISSING_ANAMNESE"
   | "MISSING_EXAME_FISICO";
 
@@ -26,7 +25,7 @@ export type ClinicalFlowReadinessState = {
 export type ClinicalFlowGuard = {
   action: ClinicalFlowAction;
   reason: ClinicalFlowBlockReason;
-  analyticsReason: "MISSING_LINK" | "MISSING_ANAMNESE" | "MISSING_EXAME_FISICO";
+  analyticsReason: "MISSING_ANAMNESE" | "MISSING_EXAME_FISICO";
   redirectStep: ClinicalFlowNextStep;
 };
 
@@ -82,15 +81,6 @@ export function getClinicalFlowGuard(
   state: ClinicalFlowReadinessState,
   options?: { requirePhysicalExamForEvolution?: boolean },
 ): ClinicalFlowGuard | null {
-  if (!state.hasVinculoAtivo) {
-    return {
-      action,
-      reason: "MISSING_LINK",
-      analyticsReason: "MISSING_LINK",
-      redirectStep: "VINCULO",
-    };
-  }
-
   if (action !== "ANAMNESE" && !state.hasAnamnese) {
     return {
       action,
@@ -119,7 +109,6 @@ export function getClinicalFlowGuard(
 export function getClinicalFlowNextStep(
   state: ClinicalFlowReadinessState,
 ): ClinicalFlowNextStep {
-  if (!state.hasVinculoAtivo) return "VINCULO";
   if (!state.hasAnamnese) return "ANAMNESE";
   if (state.hasExameFisico === false) return "EXAME_FISICO";
   if (state.hasEvolucao === false) return "EVOLUCAO";

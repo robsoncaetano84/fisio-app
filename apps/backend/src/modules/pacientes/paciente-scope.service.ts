@@ -43,13 +43,10 @@ export class PacienteScopeService {
         },
       )
       .where('p.ativo = :ativo', { ativo: true })
-      .andWhere(
-        '((p.usuarioId = :usuarioId AND p.pacienteUsuarioId IS NULL) OR vScope.id IS NOT NULL)',
-        {
-          usuarioId,
-          vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
-        },
-      );
+      .andWhere('(p.usuarioId = :usuarioId OR vScope.id IS NOT NULL)', {
+        usuarioId,
+        vinculoStatusAtivo: ProfissionalPacienteVinculoStatus.ATIVO,
+      });
   }
 
   buildScopedAttentionRowsQuery(
