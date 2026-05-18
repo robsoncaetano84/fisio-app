@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { StatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Platform,
@@ -24,6 +25,11 @@ import { AdminCrmScreen } from "./src/screens/admin/AdminCrmScreen";
 import { COLORS, FONTS, SPACING } from "./src/constants/theme";
 import { UserRole } from "./src/types";
 import { initSentry, Sentry } from "./src/services/sentry";
+import {
+  clearRememberedLogin,
+  loadRememberedLogin,
+  saveRememberedLogin,
+} from "./src/services/rememberedLogin";
 
 const CRM_WEB_SESSION_FLAG = "crm:web:entry";
 
@@ -67,10 +73,18 @@ function writeCrmSessionFlag(enabled: boolean) {
 function WebCrmEntry() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(false);
   const [error, setError] = useState("");
   const [bootstrapped, setBootstrapped] = useState(false);
-  const { isAuthenticated, isLoading, usuario, login, logout, loadStoredAuth, setLoading } =
-    useAuthStore();
+  const {
+    isAuthenticated,
+    isLoading,
+    usuario,
+    login,
+    logout,
+    loadStoredAuth,
+    setLoading,
+  } = useAuthStore();
 
   useEffect(() => {
     let mounted = true;
@@ -87,6 +101,44 @@ function WebCrmEntry() {
     };
   }, [loadStoredAuth, setLoading]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadRememberedCrmLogin() {
+      try {
+        const savedLogin = await loadRememberedLogin("crm");
+        if (!mounted) return;
+
+        setRememberLogin(savedLogin.remember);
+        if (savedLogin.remember && savedLogin.identifier) {
+          setEmail(savedLogin.identifier);
+        }
+      } catch {
+        // ignore storage failures
+      }
+    }
+
+    void loadRememberedCrmLogin();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const persistRememberedCrmLogin = async (emailToRemember: string) => {
+    await saveRememberedLogin("crm", emailToRemember, rememberLogin);
+  };
+
+  const toggleRememberLogin = () => {
+    setRememberLogin((current) => {
+      const next = !current;
+      if (!next) {
+        clearRememberedLogin("crm").catch(() => undefined);
+      }
+      return next;
+    });
+  };
+
   const isAdmin = usuario?.role === UserRole.ADMIN;
   const title = useMemo(
     () => (isAuthenticated ? "CRM (ADM Master)" : "Login CRM (ADM Master)"),
@@ -96,8 +148,10 @@ function WebCrmEntry() {
   const handleLogin = async () => {
     setError("");
     try {
+      const normalizedEmail = email.trim();
       writeCrmSessionFlag(true);
-      await login({ identificador: email.trim(), senha });
+      await login({ identificador: normalizedEmail, senha });
+      await persistRememberedCrmLogin(normalizedEmail);
     } catch (e: any) {
       setError(e?.response?.data?.message || "Falha no login");
     }
@@ -141,7 +195,9 @@ function WebCrmEntry() {
     <View style={styles.loginWrap}>
       <View style={styles.loginCard}>
         <Text style={styles.loginTitle}>{title}</Text>
-        <Text style={styles.loginSubtitle}>Acesso exclusivo para administrador master</Text>
+        <Text style={styles.loginSubtitle}>
+          Acesso exclusivo para administrador master
+        </Text>
 
         <TextInput
           style={styles.input}
@@ -160,9 +216,28 @@ function WebCrmEntry() {
           placeholderTextColor={COLORS.gray400}
         />
 
+        <Pressable
+          style={styles.rememberLogin}
+          onPress={toggleRememberLogin}
+          disabled={isLoading}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: rememberLogin }}
+        >
+          <Ionicons
+            name={rememberLogin ? "checkbox" : "square-outline"}
+            size={20}
+            color={rememberLogin ? COLORS.primary : COLORS.gray500}
+          />
+          <Text style={styles.rememberLoginText}>
+            Salvar e-mail neste dispositivo
+          </Text>
+        </Pressable>
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         {isAuthenticated && !isAdmin ? (
-          <Text style={styles.errorText}>Usuário autenticado sem perfil ADMIN.</Text>
+          <Text style={styles.errorText}>
+            Usuário autenticado sem perfil ADMIN.
+          </Text>
         ) : null}
 
         <Pressable style={styles.loginButton} onPress={handleLogin}>
@@ -318,6 +393,17 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: FONTS.sizes.sm,
   },
+  rememberLogin: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  rememberLoginText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "500",
+  },
   errorText: {
     color: "#B52828",
     fontSize: FONTS.sizes.xs,
@@ -337,5 +423,3 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
   },
 });
-
-

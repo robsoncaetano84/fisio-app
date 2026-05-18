@@ -19,6 +19,7 @@ export const ptAuth: TranslationMap = {
   "login.emailLabel": "E-mail",
   "login.emailPlaceholder": "seu@email.com",
   "login.passwordLabel": "Senha",
+  "login.rememberIdentifier": "Lembrar e-mail/CPF",
   "inviteSignup.title": "Cadastro do Paciente",
   "inviteSignup.subtitle": "Complete o cadastro para acessar sua área no app.",
   "inviteSignup.inviteTokenLabel": "Token do convite",
@@ -46,8 +47,7 @@ export const ptAuth: TranslationMap = {
   "inviteSignup.consentAiLabel":
     "Autorizo uso anonimizado para melhoria de IA clínica (opcional)",
   "inviteSignup.requiredTermsConsent": "Aceite os Termos de Uso",
-  "inviteSignup.requiredPrivacyConsent":
-    "Aceite a Política de Privacidade",
+  "inviteSignup.requiredPrivacyConsent": "Aceite a Política de Privacidade",
   "inviteSignup.successLinked": "Cadastro concluído e vínculo realizado",
   "inviteSignup.successPendingLink":
     "Cadastro concluído. Seu vínculo será finalizado pelo profissional.",
@@ -129,6 +129,7 @@ export const enAuth: TranslationMap = {
   "login.emailLabel": "Email",
   "login.emailPlaceholder": "you@email.com",
   "login.passwordLabel": "Password",
+  "login.rememberIdentifier": "Remember email/CPF",
   "inviteSignup.title": "Patient Sign Up",
   "inviteSignup.subtitle": "Complete sign up to access your area in the app.",
   "inviteSignup.inviteTokenLabel": "Invite token",
@@ -238,6 +239,7 @@ export const esAuth: TranslationMap = {
   "login.emailLabel": "Correo",
   "login.emailPlaceholder": "tu@email.com",
   "login.passwordLabel": "Contraseña",
+  "login.rememberIdentifier": "Recordar correo/CPF",
   "inviteSignup.title": "Registro del Paciente",
   "inviteSignup.subtitle":
     "Completa el registro para acceder a tu área en la app.",
@@ -266,8 +268,7 @@ export const esAuth: TranslationMap = {
   "inviteSignup.consentAiLabel":
     "Autorizo uso anonimizado para mejora de IA clínica (opcional)",
   "inviteSignup.requiredTermsConsent": "Acepta los Términos de Uso",
-  "inviteSignup.requiredPrivacyConsent":
-    "Acepta la Política de Privacidad",
+  "inviteSignup.requiredPrivacyConsent": "Acepta la Política de Privacidad",
   "inviteSignup.successLinked": "Registro completado y vínculo realizado",
   "inviteSignup.successPendingLink":
     "Registro completado. Tu vínculo será finalizado por el profesional.",

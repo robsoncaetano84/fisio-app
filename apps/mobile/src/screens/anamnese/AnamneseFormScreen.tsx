@@ -12,6 +12,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -383,6 +384,7 @@ export function AnamneseFormScreen({
   );
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const [stepsContainerWidth, setStepsContainerWidth] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const didSaveRef = useRef(false);
   const currentStepRef = useRef(0);
@@ -440,6 +442,11 @@ export function AnamneseFormScreen({
     { title: "Histórico", icon: "time-outline" },
     { title: "Estilo de vida", icon: "heart-outline" },
   ];
+  const isCompactStepper = stepsContainerWidth > 0 && stepsContainerWidth < 560;
+
+  const handleStepsLayout = (event: LayoutChangeEvent) => {
+    setStepsContainerWidth(event.nativeEvent.layout.width);
+  };
 
   const appendText = (
     setter: React.Dispatch<React.SetStateAction<string>>,
@@ -2688,51 +2695,104 @@ export function AnamneseFormScreen({
         </View>
       </View>
 
-      <View style={styles.stepsContainer}>
-        {steps.map((step, index) => (
-          <View key={index} style={styles.stepItem}>
-            <TouchableOpacity
-              style={[
-                styles.stepButton,
-                index === currentStep && styles.stepButtonCurrent,
-              ]}
-              onPress={() => goToStep(index)}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel={"Ir para etapa: " + step.title}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
-              <View
+      <View
+        style={[
+          styles.stepsContainer,
+          isCompactStepper && styles.stepsContainerCompact,
+        ]}
+        onLayout={handleStepsLayout}
+      >
+        {isCompactStepper ? (
+          <>
+            <View style={styles.compactStepsTrack}>
+              {steps.map((step, index) => (
+                <React.Fragment key={step.title}>
+                  <TouchableOpacity
+                    style={styles.compactStepButton}
+                    onPress={() => goToStep(index)}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={"Ir para etapa: " + step.title}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <View
+                      style={[
+                        styles.stepCircle,
+                        index <= currentStep && styles.stepCircleActive,
+                      ]}
+                    >
+                      <Ionicons
+                        name={step.icon}
+                        size={16}
+                        color={
+                          index <= currentStep ? COLORS.white : COLORS.gray400
+                        }
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  {index < steps.length - 1 && (
+                    <View
+                      style={[
+                        styles.stepLine,
+                        index < currentStep && styles.stepLineActive,
+                      ]}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </View>
+            <Text style={styles.compactStepLabel} numberOfLines={1}>
+              Etapa {currentStep + 1} de {steps.length}:{" "}
+              {steps[currentStep]?.title}
+            </Text>
+          </>
+        ) : (
+          steps.map((step, index) => (
+            <View key={index} style={styles.stepItem}>
+              <TouchableOpacity
                 style={[
-                  styles.stepCircle,
-                  index <= currentStep && styles.stepCircleActive,
+                  styles.stepButton,
+                  index === currentStep && styles.stepButtonCurrent,
                 ]}
+                onPress={() => goToStep(index)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={"Ir para etapa: " + step.title}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Ionicons
-                  name={step.icon}
-                  size={16}
-                  color={index <= currentStep ? COLORS.white : COLORS.gray400}
+                <View
+                  style={[
+                    styles.stepCircle,
+                    index <= currentStep && styles.stepCircleActive,
+                  ]}
+                >
+                  <Ionicons
+                    name={step.icon}
+                    size={16}
+                    color={index <= currentStep ? COLORS.white : COLORS.gray400}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.stepText,
+                    index <= currentStep && styles.stepTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {step.title}
+                </Text>
+              </TouchableOpacity>
+              {index < steps.length - 1 && (
+                <View
+                  style={[
+                    styles.stepLine,
+                    index < currentStep && styles.stepLineActive,
+                  ]}
                 />
-              </View>
-              <Text
-                style={[
-                  styles.stepText,
-                  index <= currentStep && styles.stepTextActive,
-                ]}
-              >
-                {step.title}
-              </Text>
-            </TouchableOpacity>
-            {index < steps.length - 1 && (
-              <View
-                style={[
-                  styles.stepLine,
-                  index < currentStep && styles.stepLineActive,
-                ]}
-              />
-            )}
-          </View>
-        ))}
+              )}
+            </View>
+          ))
+        )}
       </View>
 
       {VOICE_ENABLED && isRecording && (
@@ -2872,6 +2932,26 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.base,
     ...SHADOWS.sm,
+  },
+  stepsContainerCompact: {
+    flexDirection: "column",
+    gap: SPACING.xs,
+  },
+  compactStepsTrack: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  compactStepButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compactStepLabel: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
   },
   stepItem: {
     flex: 1,
@@ -3060,9 +3140,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-
-
-
-
-

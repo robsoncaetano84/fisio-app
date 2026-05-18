@@ -8,7 +8,10 @@ import {
   View,
 } from "react-native";
 import { COLORS, FONTS, SPACING } from "../../constants/theme";
-import { BodyMapPoint as BodyMapPointModel, bodyMapPointKey } from "./body-map-points.config";
+import {
+  BodyMapPoint as BodyMapPointModel,
+  bodyMapPointKey,
+} from "./body-map-points.config";
 
 type PanelSize = {
   width: number;
@@ -20,9 +23,14 @@ interface BodyMapPointProps {
   selected: boolean;
   disabled?: boolean;
   editable?: boolean;
+  sizeScale?: number;
   panelSize?: PanelSize;
   onToggle: (point: BodyMapPointModel) => void;
-  onMove?: (point: BodyMapPointModel, xPercent: number, yPercent: number) => void;
+  onMove?: (
+    point: BodyMapPointModel,
+    xPercent: number,
+    yPercent: number,
+  ) => void;
 }
 
 const SELECTED_COLOR = "#C62828";
@@ -35,6 +43,7 @@ export function BodyMapPoint({
   selected,
   disabled = false,
   editable = false,
+  sizeScale = 1,
   panelSize,
   onToggle,
   onMove,
@@ -48,8 +57,11 @@ export function BodyMapPoint({
   const didDragRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hitSize = point.hitSize || 44;
-  const visibleSize = (point.visibleRadius || 8) * 2;
+  const hitSize = Math.max(36, Math.round((point.hitSize || 44) * sizeScale));
+  const visibleSize = Math.max(
+    12,
+    Math.round((point.visibleRadius || 8) * 2 * sizeScale),
+  );
 
   useEffect(
     () => () => {
@@ -66,10 +78,10 @@ export function BodyMapPoint({
         onMoveShouldSetPanResponder: (_event, gesture) =>
           Boolean(
             editable &&
-              onMove &&
-              panelSize?.width &&
-              panelSize?.height &&
-              (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
+            onMove &&
+            panelSize?.width &&
+            panelSize?.height &&
+            (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
           ),
         onPanResponderGrant: () => {
           didDragRef.current = false;
@@ -84,10 +96,12 @@ export function BodyMapPoint({
           }
           didDragRef.current = true;
           const nextX = clampPercent(
-            dragStartRef.current.xPercent + (gesture.dx / panelSize.width) * 100,
+            dragStartRef.current.xPercent +
+              (gesture.dx / panelSize.width) * 100,
           );
           const nextY = clampPercent(
-            dragStartRef.current.yPercent + (gesture.dy / panelSize.height) * 100,
+            dragStartRef.current.yPercent +
+              (gesture.dy / panelSize.height) * 100,
           );
           onMove(point, nextX, nextY);
         },
@@ -123,7 +137,11 @@ export function BodyMapPoint({
           tabIndex: disabled ? -1 : 0,
           onKeyDown: (event: { key?: string; preventDefault?: () => void }) => {
             if (disabled) return;
-            if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+            if (
+              event.key === "Enter" ||
+              event.key === " " ||
+              event.key === "Spacebar"
+            ) {
               event.preventDefault?.();
               onToggle(point);
             }

@@ -27,8 +27,13 @@ interface BodyMapSideProps {
   selectedKeys: Set<string>;
   disabled?: boolean;
   editable?: boolean;
+  compact?: boolean;
   onTogglePoint: (point: BodyMapPointModel) => void;
-  onMovePoint?: (point: BodyMapPointModel, xPercent: number, yPercent: number) => void;
+  onMovePoint?: (
+    point: BodyMapPointModel,
+    xPercent: number,
+    yPercent: number,
+  ) => void;
 }
 
 export function BodyMapSide({
@@ -38,10 +43,12 @@ export function BodyMapSide({
   selectedKeys,
   disabled = false,
   editable = false,
+  compact = false,
   onTogglePoint,
   onMovePoint,
 }: BodyMapSideProps) {
   const [panelSize, setPanelSize] = useState({ width: 0, height: 0 });
+  const pointSizeScale = compact && panelSize.width < 360 ? 0.9 : 1;
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -51,7 +58,7 @@ export function BodyMapSide({
   return (
     <View
       onLayout={handleLayout}
-      style={styles.panel}
+      style={[styles.panel, compact && styles.panelCompact]}
       accessibilityRole="image"
       accessibilityLabel="Mapa corporal anatomico"
     >
@@ -70,6 +77,7 @@ export function BodyMapSide({
           selected={selectedKeys.has(bodyMapPointKey(point))}
           disabled={disabled}
           editable={editable}
+          sizeScale={pointSizeScale}
           panelSize={panelSize}
           onToggle={onTogglePoint}
           onMove={onMovePoint}
@@ -90,6 +98,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.gray200,
     borderRadius: BORDER_RADIUS.md,
+  },
+  panelCompact: {
+    width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
+    flexGrow: 0,
+    flexShrink: 0,
   },
   image: {
     position: "absolute",

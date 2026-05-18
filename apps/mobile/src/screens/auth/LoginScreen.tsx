@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,11 @@ import { APP_VERSION_LABEL } from "../../constants/version";
 import { RootStackParamList, UserRole } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import {
+  clearRememberedLogin,
+  loadRememberedLogin,
+  saveRememberedLogin,
+} from "../../services/rememberedLogin";
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Login">;
@@ -30,6 +35,7 @@ type LoginScreenProps = {
 export function LoginScreen({ navigation, route }: LoginScreenProps) {
   const [identificador, setIdentificador] = useState("");
   const [senha, setSenha] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [errors, setErrors] = useState<{
     identificador?: string;
@@ -44,6 +50,44 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
     useAuthStore();
   const { showToast } = useToast();
   const { t } = useLanguage();
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function bootstrapRememberedLogin() {
+      try {
+        const savedLogin = await loadRememberedLogin("app");
+        if (!mounted) return;
+
+        setRememberLogin(savedLogin.remember);
+        if (savedLogin.remember && savedLogin.identifier) {
+          setIdentificador(savedLogin.identifier);
+        }
+      } catch {
+        // Non-blocking: login must keep working without local storage.
+      }
+    }
+
+    void bootstrapRememberedLogin();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const persistRememberedLogin = async (identifier: string) => {
+    await saveRememberedLogin("app", identifier, rememberLogin);
+  };
+
+  const toggleRememberLogin = () => {
+    setRememberLogin((current) => {
+      const next = !current;
+      if (!next) {
+        clearRememberedLogin("app").catch(() => undefined);
+      }
+      return next;
+    });
+  };
 
   const validate = (): boolean => {
     const newErrors: { identificador?: string; senha?: string } = {};
@@ -72,10 +116,12 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
     if (!validate()) return;
 
     try {
+      const normalizedIdentifier = identificador.trim();
       const response = await login({
-        identificador: identificador.trim(),
+        identificador: normalizedIdentifier,
         senha,
       });
+      await persistRememberedLogin(normalizedIdentifier);
       if (conviteToken) {
         if (response.usuario.role === UserRole.PACIENTE) {
           setPendingInviteToken(conviteToken);
@@ -188,7 +234,7 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
 
             <Input
               label={t("login.passwordLabel")}
-              placeholder={t("Senha")}
+              placeholder={t("login.passwordLabel")}
               value={senha}
               onChangeText={setSenha}
               error={errors.senha}
@@ -196,15 +242,35 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
               isPassword
             />
 
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={handleForgotPassword}
-              disabled={isLoading || isSendingReset}
-            >
-              <Text style={styles.forgotPasswordText}>
-                {t("login.forgotPassword")}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.loginOptionsRow}>
+              <TouchableOpacity
+                style={styles.rememberLogin}
+                onPress={toggleRememberLogin}
+                activeOpacity={0.8}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: rememberLogin }}
+                disabled={isLoading}
+              >
+                <Ionicons
+                  name={rememberLogin ? "checkbox" : "square-outline"}
+                  size={20}
+                  color={rememberLogin ? COLORS.primary : COLORS.gray500}
+                />
+                <Text style={styles.rememberLoginText}>
+                  {t("login.rememberIdentifier")}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={handleForgotPassword}
+                disabled={isLoading || isSendingReset}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  {t("login.forgotPassword")}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <Button
               title={t("login.enter")}
@@ -295,9 +361,30 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: SPACING.xl,
   },
+  loginOptionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  rememberLogin: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    flexShrink: 1,
+  },
+  rememberLoginText: {
+    flexShrink: 1,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: "500",
+  },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: SPACING.lg,
+    minHeight: 32,
+    justifyContent: "center",
   },
   forgotPasswordText: {
     fontSize: FONTS.sizes.sm,

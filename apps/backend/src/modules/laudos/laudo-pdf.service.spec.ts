@@ -23,6 +23,7 @@ describe('LaudoPdfService', () => {
     nome: 'Dra. Ana Silva',
     conselhoProf: 'CREFITO-3',
     registroProf: '12345',
+    especialidade: 'Fisioterapia Ortopedica',
   };
 
   it('builds professional laudo pdf buffer', async () => {
@@ -36,6 +37,9 @@ describe('LaudoPdfService', () => {
 
     expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
     expect(buffer.length).toBeGreaterThan(1000);
+    const raw = buffer.toString('latin1');
+    expect(raw).toContain('Dra. Ana Silva');
+    expect(raw).toContain('CREFITO-3 12345');
   });
 
   it('builds patient treatment plan pdf buffer', async () => {
@@ -49,5 +53,9 @@ describe('LaudoPdfService', () => {
 
     expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
     expect(buffer.length).toBeGreaterThan(1000);
+    const raw = buffer.toString('latin1');
+    expect(raw).toContain('Meu Plano de Tratamento');
+    expect(raw).toContain('Documento clinico de Paciente Teste');
+    expect(raw).toContain('CREFITO-3 12345');
   });
 });

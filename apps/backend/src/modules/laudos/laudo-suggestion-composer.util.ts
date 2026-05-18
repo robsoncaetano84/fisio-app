@@ -501,6 +501,7 @@ function buildRuleBasedLaudoFields(
       summary.areasPrioritarias.length
         ? `Regioes prioritarias: ${summary.areasPrioritarias.join(', ')}.`
         : '',
+      'Em linguagem simples: o plano deve relacionar a dor, o movimento e as atividades que o paciente quer recuperar.',
       summary.hipotesesFuncionais.length
         ? `Raciocinio: ${summary.hipotesesFuncionais.join(' | ')}.`
         : '',
@@ -548,9 +549,9 @@ function buildRuleBasedLaudoFields(
       `Evidencias usadas: ${evidence}.`,
     ]),
     planoTratamentoIA: [
-      `Fase 1: controlar irritabilidade (${summary.irritabilidade}) em ${primaryArea || 'regiao sintomatica'} e confirmar lacunas clinicas. Condutas: educacao direcionada, ajuste de carga e movimento toleravel. Evidencia: ${summary.ancorasEspecificidade.slice(0, 3).join(' | ') || evidence}. Criterio: ${progressCriterion}.`,
-      `Fase 2: progredir mobilidade, controle motor e forca em ${primaryArea || 'regiao prioritaria'}. Condutas: tarefas graduadas vinculadas a ${primaryGoal || 'funcao-alvo do paciente'}. Evidencia: ${relevantFactors || evidence}. Criterio: melhora funcional objetiva e resposta estavel entre sessoes.`,
-      `Fase 3: retorno funcional especifico para ${primaryGoal || 'atividade-alvo'} e prevencao de recidiva. Condutas: exposicao progressiva a demandas do caso e plano domiciliar. Criterio: tarefa-alvo executada com independencia e baixa reatividade.`,
+      `Fase 1 - Controle de sintomas: controlar irritabilidade (${summary.irritabilidade}) em ${primaryArea || 'regiao sintomatica'} e confirmar lacunas clinicas. Condutas: educacao direcionada, ajuste de carga e movimento toleravel. Evidencia: ${summary.ancorasEspecificidade.slice(0, 3).join(' | ') || evidence}. Criterio: ${progressCriterion}.`,
+      `Fase 2 - Recuperacao de movimento/forca: progredir mobilidade, controle motor e forca em ${primaryArea || 'regiao prioritaria'}. Condutas: tarefas graduadas vinculadas a ${primaryGoal || 'funcao-alvo do paciente'}. Evidencia: ${relevantFactors || evidence}. Criterio: melhora funcional objetiva e resposta estavel entre sessoes.`,
+      `Fase 3 - Retorno a funcao: retorno funcional especifico para ${primaryGoal || 'atividade-alvo'} e prevencao de recidiva. Condutas: exposicao progressiva a demandas do caso e plano domiciliar. Criterio: tarefa-alvo executada com independencia e baixa reatividade.`,
       summary.areasSelecionadasDetalhadas.length
         ? `Monitoramento por area: ${summary.areasSelecionadasDetalhadas.map((area) => area.resumo).join(' | ')}.`
         : '',

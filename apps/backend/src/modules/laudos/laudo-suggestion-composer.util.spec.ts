@@ -170,7 +170,7 @@ describe('laudo suggestion composer util', () => {
     expect(draft.payload.condutas).toContain('Conduta: exercicios');
     expect(draft.payload.condutas).toContain('Criterio de progressao');
     expect(draft.payload.planoTratamentoIA).toContain(
-      'Fase 2: progredir mobilidade, controle motor e forca em lombar',
+      'Fase 2 - Recuperacao de movimento/forca',
     );
     expect(draft.payload.criteriosAlta).toContain('lombar');
     expect(draft.payload.planoTratamentoIA).toContain(

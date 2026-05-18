@@ -228,6 +228,15 @@ Regras de especificidade obrigatorias:
 - Nao use condutas soltas como "alongamento", "fortalecimento", "terapia manual", "cinesioterapia", "analgesia" ou "educacao em dor" sem especificar regiao, objetivo clinico, motivo e progressao.
 - Se faltar dado para ser especifico, declare a lacuna clinica explicitamente e diga qual avaliacao precisa ser feita.
 
+Regras para PDF e entendimento do paciente:
+- Escreva como um documento que o paciente conseguira entender, mantendo precisao clinica.
+- Explique termos tecnicos brevemente entre parenteses quando forem importantes.
+- Evite jargoes isolados; troque "cinesioterapia" por "exercicios terapeuticos para..." e indique o objetivo.
+- Organize textos longos com frases curtas, quebras de linha e marcadores quando fizer sentido.
+- Em objetivos, deixe claro o que o paciente deve perceber no dia a dia.
+- Em planoTratamentoIA, use fases nomeadas e legiveis: "Fase 1 - Controle de sintomas", "Fase 2 - Recuperacao de movimento/forca", "Fase 3 - Retorno a funcao".
+- Em criteriosAlta, escreva criterios que o paciente possa reconhecer e o profissional possa medir.
+
 Exemplo de nivel de especificidade esperado:
 "Para ombro direito anterior com dor 6/10 e observacao de dor ao elevar o braco, iniciar exercicios ativos-assistidos em amplitude toleravel; evidencia do caso: area ombro direito + dor 6/10 + piora em elevacao; progressao: elevar amplitude sem piora sustentada por 24h."
 

@@ -119,7 +119,9 @@ export const APP_CONFIG = {
     tokenKey: "@synap:token",
     refreshTokenKey: "@synap:refreshToken",
     userKey: "@synap:user",
+    rememberLoginKey: "@synap:rememberLogin",
+    rememberedLoginIdentifierKey: "@synap:rememberedLoginIdentifier",
+    crmRememberLoginKey: "@synap:crmRememberLogin",
+    crmRememberedEmailKey: "@synap:crmRememberedEmail",
   },
 } as const;
-
-

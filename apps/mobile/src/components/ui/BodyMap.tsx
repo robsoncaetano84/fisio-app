@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Platform,
+  LayoutChangeEvent,
   StyleSheet,
   Text,
   TextInput,
@@ -148,7 +149,8 @@ const sideLabel = (side?: AreaAfetada["lado"], short = false) => {
 const viewLabel = (view?: AreaAfetada["vista"]) =>
   view === "posterior" ? "costas" : "frente";
 
-const areaLabel = (area: AreaAfetada) => REGION_LABELS[area.regiao] || area.regiao;
+const areaLabel = (area: AreaAfetada) =>
+  REGION_LABELS[area.regiao] || area.regiao;
 
 const areaMetaLabel = (area: AreaAfetada, intensity?: number) =>
   `${sideLabel(area.lado)} ${viewLabel(area.vista)} - ${
@@ -187,7 +189,9 @@ const buildSelectedPointKeys = (
     }
   });
 
-  selectedRegions.forEach((region) => keys.add(selectedRegionToPointKey(region)));
+  selectedRegions.forEach((region) =>
+    keys.add(selectedRegionToPointKey(region)),
+  );
 
   return keys;
 };
@@ -240,7 +244,10 @@ export function BodyMap({
   editable = false,
 }: BodyMapProps) {
   const resolvedSex = normalizeSex(sex, sexo);
-  const [runtimeOverrides, setRuntimeOverrides] = useState<BodyMapPointOverrides>({});
+  const [runtimeOverrides, setRuntimeOverrides] =
+    useState<BodyMapPointOverrides>({});
+  const [mapWidth, setMapWidth] = useState(0);
+  const isCompactMap = mapWidth > 0 && mapWidth < 560;
 
   const posteriorPoints = useMemo(
     () => getBodyMapPoints(resolvedSex, "posterior", runtimeOverrides),
@@ -275,7 +282,9 @@ export function BodyMap({
     const targetPointKey = bodyMapPointKey(point);
     const targetAreaKey = pointAreaKey(point);
     const isSelected = selectedPointKeys.has(targetPointKey);
-    const nextPointKeys = multiple ? new Set(selectedPointKeys) : new Set<string>();
+    const nextPointKeys = multiple
+      ? new Set(selectedPointKeys)
+      : new Set<string>();
 
     if (isSelected) {
       nextPointKeys.delete(targetPointKey);
@@ -287,7 +296,9 @@ export function BodyMap({
       if (!multiple) {
         onAreasChange(isSelected ? [] : [pointToArea(point)]);
       } else if (isSelected) {
-        onAreasChange(selectedAreas.filter((area) => areaKey(area) !== targetAreaKey));
+        onAreasChange(
+          selectedAreas.filter((area) => areaKey(area) !== targetAreaKey),
+        );
       } else {
         onAreasChange([...selectedAreas, pointToArea(point)]);
       }
@@ -296,7 +307,11 @@ export function BodyMap({
     emitRegionChange(nextPointKeys);
   };
 
-  const movePoint = (point: BodyMapPoint, xPercent: number, yPercent: number) => {
+  const movePoint = (
+    point: BodyMapPoint,
+    xPercent: number,
+    yPercent: number,
+  ) => {
     if (!editable) return;
     setRuntimeOverrides((current) => ({
       ...current,
@@ -315,9 +330,13 @@ export function BodyMap({
   };
 
   const removeArea = (selectedKey: string) => {
-    onAreasChange?.(selectedAreas.filter((area) => areaKey(area) !== selectedKey));
+    onAreasChange?.(
+      selectedAreas.filter((area) => areaKey(area) !== selectedKey),
+    );
     const nextPointKeys = new Set(selectedPointKeys);
-    const point = allPoints.find((candidate) => pointAreaKey(candidate) === selectedKey);
+    const point = allPoints.find(
+      (candidate) => pointAreaKey(candidate) === selectedKey,
+    );
     if (point) {
       nextPointKeys.delete(bodyMapPointKey(point));
     }
@@ -329,7 +348,8 @@ export function BodyMap({
       selectedAreas.map((area) => {
         if (areaKey(area) !== selectedKey) return area;
         const current =
-          typeof area.intensidade === "number" && Number.isFinite(area.intensidade)
+          typeof area.intensidade === "number" &&
+          Number.isFinite(area.intensidade)
             ? area.intensidade
             : 0;
         const next = Math.max(0, Math.min(10, current + delta));
@@ -354,10 +374,19 @@ export function BodyMap({
   const exportCalibration = () => {
     if (Platform.OS === "web") {
       const maybeNavigator = globalThis.navigator as
-        | (Navigator & { clipboard?: { writeText: (value: string) => Promise<void> } })
+        | (Navigator & {
+            clipboard?: { writeText: (value: string) => Promise<void> };
+          })
         | undefined;
-      maybeNavigator?.clipboard?.writeText(calibrationJson).catch(() => undefined);
+      maybeNavigator?.clipboard
+        ?.writeText(calibrationJson)
+        .catch(() => undefined);
     }
+  };
+
+  const handleMapLayout = (event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setMapWidth(width);
   };
 
   return (
@@ -367,7 +396,10 @@ export function BodyMap({
         Toque nos pontos para marcar dor e intensidade.
       </Text>
 
-      <View style={styles.mapSurface}>
+      <View
+        style={[styles.mapSurface, isCompactMap && styles.mapSurfaceCompact]}
+        onLayout={handleMapLayout}
+      >
         <BodyMapSide
           sex={resolvedSex}
           view="anterior"
@@ -377,6 +409,7 @@ export function BodyMap({
           selectedKeys={selectedPointKeys}
           disabled={disabled}
           editable={editable}
+          compact={isCompactMap}
           onTogglePoint={togglePoint}
           onMovePoint={movePoint}
         />
@@ -389,6 +422,7 @@ export function BodyMap({
           selectedKeys={selectedPointKeys}
           disabled={disabled}
           editable={editable}
+          compact={isCompactMap}
           onTogglePoint={togglePoint}
           onMovePoint={movePoint}
         />
@@ -403,14 +437,17 @@ export function BodyMap({
             {selectedDisplayAreas.map((area) => {
               const selectedKey = areaKey(area);
               const intensity =
-                typeof area.intensidade === "number" && Number.isFinite(area.intensidade)
+                typeof area.intensidade === "number" &&
+                Number.isFinite(area.intensidade)
                   ? area.intensidade
                   : undefined;
               return (
                 <View key={selectedKey} style={styles.selectedChip}>
                   <View style={styles.selectedChipHeader}>
                     <View style={styles.chipTextBlock}>
-                      <Text style={styles.selectedChipText}>{areaLabel(area)}</Text>
+                      <Text style={styles.selectedChipText}>
+                        {areaLabel(area)}
+                      </Text>
                       <Text style={styles.selectedChipMeta}>
                         {areaMetaLabel(area, intensity)}
                       </Text>
@@ -420,17 +457,27 @@ export function BodyMap({
                         accessibilityRole="button"
                         accessibilityLabel={`Diminuir dor em ${areaLabel(area)}`}
                         disabled={disabled}
-                        style={[styles.intensityButton, disabled && styles.disabledControl]}
+                        style={[
+                          styles.intensityButton,
+                          disabled && styles.disabledControl,
+                        ]}
                         onPress={() => changeIntensity(selectedKey, -1)}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="remove" size={22} color={COLORS.white} />
+                        <Ionicons
+                          name="remove"
+                          size={22}
+                          color={COLORS.white}
+                        />
                       </TouchableOpacity>
                       <TouchableOpacity
                         accessibilityRole="button"
                         accessibilityLabel={`Aumentar dor em ${areaLabel(area)}`}
                         disabled={disabled}
-                        style={[styles.intensityButton, disabled && styles.disabledControl]}
+                        style={[
+                          styles.intensityButton,
+                          disabled && styles.disabledControl,
+                        ]}
                         onPress={() => changeIntensity(selectedKey, 1)}
                         activeOpacity={0.8}
                       >
@@ -440,7 +487,10 @@ export function BodyMap({
                         accessibilityRole="button"
                         accessibilityLabel={`Remover ${areaLabel(area)}`}
                         disabled={disabled}
-                        style={[styles.removeButton, disabled && styles.disabledControl]}
+                        style={[
+                          styles.removeButton,
+                          disabled && styles.disabledControl,
+                        ]}
                         onPress={() => removeArea(selectedKey)}
                         activeOpacity={0.8}
                       >
@@ -451,7 +501,9 @@ export function BodyMap({
                   <TextInput
                     value={area.observacao || ""}
                     editable={!disabled}
-                    onChangeText={(value) => changeObservation(selectedKey, value)}
+                    onChangeText={(value) =>
+                      changeObservation(selectedKey, value)
+                    }
                     placeholder="Observacao clinica da area"
                     placeholderTextColor="rgba(255,255,255,0.72)"
                     style={styles.observationInput}
@@ -480,8 +532,8 @@ export function BodyMap({
             </TouchableOpacity>
           </View>
           <Text style={styles.calibrationHint}>
-            Arraste um ponto para ajustar xPercent/yPercent. O JSON tambem e enviado
-            ao console.
+            Arraste um ponto para ajustar xPercent/yPercent. O JSON tambem e
+            enviado ao console.
           </Text>
           <TextInput
             value={calibrationJson}
@@ -520,6 +572,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.gray200,
     borderRadius: BORDER_RADIUS.md,
+  },
+  mapSurfaceCompact: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: SPACING.sm,
   },
   selectedContainer: {
     marginTop: SPACING.md,
