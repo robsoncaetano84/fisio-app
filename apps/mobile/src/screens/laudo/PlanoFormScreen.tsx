@@ -5,7 +5,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
@@ -21,7 +27,13 @@ import {
   trackEvent,
 } from "../../services";
 import { FEATURE_FLAGS } from "../../constants/featureFlags";
-import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING } from "../../constants/theme";
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONTS,
+  SHADOWS,
+  SPACING,
+} from "../../constants/theme";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
@@ -79,6 +91,16 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     }
     return "BAIXA";
   }, [aiSuggestionMeta]);
+  const clinicalBaseLabel = useMemo(() => {
+    if (!aiConfidence) return "";
+    if (aiConfidence === "ALTA") {
+      return t("clinical.status.clinicalBaseComplete");
+    }
+    if (aiConfidence === "MODERADA") {
+      return t("clinical.status.clinicalBasePartial");
+    }
+    return t("clinical.status.clinicalBaseInitial");
+  }, [aiConfidence, t]);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const autoFillRef = useRef(false);
@@ -113,9 +135,13 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       examesConsiderados?: number;
       examesComLeituraIa?: number;
     } = {};
-    if (aiSuggestionMeta.source) payload.sugestaoSource = aiSuggestionMeta.source;
+    if (aiSuggestionMeta.source)
+      payload.sugestaoSource = aiSuggestionMeta.source;
     if (Number.isFinite(aiSuggestionMeta.examesConsiderados)) {
-      payload.examesConsiderados = Math.max(0, aiSuggestionMeta.examesConsiderados || 0);
+      payload.examesConsiderados = Math.max(
+        0,
+        aiSuggestionMeta.examesConsiderados || 0,
+      );
     }
     if (Number.isFinite(aiSuggestionMeta.examesComLeituraIa)) {
       payload.examesComLeituraIa = Math.max(
@@ -223,7 +249,9 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         await fetchPacientes(true).catch(() => undefined);
       }
       await fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
-      const laudo = await fetchLaudoByPaciente(pacienteId, false).catch(() => null);
+      const laudo = await fetchLaudoByPaciente(pacienteId, false).catch(
+        () => null,
+      );
       if (!active) return;
       if (laudo?.id) {
         setLaudoId(laudo.id);
@@ -284,14 +312,21 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         const raw = await AsyncStorage.getItem(draftKey);
         if (raw && !laudo?.id) {
           const draft = JSON.parse(raw) as Partial<PlanoDraft>;
-          if (draft.objetivosCurtoPrazo !== undefined) setObjetivosCurtoPrazo(draft.objetivosCurtoPrazo);
-          if (draft.objetivosMedioPrazo !== undefined) setObjetivosMedioPrazo(draft.objetivosMedioPrazo);
-          if (draft.frequenciaSemanal !== undefined) setFrequenciaSemanal(draft.frequenciaSemanal);
-          if (draft.duracaoSemanas !== undefined) setDuracaoSemanas(draft.duracaoSemanas);
+          if (draft.objetivosCurtoPrazo !== undefined)
+            setObjetivosCurtoPrazo(draft.objetivosCurtoPrazo);
+          if (draft.objetivosMedioPrazo !== undefined)
+            setObjetivosMedioPrazo(draft.objetivosMedioPrazo);
+          if (draft.frequenciaSemanal !== undefined)
+            setFrequenciaSemanal(draft.frequenciaSemanal);
+          if (draft.duracaoSemanas !== undefined)
+            setDuracaoSemanas(draft.duracaoSemanas);
           if (draft.condutas !== undefined) setCondutas(draft.condutas);
-          if (draft.planoTratamentoIA !== undefined) setPlanoTratamentoIA(draft.planoTratamentoIA);
-          if (draft.criteriosAlta !== undefined) setCriteriosAlta(draft.criteriosAlta);
-          if (draft.observacoes !== undefined) setObservacoes(draft.observacoes);
+          if (draft.planoTratamentoIA !== undefined)
+            setPlanoTratamentoIA(draft.planoTratamentoIA);
+          if (draft.criteriosAlta !== undefined)
+            setCriteriosAlta(draft.criteriosAlta);
+          if (draft.observacoes !== undefined)
+            setObservacoes(draft.observacoes);
           if (draft.lastEditedAt) setLastDraftSavedAt(draft.lastEditedAt);
         }
       } catch {
@@ -310,7 +345,14 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     return () => {
       active = false;
     };
-  }, [draftKey, fetchAnamnesesByPaciente, fetchLaudoByPaciente, fetchPacientes, paciente, pacienteId]);
+  }, [
+    draftKey,
+    fetchAnamnesesByPaciente,
+    fetchLaudoByPaciente,
+    fetchPacientes,
+    paciente,
+    pacienteId,
+  ]);
 
   useEffect(() => {
     if (!draftLoaded || laudoId) return;
@@ -359,16 +401,22 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     const dur = Number(duracaoSemanas);
 
     if (!objetivosCurtoPrazo.trim()) {
-      nextErrors.objetivosCurtoPrazo = t("clinical.validation.shortTermRequired");
+      nextErrors.objetivosCurtoPrazo = t(
+        "clinical.validation.shortTermRequired",
+      );
     }
     if (!condutas.trim()) {
       nextErrors.condutas = t("clinical.validation.therapeuticConductRequired");
     }
     if (frequenciaSemanal.trim() && (!Number.isFinite(freq) || freq <= 0)) {
-      nextErrors.frequenciaSemanal = t("clinical.validation.numberGreaterThanZero");
+      nextErrors.frequenciaSemanal = t(
+        "clinical.validation.numberGreaterThanZero",
+      );
     }
     if (duracaoSemanas.trim() && (!Number.isFinite(dur) || dur <= 0)) {
-      nextErrors.duracaoSemanas = t("clinical.validation.numberGreaterThanZero");
+      nextErrors.duracaoSemanas = t(
+        "clinical.validation.numberGreaterThanZero",
+      );
     }
     if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
       nextErrors.aiSuggestionConfirmation = t(
@@ -382,13 +430,24 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
 
   const handleSave = async () => {
     if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", { stage: "PLANO", reason: "MISSING_ANAMNESE", pacienteId }).catch(() => undefined);
-      showToast({ type: "error", message: t("clinical.messages.fillAnamnesisBeforeSavingPlan") });
+      trackEvent("clinical_flow_blocked", {
+        stage: "PLANO",
+        reason: "MISSING_ANAMNESE",
+        pacienteId,
+      }).catch(() => undefined);
+      showToast({
+        type: "error",
+        message: t("clinical.messages.fillAnamnesisBeforeSavingPlan"),
+      });
       navigation.navigate("AnamneseForm", { pacienteId });
       return;
     }
     if (!validate()) {
-      trackEvent("clinical_flow_blocked", { stage: "PLANO", reason: "MISSING_REQUIRED_FIELDS", pacienteId }).catch(() => undefined);
+      trackEvent("clinical_flow_blocked", {
+        stage: "PLANO",
+        reason: "MISSING_REQUIRED_FIELDS",
+        pacienteId,
+      }).catch(() => undefined);
       showToast({
         type: "error",
         message: t("clinical.messages.reviewHighlightedFields"),
@@ -432,7 +491,10 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       }
 
       await AsyncStorage.removeItem(draftKey).catch(() => undefined);
-      showToast({ type: "success", message: t("clinical.messages.planSavedSuccessfully") });
+      showToast({
+        type: "success",
+        message: t("clinical.messages.planSavedSuccessfully"),
+      });
       navigation.goBack();
     } catch (error: unknown) {
       const { message, fieldErrors } = parseApiError(error);
@@ -485,8 +547,13 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>{t("common.messages.patientNotFound")}</Text>
-          <Button title={t("common.actions.back")} onPress={() => navigation.goBack()} />
+          <Text style={styles.emptyText}>
+            {t("common.messages.patientNotFound")}
+          </Text>
+          <Button
+            title={t("common.actions.back")}
+            onPress={() => navigation.goBack()}
+          />
         </View>
       </SafeAreaView>
     );
@@ -494,9 +561,14 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.section}>
-          <Text style={styles.title}>{t("clinical.sections.treatmentPlanForm")}</Text>
+          <Text style={styles.title}>
+            {t("clinical.sections.treatmentPlanForm")}
+          </Text>
           <Text style={styles.subtitle}>
             {t("clinical.messages.treatmentPlanFormSubtitle")}
           </Text>
@@ -543,7 +615,9 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
                 {aiSuggestionMeta.generatedAt ? (
                   <Text style={styles.aiMetaChip}>
                     Gerada em:{" "}
-                    {new Date(aiSuggestionMeta.generatedAt).toLocaleString("pt-BR")}
+                    {new Date(aiSuggestionMeta.generatedAt).toLocaleString(
+                      "pt-BR",
+                    )}
                   </Text>
                 ) : null}
                 {aiConfidence ? (
@@ -554,10 +628,10 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
                         ? styles.aiMetaChipHigh
                         : aiConfidence === "MODERADA"
                           ? styles.aiMetaChipMedium
-                          : styles.aiMetaChipLow,
+                          : styles.aiMetaChipInitial,
                     ]}
                   >
-                    Confiança: {aiConfidence}
+                    {t("clinical.labels.clinicalBase")}: {clinicalBaseLabel}
                   </Text>
                 ) : null}
               </View>
@@ -570,7 +644,8 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           ) : null}
           {lastDraftSavedAt ? (
             <Text style={styles.draftInfo}>
-              {t("clinical.messages.lastEditedAt")}: {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}
+              {t("clinical.messages.lastEditedAt")}:{" "}
+              {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}
             </Text>
           ) : null}
           <Button
@@ -582,7 +657,13 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             onPress={() => applySuggestion(true)}
             disabled={generating}
             variant="outline"
-            icon={<Ionicons name="sparkles-outline" size={16} color={COLORS.primary} />}
+            icon={
+              <Ionicons
+                name="sparkles-outline"
+                size={16}
+                color={COLORS.primary}
+              />
+            }
             style={styles.aiButton}
           />
         </View>
@@ -789,10 +870,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.warning + "44",
     color: COLORS.warning,
   },
-  aiMetaChipLow: {
-    backgroundColor: COLORS.error + "12",
-    borderColor: COLORS.error + "44",
-    color: COLORS.error,
+  aiMetaChipInitial: {
+    backgroundColor: COLORS.primary + "10",
+    borderColor: COLORS.primary + "33",
+    color: COLORS.primary,
   },
   aiButton: {
     alignSelf: "flex-start",
@@ -823,13 +904,3 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
 });
-
-
-
-
-
-
-
-
-
-

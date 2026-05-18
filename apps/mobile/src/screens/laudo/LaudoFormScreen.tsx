@@ -237,6 +237,16 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
     return "BAIXA";
   }, [aiSuggestionMeta]);
+  const clinicalBaseLabel = useMemo(() => {
+    if (!aiConfidence) return "";
+    if (aiConfidence === "ALTA") {
+      return t("clinical.status.clinicalBaseComplete");
+    }
+    if (aiConfidence === "MODERADA") {
+      return t("clinical.status.clinicalBasePartial");
+    }
+    return t("clinical.status.clinicalBaseInitial");
+  }, [aiConfidence, t]);
   const autoSuggestionAttemptedRef = useRef(false);
   const [selectedTemplate, setSelectedTemplate] =
     useState<TemplateKey>("GERAL");
@@ -1580,10 +1590,10 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                         ? styles.aiMetaChipHigh
                         : aiConfidence === "MODERADA"
                           ? styles.aiMetaChipMedium
-                          : styles.aiMetaChipLow,
+                          : styles.aiMetaChipInitial,
                     ]}
                   >
-                    Confiança: {aiConfidence}
+                    {t("clinical.labels.clinicalBase")}: {clinicalBaseLabel}
                   </Text>
                 ) : null}
               </View>
@@ -2473,10 +2483,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.warning + "44",
     color: COLORS.warning,
   },
-  aiMetaChipLow: {
-    backgroundColor: COLORS.error + "12",
-    borderColor: COLORS.error + "44",
-    color: COLORS.error,
+  aiMetaChipInitial: {
+    backgroundColor: COLORS.primary + "10",
+    borderColor: COLORS.primary + "33",
+    color: COLORS.primary,
   },
   templateRow: {
     flexDirection: "row",

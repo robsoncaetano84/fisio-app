@@ -140,6 +140,7 @@ export const ptClinical: TranslationMap = {
   "clinical.labels.durationWeeks": "Duração (semanas)",
   "clinical.labels.phasedPlan": "Plano em fases",
   "clinical.labels.therapeuticConducts": "Condutas terapeuticas",
+  "clinical.labels.clinicalBase": "Base clínica",
   "clinical.labels.physicalExam": "Exame físico",
   "clinical.labels.professionalDraft": "Rascunho do profissional",
   "clinical.labels.aiTreatmentPlan": "Plano de tratamento gerado por IA",
@@ -165,6 +166,9 @@ export const ptClinical: TranslationMap = {
   "clinical.status.generating": "Gerando...",
   "clinical.status.aiSuggested": "Sugerido por IA",
   "clinical.status.professionalConfirmed": "Confirmado pelo profissional",
+  "clinical.status.clinicalBaseInitial": "Inicial",
+  "clinical.status.clinicalBasePartial": "Parcial",
+  "clinical.status.clinicalBaseComplete": "Completa",
   "clinical.placeholders.functionalDiagnosis":
     "Descreva o diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":
@@ -342,6 +346,7 @@ export const enClinical: TranslationMap = {
   "clinical.labels.durationWeeks": "Duration (weeks)",
   "clinical.labels.phasedPlan": "Phased plan",
   "clinical.labels.therapeuticConducts": "Therapeutic conducts",
+  "clinical.labels.clinicalBase": "Clinical base",
   "clinical.labels.physicalExam": "Physical exam",
   "clinical.labels.professionalDraft": "Professional draft",
   "clinical.labels.aiTreatmentPlan": "AI-generated treatment plan",
@@ -367,6 +372,9 @@ export const enClinical: TranslationMap = {
   "clinical.status.generating": "Generating...",
   "clinical.status.aiSuggested": "AI suggested",
   "clinical.status.professionalConfirmed": "Confirmed by professional",
+  "clinical.status.clinicalBaseInitial": "Initial",
+  "clinical.status.clinicalBasePartial": "Partial",
+  "clinical.status.clinicalBaseComplete": "Complete",
   "clinical.placeholders.functionalDiagnosis":
     "Describe the functional diagnosis",
   "clinical.placeholders.shortTermGoals": "Expected results in the first weeks",
@@ -545,6 +553,7 @@ export const esClinical: TranslationMap = {
   "clinical.labels.durationWeeks": "Duración (semanas)",
   "clinical.labels.phasedPlan": "Plan por fases",
   "clinical.labels.therapeuticConducts": "Conductas terapeuticas",
+  "clinical.labels.clinicalBase": "Base clínica",
   "clinical.labels.physicalExam": "Examen fisico",
   "clinical.labels.professionalDraft": "Borrador profesional",
   "clinical.labels.aiTreatmentPlan": "Plan de tratamiento generado por IA",
@@ -570,6 +579,9 @@ export const esClinical: TranslationMap = {
   "clinical.status.generating": "Generando...",
   "clinical.status.aiSuggested": "Sugerido por IA",
   "clinical.status.professionalConfirmed": "Confirmado por el profesional",
+  "clinical.status.clinicalBaseInitial": "Inicial",
+  "clinical.status.clinicalBasePartial": "Parcial",
+  "clinical.status.clinicalBaseComplete": "Completa",
   "clinical.placeholders.functionalDiagnosis":
     "Describa el diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":

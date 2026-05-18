@@ -175,6 +175,11 @@ export function ExameFisicoFormScreen({
           },
     [dorSuggestion, serverDorSuggestion],
   );
+  const dorSuggestionBaseLabel = useMemo(() => {
+    if (effectiveDorSuggestion.confidence === "ALTA") return "robusta";
+    if (effectiveDorSuggestion.confidence === "MODERADA") return "parcial";
+    return "inicial";
+  }, [effectiveDorSuggestion.confidence]);
 
   const appendFieldValue = (currentValue: string, incomingText: string) => {
     const left = String(currentValue || "").trim();
@@ -1010,7 +1015,7 @@ export function ExameFisicoFormScreen({
     }).catch(() => undefined);
     showToast({
       type: "success",
-      message: `Sugestao aplicada (${effectiveDorSuggestion.confidence.toLowerCase()}): ${effectiveDorSuggestion.reason}`,
+      message: `Sugestao aplicada (base ${dorSuggestionBaseLabel}): ${effectiveDorSuggestion.reason}`,
     });
   };
 
@@ -1236,11 +1241,11 @@ export function ExameFisicoFormScreen({
                 : "Sem inferência segura"}
             </Text>
             <Text style={styles.classificationConfidenceText}>
-              Confiança: {effectiveDorSuggestion.confidence.toLowerCase()}
+              Base da sugestão: {dorSuggestionBaseLabel}
             </Text>
             {effectiveDorSuggestion.confidence === "BAIXA" ? (
               <Text style={styles.classificationLowConfidenceText}>
-                Baixa confiança: revise manualmente antes de aplicar.
+                Base inicial: revise manualmente antes de aplicar.
               </Text>
             ) : null}
             {effectiveDorSuggestion.evidenceFields.length > 0 ? (
@@ -2326,7 +2331,7 @@ export function ExameFisicoFormScreen({
             ))}
           </View>
 
-          <Text style={styles.label}>Confiança da hipótese</Text>
+          <Text style={styles.label}>Sustentação da hipótese</Text>
           <Text style={styles.subtitle}>
             Calculada pelos testes positivos/sugeridos e passível de ajuste
             clínico manual.
