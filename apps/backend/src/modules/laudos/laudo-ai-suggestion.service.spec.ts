@@ -21,6 +21,51 @@ describe('LaudoAiSuggestionService', () => {
     evolucoes: [],
     exameFisicoResumo: 'Teste regional positivo.',
     exames: [],
+    clinicalReasoning: {
+      queixaPrincipal: 'Dor lombar',
+      areasPrioritarias: ['lombar'],
+      areasSelecionadasDetalhadas: [
+        {
+          regiao: 'lombar',
+          lado: 'ambos',
+          intensidade: 6,
+          observacao: 'Dor ao flexionar.',
+          resumo: 'lombar (ambos, dor 6/10, Dor ao flexionar.)',
+        },
+      ],
+      observacoesAreas: ['lombar: Dor ao flexionar.'],
+      pontosAnamnesePreenchidos: ['areasAfetadas', 'areasAfetadas.observacao'],
+      ancorasEspecificidade: [
+        'Area selecionada: lombar (ambos, dor 6/10, Dor ao flexionar.)',
+        'Observacao de area: lombar: Dor ao flexionar.',
+        'Dor 6/10',
+      ],
+      irritabilidade: 'MODERADA',
+      hipotesesFuncionais: ['Teste regional positivo.'],
+      fatoresRelevantes: ['Dor referida: 6/10'],
+      riscosOuAlertas: [],
+      metasPaciente: ['Voltar a correr'],
+      evolucaoRecente: [],
+      evidenciasDisponiveis: ['anamnese', 'exame fisico estruturado'],
+      lacunasClinicas: ['evolucao clinica ausente'],
+      confidenceBase: 'MODERADA',
+    },
+    referenciasClinicas: {
+      profile: 'OMBRO' as const,
+      disclaimer: 'Validar clinicamente.',
+      laudoReferences: [
+        {
+          id: 'guideline-ombro',
+          title: 'Shoulder guideline',
+          category: 'GUIDELINE' as const,
+          source: 'JOSPT',
+          year: 2025,
+          url: 'https://example.com',
+          rationale: 'Referencia de ombro.',
+        },
+      ],
+      planoReferences: [],
+    },
   };
 
   it('returns empty suggestion when OpenAI is not configured', async () => {
@@ -57,6 +102,117 @@ describe('LaudoAiSuggestionService', () => {
       duracaoSemanas: 52,
       criteriosAlta: 'Sem dor limitante.',
     });
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining('Resumo clinico priorizado'),
+      }),
+    );
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining('Referencias clinicas permitidas'),
+      }),
+    );
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining('Areas selecionadas detalhadas'),
+      }),
+    );
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining('observacao clinica escrita'),
+      }),
+    );
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining(
+          'Regras de especificidade obrigatorias',
+        ),
+      }),
+    );
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining('Ancoras obrigatorias'),
+      }),
+    );
+  });
+
+  it('searches and normalizes updated clinical references with web search', async () => {
+    const openAiService = createOpenAiService();
+    openAiService.isConfigured.mockReturnValue(true);
+    openAiService.isEnabled.mockReturnValue(true);
+    openAiService.createJsonResponse.mockResolvedValue({
+      parsed: {
+        laudoReferences: [
+          {
+            id: 'recent-guideline',
+            title: 'Recent shoulder guideline',
+            category: 'GUIDELINE',
+            source: 'JOSPT',
+            year: 2026,
+            authors: 'Autores Teste',
+            url: 'https://www.jospt.org/doi/test',
+            rationale: 'Atualiza o raciocinio clinico para ombro.',
+          },
+          {
+            title: 'Commercial source',
+            category: 'ARTIGO',
+            source: 'Blog',
+            year: 2026,
+            url: 'https://example.com/source',
+            rationale: 'Deve ser descartado.',
+          },
+        ],
+        planoReferences: [
+          {
+            title: 'Recent rehab review',
+            category: 'ARTIGO',
+            source: 'PubMed',
+            year: 2025,
+            url: 'https://pubmed.ncbi.nlm.nih.gov/123/',
+            rationale: 'Atualiza a progressao terapeutica.',
+          },
+        ],
+      },
+    });
+    const service = new LaudoAiSuggestionService(openAiService);
+
+    const result = await service.findUpdatedClinicalReferences(baseInput);
+
+    expect(result?.laudoReferences).toHaveLength(1);
+    expect(result?.planoReferences?.[0]).toMatchObject({
+      id: expect.stringContaining('updated-recent-rehab-review'),
+      title: 'Recent rehab review',
+      category: 'ARTIGO',
+    });
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: [
+          expect.objectContaining({
+            type: 'web_search',
+            filters: expect.objectContaining({
+              allowed_domains: expect.arrayContaining([
+                'pubmed.ncbi.nlm.nih.gov',
+                'jospt.org',
+              ]),
+            }),
+          }),
+        ],
+        toolChoice: 'auto',
+      }),
+    );
+  });
+
+  it('does not search updated references when web references are disabled', async () => {
+    const openAiService = createOpenAiService();
+    openAiService.isConfigured.mockReturnValue(true);
+    openAiService.isEnabled.mockReturnValue(false);
+    const service = new LaudoAiSuggestionService(openAiService);
+
+    await expect(
+      service.findUpdatedClinicalReferences(baseInput),
+    ).resolves.toBeNull();
+
+    expect(openAiService.createJsonResponse).not.toHaveBeenCalled();
   });
 
   it('builds base exam insight and skips unsupported mime types', async () => {

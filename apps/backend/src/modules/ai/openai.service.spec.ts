@@ -164,4 +164,38 @@ describe('OpenAiService', () => {
     expect(firstBody.temperature).toBe(0.2);
     expect(secondBody.temperature).toBeUndefined();
   });
+
+  it('passes Responses API tools and tool choice when provided', async () => {
+    process.env.OPENAI_API_KEY = 'sk-test';
+    fetchMock.mockResolvedValueOnce(
+      makeResponse(200, { output_text: '{"ok":true}' }),
+    );
+
+    await service.createJsonResponse({
+      model: 'gpt-test',
+      systemPrompt: 'system',
+      userContent: 'user',
+      tools: [
+        {
+          type: 'web_search',
+          filters: { allowed_domains: ['pubmed.ncbi.nlm.nih.gov'] },
+        },
+      ],
+      toolChoice: 'auto',
+      timeoutMs: 1000,
+      operation: 'unit test',
+    });
+
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0]?.[1] as RequestInit).body as string,
+    ) as Record<string, unknown>;
+
+    expect(body.tools).toEqual([
+      {
+        type: 'web_search',
+        filters: { allowed_domains: ['pubmed.ncbi.nlm.nih.gov'] },
+      },
+    ]);
+    expect(body.tool_choice).toBe('auto');
+  });
 });

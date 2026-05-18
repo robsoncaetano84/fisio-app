@@ -34,14 +34,22 @@ export const envValidationSchema = Joi.object({
   OPENAI_API_KEY: Joi.string().allow('').optional(),
   OPENAI_MODEL: Joi.string().allow('').optional(),
   OPENAI_LAUDO_MODEL: Joi.string().allow('').optional(),
+  OPENAI_LAUDO_REFERENCE_MODEL: Joi.string().allow('').optional(),
   OPENAI_EXAM_MODEL: Joi.string().allow('').optional(),
   OPENAI_ATIVIDADE_MODEL: Joi.string().allow('').optional(),
   OPENAI_CHARLES_MODEL: Joi.string().allow('').optional(),
   OPENAI_EXAM_AI_ENABLED: Joi.string().valid('true', 'false').default('true'),
+  OPENAI_LAUDO_WEB_REFERENCES_ENABLED: Joi.string()
+    .valid('true', 'false')
+    .default('true'),
   OPENAI_CHARLES_AI_ENABLED: Joi.string()
     .valid('true', 'false')
     .default('true'),
   OPENAI_LAUDO_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
+  OPENAI_LAUDO_REFERENCES_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .optional(),
   OPENAI_EXAM_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
   OPENAI_ATIVIDADE_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
   OPENAI_CHARLES_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),

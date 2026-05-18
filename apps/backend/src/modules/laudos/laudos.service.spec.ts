@@ -37,14 +37,34 @@ describe('LaudosService', () => {
     const usuariosService = {
       findById: jest.fn(),
     };
+    const curatedReferences = {
+      profile: 'GERAL',
+      disclaimer: 'Validar clinicamente.',
+      laudoReferences: [],
+      planoReferences: [],
+    };
     const laudoReferencesService = {
-      getSuggestedReferences: jest.fn(),
+      getSuggestedReferences: jest.fn().mockReturnValue(curatedReferences),
+      mergeWithUpdatedReferences: jest
+        .fn()
+        .mockImplementation((base, updated) => ({
+          ...base,
+          laudoReferences: [
+            ...(base.laudoReferences || []),
+            ...(updated?.laudoReferences || []),
+          ],
+          planoReferences: [
+            ...(base.planoReferences || []),
+            ...(updated?.planoReferences || []),
+          ],
+        })),
     };
     const laudoPdfService = {
       buildPdfBuffer: jest.fn(),
     };
     const laudoAiSuggestionService = {
       generateSuggestion: jest.fn(),
+      findUpdatedClinicalReferences: jest.fn(),
     };
     const laudoExameFisicoService = {
       findLatestByPacienteId: jest.fn(),
@@ -79,6 +99,7 @@ describe('LaudosService', () => {
       service,
       laudoRepository,
       pacientesService,
+      laudoReferencesService,
       laudoAiSuggestionService,
       laudoExameFisicoService,
       laudoAiGenerationQuotaService,
@@ -192,6 +213,9 @@ describe('LaudosService', () => {
     await service.generateAndSaveByPaciente('paciente-1', 'profissional-1');
 
     expect(laudoAiSuggestionService.generateSuggestion).not.toHaveBeenCalled();
+    expect(
+      laudoAiSuggestionService.findUpdatedClinicalReferences,
+    ).not.toHaveBeenCalled();
     expect(laudoRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         pacienteId: 'paciente-1',
@@ -214,6 +238,18 @@ describe('LaudosService', () => {
     } = makeService();
     laudoRepository.findOne.mockResolvedValue(null);
     laudoAiGenerationQuotaService.acquireDailySlot.mockResolvedValue(true);
+    laudoAiSuggestionService.findUpdatedClinicalReferences.mockResolvedValue({
+      planoReferences: [
+        {
+          id: 'updated-study',
+          title: 'Updated study',
+          category: 'ARTIGO',
+          source: 'PubMed',
+          url: 'https://pubmed.ncbi.nlm.nih.gov/1/',
+          rationale: 'Atualiza plano.',
+        },
+      ],
+    });
     laudoAiSuggestionService.generateSuggestion.mockResolvedValue({
       diagnosticoFuncional: 'Diagnostico por IA',
       condutas: 'Condutas por IA',
@@ -227,6 +263,9 @@ describe('LaudosService', () => {
     expect(laudoAiSuggestionService.generateSuggestion).toHaveBeenCalledTimes(
       1,
     );
+    expect(
+      laudoAiSuggestionService.findUpdatedClinicalReferences,
+    ).toHaveBeenCalledTimes(1);
     expect(laudoRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         pacienteId: 'paciente-1',

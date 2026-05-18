@@ -6,6 +6,8 @@ type OpenAiJsonResponseInput = {
   model: string;
   systemPrompt: string;
   userContent: OpenAiUserContent;
+  tools?: Array<Record<string, unknown>>;
+  toolChoice?: string | Record<string, unknown>;
   temperature?: number;
   timeoutMs: number;
   operation: string;
@@ -67,6 +69,12 @@ export class OpenAiService {
           { role: 'user', content: input.userContent },
         ],
       };
+      if (input.tools?.length) {
+        body.tools = input.tools;
+      }
+      if (input.toolChoice) {
+        body.tool_choice = input.toolChoice;
+      }
       if (typeof input.temperature === 'number') {
         body.temperature = input.temperature;
       }

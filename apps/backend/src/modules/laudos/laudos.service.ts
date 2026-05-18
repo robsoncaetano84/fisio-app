@@ -31,6 +31,7 @@ import {
   buildCreateLaudoDraft,
   buildGenerateLaudoSuggestionInput,
   buildSuggestionPreview,
+  LaudoSuggestionContext,
   LaudoSuggestionPreview,
 } from './laudo-suggestion-composer.util';
 import { LaudoAiGenerationQuotaService } from './laudo-ai-generation-quota.service';
@@ -385,9 +386,16 @@ export class LaudosService {
     }
     const canUseAiToday =
       await this.laudoAiGenerationQuotaService.acquireDailySlot(pacienteId);
+    const referenciasClinicas = await this.buildClinicalReferences(
+      suggestionContext,
+      canUseAiToday,
+    );
     const aiSuggestion = canUseAiToday
       ? await this.laudoAiSuggestionService.generateSuggestion(
-          buildGenerateLaudoSuggestionInput(suggestionContext),
+          buildGenerateLaudoSuggestionInput(
+            suggestionContext,
+            referenciasClinicas,
+          ),
         )
       : {};
 
@@ -395,6 +403,7 @@ export class LaudosService {
       pacienteId,
       context: suggestionContext,
       aiSuggestion,
+      referenciasClinicas,
     });
 
     const created = this.laudoRepository.create({
@@ -419,10 +428,41 @@ export class LaudosService {
         pacienteId,
         usuarioId,
       );
+    const referenciasClinicas = await this.buildClinicalReferences(
+      suggestionContext,
+      true,
+    );
     const aiSuggestion = await this.laudoAiSuggestionService.generateSuggestion(
-      buildGenerateLaudoSuggestionInput(suggestionContext),
+      buildGenerateLaudoSuggestionInput(suggestionContext, referenciasClinicas),
     );
 
-    return buildSuggestionPreview(suggestionContext, aiSuggestion);
+    return buildSuggestionPreview(
+      suggestionContext,
+      aiSuggestion,
+      referenciasClinicas,
+    );
+  }
+
+  private async buildClinicalReferences(
+    suggestionContext: LaudoSuggestionContext,
+    includeUpdatedSearch: boolean,
+  ): Promise<LaudoReferenceSuggestionResponse> {
+    const curatedReferences =
+      this.laudoReferencesService.getSuggestedReferences(
+        suggestionContext.anamneses[0] ?? null,
+      );
+    if (!includeUpdatedSearch) {
+      return curatedReferences;
+    }
+
+    const updatedReferences =
+      await this.laudoAiSuggestionService.findUpdatedClinicalReferences(
+        buildGenerateLaudoSuggestionInput(suggestionContext, curatedReferences),
+      );
+
+    return this.laudoReferencesService.mergeWithUpdatedReferences(
+      curatedReferences,
+      updatedReferences,
+    );
   }
 }
