@@ -3,6 +3,14 @@ import { LaudoPdfService } from './laudo-pdf.service';
 
 describe('LaudoPdfService', () => {
   const service = new LaudoPdfService();
+  const countPages = (buffer: Buffer) =>
+    (buffer.toString('latin1').match(/\/Type \/Page\b/g) || []).length;
+  const contentStreamLengths = (buffer: Buffer) =>
+    [
+      ...buffer
+        .toString('latin1')
+        .matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g),
+    ].map((match) => match[1].length);
 
   const baseLaudo = {
     status: LaudoStatus.VALIDADO_PROFISSIONAL,
@@ -57,5 +65,38 @@ describe('LaudoPdfService', () => {
     expect(raw).toContain('Meu Plano de Tratamento');
     expect(raw).toContain('Documento clinico de Paciente Teste');
     expect(raw).toContain('CREFITO-3 12345');
+  });
+
+  it('does not append footer-only blank pages for long reports', async () => {
+    const longSection = Array.from(
+      { length: 20 },
+      (_, index) =>
+        `- Linha clinica ${index + 1} com descricao funcional, progresso, conduta e criterio objetivo para acompanhar resposta do paciente.`,
+    ).join('\n');
+
+    const buffer = await service.buildPdfBuffer({
+      laudo: {
+        ...baseLaudo,
+        diagnosticoFuncional: longSection,
+        exameFisico: longSection,
+        rascunhoProfissional: longSection,
+        objetivosCurtoPrazo: longSection,
+        objetivosMedioPrazo: longSection,
+        criteriosAlta: longSection,
+        observacoes: longSection,
+      },
+      pacienteNome: 'Paciente Teste',
+      profissional,
+      tipo: 'laudo',
+      audience: 'professional',
+    });
+
+    const pages = countPages(buffer);
+    const streams = contentStreamLengths(buffer);
+
+    expect(pages).toBeGreaterThan(1);
+    expect(pages).toBeLessThanOrEqual(12);
+    expect(streams).toHaveLength(pages);
+    expect(Math.min(...streams)).toBeGreaterThan(1000);
   });
 });

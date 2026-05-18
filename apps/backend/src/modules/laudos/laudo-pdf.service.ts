@@ -43,6 +43,13 @@ type TextSection = {
 
 @Injectable()
 export class LaudoPdfService {
+  private readonly pageTop = 42;
+  private readonly pageBottom = 768;
+  private readonly contentX = 42;
+  private readonly contentWidth = 511;
+  private readonly contentInsetX = 58;
+  private readonly contentTextWidth = 480;
+
   private readonly theme: PdfTheme = {
     primary: '#2F855A',
     primaryDark: '#14532D',
@@ -382,15 +389,13 @@ export class LaudoPdfService {
 
   private addSection(doc: PDFKit.PDFDocument, section: TextSection) {
     const value = this.normalizeText(section.value) || 'Nao informado';
-    const height = this.estimateSectionHeight(value, !!section.helper);
-    this.ensureSpace(doc, Math.min(height, 240));
+    const headerHeight = section.helper ? 58 : 42;
+    this.ensureSpace(doc, headerHeight + 30);
 
     const y = doc.y;
-    const minHeight = 82;
-    const boxHeight = Math.max(minHeight, height);
     doc.save();
     doc
-      .roundedRect(42, y, 511, boxHeight, 8)
+      .roundedRect(this.contentX, y, this.contentWidth, headerHeight, 8)
       .fillAndStroke(section.accent || '#FFFFFF', '#E5E7EB');
     doc.restore();
 
@@ -398,19 +403,30 @@ export class LaudoPdfService {
       .font('Helvetica-Bold')
       .fontSize(12.5)
       .fillColor(this.theme.primaryDark)
-      .text(section.title, 58, y + 14, { width: 480 });
+      .text(section.title, this.contentInsetX, y + 13, {
+        width: this.contentTextWidth,
+      });
 
     if (section.helper) {
       doc
         .font('Helvetica')
         .fontSize(8.8)
         .fillColor(this.theme.muted)
-        .text(section.helper, 58, doc.y + 3, { width: 480, lineGap: 1 });
+        .text(section.helper, this.contentInsetX, doc.y + 3, {
+          width: this.contentTextWidth,
+          lineGap: 1,
+        });
     }
 
-    doc.moveDown(0.55);
-    this.writeRichText(doc, value, 58, doc.y, 480);
-    doc.y = y + boxHeight + 14;
+    doc.y = y + headerHeight + 8;
+    this.writeRichText(
+      doc,
+      value,
+      this.contentInsetX,
+      doc.y,
+      this.contentTextWidth,
+    );
+    doc.y += 12;
   }
 
   private writeRichText(
@@ -436,13 +452,19 @@ export class LaudoPdfService {
     for (const line of lines) {
       const isBullet = /^[-*]\s+/.test(line);
       const isPhase = /^fase\s+\d+/i.test(line);
-      const prefix = isBullet ? '• ' : isPhase ? '• ' : '';
+      const prefix = isBullet || isPhase ? '- ' : '';
       const cleanLine = line.replace(/^[-*]\s+/, '');
+      const renderedLine = `${prefix}${cleanLine}`;
+      const estimatedHeight = doc.heightOfString(renderedLine, {
+        width,
+        lineGap: 2.2,
+      });
+      this.ensureSpace(doc, Math.min(estimatedHeight + 8, this.usableHeight()));
       doc
         .font(isPhase ? 'Helvetica-Bold' : 'Helvetica')
         .fontSize(10.3)
         .fillColor(this.theme.text)
-        .text(`${prefix}${cleanLine}`, x, doc.y, {
+        .text(renderedLine, x, doc.y, {
           width,
           lineGap: 2.2,
         });
@@ -468,23 +490,59 @@ export class LaudoPdfService {
   }
 
   private addCallout(doc: PDFKit.PDFDocument, title: string, value: string) {
-    this.ensureSpace(doc, 72);
-    const y = doc.y;
     const normalized = this.normalizeText(value);
-    const height = Math.max(58, 42 + this.estimateTextHeight(doc, normalized));
+    const textHeight = this.estimateTextHeight(doc, normalized);
+    const height = Math.max(58, 42 + textHeight);
+
+    if (height > this.usableHeight()) {
+      this.ensureSpace(doc, 58);
+      const y = doc.y;
+      doc.save();
+      doc
+        .roundedRect(this.contentX, y, this.contentWidth, 42, 8)
+        .fillAndStroke('#FFF7ED', '#FDBA74');
+      doc.restore();
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11.5)
+        .fillColor(this.theme.warning)
+        .text(title, this.contentInsetX, y + 13, {
+          width: this.contentTextWidth,
+        });
+      doc.y = y + 50;
+      this.writeRichText(
+        doc,
+        normalized,
+        this.contentInsetX,
+        doc.y,
+        this.contentTextWidth,
+      );
+      doc.y += 16;
+      return;
+    }
+
+    this.ensureSpace(doc, height + 8);
+    const y = doc.y;
     doc.save();
-    doc.roundedRect(42, y, 511, height, 8).fillAndStroke('#FFF7ED', '#FDBA74');
+    doc
+      .roundedRect(this.contentX, y, this.contentWidth, height, 8)
+      .fillAndStroke('#FFF7ED', '#FDBA74');
     doc.restore();
     doc
       .font('Helvetica-Bold')
       .fontSize(11.5)
       .fillColor(this.theme.warning)
-      .text(title, 58, y + 13, { width: 480 });
+      .text(title, this.contentInsetX, y + 13, {
+        width: this.contentTextWidth,
+      });
     doc
       .font('Helvetica')
       .fontSize(10)
       .fillColor(this.theme.text)
-      .text(normalized, 58, y + 31, { width: 480, lineGap: 2 });
+      .text(normalized, this.contentInsetX, y + 31, {
+        width: this.contentTextWidth,
+        lineGap: 2,
+      });
     doc.y = y + height + 16;
   }
 
@@ -538,13 +596,15 @@ export class LaudoPdfService {
 
   private addFooter(doc: PDFKit.PDFDocument) {
     const range = doc.bufferedPageRange();
+    const footerLineY = 776;
+    const footerTextY = 784;
     for (let i = range.start; i < range.start + range.count; i += 1) {
       doc.switchToPage(i);
       doc
         .strokeColor('#E5E7EB')
         .lineWidth(0.5)
-        .moveTo(42, 790)
-        .lineTo(553, 790)
+        .moveTo(42, footerLineY)
+        .lineTo(553, footerLineY)
         .stroke();
       doc
         .font('Helvetica')
@@ -553,13 +613,20 @@ export class LaudoPdfService {
         .text(
           'Synap | Documento clinico para acompanhamento fisioterapeutico',
           42,
-          800,
-          { width: 360 },
+          footerTextY,
+          { width: 360, height: 10, lineBreak: false },
         )
-        .text(`Pagina ${i - range.start + 1} de ${range.count}`, 470, 800, {
-          width: 83,
-          align: 'right',
-        });
+        .text(
+          `Pagina ${i - range.start + 1} de ${range.count}`,
+          470,
+          footerTextY,
+          {
+            width: 83,
+            height: 10,
+            align: 'right',
+            lineBreak: false,
+          },
+        );
     }
   }
 
@@ -574,17 +641,15 @@ export class LaudoPdfService {
   }
 
   private ensureSpace(doc: PDFKit.PDFDocument, requiredHeight: number) {
-    if (doc.y + requiredHeight > 768) {
+    if (doc.y <= this.pageTop + 1) return;
+    if (doc.y + requiredHeight > this.pageBottom) {
       doc.addPage();
-      doc.y = 42;
+      doc.y = this.pageTop;
     }
   }
 
-  private estimateSectionHeight(value: string, hasHelper: boolean): number {
-    const chars = this.normalizeText(value).length;
-    const lines = Math.max(2, Math.ceil(chars / 88));
-    const explicitBreaks = (value.match(/\n/g) || []).length;
-    return 58 + (hasHelper ? 15 : 0) + (lines + explicitBreaks) * 15;
+  private usableHeight(): number {
+    return this.pageBottom - this.pageTop;
   }
 
   private estimateTextHeight(doc: PDFKit.PDFDocument, value: string): number {
