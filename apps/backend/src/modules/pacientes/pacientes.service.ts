@@ -82,11 +82,12 @@ export class PacientesService {
   async create(
     createPacienteDto: CreatePacienteDto,
     usuarioId: string,
-  ): Promise<Paciente> {
-    return this.pacienteProfessionalService.create(
+  ): Promise<PacienteListItemDto> {
+    const paciente = await this.pacienteProfessionalService.create(
       createPacienteDto,
       usuarioId,
     );
+    return this.toPacienteListItemWithCiclo(paciente);
   }
 
   async findAll(usuarioId: string): Promise<PacienteListItemDto[]> {
@@ -172,17 +173,40 @@ export class PacientesService {
     return this.pacienteListService.applyDisplayNameFallback(paciente);
   }
 
+  async findOneListItem(
+    id: string,
+    usuarioId: string,
+  ): Promise<PacienteListItemDto> {
+    const paciente = await this.findOne(id, usuarioId);
+    return this.toPacienteListItemWithCiclo(paciente);
+  }
+
   async update(
     id: string,
     updatePacienteDto: UpdatePacienteDto,
     usuarioId: string,
-  ): Promise<Paciente> {
+  ): Promise<PacienteListItemDto> {
     const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
-    return this.pacienteProfessionalService.update(
+    const paciente = await this.pacienteProfessionalService.update(
       id,
       updatePacienteDto,
       usuarioId,
       isMasterAdmin,
+    );
+    return this.toPacienteListItemWithCiclo(paciente);
+  }
+
+  private async toPacienteListItemWithCiclo(
+    paciente: Paciente,
+  ): Promise<PacienteListItemDto> {
+    const statusByPaciente =
+      await this.pacienteListService.buildCicloStatusByPacienteIds([
+        paciente.id,
+      ]);
+
+    return this.pacienteListService.toPacienteListItem(
+      this.pacienteListService.applyDisplayNameFallback(paciente),
+      statusByPaciente.get(paciente.id),
     );
   }
 

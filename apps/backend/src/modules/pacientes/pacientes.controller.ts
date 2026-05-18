@@ -71,7 +71,7 @@ export class PacientesController {
   create(
     @Body() createPacienteDto: CreatePacienteDto,
     @CurrentUser() usuario: Usuario,
-  ) {
+  ): Promise<PacienteListItemDto> {
     return this.pacientesService.create(createPacienteDto, usuario.id);
   }
 
@@ -404,8 +404,8 @@ export class PacientesController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario: Usuario,
-  ) {
-    return this.pacientesService.findOne(id, usuario.id);
+  ): Promise<PacienteListItemDto> {
+    return this.pacientesService.findOneListItem(id, usuario.id);
   }
 
   @Patch(':id')
@@ -415,7 +415,7 @@ export class PacientesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePacienteDto: UpdatePacienteDto,
     @CurrentUser() usuario: Usuario,
-  ) {
+  ): Promise<PacienteListItemDto> {
     return this.pacientesService.update(id, updatePacienteDto, usuario.id);
   }
 
