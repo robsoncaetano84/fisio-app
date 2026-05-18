@@ -70,6 +70,27 @@ type LaudoReferenceSuggestionResponse = {
   planoReferences: LaudoReferenceItem[];
 };
 
+type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+
+type LaudoDraftPayload = {
+  pacienteId: string;
+  diagnosticoFuncional: string;
+  objetivosCurtoPrazo?: string;
+  objetivosMedioPrazo?: string;
+  frequenciaSemanal?: number;
+  duracaoSemanas?: number;
+  condutas: string;
+  planoTratamentoIA?: string;
+  rascunhoProfissional?: string;
+  observacoes?: string;
+  criteriosAlta?: string;
+  sugestaoSource?: "ai" | "rules";
+  examesConsiderados?: number;
+  examesComLeituraIa?: number;
+};
+
+const LAUDO_AUTOSAVE_DEBOUNCE_MS = 1800;
+
 const TEMPLATE_LABEL_KEY: Record<TemplateKey, string> = {
   GERAL: "clinical.templates.general",
   LOMBAR: "clinical.templates.lumbar",
@@ -161,7 +182,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const { t, language } = useLanguage();
   const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const VOICE_ENABLED = FEATURE_FLAGS.speechToText;
-  const dateLocale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
+  const dateLocale =
+    language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
   const token = useAuthStore((state) => state.token);
@@ -169,7 +191,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const { fetchLaudoByPaciente, createLaudo, updateLaudo, validarLaudo } =
     useLaudoStore();
   const { showToast } = useToast();
-
 
   const paciente = getPacienteById(pacienteId);
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
@@ -240,8 +261,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const [consultedReferenceIds, setConsultedReferenceIds] = useState<string[]>(
     [],
   );
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
+  const [lastAutosavedAt, setLastAutosavedAt] = useState<string | null>(null);
   const [professionalValidationConfirmed, setProfessionalValidationConfirmed] =
     useState(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveInFlightRef = useRef(false);
+  const isMountedRef = useRef(true);
   const totalSuggestedReferences =
     (referenceSuggestions?.laudoReferences.length || 0) +
     (referenceSuggestions?.planoReferences.length || 0);
@@ -251,6 +277,16 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const getTemplateLabel = (templateKey: TemplateKey) =>
     t(TEMPLATE_LABEL_KEY[templateKey]);
   const downloadBaseUrl = (api.defaults.baseURL || "").replace(/\/api$/, "");
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const resolveAbsoluteDownloadUrl = (path: string) => {
     if (/^https?:\/\//i.test(path)) return path;
@@ -362,9 +398,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       examesConsiderados?: number;
       examesComLeituraIa?: number;
     } = {};
-    if (aiSuggestionMeta.source) payload.sugestaoSource = aiSuggestionMeta.source;
+    if (aiSuggestionMeta.source)
+      payload.sugestaoSource = aiSuggestionMeta.source;
     if (Number.isFinite(aiSuggestionMeta.examesConsiderados)) {
-      payload.examesConsiderados = Math.max(0, aiSuggestionMeta.examesConsiderados || 0);
+      payload.examesConsiderados = Math.max(
+        0,
+        aiSuggestionMeta.examesConsiderados || 0,
+      );
     }
     if (Number.isFinite(aiSuggestionMeta.examesComLeituraIa)) {
       payload.examesComLeituraIa = Math.max(
@@ -465,7 +505,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
   };
 
-
   const buildSnapshot = (source: {
     diagnosticoFuncional?: string;
     objetivosCurtoPrazo?: string;
@@ -519,10 +558,48 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     !!laudoId && !!lastSavedSnapshot && getSnapshot() !== lastSavedSnapshot;
   const hasCriticalChangesAfterValidation =
     isValidated && !!validatedSnapshot && validatedSnapshot !== getSnapshot();
-  const hasReviewedLaudo = initialSnapshot
-    ? lastSavedSnapshot !== initialSnapshot
-    : !!lastSavedSnapshot;
-  const canGenerateLaudo = !!laudoId && !hasUnsavedChanges && hasReviewedLaudo;
+  const hasReviewedLaudo =
+    isValidated ||
+    (initialSnapshot
+      ? lastSavedSnapshot !== initialSnapshot
+      : !!lastSavedSnapshot);
+  const hasConfirmedAiReview =
+    !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
+  const isAutosaving = autosaveStatus === "saving";
+  const canGenerateLaudo =
+    !!laudoId &&
+    !hasUnsavedChanges &&
+    !isAutosaving &&
+    hasReviewedLaudo &&
+    hasConfirmedAiReview;
+  const pdfGateMessage =
+    !laudoId || hasUnsavedChanges || isAutosaving
+      ? t("clinical.messages.waitAutosaveBeforeGeneratePdf")
+      : !hasConfirmedAiReview
+        ? t("clinical.messages.confirmAiReviewBeforePdf")
+        : !hasReviewedLaudo
+          ? t("clinical.messages.reviewReportBeforePdf")
+          : "";
+  const autosaveStatusMessage = useMemo(() => {
+    if (autosaveStatus === "pending") {
+      return t("clinical.messages.autosavePending");
+    }
+    if (autosaveStatus === "saving") {
+      return t("clinical.messages.autosaveSaving");
+    }
+    if (autosaveStatus === "error") {
+      return t("clinical.messages.autosaveError");
+    }
+    if (autosaveStatus === "saved" && lastAutosavedAt) {
+      return `${t("clinical.messages.autosaveSaved")} ${new Date(
+        lastAutosavedAt,
+      ).toLocaleTimeString(dateLocale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    }
+    return "";
+  }, [autosaveStatus, dateLocale, lastAutosavedAt, t]);
 
   const getValidationHistoryKey = (id: string) =>
     `laudo:validation-history:v1:${id}`;
@@ -774,6 +851,35 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     return numeric;
   };
 
+  const hasValidOptionalNumber = (value: string, min: number, max: number) => {
+    if (!value.trim()) return true;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= min && numeric <= max;
+  };
+
+  const canAutosaveDraft = () =>
+    hasAnamnese &&
+    !generatingAi &&
+    !!diagnosticoFuncional.trim() &&
+    !!condutas.trim() &&
+    hasValidOptionalNumber(frequenciaSemanal, 1, 7) &&
+    hasValidOptionalNumber(duracaoSemanas, 1, 52);
+
+  const buildDraftPayload = (): LaudoDraftPayload => ({
+    pacienteId,
+    diagnosticoFuncional: diagnosticoFuncional.trim(),
+    objetivosCurtoPrazo: objetivosCurtoPrazo.trim() || undefined,
+    objetivosMedioPrazo: objetivosMedioPrazo.trim() || undefined,
+    frequenciaSemanal: toOptionalNumber(frequenciaSemanal),
+    duracaoSemanas: toOptionalNumber(duracaoSemanas),
+    condutas: condutas.trim(),
+    planoTratamentoIA: planoTratamentoIA.trim() || undefined,
+    rascunhoProfissional: rascunhoProfissional.trim() || undefined,
+    observacoes: observacoes.trim() || undefined,
+    criteriosAlta: criteriosAlta.trim() || undefined,
+    ...buildSuggestionMetaPayload(),
+  });
+
   const validate = () => {
     const nextErrors: Record<string, string> = {};
 
@@ -815,118 +921,134 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }).catch(() => undefined);
   }, [pacienteId]);
 
-  const handleSave = async () => {
-    if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", { stage: "LAUDO", reason: "MISSING_ANAMNESE", pacienteId }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("clinical.messages.fillAnamnesisBeforeSavingReport"),
-      });
-      navigation.navigate("AnamneseForm", { pacienteId });
-      return;
-    }
-    if (!validate()) {
-      trackEvent("clinical_flow_blocked", { stage: "LAUDO", reason: "MISSING_REQUIRED_FIELDS", pacienteId }).catch(() => undefined);
-      return;
-    }
-    setLoading(true);
+  const persistLaudoDraft = async () => {
+    const payload = buildDraftPayload();
+    const snapshot = getSnapshot();
+    const requiresRevalidation =
+      isValidated && !!validatedSnapshot && validatedSnapshot !== snapshot;
 
-    try {
-      const payload = {
-        pacienteId,
-        diagnosticoFuncional: diagnosticoFuncional.trim(),
-        objetivosCurtoPrazo: objetivosCurtoPrazo.trim() || undefined,
-        objetivosMedioPrazo: objetivosMedioPrazo.trim() || undefined,
-        frequenciaSemanal: toOptionalNumber(frequenciaSemanal),
-        duracaoSemanas: toOptionalNumber(duracaoSemanas),
-        condutas: condutas.trim(),
-        planoTratamentoIA: planoTratamentoIA.trim() || undefined,
-        rascunhoProfissional: rascunhoProfissional.trim() || undefined,
-        observacoes: observacoes.trim() || undefined,
-        criteriosAlta: criteriosAlta.trim() || undefined,
-        ...buildSuggestionMetaPayload(),
-      };
-
-      if (laudoId) {
-        const { pacienteId: _pacienteId, ...updatePayload } = payload;
-        const updated = await updateLaudo(laudoId, updatePayload);
-        if (hasCriticalChangesAfterValidation) {
-          setLaudoStatus(LaudoStatus.RASCUNHO_IA);
-          setValidadoEm("");
-          setValidatedSnapshot(null);
-          await AsyncStorage.removeItem(getValidatedSnapshotKey(laudoId));
-          await appendHistory(laudoId, "REVALIDACAO_PENDENTE");
-          await trackEvent("laudo_revalidation_required", {
+    if (laudoId) {
+      const { pacienteId: _pacienteId, ...updatePayload } = payload;
+      const updated = await updateLaudo(laudoId, updatePayload);
+      if (requiresRevalidation) {
+        setLaudoStatus(LaudoStatus.RASCUNHO_IA);
+        setValidadoEm("");
+        setValidatedSnapshot(null);
+        await AsyncStorage.removeItem(getValidatedSnapshotKey(laudoId));
+        await appendHistory(laudoId, "REVALIDACAO_PENDENTE");
+        await trackEvent("laudo_revalidation_required", {
+          laudoId,
+          pacienteId,
+          source: "autosave",
+        });
+        await recordAuditAction(
+          "LAUDO_REVALIDATION_REQUIRED",
+          {
             laudoId,
             pacienteId,
-          });
-          await recordAuditAction(
-            "LAUDO_REVALIDATION_REQUIRED",
-            {
-              laudoId,
-              pacienteId,
-            },
-            usuario?.id,
-          );
-          showToast({
-            message: t("clinical.messages.criticalChangesApplied"),
-            type: "info",
-          });
-        } else {
-          setLaudoStatus(updated.status || LaudoStatus.RASCUNHO_IA);
-          setValidadoEm(updated.validadoEm || "");
-        }
-        setLastSavedSnapshot(getSnapshot());
+            source: "autosave",
+          },
+          usuario?.id,
+        );
       } else {
-        const created = await createLaudo(payload);
-        setLaudoId(created.id);
-        setLaudoStatus(created.status || LaudoStatus.RASCUNHO_IA);
-        setValidadoEm(created.validadoEm || "");
-        setLastSavedSnapshot(getSnapshot());
+        setLaudoStatus(updated.status || LaudoStatus.RASCUNHO_IA);
+        setValidadoEm(updated.validadoEm || "");
       }
+      setLastSavedSnapshot(snapshot);
+      return { id: laudoId, snapshot };
+    }
 
-      Alert.alert(
-        t("common.titles.success"),
-        t("clinical.messages.reportAndPlanSavedSuccessfully"),
-        [{ text: t("common.ok"), onPress: () => navigation.goBack() }],
-      );
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        if (status === 403 || status === 404) {
-          await fetchPacientes(true).catch(() => undefined);
-          showToast({
-            message:
-              status === 403
-                ? t("clinical.messages.noPermissionSavePatientReport")
-                : t("clinical.messages.patientNotFoundCurrentSession"),
-            type: "error",
-          });
-          navigation.goBack();
-          return;
-        }
+    const created = await createLaudo(payload);
+    setLaudoId(created.id);
+    setLaudoStatus(created.status || LaudoStatus.RASCUNHO_IA);
+    setValidadoEm(created.validadoEm || "");
+    setLastSavedSnapshot(snapshot);
+    return { id: created.id, snapshot };
+  };
+
+  const runAutosave = async () => {
+    if (autosaveInFlightRef.current || !canAutosaveDraft()) return;
+    const snapshotBeforeSave = getSnapshot();
+    if (snapshotBeforeSave === lastSavedSnapshot) return;
+
+    autosaveInFlightRef.current = true;
+    setAutosaveStatus("saving");
+    try {
+      const saved = await persistLaudoDraft();
+      if (!isMountedRef.current) return;
+      const savedAt = new Date().toISOString();
+      setLastAutosavedAt(savedAt);
+      setAutosaveStatus("saved");
+      await trackEvent("clinical_form_autosave_saved", {
+        stage: "LAUDO",
+        pacienteId,
+        laudoId: saved.id,
+        source: "LaudoFormScreen",
+      });
+    } catch {
+      if (isMountedRef.current) {
+        setAutosaveStatus("error");
       }
-      const { message, fieldErrors } = parseApiError(error);
-      if (Object.keys(fieldErrors).length) {
-        setErrors((prev) => ({ ...prev, ...fieldErrors }));
-      }
-      showToast({ message, type: "error" });
     } finally {
-      setLoading(false);
+      autosaveInFlightRef.current = false;
     }
   };
+
+  useEffect(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    if (!canAutosaveDraft()) {
+      if (autosaveStatus === "pending" || autosaveStatus === "saving") {
+        setAutosaveStatus("idle");
+      }
+      return;
+    }
+
+    const currentSnapshot = getSnapshot();
+    if (currentSnapshot === lastSavedSnapshot) return;
+
+    setAutosaveStatus("pending");
+    autosaveTimerRef.current = setTimeout(() => {
+      void runAutosave();
+    }, LAUDO_AUTOSAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    diagnosticoFuncional,
+    objetivosCurtoPrazo,
+    objetivosMedioPrazo,
+    frequenciaSemanal,
+    duracaoSemanas,
+    condutas,
+    planoTratamentoIA,
+    rascunhoProfissional,
+    observacoes,
+    criteriosAlta,
+    aiSuggestionMeta,
+    hasAnamnese,
+    generatingAi,
+    lastSavedSnapshot,
+  ]);
 
   const performValidate = async () => {
     if (!laudoId) {
       showToast({
-        message: t("clinical.messages.saveReportBeforeValidation"),
+        message: t("clinical.messages.waitAutosaveBeforeValidation"),
         type: "error",
       });
       return;
     }
     if (hasUnsavedChanges) {
       showToast({
-        message: t("clinical.messages.saveChangesBeforeValidation"),
+        message: t("clinical.messages.waitAutosaveChangesBeforeValidation"),
         type: "info",
       });
       return;
@@ -1059,9 +1181,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   };
 
   const openPdf = async (type: "laudo" | "plano") => {
-    if (!laudoId) {
+    if (!canGenerateLaudo) {
       showToast({
-        message: t("clinical.messages.saveBeforeGeneratePdf"),
+        message:
+          pdfGateMessage ||
+          t("clinical.messages.waitAutosaveBeforeGeneratePdf"),
         type: "error",
       });
       return;
@@ -1072,6 +1196,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         type: "info",
       });
     }
+    const currentLaudoId = laudoId;
+    if (!currentLaudoId) return;
     let webPopup: Window | null = null;
     if (Platform.OS === "web" && typeof window !== "undefined") {
       webPopup = window.open("about:blank", "_blank");
@@ -1079,7 +1205,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
     setLoading(true);
     try {
-      await openPdfUrl(type, laudoId, webPopup);
+      await openPdfUrl(type, currentLaudoId, webPopup);
     } catch (error: unknown) {
       if (webPopup && !webPopup.closed) {
         webPopup.close();
@@ -1149,7 +1275,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     const query = params?.consultedRefs
       ? `?consultedRefs=${encodeURIComponent(params.consultedRefs)}`
       : "";
-    const localPathBase = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+    const localPathBase =
+      FileSystem.cacheDirectory || FileSystem.documentDirectory;
     if (!localPathBase) {
       throw new Error("no_local_storage_path");
     }
@@ -1244,8 +1371,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t("common.messages.patientNotFound")}</Text>
-          <Button title={t("common.actions.back")} onPress={() => navigation.goBack()} />
+          <Text style={styles.errorText}>
+            {t("common.messages.patientNotFound")}
+          </Text>
+          <Button
+            title={t("common.actions.back")}
+            onPress={() => navigation.goBack()}
+          />
         </View>
       </SafeAreaView>
     );
@@ -1275,7 +1407,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           color={COLORS.primary}
         />
         <Text style={styles.aiNoticeText}>
-          Rascunho gerado automaticamente por IA. Revise antes de salvar.
+          {t("clinical.messages.aiDraftReviewNotice")}
         </Text>
       </View>
       {referenceSuggestions ? (
@@ -1333,10 +1465,40 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             {t("clinical.messages.unsavedChangesInReport")}
           </Text>
         ) : null}
+        {autosaveStatusMessage ? (
+          <View style={styles.autosaveStatusRow}>
+            <Ionicons
+              name={
+                autosaveStatus === "error"
+                  ? "alert-circle-outline"
+                  : autosaveStatus === "saved"
+                    ? "cloud-done-outline"
+                    : "cloud-upload-outline"
+              }
+              size={14}
+              color={
+                autosaveStatus === "error"
+                  ? COLORS.error
+                  : autosaveStatus === "saved"
+                    ? COLORS.success
+                    : COLORS.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.autosaveStatusText,
+                autosaveStatus === "error" && styles.autosaveStatusError,
+                autosaveStatus === "saved" && styles.autosaveStatusSaved,
+              ]}
+            >
+              {autosaveStatusMessage}
+            </Text>
+          </View>
+        ) : null}
         {validadoEm ? (
           <Text style={styles.statusDate}>
             {t("clinical.messages.validatedAt")}{" "}
-                  {new Date(validadoEm).toLocaleString(dateLocale)}
+            {new Date(validadoEm).toLocaleString(dateLocale)}
           </Text>
         ) : null}
       </View>
@@ -1405,7 +1567,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 {aiSuggestionMeta.generatedAt ? (
                   <Text style={styles.aiMetaChip}>
                     Gerada em:{" "}
-                    {new Date(aiSuggestionMeta.generatedAt).toLocaleString(dateLocale)}
+                    {new Date(aiSuggestionMeta.generatedAt).toLocaleString(
+                      dateLocale,
+                    )}
                   </Text>
                 ) : null}
                 {aiConfidence ? (
@@ -1477,18 +1641,23 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 100, textAlignVertical: "top" }}
             showCount
             maxLength={2000}
-            rightIcon={VOICE_ENABLED ? getMicIcon("diagnosticoFuncional") : undefined}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("diagnosticoFuncional") : undefined
+            }
             onRightIconPress={
-              VOICE_ENABLED ? () => toggleVoice("diagnosticoFuncional") : undefined
+              VOICE_ENABLED
+                ? () => toggleVoice("diagnosticoFuncional")
+                : undefined
             }
             hint={
-              VOICE_ENABLED && activeField === "diagnosticoFuncional" && isRecording
+              VOICE_ENABLED &&
+              activeField === "diagnosticoFuncional" &&
+              isRecording
                 ? partial
                 : undefined
             }
           />
         </View>
-
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
@@ -1504,12 +1673,18 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
-            rightIcon={VOICE_ENABLED ? getMicIcon("objetivosCurtoPrazo") : undefined}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("objetivosCurtoPrazo") : undefined
+            }
             onRightIconPress={
-              VOICE_ENABLED ? () => toggleVoice("objetivosCurtoPrazo") : undefined
+              VOICE_ENABLED
+                ? () => toggleVoice("objetivosCurtoPrazo")
+                : undefined
             }
             hint={
-              VOICE_ENABLED && activeField === "objetivosCurtoPrazo" && isRecording
+              VOICE_ENABLED &&
+              activeField === "objetivosCurtoPrazo" &&
+              isRecording
                 ? partial
                 : undefined
             }
@@ -1524,21 +1699,25 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
-            rightIcon={VOICE_ENABLED ? getMicIcon("objetivosMedioPrazo") : undefined}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("objetivosMedioPrazo") : undefined
+            }
             onRightIconPress={
-              VOICE_ENABLED ? () => toggleVoice("objetivosMedioPrazo") : undefined
+              VOICE_ENABLED
+                ? () => toggleVoice("objetivosMedioPrazo")
+                : undefined
             }
             hint={
-              VOICE_ENABLED && activeField === "objetivosMedioPrazo" && isRecording
+              VOICE_ENABLED &&
+              activeField === "objetivosMedioPrazo" &&
+              isRecording
                 ? partial
                 : undefined
             }
           />
         </View>
 
-        <View
-          style={styles.section}
-          >
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             {t("clinical.sections.carePlan")}
           </Text>
@@ -1579,7 +1758,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             showCount
             maxLength={2000}
             rightIcon={VOICE_ENABLED ? getMicIcon("condutas") : undefined}
-            onRightIconPress={VOICE_ENABLED ? () => toggleVoice("condutas") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("condutas") : undefined
+            }
             hint={
               VOICE_ENABLED && activeField === "condutas" && isRecording
                 ? partial
@@ -1596,12 +1777,16 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 120, textAlignVertical: "top" }}
             showCount
             maxLength={3000}
-            rightIcon={VOICE_ENABLED ? getMicIcon("planoTratamentoIA") : undefined}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("planoTratamentoIA") : undefined
+            }
             onRightIconPress={
               VOICE_ENABLED ? () => toggleVoice("planoTratamentoIA") : undefined
             }
             hint={
-              VOICE_ENABLED && activeField === "planoTratamentoIA" && isRecording
+              VOICE_ENABLED &&
+              activeField === "planoTratamentoIA" &&
+              isRecording
                 ? partial
                 : undefined
             }
@@ -1637,7 +1822,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             showCount
             maxLength={1500}
             rightIcon={VOICE_ENABLED ? getMicIcon("observacoes") : undefined}
-            onRightIconPress={VOICE_ENABLED ? () => toggleVoice("observacoes") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("observacoes") : undefined
+            }
             hint={
               VOICE_ENABLED && activeField === "observacoes" && isRecording
                 ? partial
@@ -1662,12 +1849,18 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             style={{ height: 110, textAlignVertical: "top" }}
             showCount
             maxLength={2000}
-            rightIcon={VOICE_ENABLED ? getMicIcon("rascunhoProfissional") : undefined}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("rascunhoProfissional") : undefined
+            }
             onRightIconPress={
-              VOICE_ENABLED ? () => toggleVoice("rascunhoProfissional") : undefined
+              VOICE_ENABLED
+                ? () => toggleVoice("rascunhoProfissional")
+                : undefined
             }
             hint={
-              VOICE_ENABLED && activeField === "rascunhoProfissional" && isRecording
+              VOICE_ENABLED &&
+              activeField === "rascunhoProfissional" &&
+              isRecording
                 ? partial
                 : undefined
             }
@@ -1902,16 +2095,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         </View>
 
         <View style={styles.footer}>
-          <Button
-            title={t("clinical.actions.saveReport")}
-            onPress={handleSave}
-            loading={loading}
-            disabled={loading}
-            fullWidth
-            icon={
-              <Ionicons name="save-outline" size={18} color={COLORS.white} />
-            }
-          />
           {hasSuggestedReferences && !hasConsultedAnyReference ? (
             <View style={styles.referencesValidateHint}>
               <Ionicons
@@ -1987,7 +2170,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 color={COLORS.warning}
               />
               <Text style={styles.referencesValidateHintText}>
-                {t("clinical.messages.saveBeforeGeneratePdf")}
+                {pdfGateMessage}
               </Text>
             </View>
           ) : null}
@@ -2194,6 +2377,23 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
+  },
+  autosaveStatusRow: {
+    marginTop: SPACING.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  autosaveStatusText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+  },
+  autosaveStatusSaved: {
+    color: COLORS.success,
+  },
+  autosaveStatusError: {
+    color: COLORS.error,
   },
   section: {
     backgroundColor: COLORS.white,

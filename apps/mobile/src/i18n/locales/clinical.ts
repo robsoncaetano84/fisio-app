@@ -17,7 +17,8 @@ export const ptClinical: TranslationMap = {
   "clinical.sections.scientificReferencesSuggested":
     "Referências científicas sugeridas",
   "clinical.sections.scientificValidation": "Validação científica",
-  "clinical.sections.targetedTherapeuticConduct": "Conduta terapêutica direcionada",
+  "clinical.sections.targetedTherapeuticConduct":
+    "Conduta terapêutica direcionada",
   "clinical.sections.clinicalPreview": "Prévia clínica",
   "clinical.actions.newAnamnesis": "Nova anamnese",
   "clinical.actions.newEvolution": "Nova evolução",
@@ -31,7 +32,6 @@ export const ptClinical: TranslationMap = {
   "clinical.actions.apply": "Aplicar",
   "clinical.actions.generateReportPdf": "Gerar Laudo (PDF)",
   "clinical.actions.generatePlanPdf": "Gerar PDF do Plano",
-  "clinical.actions.saveReport": "Salvar Laudo",
   "clinical.actions.validateAndApprove": "Validar e Aprovar",
   "clinical.actions.reportValidated": "Laudo Validado",
   "clinical.actions.validateAnyway": "Validar mesmo assim",
@@ -47,7 +47,20 @@ export const ptClinical: TranslationMap = {
     "Tem certeza que deseja apagar o rascunho?",
   "clinical.messages.newReportAndPlan": "Novo laudo e plano",
   "clinical.messages.editReportAndPlan": "Editar laudo e plano",
-  "clinical.messages.saveBeforeGeneratePdf": "Salve o laudo antes de gerar PDF",
+  "clinical.messages.aiDraftReviewNotice":
+    "Rascunho gerado automaticamente por IA. Revise antes de validar ou gerar PDF.",
+  "clinical.messages.waitAutosaveBeforeGeneratePdf":
+    "Aguarde o salvamento automático antes de gerar PDF",
+  "clinical.messages.confirmAiReviewBeforePdf":
+    "Confirme a revisão da sugestão de IA antes de gerar PDF",
+  "clinical.messages.reviewReportBeforePdf":
+    "Revise o conteúdo do laudo antes de gerar PDF",
+  "clinical.messages.autosavePending":
+    "Alterações serão salvas automaticamente",
+  "clinical.messages.autosaveSaving": "Salvando rascunho...",
+  "clinical.messages.autosaveSaved": "Rascunho salvo automaticamente às",
+  "clinical.messages.autosaveError":
+    "Não foi possível salvar automaticamente. Verifique sua conexão e tente novamente.",
   "clinical.messages.applyTemplateConfirm":
     'Deseja aplicar o template "{template}"? Isso substitui os campos atuais.',
   "clinical.messages.saved": "Registro salvo com sucesso",
@@ -59,26 +72,19 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.reviewHighlightedFields":
     "Revise os campos destacados para continuar.",
   "clinical.messages.planSavedSuccessfully": "Plano salvo com sucesso.",
-  "clinical.messages.fillAnamnesisBeforeSavingReport":
-    "Preencha a anamnese antes de salvar o laudo.",
   "clinical.messages.criticalChangesApplied":
     "Mudanças críticas aplicadas. Revalide o laudo.",
-  "clinical.messages.reportAndPlanSavedSuccessfully":
-    "Laudo e plano salvos com sucesso",
-  "clinical.messages.noPermissionSavePatientReport":
-    "Sem permissão para salvar laudo deste paciente",
   "clinical.messages.patientNotFoundCurrentSession":
     "Paciente não encontrado para a sessão atual",
-  "clinical.messages.saveReportBeforeValidation":
-    "Salve o laudo antes de validar",
-  "clinical.messages.saveChangesBeforeValidation":
-    "Salve as alterações antes de validar o laudo",
+  "clinical.messages.waitAutosaveBeforeValidation":
+    "Aguarde o salvamento automático antes de validar",
+  "clinical.messages.waitAutosaveChangesBeforeValidation":
+    "Aguarde o salvamento automático das alterações antes de validar o laudo",
   "clinical.messages.reportAlreadyValidated": "Este laudo já está validado",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Laudo e plano validados com sucesso",
   "clinical.messages.pdfGenerationError": "Não foi possível gerar o PDF",
-  "clinical.messages.referenceOpenError":
-    "Não foi possível abrir a referência",
+  "clinical.messages.referenceOpenError": "Não foi possível abrir a referência",
   "clinical.messages.professionalNotesHint":
     "Anotações do profissional para ajustes antes da validação.",
   "clinical.messages.noValidationHistory":
@@ -112,7 +118,7 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.criticalChangesDetectedRevalidation":
     "Mudanças críticas detectadas. Revalidação necessária.",
   "clinical.messages.unsavedChangesInReport":
-    "Há alterações não salvas neste laudo",
+    "Há alterações aguardando salvamento automático neste laudo",
   "clinical.messages.validatedAt": "Validado em",
   "clinical.messages.professionalValidationChecklistTitle":
     "Checklist de validação profissional",
@@ -168,8 +174,7 @@ export const ptClinical: TranslationMap = {
   "clinical.placeholders.therapeuticConducts":
     "Exercícios, técnicas e condutas planejadas",
   "clinical.placeholders.phasedPlan": "Plano em fases/semanas",
-  "clinical.placeholders.dischargeCriteria":
-    "Defina os critérios para alta",
+  "clinical.placeholders.dischargeCriteria": "Defina os critérios para alta",
   "clinical.placeholders.dischargeCriteriaPatient":
     "Defina os critérios para alta do paciente",
   "clinical.placeholders.additionalObservations": "Observações adicionais",
@@ -178,9 +183,8 @@ export const ptClinical: TranslationMap = {
   "clinical.validation.functionalDiagnosisRequired":
     "Diagnóstico funcional é obrigatório",
   "clinical.validation.aiSuggestionConfirmationRequired":
-    "Confirme a revisão da sugestão de IA antes de salvar.",
-  "clinical.validation.shortTermRequired":
-    "Informe o objetivo de curto prazo.",
+    "Confirme a revisão da sugestão de IA antes de validar.",
+  "clinical.validation.shortTermRequired": "Informe o objetivo de curto prazo.",
   "clinical.validation.therapeuticConductRequired":
     "Descreva ao menos uma conduta terapêutica.",
   "clinical.validation.numberGreaterThanZero": "Use um número maior que 0.",
@@ -217,7 +221,8 @@ export const enClinical: TranslationMap = {
   "clinical.sections.scientificReferencesSuggested":
     "Suggested scientific references",
   "clinical.sections.scientificValidation": "Scientific validation",
-  "clinical.sections.targetedTherapeuticConduct": "Targeted therapeutic conduct",
+  "clinical.sections.targetedTherapeuticConduct":
+    "Targeted therapeutic conduct",
   "clinical.sections.clinicalPreview": "Clinical preview",
   "clinical.actions.newAnamnesis": "New anamnesis",
   "clinical.actions.newEvolution": "New evolution",
@@ -231,7 +236,6 @@ export const enClinical: TranslationMap = {
   "clinical.actions.apply": "Apply",
   "clinical.actions.generateReportPdf": "Generate Report (PDF)",
   "clinical.actions.generatePlanPdf": "Generate Plan PDF",
-  "clinical.actions.saveReport": "Save Report",
   "clinical.actions.validateAndApprove": "Validate and Approve",
   "clinical.actions.reportValidated": "Report Validated",
   "clinical.actions.validateAnyway": "Validate anyway",
@@ -247,44 +251,46 @@ export const enClinical: TranslationMap = {
     "Are you sure you want to delete the draft?",
   "clinical.messages.newReportAndPlan": "New report and plan",
   "clinical.messages.editReportAndPlan": "Edit report and plan",
-  "clinical.messages.saveBeforeGeneratePdf":
-    "Save the report before generating the PDF",
+  "clinical.messages.aiDraftReviewNotice":
+    "AI generated this draft automatically. Review it before validating or generating the PDF.",
+  "clinical.messages.waitAutosaveBeforeGeneratePdf":
+    "Wait for autosave before generating the PDF",
+  "clinical.messages.confirmAiReviewBeforePdf":
+    "Confirm AI suggestion review before generating the PDF",
+  "clinical.messages.reviewReportBeforePdf":
+    "Review the report content before generating the PDF",
+  "clinical.messages.autosavePending": "Changes will be saved automatically",
+  "clinical.messages.autosaveSaving": "Saving draft...",
+  "clinical.messages.autosaveSaved": "Draft saved automatically at",
+  "clinical.messages.autosaveError":
+    "Could not autosave. Check your connection and try again.",
   "clinical.messages.applyTemplateConfirm":
     'Apply the "{template}" template? This will replace the current fields.',
   "clinical.messages.saved": "Record saved successfully",
   "clinical.messages.deleted": "Record deleted successfully",
-  "clinical.messages.aiSuggestionError":
-    "Could not generate AI suggestion.",
+  "clinical.messages.aiSuggestionError": "Could not generate AI suggestion.",
   "clinical.messages.fillAnamnesisBeforeSavingPlan":
     "Fill anamnesis before saving the plan.",
   "clinical.messages.reviewHighlightedFields":
     "Review the highlighted fields to continue.",
   "clinical.messages.planSavedSuccessfully": "Plan saved successfully.",
-  "clinical.messages.fillAnamnesisBeforeSavingReport":
-    "Fill anamnesis before saving the report.",
   "clinical.messages.criticalChangesApplied":
     "Critical changes applied. Revalidate the report.",
-  "clinical.messages.reportAndPlanSavedSuccessfully":
-    "Report and plan saved successfully",
-  "clinical.messages.noPermissionSavePatientReport":
-    "No permission to save this patient's report",
   "clinical.messages.patientNotFoundCurrentSession":
     "Patient not found for the current session",
-  "clinical.messages.saveReportBeforeValidation":
-    "Save the report before validating",
-  "clinical.messages.saveChangesBeforeValidation":
-    "Save changes before validating the report",
+  "clinical.messages.waitAutosaveBeforeValidation":
+    "Wait for autosave before validating",
+  "clinical.messages.waitAutosaveChangesBeforeValidation":
+    "Wait for autosave to finish before validating the report",
   "clinical.messages.reportAlreadyValidated":
     "This report is already validated",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Report and plan validated successfully",
   "clinical.messages.pdfGenerationError": "Could not generate PDF",
-  "clinical.messages.referenceOpenError":
-    "Could not open the reference",
+  "clinical.messages.referenceOpenError": "Could not open the reference",
   "clinical.messages.professionalNotesHint":
     "Professional notes for adjustments before validation.",
-  "clinical.messages.noValidationHistory":
-    "No validation recorded yet.",
+  "clinical.messages.noValidationHistory": "No validation recorded yet.",
   "clinical.messages.noPermissionAccessPatient":
     "You do not have permission to access this patient",
   "clinical.messages.noPermissionEditPlan":
@@ -314,7 +320,7 @@ export const enClinical: TranslationMap = {
   "clinical.messages.criticalChangesDetectedRevalidation":
     "Critical changes detected. Revalidation required.",
   "clinical.messages.unsavedChangesInReport":
-    "There are unsaved changes in this report",
+    "There are changes waiting for autosave in this report",
   "clinical.messages.validatedAt": "Validated at",
   "clinical.messages.professionalValidationChecklistTitle":
     "Professional validation checklist",
@@ -363,15 +369,12 @@ export const enClinical: TranslationMap = {
   "clinical.status.professionalConfirmed": "Confirmed by professional",
   "clinical.placeholders.functionalDiagnosis":
     "Describe the functional diagnosis",
-  "clinical.placeholders.shortTermGoals":
-    "Expected results in the first weeks",
-  "clinical.placeholders.mediumTermGoals":
-    "Expected medium-term results",
+  "clinical.placeholders.shortTermGoals": "Expected results in the first weeks",
+  "clinical.placeholders.mediumTermGoals": "Expected medium-term results",
   "clinical.placeholders.therapeuticConducts":
     "Exercises, techniques and planned conducts",
   "clinical.placeholders.phasedPlan": "Plan by phases/weeks",
-  "clinical.placeholders.dischargeCriteria":
-    "Define discharge criteria",
+  "clinical.placeholders.dischargeCriteria": "Define discharge criteria",
   "clinical.placeholders.dischargeCriteriaPatient":
     "Define patient discharge criteria",
   "clinical.placeholders.additionalObservations": "Additional observations",
@@ -380,12 +383,11 @@ export const enClinical: TranslationMap = {
   "clinical.validation.functionalDiagnosisRequired":
     "Functional diagnosis is required",
   "clinical.validation.aiSuggestionConfirmationRequired":
-    "Confirm AI suggestion review before saving.",
+    "Confirm AI suggestion review before validating.",
   "clinical.validation.shortTermRequired": "Provide a short-term goal.",
   "clinical.validation.therapeuticConductRequired":
     "Describe at least one therapeutic conduct.",
-  "clinical.validation.numberGreaterThanZero":
-    "Use a number greater than 0.",
+  "clinical.validation.numberGreaterThanZero": "Use a number greater than 0.",
   "clinical.validation.weeklyFrequencyRange":
     "Weekly frequency must be between 1 and 7",
   "clinical.validation.durationWeeksRange":
@@ -419,7 +421,8 @@ export const esClinical: TranslationMap = {
   "clinical.sections.scientificReferencesSuggested":
     "Referencias científicas sugeridas",
   "clinical.sections.scientificValidation": "Validación científica",
-  "clinical.sections.targetedTherapeuticConduct": "Conducta terapéutica dirigida",
+  "clinical.sections.targetedTherapeuticConduct":
+    "Conducta terapéutica dirigida",
   "clinical.sections.clinicalPreview": "Vista previa clínica",
   "clinical.actions.newAnamnesis": "Nueva anamnesis",
   "clinical.actions.newEvolution": "Nueva evolución",
@@ -433,7 +436,6 @@ export const esClinical: TranslationMap = {
   "clinical.actions.apply": "Aplicar",
   "clinical.actions.generateReportPdf": "Generar informe (PDF)",
   "clinical.actions.generatePlanPdf": "Generar PDF del plan",
-  "clinical.actions.saveReport": "Guardar informe",
   "clinical.actions.validateAndApprove": "Validar y aprobar",
   "clinical.actions.reportValidated": "Informe validado",
   "clinical.actions.validateAnyway": "Validar de todos modos",
@@ -449,8 +451,20 @@ export const esClinical: TranslationMap = {
     "¿Seguro que deseas borrar el borrador?",
   "clinical.messages.newReportAndPlan": "Nuevo informe y plan",
   "clinical.messages.editReportAndPlan": "Editar informe y plan",
-  "clinical.messages.saveBeforeGeneratePdf":
-    "Guarde el informe antes de generar el PDF",
+  "clinical.messages.aiDraftReviewNotice":
+    "La IA generó este borrador automáticamente. Revíselo antes de validar o generar el PDF.",
+  "clinical.messages.waitAutosaveBeforeGeneratePdf":
+    "Espere el guardado automático antes de generar el PDF",
+  "clinical.messages.confirmAiReviewBeforePdf":
+    "Confirme la revisión de la sugerencia de IA antes de generar el PDF",
+  "clinical.messages.reviewReportBeforePdf":
+    "Revise el contenido del informe antes de generar el PDF",
+  "clinical.messages.autosavePending":
+    "Los cambios se guardarán automáticamente",
+  "clinical.messages.autosaveSaving": "Guardando borrador...",
+  "clinical.messages.autosaveSaved": "Borrador guardado automáticamente a las",
+  "clinical.messages.autosaveError":
+    "No fue posible guardar automáticamente. Verifique su conexión e inténtelo de nuevo.",
   "clinical.messages.applyTemplateConfirm":
     '¿Aplicar la plantilla "{template}"? Esto reemplazará los campos actuales.',
   "clinical.messages.saved": "Registro guardado con éxito",
@@ -462,27 +476,19 @@ export const esClinical: TranslationMap = {
   "clinical.messages.reviewHighlightedFields":
     "Revise los campos destacados para continuar.",
   "clinical.messages.planSavedSuccessfully": "Plan guardado con éxito.",
-  "clinical.messages.fillAnamnesisBeforeSavingReport":
-    "Complete la anamnesis antes de guardar el informe.",
   "clinical.messages.criticalChangesApplied":
     "Cambios críticos aplicados. Revalide el informe.",
-  "clinical.messages.reportAndPlanSavedSuccessfully":
-    "Informe y plan guardados con éxito",
-  "clinical.messages.noPermissionSavePatientReport":
-    "Sin permiso para guardar el informe de este paciente",
   "clinical.messages.patientNotFoundCurrentSession":
     "Paciente no encontrado para la sesión actual",
-  "clinical.messages.saveReportBeforeValidation":
-    "Guarde el informe antes de validar",
-  "clinical.messages.saveChangesBeforeValidation":
-    "Guarde los cambios antes de validar el informe",
-  "clinical.messages.reportAlreadyValidated":
-    "Este informe ya está validado",
+  "clinical.messages.waitAutosaveBeforeValidation":
+    "Espere el guardado automático antes de validar",
+  "clinical.messages.waitAutosaveChangesBeforeValidation":
+    "Espere el guardado automático de los cambios antes de validar el informe",
+  "clinical.messages.reportAlreadyValidated": "Este informe ya está validado",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Informe y plan validados con éxito",
   "clinical.messages.pdfGenerationError": "No fue posible generar el PDF",
-  "clinical.messages.referenceOpenError":
-    "No fue posible abrir la referencia",
+  "clinical.messages.referenceOpenError": "No fue posible abrir la referencia",
   "clinical.messages.professionalNotesHint":
     "Notas del profesional para ajustes antes de la validación.",
   "clinical.messages.noValidationHistory":
@@ -517,7 +523,7 @@ export const esClinical: TranslationMap = {
   "clinical.messages.criticalChangesDetectedRevalidation":
     "Cambios críticos detectados. Revalidación necesaria.",
   "clinical.messages.unsavedChangesInReport":
-    "Hay cambios no guardados en este informe",
+    "Hay cambios esperando el guardado automático en este informe",
   "clinical.messages.validatedAt": "Validado en",
   "clinical.messages.professionalValidationChecklistTitle":
     "Checklist de validación profesional",
@@ -568,13 +574,11 @@ export const esClinical: TranslationMap = {
     "Describa el diagnóstico funcional",
   "clinical.placeholders.shortTermGoals":
     "Resultados esperados en las primeras semanas",
-  "clinical.placeholders.mediumTermGoals":
-    "Resultados esperados a medio plazo",
+  "clinical.placeholders.mediumTermGoals": "Resultados esperados a medio plazo",
   "clinical.placeholders.therapeuticConducts":
     "Ejercicios, técnicas y conductas planificadas",
   "clinical.placeholders.phasedPlan": "Plan por fases/semanas",
-  "clinical.placeholders.dischargeCriteria":
-    "Defina los criterios de alta",
+  "clinical.placeholders.dischargeCriteria": "Defina los criterios de alta",
   "clinical.placeholders.dischargeCriteriaPatient":
     "Defina los criterios de alta del paciente",
   "clinical.placeholders.additionalObservations": "Observaciones adicionales",
@@ -583,13 +587,12 @@ export const esClinical: TranslationMap = {
   "clinical.validation.functionalDiagnosisRequired":
     "El diagnóstico funcional es obligatorio",
   "clinical.validation.aiSuggestionConfirmationRequired":
-    "Confirme la revisión de la sugerencia de IA antes de guardar.",
+    "Confirme la revisión de la sugerencia de IA antes de validar.",
   "clinical.validation.shortTermRequired":
     "Informe el objetivo de corto plazo.",
   "clinical.validation.therapeuticConductRequired":
     "Describa al menos una conducta terapéutica.",
-  "clinical.validation.numberGreaterThanZero":
-    "Use un número mayor que 0.",
+  "clinical.validation.numberGreaterThanZero": "Use un número mayor que 0.",
   "clinical.validation.weeklyFrequencyRange":
     "La frecuencia semanal debe estar entre 1 y 7",
   "clinical.validation.durationWeeksRange":
