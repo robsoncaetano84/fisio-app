@@ -576,7 +576,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const hasConfirmedAiReview =
     !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
   const isAutosaving = autosaveStatus === "saving";
-  const canGenerateLaudo =
+  const canGeneratePdf =
     !!laudoId &&
     !hasUnsavedChanges &&
     !isAutosaving &&
@@ -1191,7 +1191,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   };
 
   const openPdf = async (type: "laudo" | "plano") => {
-    if (!canGenerateLaudo) {
+    if (!canGeneratePdf) {
       showToast({
         message:
           pdfGateMessage ||
@@ -1841,6 +1841,29 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 : undefined
             }
           />
+          {!canGeneratePdf ? (
+            <View style={styles.referencesValidateHint}>
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color={COLORS.warning}
+              />
+              <Text style={styles.referencesValidateHintText}>
+                {pdfGateMessage}
+              </Text>
+            </View>
+          ) : null}
+          <Button
+            title={t("clinical.actions.generatePlanPdf")}
+            onPress={() => openPdf("plano")}
+            loading={loading}
+            disabled={loading || !canGeneratePdf}
+            fullWidth
+            style={{ marginTop: SPACING.sm }}
+            icon={
+              <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
+            }
+          />
         </View>
 
         <View style={styles.section}>
@@ -2172,7 +2195,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               />
             }
           />
-          {!canGenerateLaudo ? (
+          {!canGeneratePdf ? (
             <View style={styles.referencesValidateHint}>
               <Ionicons
                 name="information-circle-outline"
@@ -2188,7 +2211,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             title={t("clinical.actions.generateReportPdf")}
             onPress={() => openPdf("laudo")}
             loading={loading}
-            disabled={loading || !canGenerateLaudo}
+            disabled={loading || !canGeneratePdf}
             fullWidth
             style={{ marginTop: SPACING.sm }}
             icon={
@@ -2197,17 +2220,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 size={18}
                 color={COLORS.white}
               />
-            }
-          />
-          <Button
-            title={t("clinical.actions.generatePlanPdf")}
-            onPress={() => openPdf("plano")}
-            loading={loading}
-            disabled={loading || !canGenerateLaudo}
-            fullWidth
-            style={{ marginTop: SPACING.sm }}
-            icon={
-              <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
             }
           />
         </View>
