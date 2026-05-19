@@ -12,6 +12,7 @@ import { Usuario, UserRole } from './entities/usuario.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { UpdateMeDto } from '../auth/dto/update-me.dto';
+import { normalizeProfessionalCouncilFields } from './professional-council.util';
 
 @Injectable()
 export class UsuariosService {
@@ -43,13 +44,18 @@ export class UsuariosService {
           ? UserRole.PACIENTE
           : UserRole.USER;
 
-    const conselhoSigla = createUsuarioDto.conselhoSigla?.trim().toUpperCase();
-    const conselhoUf = createUsuarioDto.conselhoUf?.trim().toUpperCase();
-    const conselhoProf =
-      createUsuarioDto.conselhoProf?.trim() ||
-      (conselhoSigla && conselhoUf
-        ? `${conselhoSigla}-${conselhoUf}`
-        : undefined);
+    const { conselhoSigla, conselhoUf, conselhoProf } =
+      normalizeProfessionalCouncilFields({
+        conselhoSigla: createUsuarioDto.conselhoSigla,
+        conselhoUf: createUsuarioDto.conselhoUf,
+        conselhoProf: createUsuarioDto.conselhoProf,
+      });
+
+    if (role !== UserRole.PACIENTE && (!conselhoSigla || !conselhoUf)) {
+      throw new BadRequestException(
+        'Conselho e regiao/UF devem ser informados juntos',
+      );
+    }
 
     const usuario = this.usuarioRepository.create({
       ...createUsuarioDto,
@@ -196,21 +202,26 @@ export class UsuariosService {
         dto.conselhoUf !== undefined
           ? dto.conselhoUf.trim().toUpperCase()
           : (usuario.conselhoUf ?? '');
+      const normalizedCouncil = normalizeProfessionalCouncilFields({
+        conselhoSigla,
+        conselhoUf,
+        conselhoProf: usuario.conselhoProf,
+      });
 
       if (
         (dto.conselhoSigla !== undefined || dto.conselhoUf !== undefined) &&
-        (!conselhoSigla || !conselhoUf)
+        (!normalizedCouncil.conselhoSigla || !normalizedCouncil.conselhoUf)
       ) {
         throw new BadRequestException(
-          'Conselho e UF devem ser informados juntos',
+          'Conselho e regiao/UF devem ser informados juntos',
         );
       }
 
       if (dto.conselhoSigla !== undefined) {
-        usuario.conselhoSigla = conselhoSigla || '';
+        usuario.conselhoSigla = normalizedCouncil.conselhoSigla;
       }
       if (dto.conselhoUf !== undefined) {
-        usuario.conselhoUf = conselhoUf || '';
+        usuario.conselhoUf = normalizedCouncil.conselhoUf;
       }
       if (dto.registroProf !== undefined) {
         usuario.registroProf = dto.registroProf.trim() || '';
@@ -219,10 +230,14 @@ export class UsuariosService {
         usuario.especialidade = dto.especialidade.trim() || '';
       }
 
-      const finalSigla = usuario.conselhoSigla?.trim().toUpperCase();
-      const finalUf = usuario.conselhoUf?.trim().toUpperCase();
-      usuario.conselhoProf =
-        finalSigla && finalUf ? `${finalSigla}-${finalUf}` : '';
+      const finalCouncil = normalizeProfessionalCouncilFields({
+        conselhoSigla: usuario.conselhoSigla,
+        conselhoUf: usuario.conselhoUf,
+        conselhoProf: usuario.conselhoProf,
+      });
+      usuario.conselhoSigla = finalCouncil.conselhoSigla;
+      usuario.conselhoUf = finalCouncil.conselhoUf;
+      usuario.conselhoProf = finalCouncil.conselhoProf;
     }
 
     if (usuario.role === UserRole.PACIENTE && hasPatientConsentField) {

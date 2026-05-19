@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { Laudo, LaudoStatus } from './entities/laudo.entity';
 import { formatExameFisicoForDisplay } from './laudo-exame-fisico-structured.util';
+import { normalizeProfessionalCouncilFields } from '../usuarios/professional-council.util';
 
 type LaudoPdfTipo = 'laudo' | 'plano';
 type LaudoPdfAudience = 'professional' | 'patient';
@@ -691,6 +692,13 @@ export class LaudoPdfService {
   }
 
   private formatProfessionalCouncil(profissional: ProfissionalPdf): string {
+    const normalized = normalizeProfessionalCouncilFields({
+      conselhoSigla: profissional.conselhoSigla,
+      conselhoUf: profissional.conselhoUf,
+      conselhoProf: profissional.conselhoProf,
+    });
+    if (normalized.conselhoProf) return normalized.conselhoProf;
+
     return (
       this.normalizeText(profissional.conselhoProf) ||
       (profissional.conselhoSigla && profissional.conselhoUf

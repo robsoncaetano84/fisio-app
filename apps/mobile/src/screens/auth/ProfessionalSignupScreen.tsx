@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import { Button, Input, useToast } from "../../components/ui";
 import { COLORS, FONTS, SPACING } from "../../constants/theme";
 import { api } from "../../services";
@@ -22,14 +24,32 @@ import { useAuthStore } from "../../stores/authStore";
 import { RootStackParamList } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import {
+  formatProfessionalCouncil,
+  getCouncilRegionOptionLabel,
+  getCouncilRegionOptions,
+  PROFESSIONAL_COUNCILS,
+  usesRegionalCouncil,
+} from "../../constants/professionalCouncil";
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, "ProfessionalSignup">;
+  navigation: NativeStackNavigationProp<
+    RootStackParamList,
+    "ProfessionalSignup"
+  >;
 };
 
 type RegisterResponse = {
   message: string;
   usuario: { id: string; nome: string; email: string };
+};
+
+type SelectorState = {
+  visible: boolean;
+  title: string;
+  options: string[];
+  onSelect: (value: string) => void;
+  getLabel?: (value: string) => string;
 };
 
 const LEGAL_TERMS_URL =
@@ -40,48 +60,6 @@ const LEGAL_PRIVACY_URL =
   "https://fisio-frontend.onrender.com/privacidade";
 const LEGAL_VERSION = process.env.EXPO_PUBLIC_LEGAL_VERSION || "v2026.04";
 
-const CONSELHOS = [
-  "CREFITO",
-  "CRM",
-  "COREN",
-  "CREFONO",
-  "CREF",
-  "CRP",
-  "CRN",
-  "CRO",
-  "OUTRO",
-] as const;
-
-const UFS = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-] as const;
-
 export function ProfessionalSignupScreen({ navigation }: Props) {
   const { showToast } = useToast();
   const { login, isLoading } = useAuthStore();
@@ -89,32 +67,72 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [conselhoSigla, setConselhoSigla] = useState<(typeof CONSELHOS)[number] | "">("");
+  const [conselhoSigla, setConselhoSigla] = useState<
+    (typeof PROFESSIONAL_COUNCILS)[number] | ""
+  >("");
   const [outroConselho, setOutroConselho] = useState("");
-  const [conselhoUf, setConselhoUf] = useState<(typeof UFS)[number] | "">("");
+  const [conselhoUf, setConselhoUf] = useState("");
   const [registroProf, setRegistroProf] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmacaoSenha, setConfirmacaoSenha] = useState("");
   const [consentProfessionalLgpdRequired, setConsentProfessionalLgpdRequired] =
     useState(false);
+  const [selector, setSelector] = useState<SelectorState>({
+    visible: false,
+    title: "",
+    options: [],
+    onSelect: () => undefined,
+    getLabel: undefined,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const canSubmitWithConsent = consentProfessionalLgpdRequired;
+  const selectedCouncilForRegion = (
+    conselhoSigla === "OUTRO" ? outroConselho : conselhoSigla
+  ).trim();
+  const shouldShowCouncilRegionSelector = selectedCouncilForRegion.length > 0;
+  const isRegionalCouncilSelected = usesRegionalCouncil(
+    selectedCouncilForRegion,
+  );
+  const councilRegionOptions = getCouncilRegionOptions(
+    selectedCouncilForRegion,
+  );
+  const councilRegionLabel = isRegionalCouncilSelected
+    ? t("auth.professionalSignupConselhoRegion")
+    : t("auth.professionalSignupConselhoUf");
+
+  const openSelector = (
+    title: string,
+    options: string[],
+    onSelect: (value: string) => void,
+    getLabel?: (value: string) => string,
+  ) => {
+    setSelector({ visible: true, title, options, onSelect, getLabel });
+  };
+
+  const closeSelector = () => {
+    setSelector((prev) => ({ ...prev, visible: false }));
+  };
 
   const validate = () => {
     const next: Record<string, string> = {};
     if (!nome.trim()) next.nome = t("auth.errorNameRequired");
     if (!email.trim()) next.email = t("auth.errorEmailRequired");
-    else if (!/\S+@\S+\.\S+/.test(email)) next.email = t("auth.errorEmailInvalid");
+    else if (!/\S+@\S+\.\S+/.test(email))
+      next.email = t("auth.errorEmailInvalid");
     if (!conselhoSigla) next.conselhoSigla = t("auth.errorConselhoRequired");
     if (conselhoSigla === "OUTRO" && !outroConselho.trim()) {
       next.outroConselho = t("auth.errorConselhoRequired");
     }
-    if (!conselhoUf) next.conselhoUf = t("auth.errorConselhoUfRequired");
-    if (!registroProf.trim()) next.registroProf = t("auth.errorRegistroRequired");
+    if (shouldShowCouncilRegionSelector && !conselhoUf) {
+      next.conselhoUf = t("auth.errorConselhoUfRequired");
+    }
+    if (!registroProf.trim())
+      next.registroProf = t("auth.errorRegistroRequired");
     if (!senha) next.senha = t("auth.errorPasswordRequired");
     else if (senha.length < 8) next.senha = t("auth.errorPasswordMin");
-    if (!confirmacaoSenha) next.confirmacaoSenha = t("auth.errorPasswordConfirmRequired");
+    if (!confirmacaoSenha)
+      next.confirmacaoSenha = t("auth.errorPasswordConfirmRequired");
     if (senha && confirmacaoSenha && senha !== confirmacaoSenha) {
       next.confirmacaoSenha = t("auth.errorPasswordMismatch");
     }
@@ -132,14 +150,20 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
     try {
       setSubmitting(true);
       const resolvedConselhoSigla =
-        conselhoSigla === "OUTRO" ? outroConselho.trim().toUpperCase() : conselhoSigla;
+        conselhoSigla === "OUTRO"
+          ? outroConselho.trim().toUpperCase()
+          : conselhoSigla;
+      const resolvedConselhoProf = formatProfessionalCouncil(
+        resolvedConselhoSigla,
+        conselhoUf,
+      );
 
       await api.post<RegisterResponse>("/auth/registro", {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         conselhoSigla: resolvedConselhoSigla,
         conselhoUf,
-        conselhoProf: `${resolvedConselhoSigla}-${conselhoUf}`,
+        conselhoProf: resolvedConselhoProf,
         registroProf: registroProf.trim(),
         consentProfessionalLgpdRequired,
         senha,
@@ -183,7 +207,9 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
       >
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.title}>{t("auth.professionalSignupTitle")}</Text>
-          <Text style={styles.subtitle}>{t("auth.professionalSignupSubtitle")}</Text>
+          <Text style={styles.subtitle}>
+            {t("auth.professionalSignupSubtitle")}
+          </Text>
 
           <Input
             label={t("auth.professionalSignupName")}
@@ -204,31 +230,52 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
           />
 
           <View style={styles.selectorBlock}>
-            <Text style={styles.selectorLabel}>{t("auth.professionalSignupConselho")}</Text>
-            <View style={styles.optionsWrap}>
-              {CONSELHOS.map((option) => {
-                const active = conselhoSigla === option;
-                return (
-                  <Pressable
-                    key={option}
-                    style={[styles.optionChip, active && styles.optionChipActive]}
-                    onPress={() => setConselhoSigla(option)}
-                  >
-                    <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
-                      {option === "OUTRO" ? t("auth.professionalSignupConselhoOther") : option}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {errors.conselhoSigla ? <Text style={styles.selectorError}>{errors.conselhoSigla}</Text> : null}
+            <Text style={styles.selectorLabel}>
+              {t("auth.professionalSignupConselho")}
+            </Text>
+            <Pressable
+              style={styles.comboField}
+              onPress={() =>
+                openSelector(
+                  t("auth.professionalSignupConselho"),
+                  [...PROFESSIONAL_COUNCILS],
+                  (value) => {
+                    setConselhoSigla(
+                      value as (typeof PROFESSIONAL_COUNCILS)[number],
+                    );
+                    setConselhoUf("");
+                  },
+                  (value) =>
+                    value === "OUTRO"
+                      ? t("auth.professionalSignupConselhoOther")
+                      : value,
+                )
+              }
+            >
+              <Text style={styles.comboValue}>
+                {conselhoSigla === "OUTRO"
+                  ? t("auth.professionalSignupConselhoOther")
+                  : conselhoSigla || "Selecione"}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={18}
+                color={COLORS.textSecondary}
+              />
+            </Pressable>
+            {errors.conselhoSigla ? (
+              <Text style={styles.selectorError}>{errors.conselhoSigla}</Text>
+            ) : null}
           </View>
 
           {conselhoSigla === "OUTRO" ? (
             <Input
               label={t("auth.professionalSignupConselhoOther")}
               value={outroConselho}
-              onChangeText={setOutroConselho}
+              onChangeText={(value) => {
+                setOutroConselho(value);
+                setConselhoUf("");
+              }}
               autoCapitalize="characters"
               leftIcon="shield-checkmark-outline"
               error={errors.outroConselho}
@@ -236,24 +283,43 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
             />
           ) : null}
 
-          <View style={styles.selectorBlock}>
-            <Text style={styles.selectorLabel}>{t("auth.professionalSignupConselhoUf")}</Text>
-            <View style={styles.optionsWrap}>
-              {UFS.map((uf) => {
-                const active = conselhoUf === uf;
-                return (
-                  <Pressable
-                    key={uf}
-                    style={[styles.optionChip, active && styles.optionChipActive]}
-                    onPress={() => setConselhoUf(uf)}
-                  >
-                    <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{uf}</Text>
-                  </Pressable>
-                );
-              })}
+          {shouldShowCouncilRegionSelector ? (
+            <View style={styles.selectorBlock}>
+              <Text style={styles.selectorLabel}>{councilRegionLabel}</Text>
+              <Pressable
+                style={styles.comboField}
+                onPress={() =>
+                  openSelector(
+                    councilRegionLabel,
+                    councilRegionOptions,
+                    setConselhoUf,
+                    (value) =>
+                      getCouncilRegionOptionLabel(
+                        selectedCouncilForRegion,
+                        value,
+                      ),
+                  )
+                }
+              >
+                <Text style={styles.comboValue}>
+                  {conselhoUf
+                    ? getCouncilRegionOptionLabel(
+                        selectedCouncilForRegion,
+                        conselhoUf,
+                      )
+                    : "Selecione"}
+                </Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={18}
+                  color={COLORS.textSecondary}
+                />
+              </Pressable>
+              {errors.conselhoUf ? (
+                <Text style={styles.selectorError}>{errors.conselhoUf}</Text>
+              ) : null}
             </View>
-            {errors.conselhoUf ? <Text style={styles.selectorError}>{errors.conselhoUf}</Text> : null}
-          </View>
+          ) : null}
 
           <Input
             label={t("auth.professionalSignupRegistro")}
@@ -307,7 +373,8 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
                 style={[
                   styles.optionChipText,
                   styles.checkboxText,
-                  consentProfessionalLgpdRequired && styles.optionChipTextActive,
+                  consentProfessionalLgpdRequired &&
+                    styles.optionChipTextActive,
                 ]}
               >
                 {t("auth.professionalConsentLabel")}
@@ -327,7 +394,9 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
               </Pressable>
               <Text style={styles.legalSeparator}>•</Text>
               <Pressable onPress={() => openLegalLink(LEGAL_PRIVACY_URL)}>
-                <Text style={styles.legalLinkText}>Política de privacidade</Text>
+                <Text style={styles.legalLinkText}>
+                  Política de privacidade
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -350,6 +419,46 @@ export function ProfessionalSignupScreen({ navigation }: Props) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={selector.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeSelector}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={closeSelector}>
+          <Pressable
+            style={styles.modalCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{selector.title}</Text>
+              <Pressable onPress={closeSelector}>
+                <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.modalList}>
+              {selector.options.map((item) => (
+                <Pressable
+                  key={item}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    selector.onSelect(item);
+                    closeSelector();
+                  }}
+                >
+                  <Text style={styles.modalItemText}>
+                    {selector.getLabel?.(item) ||
+                      (item === "OUTRO"
+                        ? t("auth.professionalSignupConselhoOther")
+                        : item)}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -382,11 +491,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: SPACING.xs,
   },
-  optionsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.xs,
-  },
   optionChip: {
     borderWidth: 1,
     borderColor: COLORS.gray300,
@@ -411,6 +515,23 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     color: COLORS.error,
     fontSize: FONTS.sizes.xs,
+  },
+  comboField: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: COLORS.gray300,
+    borderRadius: 12,
+    paddingHorizontal: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.white,
+  },
+  comboValue: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.base,
+    fontWeight: "500",
   },
   checkboxConsent: {
     flexDirection: "row",
@@ -458,6 +579,40 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    padding: SPACING.lg,
+  },
+  modalCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    padding: SPACING.base,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray100,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: {
+    fontSize: FONTS.sizes.base,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  modalList: {
+    paddingVertical: SPACING.xs,
+  },
+  modalItem: {
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.sm,
+  },
+  modalItemText: {
+    fontSize: FONTS.sizes.base,
+    color: COLORS.textPrimary,
+    fontWeight: "500",
+  },
 });
-
-

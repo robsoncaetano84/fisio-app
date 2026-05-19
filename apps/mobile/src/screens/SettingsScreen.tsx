@@ -31,6 +31,14 @@ import { api } from "../services";
 import { isLikelyNetworkError, parseApiError } from "../utils/apiErrors";
 import { isMasterAdminUser } from "../utils/masterAdmin";
 import { FEATURE_FLAGS } from "../constants/featureFlags";
+import {
+  formatProfessionalCouncil,
+  getCouncilRegionOptionLabel,
+  getCouncilRegionOptions,
+  PROFESSIONAL_COUNCILS,
+  resolveCouncilRegionOrUf,
+  usesRegionalCouncil,
+} from "../constants/professionalCouncil";
 
 const LEGAL_TERMS_URL =
   process.env.EXPO_PUBLIC_TERMS_URL ||
@@ -39,48 +47,6 @@ const LEGAL_PRIVACY_URL =
   process.env.EXPO_PUBLIC_PRIVACY_URL ||
   "https://fisio-frontend.onrender.com/privacidade";
 const LEGAL_VERSION = process.env.EXPO_PUBLIC_LEGAL_VERSION || "v2026.04";
-
-const CONSELHOS = [
-  "CREFITO",
-  "CRM",
-  "COREN",
-  "CREFONO",
-  "CREF",
-  "CRP",
-  "CRN",
-  "CRO",
-  "OUTRO",
-] as const;
-
-const UFS = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-] as const;
 
 type ProfileForm = {
   nome: string;
@@ -96,15 +62,20 @@ type SelectorState = {
   title: string;
   options: string[];
   onSelect: (value: string) => void;
+  getLabel?: (value: string) => string;
 };
 
 const buildFormFromUsuario = (usuario: Usuario | null): ProfileForm => {
   const incomingSigla = usuario?.conselhoSigla?.trim().toUpperCase() || "";
-  const matched = CONSELHOS.find((c) => c === incomingSigla);
+  const matched = PROFESSIONAL_COUNCILS.find((c) => c === incomingSigla);
+  const conselhoSigla = matched || (incomingSigla ? "OUTRO" : "");
   return {
     nome: usuario?.nome || "",
-    conselhoSigla: matched || (incomingSigla ? "OUTRO" : ""),
-    conselhoUf: usuario?.conselhoUf?.trim().toUpperCase() || "",
+    conselhoSigla,
+    conselhoUf: resolveCouncilRegionOrUf(
+      incomingSigla,
+      usuario?.conselhoUf || usuario?.conselhoProf,
+    ),
     registroProf: usuario?.registroProf || "",
     especialidade: usuario?.especialidade || "",
     outroConselho: matched ? "" : incomingSigla,
@@ -133,6 +104,7 @@ export function SettingsScreen() {
     title: "",
     options: [],
     onSelect: () => undefined,
+    getLabel: undefined,
   });
 
   const canAccessAdminCrm =
@@ -140,6 +112,19 @@ export function SettingsScreen() {
     FEATURE_FLAGS.crmAdminWeb !== false &&
     isMasterAdminUser(usuario);
   const isProfessional = usuario?.role !== UserRole.PACIENTE;
+  const selectedCouncilForRegion = (
+    form.conselhoSigla === "OUTRO" ? form.outroConselho : form.conselhoSigla
+  ).trim();
+  const shouldShowCouncilRegionSelector = selectedCouncilForRegion.length > 0;
+  const isRegionalCouncilSelected = usesRegionalCouncil(
+    selectedCouncilForRegion,
+  );
+  const councilRegionOptions = getCouncilRegionOptions(
+    selectedCouncilForRegion,
+  );
+  const councilRegionLabel = isRegionalCouncilSelected
+    ? "Região do conselho"
+    : "UF do conselho";
 
   useEffect(() => {
     if (!isEditingProfile) {
@@ -166,8 +151,9 @@ export function SettingsScreen() {
     title: string,
     options: string[],
     onSelect: (value: string) => void,
+    getLabel?: (value: string) => string,
   ) => {
-    setSelector({ visible: true, title, options, onSelect });
+    setSelector({ visible: true, title, options, onSelect, getLabel });
   };
 
   const closeSelector = () => {
@@ -247,7 +233,9 @@ export function SettingsScreen() {
   };
 
   const handleUpdateOptionalConsent = async (
-    next: Partial<Pick<Usuario, "consentResearchOptional" | "consentAiOptional">>,
+    next: Partial<
+      Pick<Usuario, "consentResearchOptional" | "consentAiOptional">
+    >,
   ) => {
     if (!usuario || usuario.role !== UserRole.PACIENTE) return;
     try {
@@ -286,8 +274,10 @@ export function SettingsScreen() {
       if (form.conselhoSigla === "OUTRO" && !form.outroConselho.trim()) {
         next.outroConselho = "Informe o conselho";
       }
-      if (!form.conselhoUf.trim()) {
-        next.conselhoUf = "UF obrigatória";
+      if (shouldShowCouncilRegionSelector && !form.conselhoUf.trim()) {
+        next.conselhoUf = isRegionalCouncilSelected
+          ? "Região do conselho obrigatória"
+          : "UF obrigatória";
       }
       if (!form.registroProf.trim()) {
         next.registroProf = "Registro profissional obrigatório";
@@ -447,11 +437,12 @@ export function SettingsScreen() {
                     onPress={() =>
                       openSelector(
                         "Conselho profissional",
-                        [...CONSELHOS],
+                        [...PROFESSIONAL_COUNCILS],
                         (value) =>
                           setForm((prev) => ({
                             ...prev,
                             conselhoSigla: value,
+                            conselhoUf: "",
                           })),
                       )
                     }
@@ -476,7 +467,11 @@ export function SettingsScreen() {
                       label="Outro conselho"
                       value={form.outroConselho}
                       onChangeText={(v) =>
-                        setForm((prev) => ({ ...prev, outroConselho: v }))
+                        setForm((prev) => ({
+                          ...prev,
+                          outroConselho: v,
+                          conselhoUf: "",
+                        }))
                       }
                       error={errors.outroConselho}
                       leftIcon="shield-checkmark-outline"
@@ -484,26 +479,50 @@ export function SettingsScreen() {
                     />
                   ) : null}
 
-                  <Text style={styles.inputLabel}>UF do conselho</Text>
-                  <Pressable
-                    style={styles.comboField}
-                    onPress={() =>
-                      openSelector("UF do conselho", [...UFS], (value) =>
-                        setForm((prev) => ({ ...prev, conselhoUf: value })),
-                      )
-                    }
-                  >
-                    <Text style={styles.comboValue}>
-                      {form.conselhoUf || "Selecione"}
-                    </Text>
-                    <Ionicons
-                      name="chevron-down"
-                      size={18}
-                      color={COLORS.textSecondary}
-                    />
-                  </Pressable>
-                  {errors.conselhoUf ? (
-                    <Text style={styles.errorText}>{errors.conselhoUf}</Text>
+                  {shouldShowCouncilRegionSelector ? (
+                    <>
+                      <Text style={styles.inputLabel}>
+                        {councilRegionLabel}
+                      </Text>
+                      <Pressable
+                        style={styles.comboField}
+                        onPress={() =>
+                          openSelector(
+                            councilRegionLabel,
+                            councilRegionOptions,
+                            (value) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                conselhoUf: value,
+                              })),
+                            (value) =>
+                              getCouncilRegionOptionLabel(
+                                selectedCouncilForRegion,
+                                value,
+                              ),
+                          )
+                        }
+                      >
+                        <Text style={styles.comboValue}>
+                          {form.conselhoUf
+                            ? getCouncilRegionOptionLabel(
+                                selectedCouncilForRegion,
+                                form.conselhoUf,
+                              )
+                            : "Selecione"}
+                        </Text>
+                        <Ionicons
+                          name="chevron-down"
+                          size={18}
+                          color={COLORS.textSecondary}
+                        />
+                      </Pressable>
+                      {errors.conselhoUf ? (
+                        <Text style={styles.errorText}>
+                          {errors.conselhoUf}
+                        </Text>
+                      ) : null}
+                    </>
                   ) : null}
 
                   <Input
@@ -562,10 +581,10 @@ export function SettingsScreen() {
                   <View style={styles.row}>
                     <Text style={styles.label}>Conselho profissional</Text>
                     <Text style={styles.value}>
-                      {usuario?.conselhoProf ||
-                        (usuario?.conselhoSigla && usuario?.conselhoUf
-                          ? `${usuario.conselhoSigla}-${usuario.conselhoUf}`
-                          : "-")}
+                      {formatProfessionalCouncil(
+                        usuario?.conselhoSigla,
+                        usuario?.conselhoUf || usuario?.conselhoProf,
+                      ) || "-"}
                     </Text>
                   </View>
                   <View style={styles.row}>
@@ -608,7 +627,9 @@ export function SettingsScreen() {
               <Ionicons
                 name={consentResearchOptional ? "checkbox" : "square-outline"}
                 size={18}
-                color={consentResearchOptional ? COLORS.primary : COLORS.gray500}
+                color={
+                  consentResearchOptional ? COLORS.primary : COLORS.gray500
+                }
               />
               <Text style={styles.toggleText}>
                 Autorizar uso anonimizado para pesquisa e melhoria clínica
@@ -616,7 +637,10 @@ export function SettingsScreen() {
             </Pressable>
             <Pressable
               disabled={savingConsent}
-              style={[styles.toggleRow, consentAiOptional && styles.toggleRowActive]}
+              style={[
+                styles.toggleRow,
+                consentAiOptional && styles.toggleRowActive,
+              ]}
               onPress={() => {
                 const next = !consentAiOptional;
                 setConsentAiOptional(next);
@@ -768,7 +792,8 @@ export function SettingsScreen() {
                   }}
                 >
                   <Text style={styles.modalItemText}>
-                    {item === "OUTRO" ? "Outro" : item}
+                    {selector.getLabel?.(item) ||
+                      (item === "OUTRO" ? "Outro" : item)}
                   </Text>
                 </Pressable>
               ))}

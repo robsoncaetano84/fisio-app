@@ -49,8 +49,10 @@ export class CreateUsuarioDto {
   @ValidateIf(
     (o: CreateUsuarioValidationContext) => o.role !== UserRole.PACIENTE,
   )
-  @IsNotEmpty({ message: 'UF do conselho e obrigatoria' })
-  @Matches(/^[A-Z]{2}$/, { message: 'UF do conselho invalida' })
+  @IsNotEmpty({ message: 'Regiao/UF do conselho e obrigatoria' })
+  @Matches(/^[A-Z0-9][A-Z0-9/\-\s]{0,29}$/i, {
+    message: 'Regiao/UF do conselho invalida',
+  })
   conselhoUf?: string;
 
   @IsOptional()
