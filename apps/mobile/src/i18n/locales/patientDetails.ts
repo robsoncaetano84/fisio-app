@@ -157,6 +157,92 @@ export const ptPatientDetails: TranslationMap = {
     "Preenchimento da anamnese ainda não liberado para o paciente.",
   "patientDetails.ananmesisPermissionUpdateError":
     "Não foi possível atualizar a permissão da anamnese.",
+  "patientDetails.updating": "Atualizando...",
+  "patientDetails.appAccessLinkWarning":
+    "Paciente sem vínculo com acesso do app. Vincule um e-mail para liberar os recursos do paciente.",
+  "patientDetails.startHereTitle": "Vamos iniciar por aqui",
+  "patientDetails.startHereDescription":
+    "Abra a ficha de anamnese para registrar os dados iniciais do paciente.",
+  "patientDetails.startHereAction": "Abrir ficha de anamnese",
+  "patientDetails.caseSummary": "Resumo do caso",
+  "patientDetails.recentHistory": "Histórico recente",
+  "patientDetails.anamnesis": "Anamnese",
+  "patientDetails.physicalExam": "Exame físico",
+  "patientDetails.evolution": "Evolução",
+  "patientDetails.report": "Laudo",
+  "patientDetails.plan": "Plano",
+  "patientDetails.documentsCount": "{{count}} arquivo(s) anexado(s)",
+  "patientDetails.latestDocument": "Último: {{name}}",
+  "patientDetails.attachedFileFallback": "arquivo anexado",
+  "patientDetails.hideDocuments": "Ocultar documentos",
+  "patientDetails.showAllDocuments": "Ver todos os documentos",
+  "patientDetails.followUp": "Acompanhamento",
+  "patientDetails.noSession": "Sem sessão",
+  "patientDetails.adherence": "Aderência",
+  "patientDetails.risk": "Risco",
+  "patientDetails.recommendedAction": "Ação recomendada",
+  "patientDetails.lastSupportiveContact": "Último contato acolhedor: {{date}}",
+  "patientDetails.hideMessages": "Ocultar mensagens",
+  "patientDetails.seekReasonExisting": "Sintoma existente",
+  "patientDetails.seekReasonPreventive": "Preventivo",
+  "patientDetails.mainComplaint": "Queixa principal",
+  "patientDetails.affectedAreas": "Áreas afetadas",
+  "patientDetails.painIntensityShort": "dor {{value}}/10",
+  "patientDetails.limitations": "Limitações",
+  "patientDetails.patientGoal": "Meta do paciente",
+  "patientDetails.dateUnavailable": "data indisponível",
+  "patientDetails.latestEvolution": "Última evolução",
+  "patientDetails.attention": "Atenção",
+  "patientDetails.summary": "Resumo",
+  "patientDetails.noClinicalSummary":
+    "Ainda não há anamnese ou evolução suficiente para montar um resumo clínico.",
+  "patientDetails.lifestyleSleep": "Sono: {{value}}",
+  "patientDetails.lifestyleSleepQuality": "Qualidade do sono: {{value}}/10",
+  "patientDetails.lifestyleStress": "Estresse: {{value}}/10",
+  "patientDetails.lifestyleEnergy": "Energia: {{value}}/10",
+  "patientDetails.lifestyleEmotionalSupport": "Apoio emocional: {{value}}/10",
+  "patientDetails.lifestyleMood": "Humor: {{value}}",
+  "patientDetails.lifestylePhysicalActivity": "Atividade física: {{value}}",
+  "patientDetails.lifestylePhysicalActivityYes":
+    "Atividade física regular: sim",
+  "patientDetails.lifestylePhysicalActivityNo": "Atividade física regular: não",
+  "patientDetails.lifestyleNoRelevantAlert": "Sem alerta emocional relevante",
+  "patientDetails.lifestyleRiskAttention":
+    "Maior atenção para estado emocional/rotina",
+  "patientDetails.lifestyleWarnAttention":
+    "Atenção para fatores de estilo de vida",
+  "patientDetails.riskNoEvolution": "Sem evolução registrada",
+  "patientDetails.riskLongGap": "Longo intervalo sem sessão (14+ dias)",
+  "patientDetails.riskMediumGap": "Intervalo elevado sem sessão (7+ dias)",
+  "patientDetails.riskLowAdherence": "Aderência baixa nos últimos 28 dias",
+  "patientDetails.riskMediumAdherence":
+    "Aderência moderada nos últimos 28 dias",
+  "patientDetails.riskHighStress": "Estresse elevado na anamnese",
+  "patientDetails.riskLowEnergy": "Baixa energia no dia a dia",
+  "patientDetails.riskLowSupport": "Baixo apoio emocional/social",
+  "patientDetails.riskPoorSleep": "Sono com baixa qualidade",
+  "patientDetails.contextGoalHint":
+    "Considere alinhar a condução à meta principal: {{value}}.",
+  "patientDetails.contextLimitationsHint":
+    "Priorize condutas voltadas às limitações funcionais relatadas.",
+  "patientDetails.nextActionCheckinTitle": "Enviar lembrete de check-in",
+  "patientDetails.nextActionCheckinVulnerableDescription":
+    "Há sinais de vulnerabilidade emocional/rotina. Faça um contato acolhedor e incentive um check-in breve para entender como o paciente está.",
+  "patientDetails.nextActionCheckinDescription":
+    "Paciente com intervalo recente sem sessão. Reforce o check-in para retomar o acompanhamento.",
+  "patientDetails.nextActionAdherenceTitle": "Reforçar aderência",
+  "patientDetails.nextActionAdherenceDescription":
+    "Aderência abaixo do ideal. Envie uma mensagem rápida para aumentar consistência nesta semana.",
+  "patientDetails.nextActionScheduleTitle": "Agendar retorno",
+  "patientDetails.nextActionScheduleVulnerableDescription":
+    "Há sinais importantes de sobrecarga emocional/rotina. Priorize contato para acolhimento e revisão do plano antes da perda de vínculo.",
+  "patientDetails.nextActionScheduleDescription":
+    "Risco alto de evasão por ausência prolongada. Priorize contato para revisar evolução e plano.",
+  "patientDetails.nextActionReviewAdherenceTitle": "Revisar aderência e checks",
+  "patientDetails.nextActionReviewAdherenceDescription":
+    "Há sinais de queda de consistência. Confira a timeline de check-ins para agir com precisão.",
+  "patientDetails.nextActionRecordEvolutionDescription":
+    "Paciente está em acompanhamento adequado. Mantenha a cadência registrando evolução clínica.",
 };
 
 export const enPatientDetails: TranslationMap = {
@@ -311,6 +397,92 @@ export const enPatientDetails: TranslationMap = {
     "Anamnesis form not yet enabled for the patient.",
   "patientDetails.ananmesisPermissionUpdateError":
     "Could not update anamnesis permission.",
+  "patientDetails.updating": "Updating...",
+  "patientDetails.appAccessLinkWarning":
+    "Patient has no app access link. Link an email to unlock patient resources.",
+  "patientDetails.startHereTitle": "Start here",
+  "patientDetails.startHereDescription":
+    "Open the anamnesis form to record the patient's initial data.",
+  "patientDetails.startHereAction": "Open anamnesis form",
+  "patientDetails.caseSummary": "Case summary",
+  "patientDetails.recentHistory": "Recent history",
+  "patientDetails.anamnesis": "Anamnesis",
+  "patientDetails.physicalExam": "Physical exam",
+  "patientDetails.evolution": "Evolution",
+  "patientDetails.report": "Report",
+  "patientDetails.plan": "Plan",
+  "patientDetails.documentsCount": "{{count}} attached file(s)",
+  "patientDetails.latestDocument": "Latest: {{name}}",
+  "patientDetails.attachedFileFallback": "attached file",
+  "patientDetails.hideDocuments": "Hide documents",
+  "patientDetails.showAllDocuments": "View all documents",
+  "patientDetails.followUp": "Follow-up",
+  "patientDetails.noSession": "No session",
+  "patientDetails.adherence": "Adherence",
+  "patientDetails.risk": "Risk",
+  "patientDetails.recommendedAction": "Recommended action",
+  "patientDetails.lastSupportiveContact": "Last supportive contact: {{date}}",
+  "patientDetails.hideMessages": "Hide messages",
+  "patientDetails.seekReasonExisting": "Existing symptom",
+  "patientDetails.seekReasonPreventive": "Preventive",
+  "patientDetails.mainComplaint": "Main complaint",
+  "patientDetails.affectedAreas": "Affected areas",
+  "patientDetails.painIntensityShort": "pain {{value}}/10",
+  "patientDetails.limitations": "Limitations",
+  "patientDetails.patientGoal": "Patient goal",
+  "patientDetails.dateUnavailable": "date unavailable",
+  "patientDetails.latestEvolution": "Latest evolution",
+  "patientDetails.attention": "Attention",
+  "patientDetails.summary": "Summary",
+  "patientDetails.noClinicalSummary":
+    "There is not enough anamnesis or evolution data to build a clinical summary yet.",
+  "patientDetails.lifestyleSleep": "Sleep: {{value}}",
+  "patientDetails.lifestyleSleepQuality": "Sleep quality: {{value}}/10",
+  "patientDetails.lifestyleStress": "Stress: {{value}}/10",
+  "patientDetails.lifestyleEnergy": "Energy: {{value}}/10",
+  "patientDetails.lifestyleEmotionalSupport": "Emotional support: {{value}}/10",
+  "patientDetails.lifestyleMood": "Mood: {{value}}",
+  "patientDetails.lifestylePhysicalActivity": "Physical activity: {{value}}",
+  "patientDetails.lifestylePhysicalActivityYes":
+    "Regular physical activity: yes",
+  "patientDetails.lifestylePhysicalActivityNo": "Regular physical activity: no",
+  "patientDetails.lifestyleNoRelevantAlert": "No relevant emotional alert",
+  "patientDetails.lifestyleRiskAttention":
+    "More attention needed for emotional state/routine",
+  "patientDetails.lifestyleWarnAttention": "Attention to lifestyle factors",
+  "patientDetails.riskNoEvolution": "No evolution recorded",
+  "patientDetails.riskLongGap": "Long interval without session (14+ days)",
+  "patientDetails.riskMediumGap": "Elevated interval without session (7+ days)",
+  "patientDetails.riskLowAdherence": "Low adherence in the last 28 days",
+  "patientDetails.riskMediumAdherence":
+    "Moderate adherence in the last 28 days",
+  "patientDetails.riskHighStress": "High stress in anamnesis",
+  "patientDetails.riskLowEnergy": "Low daily energy",
+  "patientDetails.riskLowSupport": "Low emotional/social support",
+  "patientDetails.riskPoorSleep": "Poor sleep quality",
+  "patientDetails.contextGoalHint":
+    "Consider aligning care to the main goal: {{value}}.",
+  "patientDetails.contextLimitationsHint":
+    "Prioritize interventions aimed at the reported functional limitations.",
+  "patientDetails.nextActionCheckinTitle": "Send check-in reminder",
+  "patientDetails.nextActionCheckinVulnerableDescription":
+    "There are signs of emotional/routine vulnerability. Make a supportive contact and encourage a brief check-in to understand how the patient is doing.",
+  "patientDetails.nextActionCheckinDescription":
+    "Patient has a recent interval without session. Reinforce check-in to resume follow-up.",
+  "patientDetails.nextActionAdherenceTitle": "Reinforce adherence",
+  "patientDetails.nextActionAdherenceDescription":
+    "Adherence is below target. Send a quick message to increase consistency this week.",
+  "patientDetails.nextActionScheduleTitle": "Schedule follow-up",
+  "patientDetails.nextActionScheduleVulnerableDescription":
+    "There are important signs of emotional/routine overload. Prioritize supportive contact and plan review before loss of engagement.",
+  "patientDetails.nextActionScheduleDescription":
+    "High dropout risk due to prolonged absence. Prioritize contact to review evolution and plan.",
+  "patientDetails.nextActionReviewAdherenceTitle":
+    "Review adherence and checks",
+  "patientDetails.nextActionReviewAdherenceDescription":
+    "There are signs of declining consistency. Check the check-in timeline to act precisely.",
+  "patientDetails.nextActionRecordEvolutionDescription":
+    "Patient is following up appropriately. Keep cadence by recording clinical evolution.",
 };
 
 export const esPatientDetails: TranslationMap = {
@@ -470,4 +642,90 @@ export const esPatientDetails: TranslationMap = {
     "Anamnesis aún no habilitada para el paciente.",
   "patientDetails.ananmesisPermissionUpdateError":
     "No se pudo actualizar el permiso de anamnesis.",
+  "patientDetails.updating": "Actualizando...",
+  "patientDetails.appAccessLinkWarning":
+    "Paciente sin vínculo de acceso a la app. Vincula un correo para liberar los recursos del paciente.",
+  "patientDetails.startHereTitle": "Empezar por aquí",
+  "patientDetails.startHereDescription":
+    "Abre la ficha de anamnesis para registrar los datos iniciales del paciente.",
+  "patientDetails.startHereAction": "Abrir ficha de anamnesis",
+  "patientDetails.caseSummary": "Resumen del caso",
+  "patientDetails.recentHistory": "Historial reciente",
+  "patientDetails.anamnesis": "Anamnesis",
+  "patientDetails.physicalExam": "Examen físico",
+  "patientDetails.evolution": "Evolución",
+  "patientDetails.report": "Informe",
+  "patientDetails.plan": "Plan",
+  "patientDetails.documentsCount": "{{count}} archivo(s) adjunto(s)",
+  "patientDetails.latestDocument": "Último: {{name}}",
+  "patientDetails.attachedFileFallback": "archivo adjunto",
+  "patientDetails.hideDocuments": "Ocultar documentos",
+  "patientDetails.showAllDocuments": "Ver todos los documentos",
+  "patientDetails.followUp": "Seguimiento",
+  "patientDetails.noSession": "Sin sesión",
+  "patientDetails.adherence": "Adherencia",
+  "patientDetails.risk": "Riesgo",
+  "patientDetails.recommendedAction": "Acción recomendada",
+  "patientDetails.lastSupportiveContact": "Último contacto de apoyo: {{date}}",
+  "patientDetails.hideMessages": "Ocultar mensajes",
+  "patientDetails.seekReasonExisting": "Síntoma existente",
+  "patientDetails.seekReasonPreventive": "Preventivo",
+  "patientDetails.mainComplaint": "Queja principal",
+  "patientDetails.affectedAreas": "Áreas afectadas",
+  "patientDetails.painIntensityShort": "dolor {{value}}/10",
+  "patientDetails.limitations": "Limitaciones",
+  "patientDetails.patientGoal": "Meta del paciente",
+  "patientDetails.dateUnavailable": "fecha no disponible",
+  "patientDetails.latestEvolution": "Última evolución",
+  "patientDetails.attention": "Atención",
+  "patientDetails.summary": "Resumen",
+  "patientDetails.noClinicalSummary":
+    "Aún no hay anamnesis o evolución suficiente para montar un resumen clínico.",
+  "patientDetails.lifestyleSleep": "Sueño: {{value}}",
+  "patientDetails.lifestyleSleepQuality": "Calidad del sueño: {{value}}/10",
+  "patientDetails.lifestyleStress": "Estrés: {{value}}/10",
+  "patientDetails.lifestyleEnergy": "Energía: {{value}}/10",
+  "patientDetails.lifestyleEmotionalSupport": "Apoyo emocional: {{value}}/10",
+  "patientDetails.lifestyleMood": "Humor: {{value}}",
+  "patientDetails.lifestylePhysicalActivity": "Actividad física: {{value}}",
+  "patientDetails.lifestylePhysicalActivityYes": "Actividad física regular: sí",
+  "patientDetails.lifestylePhysicalActivityNo": "Actividad física regular: no",
+  "patientDetails.lifestyleNoRelevantAlert": "Sin alerta emocional relevante",
+  "patientDetails.lifestyleRiskAttention":
+    "Mayor atención al estado emocional/rutina",
+  "patientDetails.lifestyleWarnAttention":
+    "Atención a factores de estilo de vida",
+  "patientDetails.riskNoEvolution": "Sin evolución registrada",
+  "patientDetails.riskLongGap": "Intervalo largo sin sesión (14+ días)",
+  "patientDetails.riskMediumGap": "Intervalo elevado sin sesión (7+ días)",
+  "patientDetails.riskLowAdherence": "Adherencia baja en los últimos 28 días",
+  "patientDetails.riskMediumAdherence":
+    "Adherencia moderada en los últimos 28 días",
+  "patientDetails.riskHighStress": "Estrés elevado en la anamnesis",
+  "patientDetails.riskLowEnergy": "Baja energía diaria",
+  "patientDetails.riskLowSupport": "Bajo apoyo emocional/social",
+  "patientDetails.riskPoorSleep": "Sueño de baja calidad",
+  "patientDetails.contextGoalHint":
+    "Considera alinear la conducta con la meta principal: {{value}}.",
+  "patientDetails.contextLimitationsHint":
+    "Prioriza conductas orientadas a las limitaciones funcionales reportadas.",
+  "patientDetails.nextActionCheckinTitle": "Enviar recordatorio de check-in",
+  "patientDetails.nextActionCheckinVulnerableDescription":
+    "Hay señales de vulnerabilidad emocional/rutina. Haz un contacto de apoyo e incentiva un check-in breve para entender cómo está el paciente.",
+  "patientDetails.nextActionCheckinDescription":
+    "Paciente con intervalo reciente sin sesión. Refuerza el check-in para retomar el seguimiento.",
+  "patientDetails.nextActionAdherenceTitle": "Reforzar adherencia",
+  "patientDetails.nextActionAdherenceDescription":
+    "Adherencia por debajo de lo ideal. Envía un mensaje rápido para aumentar la constancia esta semana.",
+  "patientDetails.nextActionScheduleTitle": "Agendar retorno",
+  "patientDetails.nextActionScheduleVulnerableDescription":
+    "Hay señales importantes de sobrecarga emocional/rutina. Prioriza contacto de apoyo y revisión del plan antes de perder el vínculo.",
+  "patientDetails.nextActionScheduleDescription":
+    "Riesgo alto de abandono por ausencia prolongada. Prioriza contacto para revisar evolución y plan.",
+  "patientDetails.nextActionReviewAdherenceTitle":
+    "Revisar adherencia y checks",
+  "patientDetails.nextActionReviewAdherenceDescription":
+    "Hay señales de caída de constancia. Revisa la línea de tiempo de check-ins para actuar con precisión.",
+  "patientDetails.nextActionRecordEvolutionDescription":
+    "Paciente en seguimiento adecuado. Mantén la cadencia registrando evolución clínica.",
 };
