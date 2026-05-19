@@ -67,6 +67,44 @@ describe('LaudoPdfService', () => {
     expect(raw).toContain('CREFITO-3 12345');
   });
 
+  it('does not expose internal observations in patient PDFs', async () => {
+    const internalObservation =
+      'Massa 2 - ombro/punho esportivo para comparacao de respostas do Charles/IA.';
+    const addCalloutSpy = jest
+      .spyOn(service as any, 'addCallout')
+      .mockImplementation(() => undefined);
+
+    (service as any).addObservation(
+      {},
+      { ...baseLaudo, observacoes: internalObservation },
+      'professional',
+    );
+    (service as any).addObservation(
+      {},
+      { ...baseLaudo, observacoes: internalObservation },
+      'patient',
+    );
+
+    expect(addCalloutSpy).toHaveBeenNthCalledWith(
+      1,
+      {},
+      'Observacao importante',
+      internalObservation,
+    );
+    expect(addCalloutSpy).toHaveBeenNthCalledWith(
+      2,
+      {},
+      'Observacao importante',
+      expect.stringContaining('Este documento orienta seu acompanhamento'),
+    );
+    expect(addCalloutSpy.mock.calls[1][2]).not.toContain(internalObservation);
+    expect(addCalloutSpy.mock.calls[1][2]).toContain(
+      'Este documento orienta seu acompanhamento',
+    );
+
+    addCalloutSpy.mockRestore();
+  });
+
   it('does not append footer-only blank pages for long reports', async () => {
     const longSection = Array.from(
       { length: 20 },

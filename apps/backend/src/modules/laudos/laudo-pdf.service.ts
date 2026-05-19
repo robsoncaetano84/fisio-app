@@ -482,12 +482,10 @@ export class LaudoPdfService {
       audience === 'patient'
         ? 'Este documento orienta seu acompanhamento, mas nao substitui conversa com o profissional responsavel. Procure atendimento se houver piora importante, sintomas novos ou sinais de alerta.'
         : 'Documento para uso clinico profissional. Reavaliar periodicamente.';
+    const observation =
+      audience === 'patient' ? fallback : laudo.observacoes || fallback;
 
-    this.addCallout(
-      doc,
-      'Observacao importante',
-      laudo.observacoes || fallback,
-    );
+    this.addCallout(doc, 'Observacao importante', observation);
   }
 
   private addCallout(doc: PDFKit.PDFDocument, title: string, value: string) {
