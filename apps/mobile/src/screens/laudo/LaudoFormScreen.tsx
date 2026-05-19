@@ -576,7 +576,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const hasConfirmedAiReview =
     !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
   const isAutosaving = autosaveStatus === "saving";
-  const canGeneratePdf =
+  const canGenerateLaudo =
     !!laudoId &&
     !hasUnsavedChanges &&
     !isAutosaving &&
@@ -1190,8 +1190,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     );
   };
 
-  const openPdf = async (type: "laudo" | "plano") => {
-    if (!canGeneratePdf) {
+  const openPdf = async () => {
+    if (!canGenerateLaudo) {
       showToast({
         message:
           pdfGateMessage ||
@@ -1215,7 +1215,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
     setLoading(true);
     try {
-      await openPdfUrl(type, currentLaudoId, webPopup);
+      await openPdfUrl(currentLaudoId, webPopup);
     } catch (error: unknown) {
       if (webPopup && !webPopup.closed) {
         webPopup.close();
@@ -1233,13 +1233,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
   };
 
-  const openPdfUrl = async (
-    type: "laudo" | "plano",
-    id: string,
-    webPopup?: Window | null,
-  ) => {
-    const endpoint =
-      type === "laudo" ? `/laudos/${id}/pdf-laudo` : `/laudos/${id}/pdf-plano`;
+  const openPdfUrl = async (id: string, webPopup?: Window | null) => {
+    const endpoint = `/laudos/${id}/pdf-laudo`;
     const authHeader = token
       ? `Bearer ${token}`
       : String(api.defaults.headers.common.Authorization || "");
@@ -1253,7 +1248,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     await trackEvent("laudo_professional_pdf_opened", {
       pacienteId,
       laudoId: id,
-      pdfType: type,
+      pdfType: "laudo",
       consultedReferencesCount,
       totalSuggestedReferences,
       profile: referenceSuggestions?.profile ?? null,
@@ -1263,7 +1258,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       {
         pacienteId,
         laudoId: id,
-        pdfType: type,
+        pdfType: "laudo",
         consultedReferencesCount,
         totalSuggestedReferences,
         profile: referenceSuggestions?.profile ?? null,
@@ -1290,8 +1285,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     if (!localPathBase) {
       throw new Error("no_local_storage_path");
     }
-    const fileName = type === "laudo" ? "laudo.pdf" : "plano.pdf";
-    const localUri = `${localPathBase}${Date.now()}-${fileName}`;
+    const localUri = `${localPathBase}${Date.now()}-laudo.pdf`;
     await FileSystem.downloadAsync(`${absoluteUrl}${query}`, localUri, {
       headers: { Authorization: authHeader },
     });
@@ -1299,10 +1293,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(localUri, {
         mimeType: "application/pdf",
-        dialogTitle:
-          type === "laudo"
-            ? t("clinical.actions.generateReportPdf")
-            : t("clinical.actions.generatePlanPdf"),
+        dialogTitle: t("clinical.actions.generateReportPdf"),
       });
     } else {
       await Linking.openURL(localUri);
@@ -1841,29 +1832,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 : undefined
             }
           />
-          {!canGeneratePdf ? (
-            <View style={styles.referencesValidateHint}>
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color={COLORS.warning}
-              />
-              <Text style={styles.referencesValidateHintText}>
-                {pdfGateMessage}
-              </Text>
-            </View>
-          ) : null}
-          <Button
-            title={t("clinical.actions.generatePlanPdf")}
-            onPress={() => openPdf("plano")}
-            loading={loading}
-            disabled={loading || !canGeneratePdf}
-            fullWidth
-            style={{ marginTop: SPACING.sm }}
-            icon={
-              <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
-            }
-          />
         </View>
 
         <View style={styles.section}>
@@ -2195,7 +2163,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               />
             }
           />
-          {!canGeneratePdf ? (
+          {!canGenerateLaudo ? (
             <View style={styles.referencesValidateHint}>
               <Ionicons
                 name="information-circle-outline"
@@ -2209,9 +2177,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           ) : null}
           <Button
             title={t("clinical.actions.generateReportPdf")}
-            onPress={() => openPdf("laudo")}
+            onPress={openPdf}
             loading={loading}
-            disabled={loading || !canGeneratePdf}
+            disabled={loading || !canGenerateLaudo}
             fullWidth
             style={{ marginTop: SPACING.sm }}
             icon={

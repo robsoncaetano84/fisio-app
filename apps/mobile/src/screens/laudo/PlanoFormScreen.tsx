@@ -6,6 +6,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import {
+  Linking,
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -16,14 +18,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import { Button, Input, useToast } from "../../components/ui";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useLaudoStore } from "../../stores/laudoStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
+import { useAuthStore } from "../../stores/authStore";
 import { RootStackParamList } from "../../types";
 import {
+  api,
   getLaudoAiSuggestion,
   logClinicalAiSuggestion,
+  recordAuditAction,
   trackEvent,
 } from "../../services";
 import { FEATURE_FLAGS } from "../../constants/featureFlags";
@@ -62,10 +69,13 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const { getPacienteById, fetchPacientes } = usePacienteStore();
   const { fetchLaudoByPaciente, createLaudo, updateLaudo } = useLaudoStore();
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
+  const token = useAuthStore((state) => state.token);
+  const usuario = useAuthStore((state) => state.usuario);
 
   const paciente = getPacienteById(pacienteId);
   const [laudoId, setLaudoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiExamContextMessage, setAiExamContextMessage] = useState("");
   const [aiSuggestionMeta, setAiSuggestionMeta] = useState<{
@@ -117,6 +127,8 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
 
   const draftKey = `draft:plano:${pacienteId}`;
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
+  const downloadBaseUrl = (api.defaults.baseURL || "").replace(/\/api$/, "");
+  const isBusy = loading || pdfLoading;
 
   const shouldAutoFill = () =>
     !objetivosCurtoPrazo.trim() &&
@@ -150,6 +162,38 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       );
     }
     return payload;
+  };
+
+  const resolveAbsoluteDownloadUrl = (path: string) => {
+    if (/^https?:\/\//i.test(path)) return path;
+    const safePath = path.startsWith("/") ? path : `/${path}`;
+    return `${downloadBaseUrl}${safePath}`;
+  };
+
+  const openPdfBlobOnWeb = (blob: Blob, webPopup?: Window | null) => {
+    const blobUrl = URL.createObjectURL(blob);
+    if (webPopup && !webPopup.closed) {
+      webPopup.location.href = blobUrl;
+    } else if (typeof window !== "undefined") {
+      window.open(blobUrl, "_blank");
+    }
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  };
+
+  const buildPlanPayload = () => {
+    const freq = Number(frequenciaSemanal);
+    const dur = Number(duracaoSemanas);
+    return {
+      objetivosCurtoPrazo: objetivosCurtoPrazo.trim() || undefined,
+      objetivosMedioPrazo: objetivosMedioPrazo.trim() || undefined,
+      frequenciaSemanal: frequenciaSemanal.trim() ? freq : undefined,
+      duracaoSemanas: duracaoSemanas.trim() ? dur : undefined,
+      condutas: condutas.trim() || undefined,
+      planoTratamentoIA: planoTratamentoIA.trim() || undefined,
+      criteriosAlta: criteriosAlta.trim() || undefined,
+      observacoes: observacoes.trim() || undefined,
+      ...buildSuggestionMetaPayload(),
+    };
   };
 
   const applySuggestion = async (force = false) => {
@@ -428,7 +472,13 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSave = async () => {
+  const savePlan = async ({
+    navigateAfterSave,
+    showSuccessToast,
+  }: {
+    navigateAfterSave: boolean;
+    showSuccessToast: boolean;
+  }) => {
     if (!hasAnamnese) {
       trackEvent("clinical_flow_blocked", {
         stage: "PLANO",
@@ -440,7 +490,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         message: t("clinical.messages.fillAnamnesisBeforeSavingPlan"),
       });
       navigation.navigate("AnamneseForm", { pacienteId });
-      return;
+      return null;
     }
     if (!validate()) {
       trackEvent("clinical_flow_blocked", {
@@ -452,50 +502,36 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         type: "error",
         message: t("clinical.messages.reviewHighlightedFields"),
       });
-      return;
+      return null;
     }
 
-    const freq = Number(frequenciaSemanal);
-    const dur = Number(duracaoSemanas);
+    const payload = buildPlanPayload();
 
     setLoading(true);
     try {
-      if (laudoId) {
-        await updateLaudo(laudoId, {
-          objetivosCurtoPrazo: objetivosCurtoPrazo.trim() || undefined,
-          objetivosMedioPrazo: objetivosMedioPrazo.trim() || undefined,
-          frequenciaSemanal: frequenciaSemanal.trim() ? freq : undefined,
-          duracaoSemanas: duracaoSemanas.trim() ? dur : undefined,
-          condutas: condutas.trim() || undefined,
-          planoTratamentoIA: planoTratamentoIA.trim() || undefined,
-          criteriosAlta: criteriosAlta.trim() || undefined,
-          observacoes: observacoes.trim() || undefined,
-          ...buildSuggestionMetaPayload(),
-        });
-      } else {
-        const created = await createLaudo({
-          pacienteId,
-          diagnosticoFuncional: "Diagnostico funcional em elaboracao.",
-          objetivosCurtoPrazo: objetivosCurtoPrazo.trim() || undefined,
-          objetivosMedioPrazo: objetivosMedioPrazo.trim() || undefined,
-          frequenciaSemanal: frequenciaSemanal.trim() ? freq : undefined,
-          duracaoSemanas: duracaoSemanas.trim() ? dur : undefined,
-          condutas:
-            condutas.trim() || "Plano terapeutico inicial em elaboracao.",
-          planoTratamentoIA: planoTratamentoIA.trim() || undefined,
-          criteriosAlta: criteriosAlta.trim() || undefined,
-          observacoes: observacoes.trim() || undefined,
-          ...buildSuggestionMetaPayload(),
-        });
-        setLaudoId(created.id);
-      }
+      const savedLaudo = laudoId
+        ? await updateLaudo(laudoId, payload)
+        : await createLaudo({
+            pacienteId,
+            diagnosticoFuncional: "Diagnostico funcional em elaboracao.",
+            ...payload,
+            condutas:
+              payload.condutas || "Plano terapeutico inicial em elaboracao.",
+          });
 
+      setLaudoId(savedLaudo.id);
       await AsyncStorage.removeItem(draftKey).catch(() => undefined);
-      showToast({
-        type: "success",
-        message: t("clinical.messages.planSavedSuccessfully"),
-      });
-      navigation.goBack();
+      setLastDraftSavedAt(null);
+      if (showSuccessToast) {
+        showToast({
+          type: "success",
+          message: t("clinical.messages.planSavedSuccessfully"),
+        });
+      }
+      if (navigateAfterSave) {
+        navigation.goBack();
+      }
+      return savedLaudo;
     } catch (error: unknown) {
       const { message, fieldErrors } = parseApiError(error);
       if (Object.keys(fieldErrors).length > 0) {
@@ -513,16 +549,113 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
                 : t("common.messages.patientNotFound"),
           });
           navigation.goBack();
-          setLoading(false);
-          return;
+          return null;
         }
       }
       showToast({
         type: "error",
         message: message || t("clinical.messages.planSaveError"),
       });
+      return null;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    await savePlan({
+      navigateAfterSave: true,
+      showSuccessToast: true,
+    });
+  };
+
+  const openPlanPdfUrl = async (id: string, webPopup?: Window | null) => {
+    const endpoint = `/laudos/${id}/pdf-plano`;
+    const authHeader = token
+      ? `Bearer ${token}`
+      : String(api.defaults.headers.common.Authorization || "");
+    if (!authHeader) {
+      throw new Error(t("common.messages.sessionExpiredLogin"));
+    }
+
+    await trackEvent("laudo_professional_pdf_opened", {
+      pacienteId,
+      laudoId: id,
+      pdfType: "plano",
+    });
+    await recordAuditAction(
+      "LAUDO_PROFESSIONAL_PDF_OPENED",
+      {
+        pacienteId,
+        laudoId: id,
+        pdfType: "plano",
+      },
+      usuario?.id,
+    );
+
+    if (Platform.OS === "web") {
+      const response = await api.get<Blob>(endpoint, {
+        responseType: "blob",
+        headers: { Authorization: authHeader },
+      });
+      openPdfBlobOnWeb(response.data, webPopup);
+      return;
+    }
+
+    const absoluteUrl = resolveAbsoluteDownloadUrl(endpoint);
+    const localPathBase =
+      FileSystem.cacheDirectory || FileSystem.documentDirectory;
+    if (!localPathBase) {
+      throw new Error("no_local_storage_path");
+    }
+    const localUri = `${localPathBase}${Date.now()}-plano.pdf`;
+    await FileSystem.downloadAsync(absoluteUrl, localUri, {
+      headers: { Authorization: authHeader },
+    });
+
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(localUri, {
+        mimeType: "application/pdf",
+        dialogTitle: t("clinical.actions.generatePlanPdf"),
+      });
+    } else {
+      await Linking.openURL(localUri);
+    }
+  };
+
+  const handleGeneratePlanPdf = async () => {
+    let webPopup: Window | null = null;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      webPopup = window.open("about:blank", "_blank");
+    }
+
+    setPdfLoading(true);
+    try {
+      const savedLaudo = await savePlan({
+        navigateAfterSave: false,
+        showSuccessToast: false,
+      });
+      if (!savedLaudo?.id) {
+        if (webPopup && !webPopup.closed) {
+          webPopup.close();
+        }
+        return;
+      }
+      await openPlanPdfUrl(savedLaudo.id, webPopup);
+    } catch (error: unknown) {
+      if (webPopup && !webPopup.closed) {
+        webPopup.close();
+      }
+      const { message } = parseApiError(error);
+      showToast({
+        type: "error",
+        message:
+          message === "Network Error"
+            ? t("clinical.messages.pdfGenerationError")
+            : message || t("clinical.messages.pdfGenerationError"),
+      });
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -774,8 +907,18 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           onPress={handleSave}
           loading={loading}
           fullWidth
-          disabled={loading}
+          disabled={isBusy}
           icon={<Ionicons name="save-outline" size={18} color={COLORS.white} />}
+        />
+        <Button
+          title={t("clinical.actions.generatePlanPdf")}
+          onPress={handleGeneratePlanPdf}
+          loading={pdfLoading}
+          fullWidth
+          disabled={isBusy}
+          icon={
+            <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
+          }
         />
       </View>
     </SafeAreaView>
@@ -789,7 +932,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: SPACING.base,
-    paddingBottom: 100,
+    paddingBottom: 132,
   },
   section: {
     backgroundColor: COLORS.white,
@@ -886,6 +1029,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
+    gap: SPACING.sm,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.gray100,
