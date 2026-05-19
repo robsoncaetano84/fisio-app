@@ -674,11 +674,9 @@ export class LaudoPdfService {
   }
 
   private formatProfessionalLabel(profissional: ProfissionalPdf): string {
-    const parts = [
-      profissional.nome,
-      profissional.especialidade,
-      this.formatProfessionalCouncil(profissional),
-    ].filter((part) => this.normalizeText(part));
+    const parts = [profissional.nome, profissional.especialidade].filter(
+      (part) => this.normalizeText(part),
+    );
     return parts.join(' | ') || 'Nao informado';
   }
 
