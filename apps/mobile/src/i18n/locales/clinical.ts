@@ -123,7 +123,7 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.professionalValidationChecklistTitle":
     "Checklist de validação profissional",
   "clinical.messages.professionalValidationChecklistItem":
-    "Revisei o laudo/plano, conferi a coerência clínica e assumo a validação profissional deste conteúdo.",
+    "Revisei o laudo/plano e a sugestão de IA, conferi a coerência clínica e assumo a validação profissional deste conteúdo.",
   "clinical.messages.validationChecklistRequired":
     "Confirme a validação profissional antes de aprovar o laudo.",
   "clinical.messages.pdfWithoutConsultedReferencesWarning":
@@ -329,7 +329,7 @@ export const enClinical: TranslationMap = {
   "clinical.messages.professionalValidationChecklistTitle":
     "Professional validation checklist",
   "clinical.messages.professionalValidationChecklistItem":
-    "I reviewed the report/plan, checked clinical consistency, and take professional responsibility for validating this content.",
+    "I reviewed the report/plan and AI suggestion, checked clinical consistency, and take professional responsibility for validating this content.",
   "clinical.messages.validationChecklistRequired":
     "Confirm professional validation before approving the report.",
   "clinical.messages.pdfWithoutConsultedReferencesWarning":
@@ -536,7 +536,7 @@ export const esClinical: TranslationMap = {
   "clinical.messages.professionalValidationChecklistTitle":
     "Checklist de validación profesional",
   "clinical.messages.professionalValidationChecklistItem":
-    "Revisé el informe/plan, verifiqué la coherencia clínica y asumo la validación profesional de este contenido.",
+    "Revisé el informe/plan y la sugerencia de IA, verifiqué la coherencia clínica y asumo la validación profesional de este contenido.",
   "clinical.messages.validationChecklistRequired":
     "Confirme la validación profesional antes de aprobar el informe.",
   "clinical.messages.pdfWithoutConsultedReferencesWarning":

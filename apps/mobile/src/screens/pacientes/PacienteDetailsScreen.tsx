@@ -70,13 +70,6 @@ type PacienteDetailsScreenProps = {
   route: RouteProp<RootStackParamList, "PacienteDetails">;
 };
 
-interface InfoRowProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  onPress?: () => void;
-}
-
 interface PacienteExameItem {
   id: string;
   pacienteId: string;
@@ -109,76 +102,18 @@ type AdherenceRiskReasonCode =
   | "LOW_SUPPORT"
   | "POOR_SLEEP";
 
-
 const getMotivoBuscaLabel = (motivoBusca?: MotivoBusca | string | null) => {
   if (!motivoBusca) return "Não informado";
   if (motivoBusca === MotivoBusca.SINTOMA_EXISTENTE) return "Sintoma existente";
   if (motivoBusca === MotivoBusca.PREVENTIVO) return "Preventivo";
   return String(motivoBusca).replace(/_/g, " ");
 };
-const formatEnumLabel = (value?: string | null) => {
-  if (!value) return "";
-
-  const normalized = String(value).trim();
-  if (!normalized) return "";
-
-  const map: Record<string, string> = {
-    MASCULINO: "Masculino",
-    FEMININO: "Feminino",
-    OUTRO: "Outro",
-    SOLTEIRO: "Solteiro",
-    CASADO: "Casado",
-    VIUVO: "Viúvo",
-    DIVORCIADO: "Divorciado",
-    UNIAO_ESTAVEL: "União estável",
-  };
-
-  const upper = normalized.toUpperCase();
-  if (map[upper]) return map[upper];
-
-  return normalized
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-};
-
 const parseDatePreservingDateOnly = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return new Date(value);
   const [, year, month, day] = match;
   return new Date(Number(year), Number(month) - 1, Number(day));
 };
-
-function InfoRow({ icon, label, value, onPress }: InfoRowProps) {
-  const { t } = useLanguage();
-  const Content = (
-    <View style={styles.infoRow}>
-      <Ionicons
-        name={icon}
-        size={20}
-        color={COLORS.primary}
-        style={styles.infoIcon}
-      />
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value || t("patientDetails.notInformed")}</Text>
-      </View>
-      {onPress && (
-        <Ionicons name="chevron-forward" size={20} color={COLORS.gray400} />
-      )}
-    </View>
-  );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        {Content}
-      </TouchableOpacity>
-    );
-  }
-
-  return Content;
-}
 
 export function PacienteDetailsScreen({
   navigation,
@@ -190,17 +125,12 @@ export function PacienteDetailsScreen({
     return !value || value === key ? fallback : value;
   };
   const { pacienteId } = route.params;
-  const { getPacienteById, updatePaciente, fetchPacienteById } = usePacienteStore();
-  const {
-    anamneses,
-    fetchAnamnesesByPaciente,
-    getAnamneseById,
-  } = useAnamneseStore();
-  const {
-    evolucoes,
-    fetchEvolucoesByPaciente,
-    getEvolucaoById,
-  } = useEvolucaoStore();
+  const { getPacienteById, updatePaciente, fetchPacienteById } =
+    usePacienteStore();
+  const { anamneses, fetchAnamnesesByPaciente, getAnamneseById } =
+    useAnamneseStore();
+  const { evolucoes, fetchEvolucoesByPaciente, getEvolucaoById } =
+    useEvolucaoStore();
   const { fetchLaudoByPaciente } = useLaudoStore();
   const { showToast } = useToast();
   const actorId = useAuthStore((state) => state.usuario?.id);
@@ -209,9 +139,12 @@ export function PacienteDetailsScreen({
   const [exames, setExames] = useState<PacienteExameItem[]>([]);
   const [isLoadingExames, setIsLoadingExames] = useState(false);
   const [isUploadingExame, setIsUploadingExame] = useState(false);
-  const [downloadingExameId, setDownloadingExameId] = useState<string | null>(null);
+  const [downloadingExameId, setDownloadingExameId] = useState<string | null>(
+    null,
+  );
   const [removingExameId, setRemovingExameId] = useState<string | null>(null);
-  const [updatingAnamnesePermission, setUpdatingAnamnesePermission] = useState(false);
+  const [updatingAnamnesePermission, setUpdatingAnamnesePermission] =
+    useState(false);
   const [lastEmotionalSupportContactAt, setLastEmotionalSupportContactAt] =
     useState<string | null>(null);
   const [laudoSnapshot, setLaudoSnapshot] = useState<{
@@ -296,7 +229,10 @@ export function PacienteDetailsScreen({
           return;
         }
       }
-      showToast({ message: t("patientDetails.loadAnamnesisError"), type: "error" });
+      showToast({
+        message: t("patientDetails.loadAnamnesisError"),
+        type: "error",
+      });
     });
     fetchEvolucoesByPaciente(pacienteId).catch((error) => {
       if (axios.isAxiosError(error)) {
@@ -312,25 +248,32 @@ export function PacienteDetailsScreen({
           return;
         }
       }
-      showToast({ message: t("patientDetails.loadEvolutionError"), type: "error" });
+      showToast({
+        message: t("patientDetails.loadEvolutionError"),
+        type: "error",
+      });
     });
   }, [pacienteId]);
 
   useEffect(() => {
     let active = true;
     fetchLaudoByPaciente(pacienteId, false)
-      .then((laudo: { id: string; exameFisico?: string; condutas?: string } | null) => {
-        if (!active) return;
-        if (!laudo?.id) {
-          setLaudoSnapshot(null);
-          return;
-        }
-        setLaudoSnapshot({
-          id: laudo.id,
-          exameFisico: laudo.exameFisico,
-          condutas: laudo.condutas,
-        });
-      })
+      .then(
+        (
+          laudo: { id: string; exameFisico?: string; condutas?: string } | null,
+        ) => {
+          if (!active) return;
+          if (!laudo?.id) {
+            setLaudoSnapshot(null);
+            return;
+          }
+          setLaudoSnapshot({
+            id: laudo.id,
+            exameFisico: laudo.exameFisico,
+            condutas: laudo.condutas,
+          });
+        },
+      )
       .catch(() => {
         if (!active) return;
         setLaudoSnapshot(null);
@@ -371,21 +314,13 @@ export function PacienteDetailsScreen({
       .catch(() => setLastEmotionalSupportContactAt(null));
   }, [pacienteId]);
 
-  const formatCPF = (cpf: string) => {
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  };
-
-  const formatPhone = (phone: string) => {
-    if (!phone) return "";
-    return phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-  };
-
   const handleWhatsApp = () => {
     const phone = paciente.contato.whatsapp.replace(/\D/g, "");
     Linking.openURL(`whatsapp://send?phone=55${phone}`);
   };
 
-  const dateLocale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
+  const dateLocale =
+    language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
   const downloadBaseUrl = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
   const formatFileSize = (sizeBytes?: number) => {
@@ -409,7 +344,8 @@ export function PacienteDetailsScreen({
         api.get<PacienteExameItem[]>(`/pacientes/${pacienteId}/exames`),
       );
       const ordered = [...response.data].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
       setExames(ordered);
     } catch (error) {
@@ -420,7 +356,9 @@ export function PacienteDetailsScreen({
           return;
         }
       }
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patientDetails", "load");
       trackEvent("patient_exam_load_failed", {
         pacienteId,
@@ -447,11 +385,17 @@ export function PacienteDetailsScreen({
 
       const file = result.assets[0];
       if (!file?.uri || !file?.name) {
-        showToast({ type: "error", message: t("patientDetails.examUploadInvalidFile") });
+        showToast({
+          type: "error",
+          message: t("patientDetails.examUploadInvalidFile"),
+        });
         return;
       }
       if (typeof file.size === "number" && file.size > MAX_EXAME_SIZE_BYTES) {
-        showToast({ type: "error", message: t("patientDetails.examErrorTooLarge") });
+        showToast({
+          type: "error",
+          message: t("patientDetails.examErrorTooLarge"),
+        });
         return;
       }
 
@@ -469,7 +413,10 @@ export function PacienteDetailsScreen({
                 ? "image/webp"
                 : "application/octet-stream");
       if (!isAllowedExamFile(file.name, inferredMime)) {
-        showToast({ type: "error", message: t("patientDetails.examErrorUnsupportedType") });
+        showToast({
+          type: "error",
+          message: t("patientDetails.examErrorUnsupportedType"),
+        });
         return;
       }
       if (Platform.OS === "web") {
@@ -511,10 +458,15 @@ export function PacienteDetailsScreen({
         fileName: file.name,
         mimeType: inferredMime,
       }).catch(() => undefined);
-      showToast({ type: "success", message: t("patientDetails.examUploadedSuccess") });
+      showToast({
+        type: "success",
+        message: t("patientDetails.examUploadedSuccess"),
+      });
       await loadExames();
     } catch (error) {
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patientDetails", "upload");
       trackEvent("patient_exam_upload_failed", {
         pacienteId,
@@ -537,9 +489,12 @@ export function PacienteDetailsScreen({
       if (Platform.OS === "web") {
         const response = await withExamRetry(
           () =>
-            api.get<Blob>(`/pacientes/${pacienteId}/exames/${item.id}/arquivo`, {
-              responseType: "blob",
-            }),
+            api.get<Blob>(
+              `/pacientes/${pacienteId}/exames/${item.id}/arquivo`,
+              {
+                responseType: "blob",
+              },
+            ),
           1,
           700,
         );
@@ -555,7 +510,8 @@ export function PacienteDetailsScreen({
         const safeName = String(item.nomeOriginal || `exame-${item.id}`)
           .replace(/[^a-zA-Z0-9._-]/g, "_")
           .replace(/_{2,}/g, "_");
-        const localPathBase = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+        const localPathBase =
+          FileSystem.cacheDirectory || FileSystem.documentDirectory;
         if (!localPathBase) {
           throw new Error("no_local_storage_path");
         }
@@ -586,7 +542,9 @@ export function PacienteDetailsScreen({
       if (webPopup && !webPopup.closed) {
         webPopup.close();
       }
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patientDetails", "open");
       trackEvent("patient_exam_open_failed", {
         pacienteId,
@@ -603,12 +561,21 @@ export function PacienteDetailsScreen({
   const handleDeleteExame = async (exameId: string) => {
     setRemovingExameId(exameId);
     try {
-      await withExamRetry(() => api.delete(`/pacientes/${pacienteId}/exames/${exameId}`));
+      await withExamRetry(() =>
+        api.delete(`/pacientes/${pacienteId}/exames/${exameId}`),
+      );
       setExames((prev) => prev.filter((item) => item.id !== exameId));
-      trackEvent("patient_exam_removed", { pacienteId, exameId }).catch(() => undefined);
-      showToast({ type: "success", message: t("patientDetails.examRemoveSuccess") });
+      trackEvent("patient_exam_removed", { pacienteId, exameId }).catch(
+        () => undefined,
+      );
+      showToast({
+        type: "success",
+        message: t("patientDetails.examRemoveSuccess"),
+      });
     } catch (error) {
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patientDetails", "remove");
       trackEvent("patient_exam_remove_failed", {
         pacienteId,
@@ -626,7 +593,6 @@ export function PacienteDetailsScreen({
     loadExames().catch(() => undefined);
   }, [pacienteId]);
 
-
   const quickMessagesSectionTitleRaw = t("patientDetails.quickMessages");
   const quickMessagesSectionTitle =
     quickMessagesSectionTitleRaw.trim().toLowerCase() === "meninos"
@@ -634,10 +600,11 @@ export function PacienteDetailsScreen({
       : quickMessagesSectionTitleRaw;
 
   const prescribeActivityLabelRaw = t("patientDetails.prescribeActivity");
-  const prescribeActivityLabel =
-    /^prescrib/i.test(prescribeActivityLabelRaw.trim())
-      ? "Prescrever atividade"
-      : prescribeActivityLabelRaw;
+  const prescribeActivityLabel = /^prescrib/i.test(
+    prescribeActivityLabelRaw.trim(),
+  )
+    ? "Prescrever atividade"
+    : prescribeActivityLabelRaw;
 
   const quickMessages: Array<{
     id:
@@ -652,17 +619,23 @@ export function PacienteDetailsScreen({
     {
       id: "CHECKIN",
       label: t("patientDetails.quickMessageCheckinLabel"),
-      text: t("patientDetails.quickMessageCheckinText", { name: paciente.nomeCompleto }),
+      text: t("patientDetails.quickMessageCheckinText", {
+        name: paciente.nomeCompleto,
+      }),
     },
     {
       id: "ADHERENCE",
       label: t("patientDetails.quickMessageAdherenceLabel"),
-      text: t("patientDetails.quickMessageAdherenceText", { name: paciente.nomeCompleto }),
+      text: t("patientDetails.quickMessageAdherenceText", {
+        name: paciente.nomeCompleto,
+      }),
     },
     {
       id: "SCHEDULE",
       label: t("patientDetails.quickMessageScheduleLabel"),
-      text: t("patientDetails.quickMessageScheduleText", { name: paciente.nomeCompleto }),
+      text: t("patientDetails.quickMessageScheduleText", {
+        name: paciente.nomeCompleto,
+      }),
     },
     {
       id: "EMOTIONAL_SUPPORT",
@@ -713,12 +686,19 @@ export function PacienteDetailsScreen({
           hasFunctionalContext: hasFunctionalContextForMessage,
         });
       }
-      await recordAuditAction("QUICK_MESSAGE_SENT", {
-        pacienteId,
-        templateId: templateId || null,
-      }, actorId);
+      await recordAuditAction(
+        "QUICK_MESSAGE_SENT",
+        {
+          pacienteId,
+          templateId: templateId || null,
+        },
+        actorId,
+      );
     } catch {
-      showToast({ message: t("patientDetails.openWhatsappError"), type: "error" });
+      showToast({
+        message: t("patientDetails.openWhatsappError"),
+        type: "error",
+      });
     }
   };
 
@@ -826,13 +806,7 @@ export function PacienteDetailsScreen({
       hasEvolucao,
       hasLaudoPlano,
     }),
-    [
-      hasVinculoAtivo,
-      hasAnamnese,
-      hasExameFisico,
-      hasEvolucao,
-      hasLaudoPlano,
-    ],
+    [hasVinculoAtivo, hasAnamnese, hasExameFisico, hasEvolucao, hasLaudoPlano],
   );
 
   const localClinicalFlowItems = [
@@ -877,14 +851,20 @@ export function PacienteDetailsScreen({
     const stages = orchestratorNextAction?.stages;
     if (!Array.isArray(stages) || !stages.length) return localClinicalFlowItems;
 
-    const stageKeyMap: Record<string, "anamnese" | "exame" | "evolucao" | "laudo" | "plano"> = {
+    const stageKeyMap: Record<
+      string,
+      "anamnese" | "exame" | "evolucao" | "laudo" | "plano"
+    > = {
       ANAMNESE: "anamnese",
       EXAME_FISICO: "exame",
       EVOLUCAO: "evolucao",
       LAUDO: "laudo",
       PLANO: "plano",
     };
-    const labels: Record<"anamnese" | "exame" | "evolucao" | "laudo" | "plano", string> = {
+    const labels: Record<
+      "anamnese" | "exame" | "evolucao" | "laudo" | "plano",
+      string
+    > = {
       anamnese: "Anamnese",
       exame: "Exame físico",
       evolucao: "Evolução",
@@ -892,14 +872,18 @@ export function PacienteDetailsScreen({
       plano: "Plano",
     };
 
-    const nextStage = String(orchestratorNextAction?.nextAction?.stage || "").toUpperCase();
+    const nextStage = String(
+      orchestratorNextAction?.nextAction?.stage || "",
+    ).toUpperCase();
     const nextKey = stageKeyMap[nextStage];
 
-    const items = (Object.keys(labels) as Array<keyof typeof labels>).map((key) => ({
-      key,
-      label: labels[key],
-      status: "NOT_STARTED" as ClinicalFlowStageStatus,
-    }));
+    const items = (Object.keys(labels) as Array<keyof typeof labels>).map(
+      (key) => ({
+        key,
+        label: labels[key],
+        status: "NOT_STARTED" as ClinicalFlowStageStatus,
+      }),
+    );
 
     for (const stage of stages) {
       const mappedKey = stageKeyMap[String(stage.stage || "").toUpperCase()];
@@ -907,7 +891,8 @@ export function PacienteDetailsScreen({
       let status: ClinicalFlowStageStatus = "NOT_STARTED";
       if (stage.status === "COMPLETED") status = "DONE";
       else if (stage.status === "BLOCKED") status = "BLOCKED";
-      else if (mappedKey === nextKey && !orchestratorNextAction?.blocked) status = "IN_PROGRESS";
+      else if (mappedKey === nextKey && !orchestratorNextAction?.blocked)
+        status = "IN_PROGRESS";
       const target = items.find((item) => item.key === mappedKey);
       if (target) target.status = status;
     }
@@ -920,9 +905,7 @@ export function PacienteDetailsScreen({
       clinicalFlowItems.length) *
     100;
 
-  const getClinicalFlowGuardMessage = (
-    guard: ClinicalFlowGuard,
-  ): string => {
+  const getClinicalFlowGuardMessage = (guard: ClinicalFlowGuard): string => {
     if (guard.reason === "MISSING_EXAME_FISICO") {
       return t("patientDetails.guardPhysicalExamBeforeEvolution");
     }
@@ -1036,7 +1019,8 @@ export function PacienteDetailsScreen({
     const nextStep = getClinicalFlowNextStep(clinicalFlowState);
     const copy = clinicalFlowReadinessCopyKeys[nextStep];
     const actionByStep: Record<typeof nextStep, () => void> = {
-      VINCULO: () => navigation.navigate("PacienteForm", { pacienteId: paciente.id }),
+      VINCULO: () =>
+        navigation.navigate("PacienteForm", { pacienteId: paciente.id }),
       ANAMNESE: handleOpenAnamnese,
       EXAME_FISICO: handleOpenExameFisico,
       EVOLUCAO: handleOpenEvolucao,
@@ -1051,12 +1035,7 @@ export function PacienteDetailsScreen({
       actionLabel: t(copy.action),
       action: actionByStep[nextStep],
     };
-  }, [
-    clinicalFlowState,
-    navigation,
-    paciente.id,
-    t,
-  ]);
+  }, [clinicalFlowState, navigation, paciente.id, t]);
 
   const adesao = useMemo(() => {
     const now = Date.now();
@@ -1077,14 +1056,18 @@ export function PacienteDetailsScreen({
       return now - time <= last28Days;
     }).length;
 
-    const score = Math.max(0, Math.min(100, Math.round((sessionsIn28Days / 4) * 100)));
+    const score = Math.max(
+      0,
+      Math.min(100, Math.round((sessionsIn28Days / 4) * 100)),
+    );
 
     const lastSession = evolucoesDoPaciente[0];
     const lastSessionMs = lastSession
       ? parseDatePreservingDateOnly(lastSession.data).getTime()
       : NaN;
-    const daysWithoutSession =
-      Number.isNaN(lastSessionMs) ? null : Math.floor((now - lastSessionMs) / (24 * 60 * 60 * 1000));
+    const daysWithoutSession = Number.isNaN(lastSessionMs)
+      ? null
+      : Math.floor((now - lastSessionMs) / (24 * 60 * 60 * 1000));
 
     const riskReasons: AdherenceRiskReasonCode[] = [];
     let riskScore = 0;
@@ -1154,7 +1137,8 @@ export function PacienteDetailsScreen({
       riskReasons.includes("POOR_SLEEP");
     const hasHighEmotionalVulnerability =
       riskReasons.includes("HIGH_STRESS") &&
-      (riskReasons.includes("LOW_ENERGY") || riskReasons.includes("LOW_SUPPORT"));
+      (riskReasons.includes("LOW_ENERGY") ||
+        riskReasons.includes("LOW_SUPPORT"));
 
     let nextBestAction: NextBestActionCode = "RECORD_EVOLUTION";
     if (daysWithoutSession === null || (daysWithoutSession ?? 0) >= 14) {
@@ -1196,7 +1180,9 @@ export function PacienteDetailsScreen({
       )[0];
 
     if (ultimaAnamnese?.motivoBusca) {
-      partes.push(`Queixa principal: ${getMotivoBuscaLabel(ultimaAnamnese.motivoBusca)}.`);
+      partes.push(
+        `Queixa principal: ${getMotivoBuscaLabel(ultimaAnamnese.motivoBusca)}.`,
+      );
     }
     if (ultimaAnamnese?.limitacoesFuncionais?.trim()) {
       partes.push(
@@ -1204,9 +1190,7 @@ export function PacienteDetailsScreen({
       );
     }
     if (ultimaAnamnese?.atividadesQuePioram?.trim()) {
-      partes.push(
-        `Piora com: ${ultimaAnamnese.atividadesQuePioram.trim()}.`,
-      );
+      partes.push(`Piora com: ${ultimaAnamnese.atividadesQuePioram.trim()}.`);
     }
     if (ultimaAnamnese?.metaPrincipalPaciente?.trim()) {
       partes.push(
@@ -1222,7 +1206,9 @@ export function PacienteDetailsScreen({
       partes.push(`Última evolução registrada em ${dataLabel}.`);
 
       if ((ultimaEvolucao.avaliacao || ultimaEvolucao.ajustes)?.trim()) {
-        partes.push(`Avaliação clínica recente: ${(ultimaEvolucao.avaliacao || ultimaEvolucao.ajustes || "").trim()}.`);
+        partes.push(
+          `Avaliação clínica recente: ${(ultimaEvolucao.avaliacao || ultimaEvolucao.ajustes || "").trim()}.`,
+        );
       }
     } else {
       partes.push("Sem evoluções registradas até o momento.");
@@ -1384,7 +1370,7 @@ export function PacienteDetailsScreen({
           : hasFunctionalContextForMessage
             ? t("patientDetails.quickMessageFunctionalGoalLabel")
             : t("patientDetails.quickMessageCheckinLabel"),
-            onPress: () =>
+        onPress: () =>
           handleQuickMessage(
             adesao.hasEmotionalVulnerability
               ? quickMessages[3].text
@@ -1482,34 +1468,38 @@ export function PacienteDetailsScreen({
 
   const orchestratorActionConfig = useMemo(() => {
     if (!orchestratorNextAction?.nextAction) return null;
-    const stage = String(orchestratorNextAction.nextAction.stage || "").toUpperCase();
-    const fallbackAction = () => navigation.navigate("PacienteAdesao", { pacienteId });
-    const actionByStage: Record<string, { cta: string; onPress: () => void }> = {
-      ANAMNESE: {
-        cta: "Continuar fluxo · Anamnese",
-        onPress: handleOpenAnamnese,
-      },
-      EXAME_FISICO: {
-        cta: "Continuar fluxo · Exame físico",
-        onPress: handleOpenExameFisico,
-      },
-      EVOLUCAO: {
-        cta: "Continuar fluxo · Evolução",
-        onPress: handleOpenEvolucao,
-      },
-      LAUDO: {
-        cta: "Continuar fluxo · Laudo",
-        onPress: handleOpenLaudo,
-      },
-      PLANO: {
-        cta: "Continuar fluxo · Plano",
-        onPress: handleOpenPlano,
-      },
-      MONITORAMENTO: {
-        cta: "Abrir painel de acompanhamento",
-        onPress: fallbackAction,
-      },
-    };
+    const stage = String(
+      orchestratorNextAction.nextAction.stage || "",
+    ).toUpperCase();
+    const fallbackAction = () =>
+      navigation.navigate("PacienteAdesao", { pacienteId });
+    const actionByStage: Record<string, { cta: string; onPress: () => void }> =
+      {
+        ANAMNESE: {
+          cta: "Continuar fluxo · Anamnese",
+          onPress: handleOpenAnamnese,
+        },
+        EXAME_FISICO: {
+          cta: "Continuar fluxo · Exame físico",
+          onPress: handleOpenExameFisico,
+        },
+        EVOLUCAO: {
+          cta: "Continuar fluxo · Evolução",
+          onPress: handleOpenEvolucao,
+        },
+        LAUDO: {
+          cta: "Continuar fluxo · Laudo",
+          onPress: handleOpenLaudo,
+        },
+        PLANO: {
+          cta: "Continuar fluxo · Plano",
+          onPress: handleOpenPlano,
+        },
+        MONITORAMENTO: {
+          cta: "Abrir painel de acompanhamento",
+          onPress: fallbackAction,
+        },
+      };
     const mapped = actionByStage[stage] || {
       cta: "Abrir painel de acompanhamento",
       onPress: fallbackAction,
@@ -1533,7 +1523,8 @@ export function PacienteDetailsScreen({
     pacienteId,
   ]);
 
-  const effectiveNextActionConfig = orchestratorActionConfig || nextActionConfig;
+  const effectiveNextActionConfig =
+    orchestratorActionConfig || nextActionConfig;
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -1546,7 +1537,7 @@ export function PacienteDetailsScreen({
           </View>
           <Text style={styles.name}>{paciente.nomeCompleto}</Text>
           <Text style={styles.subtitle}>
-            {(paciente.idade ?? "-")} {t("patients.years")} -{" "}
+            {paciente.idade ?? "-"} {t("patients.years")} -{" "}
             {paciente.profissao || t("home.noProfessionInformed")}
           </Text>
           <View style={[styles.cycleBadge, cicloStatusUi.containerStyle]}>
@@ -1567,7 +1558,9 @@ export function PacienteDetailsScreen({
                 size={14}
                 color={COLORS.success}
               />
-              <Text style={styles.appAccessBadgeText}>{t("patients.appAccessActive")}</Text>
+              <Text style={styles.appAccessBadgeText}>
+                {t("patients.appAccessActive")}
+              </Text>
             </View>
           )}
           {!paciente.pacienteUsuarioId && (
@@ -1578,7 +1571,8 @@ export function PacienteDetailsScreen({
                 color={COLORS.warning}
               />
               <Text style={styles.appAccessWarningText}>
-                Paciente sem vínculo com acesso do app. Vincule um e-mail para liberar os recursos do paciente.
+                Paciente sem vínculo com acesso do app. Vincule um e-mail para
+                liberar os recursos do paciente.
               </Text>
             </View>
           )}
@@ -1588,11 +1582,15 @@ export function PacienteDetailsScreen({
               onPress={handleWhatsApp}
             >
               <Ionicons name="logo-whatsapp" size={24} color={COLORS.success} />
-              <Text style={styles.quickActionText}>{t("patientDetails.whatsapp")}</Text>
+              <Text style={styles.quickActionText}>
+                {t("patientDetails.whatsapp")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickAction} onPress={handleCall}>
               <Ionicons name="call" size={24} color={COLORS.primary} />
-              <Text style={styles.quickActionText}>{t("patientDetails.call")}</Text>
+              <Text style={styles.quickActionText}>
+                {t("patientDetails.call")}
+              </Text>
             </TouchableOpacity>
             {paciente.contato.email && (
               <TouchableOpacity
@@ -1600,17 +1598,28 @@ export function PacienteDetailsScreen({
                 onPress={handleEmail}
               >
                 <Ionicons name="mail" size={24} color={COLORS.secondary} />
-                <Text style={styles.quickActionText}>{t("patientDetails.email")}</Text>
+                <Text style={styles.quickActionText}>
+                  {t("patientDetails.email")}
+                </Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               style={styles.quickAction}
               onPress={() =>
-                navigation.navigate("PacienteForm", { pacienteId: paciente.id })
+                navigation.navigate("PacienteForm", {
+                  pacienteId: paciente.id,
+                  mode: "view",
+                })
               }
             >
-              <Ionicons name="create-outline" size={24} color={COLORS.primary} />
-              <Text style={styles.quickActionText}>{"Editar"}</Text>
+              <Ionicons
+                name="id-card-outline"
+                size={24}
+                color={COLORS.primary}
+              />
+              <Text style={styles.quickActionText}>
+                {t("patientDetails.patientData")}
+              </Text>
             </TouchableOpacity>
             {viewerRole !== UserRole.PACIENTE && (
               <TouchableOpacity
@@ -1635,8 +1644,14 @@ export function PacienteDetailsScreen({
                   {updatingAnamnesePermission
                     ? "Atualizando..."
                     : paciente.anamneseLiberadaPaciente
-                      ? tSafe("patientDetails.blockAnamnesis", "Bloquear anamnese")
-                      : tSafe("patientDetails.releaseAnamnesis", "Liberar anamnese")}
+                      ? tSafe(
+                          "patientDetails.blockAnamnesis",
+                          "Bloquear anamnese",
+                        )
+                      : tSafe(
+                          "patientDetails.releaseAnamnesis",
+                          "Liberar anamnese",
+                        )}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1646,94 +1661,36 @@ export function PacienteDetailsScreen({
         {viewerRole === UserRole.PACIENTE && anamnesesFiltradas.length === 0 ? (
           <View style={styles.startHereCard}>
             <View style={styles.startHereHeader}>
-              <Ionicons name="sparkles-outline" size={18} color={COLORS.primary} />
+              <Ionicons
+                name="sparkles-outline"
+                size={18}
+                color={COLORS.primary}
+              />
               <Text style={styles.startHereTitle}>Vamos iniciar por aqui</Text>
             </View>
             <Text style={styles.startHereDescription}>
-              Abra a ficha de anamnese para registrar os dados iniciais do paciente.
+              Abra a ficha de anamnese para registrar os dados iniciais do
+              paciente.
             </Text>
             <Button
               title="Abrir ficha de anamnese"
-              onPress={() => navigation.navigate("AnamneseForm", { pacienteId })}
+              onPress={() =>
+                navigation.navigate("AnamneseForm", { pacienteId })
+              }
               fullWidth
             />
           </View>
         ) : null}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("patientDetails.personalData")}</Text>
-          <InfoRow
-            icon="card-outline"
-            label={t("patientDetails.cpf")}
-            value={formatCPF(paciente.cpf)}
-          />
-          <InfoRow
-            icon="calendar-outline"
-            label={
-              t("patientDetails.birth") === "patientDetails.birth"
-                ? "Nascimento"
-                : t("patientDetails.birth")
-            }
-            value={paciente.dataNascimentoFormatada || paciente.dataNascimento}
-          />
-          <InfoRow icon="person-outline" label={t("patientDetails.sex")} value={formatEnumLabel(paciente.sexo)} />
-          <InfoRow
-            icon="briefcase-outline"
-            label={t("patientDetails.profession")}
-            value={paciente.profissao || ""}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("patientDetails.contact")}</Text>
-          <InfoRow
-            icon="logo-whatsapp"
-            label={t("patientDetails.whatsapp")}
-            value={formatPhone(paciente.contato.whatsapp)}
-            onPress={handleWhatsApp}
-          />
-          {paciente.contato.telefone && (
-            <InfoRow
-              icon="call-outline"
-              label={t("patientDetails.phone")}
-              value={formatPhone(paciente.contato.telefone)}
-              onPress={handleCall}
-            />
-          )}
-          {paciente.contato.email && (
-            <InfoRow
-              icon="mail-outline"
-              label={t("patientDetails.email")}
-              value={paciente.contato.email}
-              onPress={handleEmail}
-            />
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("patientDetails.address")}</Text>
-          <InfoRow
-            icon="location-outline"
-            label={t("patientDetails.addressLabel")}
-            value={`${paciente.endereco.rua}, ${paciente.endereco.numero}${paciente.endereco.complemento ? ` - ${paciente.endereco.complemento}` : ""}`}
-          />
-          <InfoRow
-            icon="business-outline"
-            label={t("patientDetails.neighborhood")}
-            value={paciente.endereco.bairro}
-          />
-          <InfoRow
-            icon="map-outline"
-            label={t("patientDetails.city")}
-            value={`${paciente.endereco.cidade} - ${paciente.endereco.uf}`}
-          />
-        </View>
-
         {/* Resumo de Anamneses */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("patientDetails.latestAnamneses")}</Text>
+          <Text style={styles.sectionTitle}>
+            {t("patientDetails.latestAnamneses")}
+          </Text>
           {anamnesesFiltradas.length === 0 ? (
-            <Text style={styles.emptyInline}>{t("patientDetails.noAnamnesis")}</Text>
+            <Text style={styles.emptyInline}>
+              {t("patientDetails.noAnamnesis")}
+            </Text>
           ) : (
             anamnesesFiltradas.map((a) => (
               <TouchableOpacity
@@ -1767,10 +1724,14 @@ export function PacienteDetailsScreen({
 
         {/* Resumo de Evolucoes */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("patientDetails.adherenceRetention")}</Text>
+          <Text style={styles.sectionTitle}>
+            {t("patientDetails.adherenceRetention")}
+          </Text>
           <View style={styles.adherenceCard}>
             <View style={styles.adherenceHeader}>
-              <Text style={styles.adherenceTitle}>{t("patientDetails.adherence28")}</Text>
+              <Text style={styles.adherenceTitle}>
+                {t("patientDetails.adherence28")}
+              </Text>
               <Text style={styles.adherenceScore}>{adesao.score}%</Text>
             </View>
             <View style={styles.adherenceTrack}>
@@ -1790,13 +1751,17 @@ export function PacienteDetailsScreen({
               />
             </View>
             <Text style={styles.adherenceMeta}>
-              {t("patientDetails.sessions28", { count: adesao.sessionsIn28Days })}
+              {t("patientDetails.sessions28", {
+                count: adesao.sessionsIn28Days,
+              })}
             </Text>
             <Text style={styles.adherenceMeta}>
               {t("patientDetails.lastSession")}:{" "}
               {adesao.daysWithoutSession === null
                 ? t("patientDetails.noEvolutionRegistered")
-                : t("patientDetails.daysAgo", { days: adesao.daysWithoutSession })}
+                : t("patientDetails.daysAgo", {
+                    days: adesao.daysWithoutSession,
+                  })}
             </Text>
             <Text style={styles.adherenceMeta}>
               {t("patientDetails.nextSuggestedSession")}:{" "}
@@ -1816,7 +1781,9 @@ export function PacienteDetailsScreen({
               ]}
             >
               <Ionicons
-                name={adesao.risco === "ALTO" ? "alert-circle" : "checkmark-circle"}
+                name={
+                  adesao.risco === "ALTO" ? "alert-circle" : "checkmark-circle"
+                }
                 size={14}
                 color={
                   adesao.risco === "ALTO"
@@ -1919,7 +1886,9 @@ export function PacienteDetailsScreen({
               </View>
               {resumoFuncionalObjetivos.limitacoes ? (
                 <Text style={styles.nextActionDescription}>
-                  <Text style={{ fontWeight: "700", color: COLORS.textPrimary }}>
+                  <Text
+                    style={{ fontWeight: "700", color: COLORS.textPrimary }}
+                  >
                     Limitações:
                   </Text>{" "}
                   {resumoFuncionalObjetivos.limitacoes}
@@ -1927,7 +1896,9 @@ export function PacienteDetailsScreen({
               ) : null}
               {resumoFuncionalObjetivos.piora ? (
                 <Text style={styles.nextActionDescription}>
-                  <Text style={{ fontWeight: "700", color: COLORS.textPrimary }}>
+                  <Text
+                    style={{ fontWeight: "700", color: COLORS.textPrimary }}
+                  >
                     Piora com:
                   </Text>{" "}
                   {resumoFuncionalObjetivos.piora}
@@ -1935,7 +1906,9 @@ export function PacienteDetailsScreen({
               ) : null}
               {resumoFuncionalObjetivos.meta ? (
                 <Text style={styles.nextActionDescription}>
-                  <Text style={{ fontWeight: "700", color: COLORS.textPrimary }}>
+                  <Text
+                    style={{ fontWeight: "700", color: COLORS.textPrimary }}
+                  >
                     Meta principal:
                   </Text>{" "}
                   {resumoFuncionalObjetivos.meta}
@@ -1946,13 +1919,21 @@ export function PacienteDetailsScreen({
         ) : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Resumo clínico automático (MVP)</Text>
+          <Text style={styles.sectionTitle}>
+            Resumo clínico automático (MVP)
+          </Text>
           <View style={styles.nextActionCard}>
             <View style={styles.nextActionHeader}>
-              <Ionicons name="document-text-outline" size={18} color={COLORS.primary} />
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color={COLORS.primary}
+              />
               <Text style={styles.nextActionTitle}>Resumo por regras</Text>
             </View>
-            <Text style={styles.nextActionDescription}>{resumoClinicoAutomatico}</Text>
+            <Text style={styles.nextActionDescription}>
+              {resumoClinicoAutomatico}
+            </Text>
           </View>
         </View>
 
@@ -1960,14 +1941,25 @@ export function PacienteDetailsScreen({
           <Text style={styles.sectionTitle}>Próxima melhor ação</Text>
           <View style={styles.nextActionCard}>
             <View style={styles.nextActionHeader}>
-              <Ionicons name="sparkles-outline" size={18} color={COLORS.primary} />
-              <Text style={styles.nextActionTitle}>{effectiveNextActionConfig.title}</Text>
+              <Ionicons
+                name="sparkles-outline"
+                size={18}
+                color={COLORS.primary}
+              />
+              <Text style={styles.nextActionTitle}>
+                {effectiveNextActionConfig.title}
+              </Text>
             </View>
             {orchestratorActionConfig?.blocked ? (
               <View style={styles.nextActionBlockedChip}>
-                <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={14}
+                  color={COLORS.error}
+                />
                 <Text style={styles.nextActionBlockedChipText}>
-                  {orchestratorActionConfig.blockerMessage || "Há bloqueio clínico ativo no fluxo."}
+                  {orchestratorActionConfig.blockerMessage ||
+                    "Há bloqueio clínico ativo no fluxo."}
                 </Text>
               </View>
             ) : null}
@@ -1979,7 +1971,9 @@ export function PacienteDetailsScreen({
               onPress={effectiveNextActionConfig.onPress}
               activeOpacity={0.85}
             >
-              <Text style={styles.nextActionButtonText}>{effectiveNextActionConfig.ctaLabel}</Text>
+              <Text style={styles.nextActionButtonText}>
+                {effectiveNextActionConfig.ctaLabel}
+              </Text>
               <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
             </TouchableOpacity>
           </View>
@@ -1992,7 +1986,9 @@ export function PacienteDetailsScreen({
               <Ionicons name="heart-outline" size={14} color={COLORS.error} />
               <Text style={styles.emotionalContactInfoText}>
                 Último contato acolhedor:{" "}
-                {new Date(lastEmotionalSupportContactAt).toLocaleString(dateLocale)}
+                {new Date(lastEmotionalSupportContactAt).toLocaleString(
+                  dateLocale,
+                )}
               </Text>
             </View>
           ) : null}
@@ -2001,12 +1997,16 @@ export function PacienteDetailsScreen({
               key={message.label}
               style={[
                 styles.quickMessageButton,
-                ((message.id === "EMOTIONAL_SUPPORT" && adesao.hasEmotionalVulnerability) ||
-                  (message.id === "FUNCTIONAL_GOAL" && hasFunctionalContextForMessage))
+                (message.id === "EMOTIONAL_SUPPORT" &&
+                  adesao.hasEmotionalVulnerability) ||
+                (message.id === "FUNCTIONAL_GOAL" &&
+                  hasFunctionalContextForMessage)
                   ? styles.quickMessageButtonHighlight
                   : null,
               ]}
-              onPress={() => handleQuickMessage(message.text, message.label, message.id)}
+              onPress={() =>
+                handleQuickMessage(message.text, message.label, message.id)
+              }
               activeOpacity={0.85}
             >
               <Ionicons
@@ -2015,12 +2015,14 @@ export function PacienteDetailsScreen({
                     ? "heart-outline"
                     : message.id === "FUNCTIONAL_GOAL"
                       ? "flag-outline"
-                    : "chatbubble-ellipses-outline"
+                      : "chatbubble-ellipses-outline"
                 }
                 size={16}
                 color={
-                  ((message.id === "EMOTIONAL_SUPPORT" && adesao.hasEmotionalVulnerability) ||
-                    (message.id === "FUNCTIONAL_GOAL" && hasFunctionalContextForMessage))
+                  (message.id === "EMOTIONAL_SUPPORT" &&
+                    adesao.hasEmotionalVulnerability) ||
+                  (message.id === "FUNCTIONAL_GOAL" &&
+                    hasFunctionalContextForMessage)
                     ? COLORS.error
                     : COLORS.primary
                 }
@@ -2031,9 +2033,13 @@ export function PacienteDetailsScreen({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("patientDetails.latestEvolutions")}</Text>
+          <Text style={styles.sectionTitle}>
+            {t("patientDetails.latestEvolutions")}
+          </Text>
           {evolucoesFiltradas.length === 0 ? (
-            <Text style={styles.emptyInline}>{t("patientDetails.noEvolution")}</Text>
+            <Text style={styles.emptyInline}>
+              {t("patientDetails.noEvolution")}
+            </Text>
           ) : (
             evolucoesFiltradas.map((e) => (
               <TouchableOpacity
@@ -2047,10 +2053,14 @@ export function PacienteDetailsScreen({
                 style={styles.inlineCard}
               >
                 <Text style={styles.inlineTitle}>
-                  {parseDatePreservingDateOnly(e.data).toLocaleDateString(dateLocale)}
+                  {parseDatePreservingDateOnly(e.data).toLocaleDateString(
+                    dateLocale,
+                  )}
                 </Text>
                 <Text style={styles.inlineText} numberOfLines={1}>
-                  {e.avaliacao || e.ajustes || t("patientDetails.noAdjustments")}
+                  {e.avaliacao ||
+                    e.ajustes ||
+                    t("patientDetails.noAdjustments")}
                 </Text>
               </TouchableOpacity>
             ))
@@ -2067,25 +2077,41 @@ export function PacienteDetailsScreen({
 
         <View style={styles.section}>
           <View style={styles.examesHeaderRow}>
-            <Text style={styles.sectionTitle}>{t("patientDetails.documentsExams")}</Text>
+            <Text style={styles.sectionTitle}>
+              {t("patientDetails.documentsExams")}
+            </Text>
             <Button
               title={t("patientDetails.attachExam")}
               onPress={handleUploadExame}
               loading={isUploadingExame}
               size="sm"
-              icon={<Ionicons name="attach-outline" size={16} color={COLORS.white} />}
+              icon={
+                <Ionicons
+                  name="attach-outline"
+                  size={16}
+                  color={COLORS.white}
+                />
+              }
             />
           </View>
 
           {isLoadingExames ? (
-            <Text style={styles.emptyInline}>{t("patientDetails.loadingExams")}</Text>
+            <Text style={styles.emptyInline}>
+              {t("patientDetails.loadingExams")}
+            </Text>
           ) : exames.length === 0 ? (
-            <Text style={styles.emptyInline}>{t("patientDetails.noExamsAttached")}</Text>
+            <Text style={styles.emptyInline}>
+              {t("patientDetails.noExamsAttached")}
+            </Text>
           ) : (
             exames.map((item) => (
               <View key={item.id} style={styles.exameCard}>
                 <View style={styles.exameHeader}>
-                  <Ionicons name="document-attach-outline" size={18} color={COLORS.primary} />
+                  <Ionicons
+                    name="document-attach-outline"
+                    size={18}
+                    color={COLORS.primary}
+                  />
                   <View style={styles.exameHeaderTextWrap}>
                     <Text numberOfLines={1} style={styles.exameTitle}>
                       {item.nomeOriginal}
@@ -2100,20 +2126,40 @@ export function PacienteDetailsScreen({
                 </View>
                 <View style={styles.exameActionsRow}>
                   <Button
-                    title={downloadingExameId === item.id ? t("patientDetails.openingExam") : t("patientDetails.openExam")}
+                    title={
+                      downloadingExameId === item.id
+                        ? t("patientDetails.openingExam")
+                        : t("patientDetails.openExam")
+                    }
                     onPress={() => handleOpenExame(item)}
                     loading={downloadingExameId === item.id}
                     size="sm"
                     variant="outline"
-                    icon={<Ionicons name="open-outline" size={14} color={COLORS.primary} />}
+                    icon={
+                      <Ionicons
+                        name="open-outline"
+                        size={14}
+                        color={COLORS.primary}
+                      />
+                    }
                   />
                   <Button
-                    title={removingExameId === item.id ? t("patientDetails.removingExam") : t("patientDetails.removeExam")}
+                    title={
+                      removingExameId === item.id
+                        ? t("patientDetails.removingExam")
+                        : t("patientDetails.removeExam")
+                    }
                     onPress={() => handleDeleteExame(item.id)}
                     loading={removingExameId === item.id}
                     size="sm"
                     variant="ghost"
-                    icon={<Ionicons name="trash-outline" size={14} color={COLORS.error} />}
+                    icon={
+                      <Ionicons
+                        name="trash-outline"
+                        size={14}
+                        color={COLORS.error}
+                      />
+                    }
                     textStyle={{ color: COLORS.error }}
                   />
                 </View>
@@ -2126,10 +2172,14 @@ export function PacienteDetailsScreen({
           <View style={styles.readinessCard}>
             <View style={styles.readinessHeaderRow}>
               <Ionicons name="pulse-outline" size={18} color={COLORS.primary} />
-              <Text style={styles.readinessTitle}>{t("patientDetails.readinessSummary")}</Text>
+              <Text style={styles.readinessTitle}>
+                {t("patientDetails.readinessSummary")}
+              </Text>
             </View>
             <Text style={styles.readinessMain}>{readiness.title}</Text>
-            <Text style={styles.readinessDescription}>{readiness.description}</Text>
+            <Text style={styles.readinessDescription}>
+              {readiness.description}
+            </Text>
             <Button
               title={readiness.actionLabel}
               onPress={() => {
@@ -2151,7 +2201,9 @@ export function PacienteDetailsScreen({
             />
           </View>
 
-          <Text style={styles.flowTitle}>{t("patientDetails.clinicalFlowSteps")}</Text>
+          <Text style={styles.flowTitle}>
+            {t("patientDetails.clinicalFlowSteps")}
+          </Text>
           <View style={styles.flowProgressTrack}>
             <View
               style={[
@@ -2196,7 +2248,8 @@ export function PacienteDetailsScreen({
                   style={[
                     styles.flowChipText,
                     item.status === "DONE" && styles.flowChipTextDone,
-                    item.status === "IN_PROGRESS" && styles.flowChipTextInProgress,
+                    item.status === "IN_PROGRESS" &&
+                      styles.flowChipTextInProgress,
                     item.status === "BLOCKED" && styles.flowChipTextBlocked,
                   ]}
                 >
@@ -2219,13 +2272,21 @@ export function PacienteDetailsScreen({
             title="Anamnese"
             onPress={handleOpenAnamnese}
             fullWidth
-            icon={<Ionicons name="clipboard-outline" size={20} color={COLORS.white} />}
+            icon={
+              <Ionicons
+                name="clipboard-outline"
+                size={20}
+                color={COLORS.white}
+              />
+            }
           />
           <Button
             title={t("nav.physicalExam")}
             onPress={handleOpenExameFisico}
             fullWidth
-            icon={<Ionicons name="fitness-outline" size={20} color={COLORS.white} />}
+            icon={
+              <Ionicons name="fitness-outline" size={20} color={COLORS.white} />
+            }
             style={{ marginTop: SPACING.sm }}
           />
           <Button
@@ -2245,14 +2306,26 @@ export function PacienteDetailsScreen({
             title={t("nav.report")}
             onPress={handleOpenLaudo}
             fullWidth
-            icon={<Ionicons name="document-text-outline" size={20} color={COLORS.white} />}
+            icon={
+              <Ionicons
+                name="document-text-outline"
+                size={20}
+                color={COLORS.white}
+              />
+            }
             style={{ marginTop: SPACING.sm }}
           />
           <Button
             title={t("nav.plan")}
             onPress={handleOpenPlano}
             fullWidth
-            icon={<Ionicons name="document-outline" size={20} color={COLORS.white} />}
+            icon={
+              <Ionicons
+                name="document-outline"
+                size={20}
+                color={COLORS.white}
+              />
+            }
             style={{ marginTop: SPACING.sm }}
           />
           <Button
@@ -2264,7 +2337,13 @@ export function PacienteDetailsScreen({
               })
             }
             fullWidth
-            icon={<Ionicons name="checkmark-done-outline" size={20} color={COLORS.white} />}
+            icon={
+              <Ionicons
+                name="checkmark-done-outline"
+                size={20}
+                color={COLORS.white}
+              />
+            }
             style={{ marginTop: SPACING.sm }}
           />
           <Button
@@ -2273,7 +2352,13 @@ export function PacienteDetailsScreen({
               navigation.navigate("PacienteAdesao", { pacienteId: paciente.id })
             }
             fullWidth
-            icon={<Ionicons name="analytics-outline" size={20} color={COLORS.white} />}
+            icon={
+              <Ionicons
+                name="analytics-outline"
+                size={20}
+                color={COLORS.white}
+              />
+            }
             style={{ marginTop: SPACING.sm }}
           />
         </View>
@@ -2453,7 +2538,8 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONTS.sizes.sm,
     fontWeight: "600",
-  },  startHereCard: {
+  },
+  startHereCard: {
     backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.base,
@@ -2651,28 +2737,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginBottom: SPACING.md,
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray100,
-  },
-  infoIcon: {
-    marginRight: SPACING.md,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  infoValue: {
-    fontSize: FONTS.sizes.base,
-    color: COLORS.textPrimary,
-    marginTop: 2,
-  },
   examesHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2835,86 +2899,3 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -570,8 +570,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     isValidated && !!validatedSnapshot && validatedSnapshot !== getSnapshot();
   const isValidatedWithoutPendingChanges =
     isValidated && !hasCriticalChangesAfterValidation;
+  const hasConfirmedRequiredAiReview =
+    !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
   const validationChecklistChecked =
-    professionalValidationConfirmed || isValidatedWithoutPendingChanges;
+    isValidatedWithoutPendingChanges ||
+    (professionalValidationConfirmed && hasConfirmedRequiredAiReview);
   const canToggleValidationChecklist = !isValidatedWithoutPendingChanges;
   const hasReviewedLaudo =
     isValidated ||
@@ -1080,16 +1083,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       });
       return;
     }
-    if (!professionalValidationConfirmed) {
+    if (!validationChecklistChecked) {
       showToast({
         message: t("clinical.messages.validationChecklistRequired"),
-        type: "info",
-      });
-      return;
-    }
-    if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
-      showToast({
-        message: t("clinical.validation.aiSuggestionConfirmationRequired"),
         type: "info",
       });
       return;
@@ -1155,7 +1151,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     await performValidate();
   };
 
-  const handleConfirmAiSuggestion = () => {
+  const confirmAiSuggestionReview = () => {
     setAiSuggestionConfirmed(true);
     setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
     logClinicalAiSuggestion({
@@ -1166,10 +1162,21 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       evidenceFields: ["diagnosticoFuncional", "condutas", "planoTratamentoIA"],
       patientId: pacienteId,
     }).catch(() => undefined);
-    showToast({
-      type: "success",
-      message: t("clinical.status.professionalConfirmed"),
-    });
+  };
+
+  const handleToggleProfessionalValidationChecklist = () => {
+    if (!canToggleValidationChecklist) return;
+    const nextChecked = !validationChecklistChecked;
+    setProfessionalValidationConfirmed(nextChecked);
+    if (nextChecked) {
+      if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
+        confirmAiSuggestionReview();
+      }
+      return;
+    }
+    if (AI_REVIEW_REQUIRED && aiSuggestionMeta) {
+      setAiSuggestionConfirmed(false);
+    }
   };
 
   const applyTemplate = (templateKey: TemplateKey) => {
@@ -2105,27 +2112,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               </Text>
             </View>
           ) : null}
-          {errors.aiSuggestionConfirmation ? (
-            <Text style={styles.aiConfirmError}>
-              {errors.aiSuggestionConfirmation}
-            </Text>
-          ) : null}
-          {AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed ? (
-            <Button
-              title={t("clinical.actions.confirmAiSuggestion")}
-              onPress={handleConfirmAiSuggestion}
-              variant="outline"
-              fullWidth
-              disabled={loading}
-              icon={
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={18}
-                  color={COLORS.primary}
-                />
-              }
-            />
-          ) : null}
           <View style={styles.professionalValidationChecklist}>
             <Text style={styles.professionalValidationChecklistTitle}>
               {t("clinical.messages.professionalValidationChecklistTitle")}
@@ -2134,10 +2120,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               style={styles.professionalValidationChecklistRow}
               activeOpacity={0.85}
               disabled={!canToggleValidationChecklist}
-              onPress={() => {
-                if (!canToggleValidationChecklist) return;
-                setProfessionalValidationConfirmed((current) => !current);
-              }}
+              onPress={handleToggleProfessionalValidationChecklist}
             >
               <Ionicons
                 name={

@@ -5,6 +5,8 @@
 type TranslationMap = Record<string, string>;
 
 export const ptPatientForm: TranslationMap = {
+  "patientForm.patientDataTitle": "Dados do paciente",
+  "patientForm.editData": "Editar dados",
   "patientForm.personalData": "Dados Pessoais",
   "patientForm.patientAccess": "Acesso do Paciente (App)",
   "patientForm.update": "Atualizar",
@@ -105,6 +107,8 @@ export const ptPatientForm: TranslationMap = {
 };
 
 export const enPatientForm: TranslationMap = {
+  "patientForm.patientDataTitle": "Patient data",
+  "patientForm.editData": "Edit data",
   "patientForm.personalData": "Personal Data",
   "patientForm.patientAccess": "Patient Access (App)",
   "patientForm.update": "Update",
@@ -205,6 +209,8 @@ export const enPatientForm: TranslationMap = {
 };
 
 export const esPatientForm: TranslationMap = {
+  "patientForm.patientDataTitle": "Datos del paciente",
+  "patientForm.editData": "Editar datos",
   "patientForm.personalData": "Datos Personales",
   "patientForm.patientAccess": "Acceso del Paciente (App)",
   "patientForm.update": "Actualizar",

@@ -71,7 +71,6 @@ export enum DorSubtipoClinico {
   NAO_MECANICA = "NAO_MECANICA",
 }
 
-
 export enum VariacaoStatus {
   PIOROU = "PIOROU",
   MANTEVE = "MANTEVE",
@@ -473,7 +472,16 @@ export type RootStackParamList = {
   Home: undefined;
   Settings: undefined;
   AdminHome: undefined;
-  AdminCrm: { initialTab?: "PROFISSIONAIS" | "PACIENTES" | "LEADS" | "TAREFAS" | "INTERACOES" } | undefined;
+  AdminCrm:
+    | {
+        initialTab?:
+          | "PROFISSIONAIS"
+          | "PACIENTES"
+          | "LEADS"
+          | "TAREFAS"
+          | "INTERACOES";
+      }
+    | undefined;
   AdminProfessionals: undefined;
   AdminPatients: undefined;
   PacienteHome: undefined;
@@ -488,13 +496,18 @@ export type RootStackParamList = {
         attentionSource?: "HOME_SUMMARY";
       }
     | undefined;
-  PacienteForm: { pacienteId?: string };
+  PacienteForm: { pacienteId?: string; mode?: "view" | "edit" };
   PacienteDetails: { pacienteId: string };
   PacienteAdesao: { pacienteId: string };
   AtividadeForm: { pacienteId: string; pacienteNome?: string };
 
   // Anamnese
-  AnamneseForm: { pacienteId: string; anamneseId?: string; selfMode?: boolean; pacienteNome?: string };
+  AnamneseForm: {
+    pacienteId: string;
+    anamneseId?: string;
+    selfMode?: boolean;
+    pacienteNome?: string;
+  };
   AnamneseList: { pacienteId: string };
 
   // Evolução
@@ -504,8 +517,3 @@ export type RootStackParamList = {
   ExameFisicoForm: { pacienteId: string };
   PlanoForm: { pacienteId: string };
 };
-
-
-
-
-

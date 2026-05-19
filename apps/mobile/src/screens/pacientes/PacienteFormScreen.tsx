@@ -45,11 +45,13 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type PacienteFormMode = "view" | "edit";
 type PacienteFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteForm">;
   route: {
     params?: {
       pacienteId?: string;
+      mode?: PacienteFormMode;
     };
   };
 };
@@ -95,6 +97,26 @@ function FormSection({ title, children }: FormSectionProps) {
   );
 }
 
+interface ReadOnlyDataRowProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+}
+
+function ReadOnlyDataRow({ icon, label, value }: ReadOnlyDataRowProps) {
+  return (
+    <View style={styles.readOnlyRow}>
+      <View style={styles.readOnlyIconBox}>
+        <Ionicons name={icon} size={18} color={COLORS.primary} />
+      </View>
+      <View style={styles.readOnlyTextWrap}>
+        <Text style={styles.readOnlyLabel}>{label}</Text>
+        <Text style={styles.readOnlyValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 export function PacienteFormScreen({
   navigation,
   route,
@@ -104,6 +126,12 @@ export function PacienteFormScreen({
   const isSelfEditMode = usuario?.role === UserRole.PACIENTE;
   const isEditing = isSelfEditMode ? true : !!route.params?.pacienteId;
   const routePacienteId = route.params?.pacienteId?.trim() || "";
+  const [screenMode, setScreenMode] = useState<PacienteFormMode>(
+    route.params?.pacienteId && route.params?.mode === "view" ? "view" : "edit",
+  );
+  const [shouldReturnToViewAfterSave, setShouldReturnToViewAfterSave] =
+    useState(!!route.params?.pacienteId && route.params?.mode === "view");
+  const isViewMode = isEditing && !isSelfEditMode && screenMode === "view";
   const { getPacienteById, createPaciente, updatePaciente, deletePaciente } =
     usePacienteStore();
   const { showToast } = useToast();
@@ -145,6 +173,22 @@ export function PacienteFormScreen({
 
   // Erros
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (isSelfEditMode || !isEditing) {
+      setScreenMode("edit");
+      setShouldReturnToViewAfterSave(false);
+      return;
+    }
+
+    if (route.params?.mode === "view") {
+      setScreenMode("view");
+      setShouldReturnToViewAfterSave(true);
+      return;
+    }
+
+    setScreenMode("edit");
+  }, [isEditing, isSelfEditMode, route.params?.mode, route.params?.pacienteId]);
 
   const isUuid = (value: string | null | undefined) =>
     !!value && UUID_REGEX.test(value.trim());
@@ -306,7 +350,8 @@ export function PacienteFormScreen({
       const loadMyProfile = async () => {
         try {
           setLoading(true);
-          const response = await api.get<PacienteProfileResponse>("/pacientes/me");
+          const response =
+            await api.get<PacienteProfileResponse>("/pacientes/me");
           const paciente = response.data?.paciente;
           if (!paciente) {
             setNomeCompleto(usuario?.nome || "");
@@ -326,7 +371,8 @@ export function PacienteFormScreen({
           setPacienteUsuarioId(paciente.pacienteUsuarioId || null);
           setAnamneseLiberadaPaciente(!!paciente.anamneseLiberadaPaciente);
           setCadastroOrigem(
-            paciente.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+            paciente.cadastroOrigem ||
+              PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
           );
           setCep(formatCEP(paciente.endereco?.cep || ""));
           setRua(paciente.endereco?.rua || "");
@@ -457,7 +503,10 @@ export function PacienteFormScreen({
         try {
           await compartilharConviteSistema(link);
         } catch {
-          showToast({ message: t("patientForm.inviteShareError"), type: "error" });
+          showToast({
+            message: t("patientForm.inviteShareError"),
+            type: "error",
+          });
         }
       }
     };
@@ -508,7 +557,9 @@ export function PacienteFormScreen({
               text: "Compartilhar",
               onPress: () => {
                 void (async () => {
-                  await executarComFallback(() => compartilharConviteSistema(link));
+                  await executarComFallback(() =>
+                    compartilharConviteSistema(link),
+                  );
                   done();
                 })();
               },
@@ -557,7 +608,9 @@ export function PacienteFormScreen({
     cadastroOrigem,
   });
 
-  const mapPayloadToApi = (payload: ReturnType<typeof buildPacientePayloadFromForm>) => ({
+  const mapPayloadToApi = (
+    payload: ReturnType<typeof buildPacientePayloadFromForm>,
+  ) => ({
     nomeCompleto: payload.nomeCompleto,
     cpf: payload.cpf,
     dataNascimento: payload.dataNascimento,
@@ -575,7 +628,8 @@ export function PacienteFormScreen({
     contatoEmail: payload.contato.email || undefined,
     pacienteUsuarioId: payload.pacienteUsuarioId || undefined,
     anamneseLiberadaPaciente: payload.anamneseLiberadaPaciente ?? false,
-    cadastroOrigem: payload.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+    cadastroOrigem:
+      payload.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
   });
 
   const handleSave = async () => {
@@ -625,6 +679,14 @@ export function PacienteFormScreen({
             isEditing: true,
             pacienteId: pacienteAtualizado?.id || routePacienteId,
           }).catch(() => undefined);
+          if (shouldReturnToViewAfterSave) {
+            setScreenMode("view");
+            navigation.setParams({
+              pacienteId: pacienteAtualizado?.id || routePacienteId,
+              mode: "view",
+            });
+            return;
+          }
           navigation.goBack();
           return;
         }
@@ -712,7 +774,8 @@ export function PacienteFormScreen({
                     const { message } = parseApiError(error);
                     showToast({
                       message:
-                        "Paciente cadastrado com sucesso, mas o convite não foi enviado. " + message,
+                        "Paciente cadastrado com sucesso, mas o convite não foi enviado. " +
+                        message,
                       type: "error",
                     });
                   } finally {
@@ -736,7 +799,8 @@ export function PacienteFormScreen({
                     const { message } = parseApiError(error);
                     showToast({
                       message:
-                        "Paciente cadastrado com sucesso, mas o convite não foi enviado. " + message,
+                        "Paciente cadastrado com sucesso, mas o convite não foi enviado. " +
+                        message,
                       type: "error",
                     });
                   } finally {
@@ -747,6 +811,15 @@ export function PacienteFormScreen({
             },
           ],
         );
+        return;
+      }
+
+      if (isEditing && shouldReturnToViewAfterSave) {
+        setScreenMode("view");
+        navigation.setParams({
+          pacienteId: pacientePersistido?.id || routePacienteId,
+          mode: "view",
+        });
         return;
       }
 
@@ -770,7 +843,11 @@ export function PacienteFormScreen({
   const handleDelete = () => {
     if (!isEditing) return;
 
-    const pacienteIdToDelete = (currentPacienteId || routePacienteId || "").trim();
+    const pacienteIdToDelete = (
+      currentPacienteId ||
+      routePacienteId ||
+      ""
+    ).trim();
     if (!isUuid(pacienteIdToDelete)) {
       showToast({
         message: t("patientForm.deleteError"),
@@ -848,8 +925,13 @@ export function PacienteFormScreen({
     };
 
     if (Platform.OS === "web") {
-      const confirmMessage = t("patientForm.confirmDeleteMessage", { name: nomePaciente });
-      if (typeof globalThis.confirm === "function" && !globalThis.confirm(confirmMessage)) {
+      const confirmMessage = t("patientForm.confirmDeleteMessage", {
+        name: nomePaciente,
+      });
+      if (
+        typeof globalThis.confirm === "function" &&
+        !globalThis.confirm(confirmMessage)
+      ) {
         return;
       }
       void executeDelete();
@@ -871,6 +953,197 @@ export function PacienteFormScreen({
       ],
     );
   };
+
+  const getSexoLabel = (value: Sexo | null) => {
+    if (value === Sexo.MASCULINO) return t("patientForm.sexMale");
+    if (value === Sexo.FEMININO) return t("patientForm.sexFemale");
+    if (value === Sexo.OUTRO) return t("patientForm.sexOther");
+    return "";
+  };
+
+  const getEstadoCivilLabel = (value: EstadoCivil | null) => {
+    if (value === EstadoCivil.SOLTEIRO) return t("patientForm.maritalSingle");
+    if (value === EstadoCivil.CASADO) return t("patientForm.maritalMarried");
+    if (value === EstadoCivil.DIVORCIADO) {
+      return t("patientForm.maritalDivorced");
+    }
+    if (value === EstadoCivil.VIUVO) return t("patientForm.maritalWidowed");
+    if (value === EstadoCivil.UNIAO_ESTAVEL) {
+      return t("patientForm.maritalStableUnion");
+    }
+    return "";
+  };
+
+  const removeRequiredMarker = (label: string) => label.replace(/\s*\*$/, "");
+
+  const displayValue = (value?: string | null) => {
+    const normalized = (value || "").trim();
+    return normalized || t("patientDetails.notInformed");
+  };
+
+  const handleEnterEditMode = () => {
+    setScreenMode("edit");
+    setShouldReturnToViewAfterSave(true);
+    navigation.setParams({
+      pacienteId: currentPacienteId || routePacienteId,
+      mode: "edit",
+    });
+  };
+
+  const handleCancel = () => {
+    if (shouldReturnToViewAfterSave && isEditing && !isSelfEditMode) {
+      setScreenMode("view");
+      navigation.setParams({
+        pacienteId: currentPacienteId || routePacienteId,
+        mode: "view",
+      });
+      return;
+    }
+    navigation.goBack();
+  };
+
+  if (isViewMode) {
+    const addressLine = displayValue(
+      [
+        rua.trim(),
+        numero.trim() ? `${t("patientForm.numberLabel")} ${numero.trim()}` : "",
+        complemento.trim(),
+      ]
+        .filter(Boolean)
+        .join(", "),
+    );
+    const cityLine = displayValue(
+      [cidade.trim(), uf.trim()].filter(Boolean).join(" - "),
+    );
+
+    return (
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.viewHeader}>
+            <View style={styles.viewHeaderIcon}>
+              <Ionicons
+                name="id-card-outline"
+                size={24}
+                color={COLORS.primary}
+              />
+            </View>
+            <View style={styles.viewHeaderText}>
+              <Text style={styles.viewHeaderTitle}>
+                {t("patientForm.patientDataTitle")}
+              </Text>
+              <Text style={styles.viewHeaderSubtitle}>
+                {displayValue(nomeCompleto)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.viewEditButton}
+              onPress={handleEnterEditMode}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="create-outline"
+                size={16}
+                color={COLORS.primary}
+              />
+              <Text style={styles.viewEditButtonText}>
+                {t("patientForm.editData")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <FormSection title={t("patientForm.personalData")}>
+            <ReadOnlyDataRow
+              icon="person-outline"
+              label={removeRequiredMarker(t("patientForm.fullNameLabel"))}
+              value={displayValue(nomeCompleto)}
+            />
+            <ReadOnlyDataRow
+              icon="card-outline"
+              label={removeRequiredMarker(t("patientForm.cpfLabel"))}
+              value={displayValue(cpf)}
+            />
+            <ReadOnlyDataRow
+              icon="calendar-outline"
+              label={removeRequiredMarker(t("patientForm.birthLabel"))}
+              value={displayValue(dataNascimento)}
+            />
+            <ReadOnlyDataRow
+              icon="person-circle-outline"
+              label={removeRequiredMarker(t("patientForm.sexLabel"))}
+              value={displayValue(getSexoLabel(sexo))}
+            />
+            <ReadOnlyDataRow
+              icon="people-outline"
+              label={t("patientForm.maritalStatusLabel")}
+              value={displayValue(getEstadoCivilLabel(estadoCivil))}
+            />
+            <ReadOnlyDataRow
+              icon="briefcase-outline"
+              label={t("patientForm.professionLabel")}
+              value={displayValue(profissao)}
+            />
+          </FormSection>
+
+          <FormSection title={t("patientDetails.contact")}>
+            <ReadOnlyDataRow
+              icon="logo-whatsapp"
+              label={removeRequiredMarker(t("patientForm.whatsappLabel"))}
+              value={displayValue(whatsapp)}
+            />
+            <ReadOnlyDataRow
+              icon="mail-outline"
+              label={t("patientForm.emailLabel")}
+              value={displayValue(email)}
+            />
+          </FormSection>
+
+          <FormSection title={t("patientDetails.address")}>
+            <ReadOnlyDataRow
+              icon="map-outline"
+              label={t("patientDetails.addressLabel")}
+              value={addressLine}
+            />
+            <ReadOnlyDataRow
+              icon="business-outline"
+              label={t("patientDetails.neighborhood")}
+              value={displayValue(bairro)}
+            />
+            <ReadOnlyDataRow
+              icon="location-outline"
+              label={t("patientDetails.city")}
+              value={cityLine}
+            />
+            <ReadOnlyDataRow
+              icon="navigate-outline"
+              label={t("patientForm.cepLabel")}
+              value={displayValue(cep)}
+            />
+          </FormSection>
+
+          <View style={styles.viewActions}>
+            <Button
+              title={t("common.back")}
+              onPress={() => navigation.goBack()}
+              variant="outline"
+              style={styles.cancelButton}
+            />
+            <Button
+              title={t("patientForm.editData")}
+              onPress={handleEnterEditMode}
+              style={styles.saveButton}
+              icon={
+                <Ionicons
+                  name="create-outline"
+                  size={18}
+                  color={COLORS.white}
+                />
+              }
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -953,7 +1226,9 @@ export function PacienteFormScreen({
               </View>
 
               <Text style={styles.label}>{t("patientForm.sexLabel")}</Text>
-              {errors.sexo && <Text style={styles.errorText}>{errors.sexo}</Text>}
+              {errors.sexo && (
+                <Text style={styles.errorText}>{errors.sexo}</Text>
+              )}
               <View style={styles.optionsRow}>
                 <SelectOption
                   label="Masculino"
@@ -972,7 +1247,9 @@ export function PacienteFormScreen({
                 />
               </View>
 
-              <Text style={styles.label}>{t("patientForm.maritalStatusLabel")}</Text>
+              <Text style={styles.label}>
+                {t("patientForm.maritalStatusLabel")}
+              </Text>
               <View style={styles.optionsRow}>
                 <SelectOption
                   label={t("patientForm.maritalSingle")}
@@ -1123,7 +1400,7 @@ export function PacienteFormScreen({
         <View style={styles.buttonsContainer}>
           <Button
             title={t("common.cancel")}
-            onPress={() => navigation.goBack()}
+            onPress={handleCancel}
             variant="outline"
             style={styles.cancelButton}
           />
@@ -1177,6 +1454,90 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
+  },
+  viewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.base,
+    marginBottom: SPACING.base,
+    ...SHADOWS.sm,
+  },
+  viewHeaderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.primary + "12",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  viewHeaderTitle: {
+    fontSize: FONTS.sizes.lg,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  viewHeaderSubtitle: {
+    marginTop: 2,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+  },
+  viewEditButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  viewEditButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  readOnlyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray100,
+  },
+  readOnlyIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary + "0F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  readOnlyTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  readOnlyLabel: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+  readOnlyValue: {
+    marginTop: 3,
+    fontSize: FONTS.sizes.base,
+    color: COLORS.textPrimary,
+    lineHeight: 22,
+  },
+  viewActions: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xl,
   },
   accessStep: {
     gap: SPACING.xs,
@@ -1386,27 +1747,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

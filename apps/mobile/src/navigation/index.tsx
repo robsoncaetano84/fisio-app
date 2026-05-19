@@ -171,7 +171,9 @@ const MainStack = ({ t }: { t: (key: string) => string }) => (
       component={PacienteFormScreen}
       options={({ route }) => ({
         title: route.params?.pacienteId
-          ? t("nav.editPatient")
+          ? route.params?.mode === "view"
+            ? t("patientForm.patientDataTitle")
+            : t("nav.editPatient")
           : t("nav.newPatient"),
       })}
     />
@@ -484,15 +486,3 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-

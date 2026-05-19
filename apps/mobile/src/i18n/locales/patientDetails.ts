@@ -9,6 +9,7 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.whatsapp": "WhatsApp",
   "patientDetails.call": "Ligar",
   "patientDetails.email": "E-mail",
+  "patientDetails.patientData": "Dados",
   "patientDetails.personalData": "Dados Pessoais",
   "patientDetails.cpf": "CPF",
   "patientDetails.profession": "Profissão",
@@ -115,31 +116,47 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.examUploadedSuccess": "Exame anexado com sucesso.",
   "patientDetails.examUploadInvalidFile": "Arquivo inválido para upload.",
   "patientDetails.examUploadError": "Não foi possível anexar o exame.",
-  "patientDetails.examsLoadError": "Não foi possível carregar os exames anexados.",
+  "patientDetails.examsLoadError":
+    "Não foi possível carregar os exames anexados.",
   "patientDetails.examOpenError": "Falha ao abrir o exame. Tente novamente.",
-  "patientDetails.examErrorNetwork": "Sem conexão estável. Verifique a internet e tente novamente.",
-  "patientDetails.examErrorSessionExpired": "Sessão expirada. Faça login novamente.",
+  "patientDetails.examErrorNetwork":
+    "Sem conexão estável. Verifique a internet e tente novamente.",
+  "patientDetails.examErrorSessionExpired":
+    "Sessão expirada. Faça login novamente.",
   "patientDetails.examErrorForbidden": "Sem permissão para acessar este exame.",
   "patientDetails.examErrorNotFound": "Exame não encontrado ou já removido.",
   "patientDetails.examErrorTooLarge": "Arquivo muito grande. O limite é 10 MB.",
-  "patientDetails.examErrorUnsupportedType": "Tipo de arquivo não suportado. Envie PDF ou imagem.",
-  "patientDetails.examErrorInvalidData": "Dados do exame inválidos. Revise o arquivo e tente novamente.",
-  "patientDetails.examErrorRateLimit": "Muitas tentativas. Aguarde alguns segundos para tentar novamente.",
-  "patientDetails.examErrorServer": "Serviço indisponível no momento. Tente novamente.",
+  "patientDetails.examErrorUnsupportedType":
+    "Tipo de arquivo não suportado. Envie PDF ou imagem.",
+  "patientDetails.examErrorInvalidData":
+    "Dados do exame inválidos. Revise o arquivo e tente novamente.",
+  "patientDetails.examErrorRateLimit":
+    "Muitas tentativas. Aguarde alguns segundos para tentar novamente.",
+  "patientDetails.examErrorServer":
+    "Serviço indisponível no momento. Tente novamente.",
   "patientDetails.examRemoveSuccess": "Exame removido.",
   "patientDetails.examRemoveError": "Não foi possível remover o exame.",
   "patientDetails.openExamDialogTitle": "Abrir exame",
   "patientDetails.releaseAnamnesis": "Liberar anamnese",
   "patientDetails.blockAnamnesis": "Bloquear anamnese",
-  "patientDetails.anamnesisPermissionEnabled": "Preenchimento da anamnese liberado para o paciente.",
-  "patientDetails.anamnesisPermissionDisabled": "Preenchimento da anamnese ainda não liberado para o paciente.",
-  "patientDetails.anamnesisPermissionUpdateError": "Não foi possível atualizar a permissão da anamnese.",
-  "patientDetails.ananesisPermissionEnabled": "Preenchimento da anamnese liberado para o paciente.",
-  "patientDetails.ananesisPermissionDisabled": "Preenchimento da anamnese ainda não liberado para o paciente.",
-  "patientDetails.ananesisPermissionUpdateError": "Não foi possível atualizar a permissão da anamnese.",
-  "patientDetails.ananmesisPermissionEnabled": "Preenchimento da anamnese liberado para o paciente.",
-  "patientDetails.ananmesisPermissionDisabled": "Preenchimento da anamnese ainda não liberado para o paciente.",
-  "patientDetails.ananmesisPermissionUpdateError": "Não foi possível atualizar a permissão da anamnese.",
+  "patientDetails.anamnesisPermissionEnabled":
+    "Preenchimento da anamnese liberado para o paciente.",
+  "patientDetails.anamnesisPermissionDisabled":
+    "Preenchimento da anamnese ainda não liberado para o paciente.",
+  "patientDetails.anamnesisPermissionUpdateError":
+    "Não foi possível atualizar a permissão da anamnese.",
+  "patientDetails.ananesisPermissionEnabled":
+    "Preenchimento da anamnese liberado para o paciente.",
+  "patientDetails.ananesisPermissionDisabled":
+    "Preenchimento da anamnese ainda não liberado para o paciente.",
+  "patientDetails.ananesisPermissionUpdateError":
+    "Não foi possível atualizar a permissão da anamnese.",
+  "patientDetails.ananmesisPermissionEnabled":
+    "Preenchimento da anamnese liberado para o paciente.",
+  "patientDetails.ananmesisPermissionDisabled":
+    "Preenchimento da anamnese ainda não liberado para o paciente.",
+  "patientDetails.ananmesisPermissionUpdateError":
+    "Não foi possível atualizar a permissão da anamnese.",
 };
 
 export const enPatientDetails: TranslationMap = {
@@ -147,6 +164,7 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.whatsapp": "WhatsApp",
   "patientDetails.call": "Call",
   "patientDetails.email": "Email",
+  "patientDetails.patientData": "Data",
   "patientDetails.personalData": "Personal Data",
   "patientDetails.cpf": "ID",
   "patientDetails.profession": "Profession",
@@ -182,8 +200,7 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.readinessPhysicalExamTitle": "Ready for physical exam",
   "patientDetails.readinessPhysicalExamDescription":
     "Anamnesis completed. Recommended next step: physical exam.",
-  "patientDetails.readinessPhysicalExamAction":
-    "Continue flow · Physical exam",
+  "patientDetails.readinessPhysicalExamAction": "Continue flow · Physical exam",
   "patientDetails.readinessEvolutionTitle": "Ready to record evolution",
   "patientDetails.readinessEvolutionDescription":
     "Physical exam completed. Recommended next step: evolution.",
@@ -255,29 +272,45 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.examUploadError": "Could not attach exam.",
   "patientDetails.examsLoadError": "Could not load attached exams.",
   "patientDetails.examOpenError": "Failed to open exam. Please try again.",
-  "patientDetails.examErrorNetwork": "No stable connection. Check your internet and try again.",
-  "patientDetails.examErrorSessionExpired": "Session expired. Please sign in again.",
-  "patientDetails.examErrorForbidden": "You do not have permission to access this exam.",
+  "patientDetails.examErrorNetwork":
+    "No stable connection. Check your internet and try again.",
+  "patientDetails.examErrorSessionExpired":
+    "Session expired. Please sign in again.",
+  "patientDetails.examErrorForbidden":
+    "You do not have permission to access this exam.",
   "patientDetails.examErrorNotFound": "Exam not found or already removed.",
   "patientDetails.examErrorTooLarge": "File too large. Maximum size is 10 MB.",
-  "patientDetails.examErrorUnsupportedType": "Unsupported file type. Upload a PDF or image.",
-  "patientDetails.examErrorInvalidData": "Invalid exam data. Review the file and try again.",
-  "patientDetails.examErrorRateLimit": "Too many attempts. Wait a few seconds and try again.",
-  "patientDetails.examErrorServer": "Service unavailable right now. Please try again.",
+  "patientDetails.examErrorUnsupportedType":
+    "Unsupported file type. Upload a PDF or image.",
+  "patientDetails.examErrorInvalidData":
+    "Invalid exam data. Review the file and try again.",
+  "patientDetails.examErrorRateLimit":
+    "Too many attempts. Wait a few seconds and try again.",
+  "patientDetails.examErrorServer":
+    "Service unavailable right now. Please try again.",
   "patientDetails.examRemoveSuccess": "Exam removed.",
   "patientDetails.examRemoveError": "Could not remove exam.",
   "patientDetails.openExamDialogTitle": "Open exam",
   "patientDetails.releaseAnamnesis": "Enable anamnesis",
   "patientDetails.blockAnamnesis": "Disable anamnesis",
-  "patientDetails.anamnesisPermissionEnabled": "Anamnesis form enabled for the patient.",
-  "patientDetails.anamnesisPermissionDisabled": "Anamnesis form not yet enabled for the patient.",
-  "patientDetails.anamnesisPermissionUpdateError": "Could not update anamnesis permission.",
-  "patientDetails.ananesisPermissionEnabled": "Anamnesis form enabled for the patient.",
-  "patientDetails.ananesisPermissionDisabled": "Anamnesis form not yet enabled for the patient.",
-  "patientDetails.ananesisPermissionUpdateError": "Could not update anamnesis permission.",
-  "patientDetails.ananmesisPermissionEnabled": "Anamnesis form enabled for the patient.",
-  "patientDetails.ananmesisPermissionDisabled": "Anamnesis form not yet enabled for the patient.",
-  "patientDetails.ananmesisPermissionUpdateError": "Could not update anamnesis permission.",
+  "patientDetails.anamnesisPermissionEnabled":
+    "Anamnesis form enabled for the patient.",
+  "patientDetails.anamnesisPermissionDisabled":
+    "Anamnesis form not yet enabled for the patient.",
+  "patientDetails.anamnesisPermissionUpdateError":
+    "Could not update anamnesis permission.",
+  "patientDetails.ananesisPermissionEnabled":
+    "Anamnesis form enabled for the patient.",
+  "patientDetails.ananesisPermissionDisabled":
+    "Anamnesis form not yet enabled for the patient.",
+  "patientDetails.ananesisPermissionUpdateError":
+    "Could not update anamnesis permission.",
+  "patientDetails.ananmesisPermissionEnabled":
+    "Anamnesis form enabled for the patient.",
+  "patientDetails.ananmesisPermissionDisabled":
+    "Anamnesis form not yet enabled for the patient.",
+  "patientDetails.ananmesisPermissionUpdateError":
+    "Could not update anamnesis permission.",
 };
 
 export const esPatientDetails: TranslationMap = {
@@ -285,6 +318,7 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.whatsapp": "WhatsApp",
   "patientDetails.call": "Llamar",
   "patientDetails.email": "Correo",
+  "patientDetails.patientData": "Datos",
   "patientDetails.personalData": "Datos Personales",
   "patientDetails.cpf": "CPF",
   "patientDetails.profession": "Profesión",
@@ -349,7 +383,8 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.openWhatsappError": "No se pudo abrir WhatsApp",
   "patientDetails.guardCreateLinkBeforeAnamnesis":
     "Crea el vínculo del paciente antes de completar la anamnesis.",
-  "patientDetails.guardCreateLinkFirst": "Crea primero el vínculo del paciente.",
+  "patientDetails.guardCreateLinkFirst":
+    "Crea primero el vínculo del paciente.",
   "patientDetails.guardAnamnesisBeforePhysicalExam":
     "Registra la anamnesis antes de abrir el examen físico.",
   "patientDetails.guardAnamnesisBeforeEvolution":
@@ -391,30 +426,48 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.examUploadedSuccess": "Examen adjuntado con éxito.",
   "patientDetails.examUploadInvalidFile": "Archivo inválido para subir.",
   "patientDetails.examUploadError": "No se pudo adjuntar el examen.",
-  "patientDetails.examsLoadError": "No se pudieron cargar los exámenes adjuntos.",
-  "patientDetails.examOpenError": "No se pudo abrir el examen. Inténtalo nuevamente.",
-  "patientDetails.examErrorNetwork": "Sin conexión estable. Verifica internet e inténtalo de nuevo.",
-  "patientDetails.examErrorSessionExpired": "Sesión expirada. Inicia sesión nuevamente.",
-  "patientDetails.examErrorForbidden": "Sin permiso para acceder a este examen.",
+  "patientDetails.examsLoadError":
+    "No se pudieron cargar los exámenes adjuntos.",
+  "patientDetails.examOpenError":
+    "No se pudo abrir el examen. Inténtalo nuevamente.",
+  "patientDetails.examErrorNetwork":
+    "Sin conexión estable. Verifica internet e inténtalo de nuevo.",
+  "patientDetails.examErrorSessionExpired":
+    "Sesión expirada. Inicia sesión nuevamente.",
+  "patientDetails.examErrorForbidden":
+    "Sin permiso para acceder a este examen.",
   "patientDetails.examErrorNotFound": "Examen no encontrado o ya eliminado.",
-  "patientDetails.examErrorTooLarge": "Archivo demasiado grande. El límite es 10 MB.",
-  "patientDetails.examErrorUnsupportedType": "Tipo de archivo no compatible. Envía PDF o imagen.",
-  "patientDetails.examErrorInvalidData": "Datos del examen inválidos. Revisa el archivo e inténtalo de nuevo.",
-  "patientDetails.examErrorRateLimit": "Demasiados intentos. Espera unos segundos e inténtalo de nuevo.",
-  "patientDetails.examErrorServer": "Servicio no disponible en este momento. Inténtalo de nuevo.",
+  "patientDetails.examErrorTooLarge":
+    "Archivo demasiado grande. El límite es 10 MB.",
+  "patientDetails.examErrorUnsupportedType":
+    "Tipo de archivo no compatible. Envía PDF o imagen.",
+  "patientDetails.examErrorInvalidData":
+    "Datos del examen inválidos. Revisa el archivo e inténtalo de nuevo.",
+  "patientDetails.examErrorRateLimit":
+    "Demasiados intentos. Espera unos segundos e inténtalo de nuevo.",
+  "patientDetails.examErrorServer":
+    "Servicio no disponible en este momento. Inténtalo de nuevo.",
   "patientDetails.examRemoveSuccess": "Examen eliminado.",
   "patientDetails.examRemoveError": "No se pudo eliminar el examen.",
   "patientDetails.openExamDialogTitle": "Abrir examen",
   "patientDetails.releaseAnamnesis": "Habilitar anamnesis",
   "patientDetails.blockAnamnesis": "Bloquear anamnesis",
-  "patientDetails.anamnesisPermissionEnabled": "Anamnesis habilitada para el paciente.",
-  "patientDetails.anamnesisPermissionDisabled": "Anamnesis aún no habilitada para el paciente.",
-  "patientDetails.anamnesisPermissionUpdateError": "No se pudo actualizar el permiso de anamnesis.",
-  "patientDetails.ananesisPermissionEnabled": "Anamnesis habilitada para el paciente.",
-  "patientDetails.ananesisPermissionDisabled": "Anamnesis aún no habilitada para el paciente.",
-  "patientDetails.ananesisPermissionUpdateError": "No se pudo actualizar el permiso de anamnesis.",
-  "patientDetails.ananmesisPermissionEnabled": "Anamnesis habilitada para el paciente.",
-  "patientDetails.ananmesisPermissionDisabled": "Anamnesis aún no habilitada para el paciente.",
-  "patientDetails.ananmesisPermissionUpdateError": "No se pudo actualizar el permiso de anamnesis.",
+  "patientDetails.anamnesisPermissionEnabled":
+    "Anamnesis habilitada para el paciente.",
+  "patientDetails.anamnesisPermissionDisabled":
+    "Anamnesis aún no habilitada para el paciente.",
+  "patientDetails.anamnesisPermissionUpdateError":
+    "No se pudo actualizar el permiso de anamnesis.",
+  "patientDetails.ananesisPermissionEnabled":
+    "Anamnesis habilitada para el paciente.",
+  "patientDetails.ananesisPermissionDisabled":
+    "Anamnesis aún no habilitada para el paciente.",
+  "patientDetails.ananesisPermissionUpdateError":
+    "No se pudo actualizar el permiso de anamnesis.",
+  "patientDetails.ananmesisPermissionEnabled":
+    "Anamnesis habilitada para el paciente.",
+  "patientDetails.ananmesisPermissionDisabled":
+    "Anamnesis aún no habilitada para el paciente.",
+  "patientDetails.ananmesisPermissionUpdateError":
+    "No se pudo actualizar el permiso de anamnesis.",
 };
-
