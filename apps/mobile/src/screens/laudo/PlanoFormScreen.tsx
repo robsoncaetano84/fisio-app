@@ -12,7 +12,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -723,17 +722,6 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
                     ? t("clinical.status.professionalConfirmed")
                     : t("clinical.status.aiSuggested")}
                 </Text>
-                {AI_REVIEW_REQUIRED && !aiSuggestionConfirmed ? (
-                  <TouchableOpacity
-                    style={styles.aiConfirmButton}
-                    onPress={handleConfirmAiSuggestion}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.aiConfirmButtonText}>
-                      {t("clinical.actions.confirmAiSuggestion")}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
               </View>
               <View style={styles.aiMetaRow}>
                 <Text style={styles.aiMetaChip}>
@@ -769,11 +757,6 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
                 ) : null}
               </View>
             </View>
-          ) : null}
-          {errors.aiSuggestionConfirmation ? (
-            <Text style={styles.aiConfirmError}>
-              {errors.aiSuggestionConfirmation}
-            </Text>
           ) : null}
           {lastDraftSavedAt ? (
             <Text style={styles.draftInfo}>
@@ -902,6 +885,27 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       </ScrollView>
 
       <View style={styles.footer}>
+        {errors.aiSuggestionConfirmation ? (
+          <Text style={styles.aiConfirmError}>
+            {errors.aiSuggestionConfirmation}
+          </Text>
+        ) : null}
+        {AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed ? (
+          <Button
+            title={t("clinical.actions.confirmAiSuggestion")}
+            onPress={handleConfirmAiSuggestion}
+            variant="outline"
+            fullWidth
+            disabled={isBusy}
+            icon={
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={18}
+                color={COLORS.primary}
+              />
+            }
+          />
+        ) : null}
         <Button
           title={t("clinical.actions.savePlan")}
           onPress={handleSave}
@@ -969,22 +973,8 @@ const styles = StyleSheet.create({
   aiSuggestionStatusRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: SPACING.sm,
     marginBottom: SPACING.xs,
-  },
-  aiConfirmButton: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    backgroundColor: COLORS.white,
-  },
-  aiConfirmButtonText: {
-    color: COLORS.primary,
-    fontSize: FONTS.sizes.xs,
-    fontWeight: "700",
   },
   aiConfirmError: {
     color: COLORS.error,

@@ -568,6 +568,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     !!laudoId && !!lastSavedSnapshot && getSnapshot() !== lastSavedSnapshot;
   const hasCriticalChangesAfterValidation =
     isValidated && !!validatedSnapshot && validatedSnapshot !== getSnapshot();
+  const isValidatedWithoutPendingChanges =
+    isValidated && !hasCriticalChangesAfterValidation;
+  const validationChecklistChecked =
+    professionalValidationConfirmed || isValidatedWithoutPendingChanges;
+  const canToggleValidationChecklist = !isValidatedWithoutPendingChanges;
   const hasReviewedLaudo =
     isValidated ||
     (initialSnapshot
@@ -677,6 +682,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       setObservacoes(laudo.observacoes || "");
       setCriteriosAlta(laudo.criteriosAlta || "");
       setLaudoStatus(laudo.status || LaudoStatus.RASCUNHO_IA);
+      setProfessionalValidationConfirmed(
+        laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL,
+      );
       setValidadoEm(laudo.validadoEm || "");
       const examesConsiderados = Number(laudo.examesConsiderados || 0);
       const examesComLeituraIa = Number(laudo.examesComLeituraIa || 0);
@@ -942,6 +950,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       const updated = await updateLaudo(laudoId, updatePayload);
       if (requiresRevalidation) {
         setLaudoStatus(LaudoStatus.RASCUNHO_IA);
+        setProfessionalValidationConfirmed(false);
         setValidadoEm("");
         setValidatedSnapshot(null);
         await AsyncStorage.removeItem(getValidatedSnapshotKey(laudoId));
@@ -971,6 +980,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     const created = await createLaudo(payload);
     setLaudoId(created.id);
     setLaudoStatus(created.status || LaudoStatus.RASCUNHO_IA);
+    setProfessionalValidationConfirmed(false);
     setValidadoEm(created.validadoEm || "");
     setLastSavedSnapshot(snapshot);
     return { id: created.id, snapshot };
@@ -1088,6 +1098,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     try {
       const validated = await validarLaudo(laudoId);
       setLaudoStatus(validated.status || LaudoStatus.VALIDADO_PROFISSIONAL);
+      setProfessionalValidationConfirmed(true);
       setValidadoEm(validated.validadoEm || "");
       const snapshot = getSnapshot();
       setValidatedSnapshot(snapshot);
@@ -1543,17 +1554,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                     ? t("clinical.status.professionalConfirmed")
                     : t("clinical.status.aiSuggested")}
                 </Text>
-                {AI_REVIEW_REQUIRED && !aiSuggestionConfirmed ? (
-                  <TouchableOpacity
-                    style={styles.aiConfirmButton}
-                    onPress={handleConfirmAiSuggestion}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.aiConfirmButtonText}>
-                      {t("clinical.actions.confirmAiSuggestion")}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
               </View>
               <View style={styles.aiMetaRow}>
                 <Text style={styles.aiMetaChip}>
@@ -1589,11 +1589,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 ) : null}
               </View>
             </View>
-          ) : null}
-          {errors.aiSuggestionConfirmation ? (
-            <Text style={styles.aiConfirmError}>
-              {errors.aiSuggestionConfirmation}
-            </Text>
           ) : null}
           <View style={styles.templateRow}>
             {(["GERAL", "LOMBAR", "CERVICAL", "JOELHO"] as TemplateKey[]).map(
@@ -2110,6 +2105,27 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               </Text>
             </View>
           ) : null}
+          {errors.aiSuggestionConfirmation ? (
+            <Text style={styles.aiConfirmError}>
+              {errors.aiSuggestionConfirmation}
+            </Text>
+          ) : null}
+          {AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed ? (
+            <Button
+              title={t("clinical.actions.confirmAiSuggestion")}
+              onPress={handleConfirmAiSuggestion}
+              variant="outline"
+              fullWidth
+              disabled={loading}
+              icon={
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={18}
+                  color={COLORS.primary}
+                />
+              }
+            />
+          ) : null}
           <View style={styles.professionalValidationChecklist}>
             <Text style={styles.professionalValidationChecklistTitle}>
               {t("clinical.messages.professionalValidationChecklistTitle")}
@@ -2117,19 +2133,21 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             <TouchableOpacity
               style={styles.professionalValidationChecklistRow}
               activeOpacity={0.85}
-              onPress={() =>
-                setProfessionalValidationConfirmed((current) => !current)
-              }
+              disabled={!canToggleValidationChecklist}
+              onPress={() => {
+                if (!canToggleValidationChecklist) return;
+                setProfessionalValidationConfirmed((current) => !current);
+              }}
             >
               <Ionicons
                 name={
-                  professionalValidationConfirmed
+                  validationChecklistChecked
                     ? "checkbox-outline"
                     : "square-outline"
                 }
                 size={20}
                 color={
-                  professionalValidationConfirmed
+                  validationChecklistChecked
                     ? COLORS.success
                     : COLORS.textSecondary
                 }
@@ -2422,19 +2440,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: SPACING.xs,
     gap: SPACING.sm,
-  },
-  aiConfirmButton: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    backgroundColor: COLORS.white,
-  },
-  aiConfirmButtonText: {
-    color: COLORS.primary,
-    fontSize: FONTS.sizes.xs,
-    fontWeight: "700",
   },
   aiConfirmError: {
     color: COLORS.error,
