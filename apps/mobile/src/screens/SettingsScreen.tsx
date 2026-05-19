@@ -135,6 +135,30 @@ export function SettingsScreen() {
     setConsentAiOptional(!!usuario?.consentAiOptional);
   }, [usuario, isEditingProfile]);
 
+  useEffect(() => {
+    if (
+      !isEditingProfile ||
+      !shouldShowCouncilRegionSelector ||
+      !form.conselhoUf
+    ) {
+      return;
+    }
+
+    const normalizedRegionOrUf = resolveCouncilRegionOrUf(
+      selectedCouncilForRegion,
+      form.conselhoUf,
+    );
+
+    if (normalizedRegionOrUf !== form.conselhoUf) {
+      setForm((prev) => ({ ...prev, conselhoUf: normalizedRegionOrUf }));
+    }
+  }, [
+    form.conselhoUf,
+    isEditingProfile,
+    selectedCouncilForRegion,
+    shouldShowCouncilRegionSelector,
+  ]);
+
   const roleLabel = useMemo(() => {
     switch (usuario?.role) {
       case UserRole.ADMIN:
@@ -307,13 +331,17 @@ export function SettingsScreen() {
       form.conselhoSigla === "OUTRO"
         ? form.outroConselho.trim().toUpperCase()
         : form.conselhoSigla;
+    const resolvedConselhoUf = resolveCouncilRegionOrUf(
+      resolvedConselhoSigla,
+      form.conselhoUf,
+    );
 
     const payload = {
       nome: form.nome.trim(),
       ...(isProfessional
         ? {
             conselhoSigla: resolvedConselhoSigla,
-            conselhoUf: form.conselhoUf.trim().toUpperCase(),
+            conselhoUf: resolvedConselhoUf,
             registroProf: form.registroProf.trim(),
             especialidade: form.especialidade.trim(),
           }
