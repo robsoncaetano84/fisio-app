@@ -1,4 +1,5 @@
 import { LaudoStatus } from './entities/laudo.entity';
+import { STRUCTURED_EXAME_PREFIX } from './laudo-exame-fisico-structured.util';
 import { LaudoPdfService } from './laudo-pdf.service';
 
 describe('LaudoPdfService', () => {
@@ -103,6 +104,54 @@ describe('LaudoPdfService', () => {
     );
 
     addCalloutSpy.mockRestore();
+  });
+
+  it('uses patient-friendly physical exam summary in patient reports', () => {
+    const structuredExam = `${STRUCTURED_EXAME_PREFIX}${JSON.stringify({
+      dorPrincipal: 'Mecanica',
+      avaliacaoRegioes: [
+        {
+          regiao: 'LOMBAR',
+          titulo: 'Coluna lombar',
+          adm: 'Nao informado',
+          testes: [
+            { nome: 'Lasegue (SLR)', resultado: 'NEGATIVO' },
+            {
+              nome: 'Slump test',
+              resultado: 'NAO_TESTADO',
+              selecionado: true,
+            },
+          ],
+        },
+      ],
+    })}`;
+    const addSectionsSpy = jest
+      .spyOn(service as any, 'addSections')
+      .mockImplementation(() => undefined);
+    const addObservationSpy = jest
+      .spyOn(service as any, 'addObservation')
+      .mockImplementation(() => undefined);
+
+    (service as any).addBody(
+      {},
+      { ...baseLaudo, exameFisico: structuredExam },
+      'laudo',
+      'patient',
+    );
+
+    const sections = addSectionsSpy.mock.calls[0][1];
+    const examSection = sections.find(
+      (section: { title: string }) =>
+        section.title === 'Achados do exame fisico',
+    );
+
+    expect(examSection.value).toContain('Coluna lombar');
+    expect(examSection.value).not.toContain('Selecionado');
+    expect(examSection.value).not.toContain('Nao informado');
+    expect(examSection.value).not.toContain('Avaliacao por regioes');
+
+    addSectionsSpy.mockRestore();
+    addObservationSpy.mockRestore();
   });
 
   it('does not append footer-only blank pages for long reports', async () => {

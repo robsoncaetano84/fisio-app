@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { Laudo, LaudoStatus } from './entities/laudo.entity';
-import { formatExameFisicoForDisplay } from './laudo-exame-fisico-structured.util';
+import {
+  formatExameFisicoForDisplay,
+  formatExameFisicoForPatientDisplay,
+} from './laudo-exame-fisico-structured.util';
 import { normalizeProfessionalCouncilFields } from '../usuarios/professional-council.util';
 
 type LaudoPdfTipo = 'laudo' | 'plano';
@@ -299,9 +302,14 @@ export class LaudoPdfService {
                   audience === 'patient'
                     ? 'Achados do exame fisico'
                     : 'Exame Fisico',
-                value: formatExameFisicoForDisplay(laudo.exameFisico),
+                value:
+                  audience === 'patient'
+                    ? formatExameFisicoForPatientDisplay(laudo.exameFisico)
+                    : formatExameFisicoForDisplay(laudo.exameFisico),
                 helper:
-                  'Dados observados pelo profissional durante a avaliacao.',
+                  audience === 'patient'
+                    ? 'Resumo dos achados em linguagem simples, sem substituir a conversa com o profissional.'
+                    : 'Dados observados pelo profissional durante a avaliacao.',
               },
             ]
           : []),

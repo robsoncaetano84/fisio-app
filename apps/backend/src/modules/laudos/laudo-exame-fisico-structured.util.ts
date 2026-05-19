@@ -15,6 +15,7 @@ type RegionalGroup = {
 };
 
 export type StructuredExameData = {
+  version?: number;
   dorPrincipal?: string;
   dorSubtipo?: string;
   observacao?: {
@@ -109,6 +110,151 @@ export type StructuredExameData = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function cleanText(value?: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (
+    typeof value !== 'string' &&
+    typeof value !== 'number' &&
+    typeof value !== 'boolean'
+  ) {
+    return '';
+  }
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeComparable(value?: unknown): string {
+  return cleanText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
+
+function isInformative(value?: unknown): boolean {
+  const normalized = normalizeComparable(value);
+  return (
+    normalized.length > 0 &&
+    ![
+      '-',
+      'NA',
+      'N/A',
+      'NAO INFORMADO',
+      'NAO_INFORMADO',
+      'NAO TESTADO',
+      'NAO_TESTADO',
+      'NAO SE APLICA',
+      'SEM TESTES MARCADOS',
+      'SELECIONADO',
+      'NULL',
+      'UNDEFINED',
+    ].includes(normalized)
+  );
+}
+
+function joinReadable(values: string[], maxItems = 4): string {
+  const unique = Array.from(
+    new Set(values.map(cleanText).filter(isInformative)),
+  );
+  if (unique.length <= maxItems) return unique.join(', ');
+  return `${unique.slice(0, maxItems).join(', ')} e mais ${
+    unique.length - maxItems
+  }`;
+}
+
+function selectedRegionalTests(
+  group: RegionalGroup,
+  result: 'POSITIVO' | 'NEGATIVO',
+): string[] {
+  return (Array.isArray(group.testes) ? group.testes : [])
+    .filter((test) => normalizeComparable(test?.resultado) === result)
+    .map((test) => cleanText(test?.nome || 'Teste clinico'))
+    .filter(isInformative);
+}
+
+function formatPatientRegionalGroup(group: RegionalGroup): string {
+  const title = cleanText(group.titulo || group.regiao || 'Regiao avaliada');
+  if (!isInformative(title)) return '';
+
+  const positives = selectedRegionalTests(group, 'POSITIVO');
+  const negatives = selectedRegionalTests(group, 'NEGATIVO');
+  const parts: string[] = [];
+  if (positives.length) {
+    parts.push(`sinais positivos em ${joinReadable(positives)}`);
+  }
+  if (negatives.length) {
+    parts.push(`testes sem resposta positiva em ${joinReadable(negatives)}`);
+  }
+  if (isInformative(group.adm)) {
+    parts.push(`mobilidade observada: ${cleanText(group.adm)}`);
+  }
+
+  if (!parts.length) return '';
+  return `${title}: ${parts.join('; ')}.`;
+}
+
+export function formatExameFisicoForPatientDisplay(
+  value?: string | null,
+): string {
+  const parsed = parseStructuredExame(value);
+  if (!parsed) {
+    return value?.trim()
+      ? 'O exame fisico foi registrado pelo profissional e considerado na interpretacao do caso.'
+      : 'Nao informado';
+  }
+
+  const lines: string[] = [];
+  const painClassification = [parsed.dorPrincipal, parsed.dorSubtipo]
+    .map(cleanText)
+    .filter(isInformative);
+  if (painClassification.length) {
+    lines.push(`Padrao principal avaliado: ${painClassification.join(' - ')}.`);
+  }
+
+  const painPattern = [parsed.padraoDor?.local, parsed.padraoDor?.irradiada]
+    .map(cleanText)
+    .filter(isInformative);
+  if (painPattern.length) {
+    lines.push(`Dor observada ou relatada: ${painPattern.join(' | ')}.`);
+  }
+
+  const movement = [
+    parsed.movimento?.ativo,
+    parsed.movimento?.passivo,
+    parsed.movimento?.resistido,
+    parsed.movimento?.reproduzDor,
+    parsed.movimento?.qualidadeMovimento,
+  ]
+    .map(cleanText)
+    .filter(isInformative);
+  if (movement.length) {
+    lines.push(`Movimento e funcao: ${movement.join(' | ')}.`);
+  }
+
+  const regionalSummaries = (parsed.avaliacaoRegioes || [])
+    .map(formatPatientRegionalGroup)
+    .filter(Boolean);
+  lines.push(...regionalSummaries.slice(0, 6));
+
+  if (isInformative(parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal)) {
+    lines.push(
+      `Conclusao funcional considerada: ${cleanText(
+        parsed.diagnosticoFuncionalIa?.disfuncaoPrincipal,
+      )}.`,
+    );
+  }
+
+  if (parsed.redFlags?.criticalTriggered) {
+    lines.push(
+      'Foram identificados sinais de alerta que exigem orientacao ou encaminhamento profissional.',
+    );
+  }
+
+  if (!lines.length) {
+    return 'O exame fisico foi registrado pelo profissional e considerado na interpretacao do caso.';
+  }
+
+  return lines.join('\n');
 }
 
 export function formatExameFisicoForDisplay(value?: string | null): string {

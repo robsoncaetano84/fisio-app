@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   formatExameFisicoForDisplay,
+  formatExameFisicoForPatientDisplay,
   LEGACY_STRUCTURED_EXAME_PREFIX,
   parseStructuredExame,
   STRUCTURED_EXAME_PREFIX,
@@ -141,6 +142,50 @@ describe('laudo exame fisico structured util', () => {
     expect(formatted).toContain('Raciocinio clinico');
     expect(formatted).toContain('Diagnostico funcional');
     expect(formatted).toContain('Conduta direcionada');
+  });
+
+  it('formats structured exam for patients without technical placeholders', () => {
+    const payload = buildPayload({
+      dorPrincipal: 'Mecanica',
+      padraoDor: {
+        local: 'Lombar baixa',
+        irradiada: 'Nao informado',
+      },
+      movimento: {
+        ativo: 'Flexao reproduz desconforto leve',
+        passivo: 'Nao informado',
+      },
+      avaliacaoRegioes: [
+        {
+          regiao: 'LOMBAR',
+          titulo: 'Coluna lombar',
+          adm: 'Nao informado',
+          testes: [
+            { nome: 'Lasegue (SLR)', resultado: 'NEGATIVO' },
+            {
+              nome: 'Slump test',
+              resultado: 'NAO_TESTADO',
+              selecionado: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    const formatted = formatExameFisicoForPatientDisplay(
+      `${prefix}${JSON.stringify(payload)}`,
+    );
+
+    expect(formatted).toContain('Padrao principal avaliado');
+    expect(formatted).toContain('Coluna lombar');
+    expect(formatted).toContain('Lasegue');
+    expect(formatted).not.toContain('Slump test');
+    expect(formatted).not.toContain('Selecionado');
+    expect(formatted).not.toContain('Nao informado');
+    expect(formatted).not.toContain('Sem testes marcados');
+    expect(formatted).not.toContain('Avaliacao por regioes');
+    expect(formatted).not.toContain('Raciocinio clinico');
+    expect(formatted).not.toContain('Conduta direcionada');
   });
 
   it('scenario A (joelho esportivo): accepts valid regional tests', () => {
