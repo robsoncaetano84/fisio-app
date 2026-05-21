@@ -23,6 +23,7 @@ interface BodyMapSideProps {
   view: BodyView;
   source: ImageSourcePropType;
   imageHalf: ImageHalf;
+  panelWidth?: number;
   points: BodyMapPointModel[];
   selectedKeys: Set<string>;
   disabled?: boolean;
@@ -39,6 +40,7 @@ interface BodyMapSideProps {
 export function BodyMapSide({
   source,
   imageHalf,
+  panelWidth,
   points,
   selectedKeys,
   disabled = false,
@@ -48,7 +50,17 @@ export function BodyMapSide({
   onMovePoint,
 }: BodyMapSideProps) {
   const [panelSize, setPanelSize] = useState({ width: 0, height: 0 });
+  const hasMeasuredPanelWidth =
+    typeof panelWidth === "number" &&
+    Number.isFinite(panelWidth) &&
+    panelWidth > 0;
   const pointSizeScale = compact && panelSize.width < 360 ? 0.9 : 1;
+  const explicitPanelSize = hasMeasuredPanelWidth
+    ? {
+        width: panelWidth,
+        height: panelWidth / BODY_MAP_PANEL_ASPECT_RATIO,
+      }
+    : null;
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -58,7 +70,12 @@ export function BodyMapSide({
   return (
     <View
       onLayout={handleLayout}
-      style={[styles.panel, compact && styles.panelCompact]}
+      style={[
+        styles.panel,
+        hasMeasuredPanelWidth ? styles.panelFixed : styles.panelFluid,
+        compact && styles.panelCompact,
+        explicitPanelSize,
+      ]}
       accessibilityRole="image"
       accessibilityLabel="Mapa corporal anatomico"
     >
@@ -90,7 +107,6 @@ export function BodyMapSide({
 const styles = StyleSheet.create({
   panel: {
     position: "relative",
-    flex: 1,
     aspectRatio: BODY_MAP_PANEL_ASPECT_RATIO,
     minWidth: 0,
     overflow: "hidden",
@@ -98,6 +114,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.gray200,
     borderRadius: BORDER_RADIUS.md,
+  },
+  panelFluid: {
+    flex: 1,
+  },
+  panelFixed: {
+    flexGrow: 0,
+    flexShrink: 0,
   },
   panelCompact: {
     width: "100%",

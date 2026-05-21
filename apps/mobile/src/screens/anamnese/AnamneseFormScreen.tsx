@@ -314,6 +314,25 @@ export function AnamneseFormScreen({
       }
     : getPacienteById(pacienteId);
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    if (isSelfMode) {
+      navigation.navigate("PacienteHome");
+      return;
+    }
+
+    if (paciente) {
+      navigation.navigate("PacienteDetails", { pacienteId });
+      return;
+    }
+
+    navigation.navigate("PacientesList");
+  };
+
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [currentAnamneseId, setCurrentAnamneseId] = useState<
@@ -2639,7 +2658,7 @@ export function AnamneseFormScreen({
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text>Paciente não encontrado</Text>
-          <Button title="Voltar" onPress={() => navigation.goBack()} />
+          <Button title="Voltar" onPress={handleBack} />
         </View>
       </SafeAreaView>
     );
@@ -2833,7 +2852,7 @@ export function AnamneseFormScreen({
         ) : isViewingRecordedAnamnese ? (
           <Button
             title="Voltar"
-            onPress={() => navigation.goBack()}
+            onPress={handleBack}
             variant="outline"
             style={styles.navButton}
           />

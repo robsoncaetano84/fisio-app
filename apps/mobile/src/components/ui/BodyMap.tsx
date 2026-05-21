@@ -14,6 +14,7 @@ import { AreaAfetada, Sexo } from "../../types";
 import {
   BodyMapPoint,
   BodyMapPointOverrides,
+  BODY_MAP_PANEL_ASPECT_RATIO,
   BodySex,
   SelectedBodyRegion,
   bodyMapPointKey,
@@ -248,6 +249,17 @@ export function BodyMap({
     useState<BodyMapPointOverrides>({});
   const [mapWidth, setMapWidth] = useState(0);
   const isCompactMap = mapWidth > 0 && mapWidth < 560;
+  const mapInnerWidth = Math.max(0, mapWidth - SPACING.xs * 2);
+  const sidePanelWidth =
+    mapInnerWidth > 0
+      ? isCompactMap
+        ? Math.min(mapInnerWidth, 360)
+        : Math.max(0, (mapInnerWidth - SPACING.xs) / 2)
+      : undefined;
+  const compactMapMinHeight =
+    isCompactMap && sidePanelWidth
+      ? sidePanelWidth / BODY_MAP_PANEL_ASPECT_RATIO
+      : undefined;
 
   const posteriorPoints = useMemo(
     () => getBodyMapPoints(resolvedSex, "posterior", runtimeOverrides),
@@ -397,7 +409,11 @@ export function BodyMap({
       </Text>
 
       <View
-        style={[styles.mapSurface, isCompactMap && styles.mapSurfaceCompact]}
+        style={[
+          styles.mapSurface,
+          isCompactMap && styles.mapSurfaceCompact,
+          compactMapMinHeight ? { minHeight: compactMapMinHeight * 2 } : null,
+        ]}
         onLayout={handleMapLayout}
       >
         <BodyMapSide
@@ -405,6 +421,7 @@ export function BodyMap({
           view="anterior"
           source={BODY_MAP_COMBINED_IMAGES[resolvedSex]}
           imageHalf="left"
+          panelWidth={sidePanelWidth}
           points={anteriorPoints}
           selectedKeys={selectedPointKeys}
           disabled={disabled}
@@ -418,6 +435,7 @@ export function BodyMap({
           view="posterior"
           source={BODY_MAP_COMBINED_IMAGES[resolvedSex]}
           imageHalf="right"
+          panelWidth={sidePanelWidth}
           points={posteriorPoints}
           selectedKeys={selectedPointKeys}
           disabled={disabled}
