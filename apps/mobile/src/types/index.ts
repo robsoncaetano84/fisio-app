@@ -272,12 +272,16 @@ export interface Evolucao {
 export interface Laudo {
   id: string;
   pacienteId: string;
-  diagnosticoFuncional: string;
+  motivoAvaliacao?: string;
+  historicoClinico?: string;
+  achadosClinicos?: string;
+  diagnosticoFuncional?: string;
   objetivosCurtoPrazo?: string;
   objetivosMedioPrazo?: string;
   frequenciaSemanal?: number;
   duracaoSemanas?: number;
-  condutas: string;
+  conclusao?: string;
+  condutas?: string;
   exameFisico?: string;
   planoTratamentoIA?: string;
   rascunhoProfissional?: string;

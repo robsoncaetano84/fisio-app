@@ -2,11 +2,15 @@
 import { Anamnese } from "../types";
 
 export type LaudoAiSuggestion = Partial<{
+  motivoAvaliacao: string;
+  historicoClinico: string;
+  achadosClinicos: string;
   diagnosticoFuncional: string;
   objetivosCurtoPrazo: string;
   objetivosMedioPrazo: string;
   frequenciaSemanal: number;
   duracaoSemanas: number;
+  conclusao: string;
   condutas: string;
   planoTratamentoIA: string;
   criteriosAlta: string;
@@ -54,12 +58,15 @@ export async function getLaudoAiSuggestion(
 }
 
 export function buildPhysicalExamTemplateFromAnamnese(anamnese?: Anamnese) {
-  const areas = anamnese?.areasAfetadas?.map((a) => a.regiao).filter(Boolean) || [];
+  const areas =
+    anamnese?.areasAfetadas?.map((a) => a.regiao).filter(Boolean) || [];
   const areaPrincipal = areas[0] || "Regiao principal nao definida";
   const areasTexto = areas.length ? areas.join(", ") : "Nao informado";
 
   const historiaDor = [
-    anamnese?.descricaoSintomas ? "Sintomas: " + anamnese.descricaoSintomas : "",
+    anamnese?.descricaoSintomas
+      ? "Sintomas: " + anamnese.descricaoSintomas
+      : "",
     anamnese?.tempoProblema ? "Tempo de queixa: " + anamnese.tempoProblema : "",
     "Inicio: " + mapInicioProblema(anamnese?.inicioProblema),
     anamnese?.fatorAlivio ? "Fator de alivio: " + anamnese.fatorAlivio : "",
@@ -111,7 +118,11 @@ export function buildPhysicalExamTemplateFromAnamnese(anamnese?: Anamnese) {
     "",
     "Testes Especiais",
     "Ortopedicos: Selecionar conforme hipotese funcional.",
-    "Neurologicos: Irradiacao " + irradiacao + "; local " + localIrradiacao + ".",
+    "Neurologicos: Irradiacao " +
+      irradiacao +
+      "; local " +
+      localIrradiacao +
+      ".",
     "Funcionais: Sentar-levantar, agachar, marcha e tarefa especifica.",
     "",
     "Equilibrio e Coordenacao",
@@ -126,7 +137,11 @@ export function buildPhysicalExamTemplateFromAnamnese(anamnese?: Anamnese) {
     "",
     "Diagnostico Funcional",
     "Cadeias musculares envolvidas: Suspeita inicial para " + areasTexto + ".",
-    "Disfuncoes: Tipo de dor " + tipoDor + "; intensidade atual " + intensidadeDor + ".",
+    "Disfuncoes: Tipo de dor " +
+      tipoDor +
+      "; intensidade atual " +
+      intensidadeDor +
+      ".",
     "",
     "Plano Terapeutico",
     "Objetivos: " + safeText(anamnese?.metaPrincipalPaciente),

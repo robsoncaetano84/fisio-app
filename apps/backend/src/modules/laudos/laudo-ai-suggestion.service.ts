@@ -182,11 +182,15 @@ export class LaudoAiSuggestionService {
       'Voce e um assistente clinico para fisioterapeutas. Gere um rascunho tecnico, objetivo, prudente e rastreavel. Nao invente dados ausentes. Todo plano deve estar ancorado em achados, limitacoes, metas e lacunas clinicas do caso.';
     const userPrompt = `
 Retorne SOMENTE JSON valido com as chaves:
+motivoAvaliacao (string),
+historicoClinico (string),
+achadosClinicos (string),
 diagnosticoFuncional (string),
 objetivosCurtoPrazo (string),
 objetivosMedioPrazo (string),
 frequenciaSemanal (number 1-7),
 duracaoSemanas (number 1-52),
+conclusao (string),
 condutas (string),
 planoTratamentoIA (string com plano por fases/semanas),
 criteriosAlta (string),
@@ -227,6 +231,10 @@ Regras de especificidade obrigatorias:
 - criteriosAlta deve ser objetivo e verificavel: dor esperada, funcao-alvo, tolerancia a carga/movimento e independencia no plano domiciliar, todos adaptados ao caso.
 - Nao use condutas soltas como "alongamento", "fortalecimento", "terapia manual", "cinesioterapia", "analgesia" ou "educacao em dor" sem especificar regiao, objetivo clinico, motivo e progressao.
 - Se faltar dado para ser especifico, declare a lacuna clinica explicitamente e diga qual avaliacao precisa ser feita.
+- motivoAvaliacao deve explicar por que o laudo esta sendo emitido, usando queixa, finalidade, encaminhamento ou contexto clinico quando existirem.
+- historicoClinico deve resumir inicio, tempo de evolucao, fatores de melhora/piora, tratamentos, exames e impacto na rotina, sem inventar dados ausentes.
+- achadosClinicos deve registrar o que foi observado na avaliacao clinica e exame fisico; se houver lacunas, indique que precisam ser avaliadas.
+- conclusao deve fechar tecnicamente o laudo, descrevendo condicao funcional/clinica observada e impacto no paciente, sem substituir decisao profissional.
 
 Regras para PDF e entendimento do paciente:
 - Escreva como um documento que o paciente conseguira entender, mantendo precisao clinica.
@@ -289,6 +297,18 @@ ${JSON.stringify(input, null, 2)}
           : undefined;
 
       return {
+        motivoAvaliacao: this.normalizeSuggestionText(
+          parsed.motivoAvaliacao,
+          2500,
+        ),
+        historicoClinico: this.normalizeSuggestionText(
+          parsed.historicoClinico,
+          3500,
+        ),
+        achadosClinicos: this.normalizeSuggestionText(
+          parsed.achadosClinicos,
+          4500,
+        ),
         diagnosticoFuncional: this.normalizeSuggestionText(
           parsed.diagnosticoFuncional,
           2500,
@@ -303,6 +323,7 @@ ${JSON.stringify(input, null, 2)}
         ),
         frequenciaSemanal: freq,
         duracaoSemanas: dur,
+        conclusao: this.normalizeSuggestionText(parsed.conclusao, 2500),
         condutas: this.normalizeSuggestionText(parsed.condutas, 5000),
         planoTratamentoIA: this.normalizeSuggestionText(
           parsed.planoTratamentoIA,

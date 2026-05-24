@@ -9,12 +9,16 @@ import { Laudo } from "../types";
 
 type CreateLaudoPayload = {
   pacienteId?: string;
-  diagnosticoFuncional: string;
+  motivoAvaliacao?: string;
+  historicoClinico?: string;
+  achadosClinicos?: string;
+  diagnosticoFuncional?: string;
   objetivosCurtoPrazo?: string;
   objetivosMedioPrazo?: string;
   frequenciaSemanal?: number;
   duracaoSemanas?: number;
-  condutas: string;
+  conclusao?: string;
+  condutas?: string;
   exameFisico?: string;
   planoTratamentoIA?: string;
   rascunhoProfissional?: string;
@@ -33,8 +37,11 @@ export const useLaudoStore = create<{
     autoGenerate?: boolean,
   ) => Promise<Laudo | null>;
   createLaudo: (payload: CreateLaudoPayload) => Promise<Laudo>;
-  updateLaudo: (id: string, payload: Partial<CreateLaudoPayload>) => Promise<Laudo>;
-    validarLaudo: (id: string) => Promise<Laudo>;
+  updateLaudo: (
+    id: string,
+    payload: Partial<CreateLaudoPayload>,
+  ) => Promise<Laudo>;
+  validarLaudo: (id: string) => Promise<Laudo>;
 }>((set) => ({
   laudoAtual: null,
   isLoading: false,
@@ -94,6 +101,3 @@ export const useLaudoStore = create<{
     }
   },
 }));
-
-
-

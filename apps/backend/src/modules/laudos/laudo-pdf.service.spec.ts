@@ -90,7 +90,7 @@ describe('LaudoPdfService', () => {
       1,
       {},
       'Observacao importante',
-      internalObservation,
+      'Documento para uso clinico profissional. Reavaliar periodicamente.',
     );
     expect(addCalloutSpy).toHaveBeenNthCalledWith(
       2,
@@ -98,6 +98,7 @@ describe('LaudoPdfService', () => {
       'Observacao importante',
       expect.stringContaining('Este documento orienta seu acompanhamento'),
     );
+    expect(addCalloutSpy.mock.calls[0][2]).not.toContain(internalObservation);
     expect(addCalloutSpy.mock.calls[1][2]).not.toContain(internalObservation);
     expect(addCalloutSpy.mock.calls[1][2]).toContain(
       'Este documento orienta seu acompanhamento',
@@ -141,8 +142,7 @@ describe('LaudoPdfService', () => {
 
     const sections = addSectionsSpy.mock.calls[0][1];
     const examSection = sections.find(
-      (section: { title: string }) =>
-        section.title === 'Achados do exame fisico',
+      (section: { title: string }) => section.title === 'Achados da avaliacao',
     );
 
     expect(examSection.value).toContain('Coluna lombar');
@@ -164,12 +164,12 @@ describe('LaudoPdfService', () => {
     const buffer = await service.buildPdfBuffer({
       laudo: {
         ...baseLaudo,
+        motivoAvaliacao: longSection,
+        historicoClinico: longSection,
+        achadosClinicos: longSection,
         diagnosticoFuncional: longSection,
-        exameFisico: longSection,
-        rascunhoProfissional: longSection,
-        objetivosCurtoPrazo: longSection,
-        objetivosMedioPrazo: longSection,
-        criteriosAlta: longSection,
+        conclusao: longSection,
+        condutas: longSection,
         observacoes: longSection,
       },
       pacienteNome: 'Paciente Teste',

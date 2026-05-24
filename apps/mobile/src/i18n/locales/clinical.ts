@@ -9,6 +9,7 @@ export const ptClinical: TranslationMap = {
   "clinical.sections.evolution": "Evolução",
   "clinical.sections.report": "Laudo",
   "clinical.sections.clinicalTemplate": "Template Clínico",
+  "clinical.sections.reportBody": "Corpo do laudo clínico",
   "clinical.sections.functionalDiagnosis": "Diagnóstico Funcional",
   "clinical.sections.treatmentGoals": "Objetivos do Tratamento",
   "clinical.sections.carePlan": "Plano de Atendimento",
@@ -99,6 +100,8 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.lastEditedAt": "Última edição",
   "clinical.messages.applyInitialTemplateHint":
     "Aplique um modelo inicial e ajuste conforme o caso.",
+  "clinical.messages.reportBodyHint":
+    "Organize o conteúdo principal do laudo em seções clínicas claras. A sugestão de IA é apenas um rascunho editável.",
   "clinical.messages.aiUsedExamReadings":
     "IA considerou leitura de {{total}} exame(s) de imagem anexado(s).",
   "clinical.messages.aiUsedExamMetadata":
@@ -136,6 +139,14 @@ export const ptClinical: TranslationMap = {
   "clinical.labels.mediumTerm": "Médio prazo",
   "clinical.labels.shortTermGoals": "Objetivos de curto prazo",
   "clinical.labels.mediumTermGoals": "Objetivos de médio prazo",
+  "clinical.labels.evaluationReason": "Motivo da avaliação",
+  "clinical.labels.clinicalHistory": "Histórico clínico resumido",
+  "clinical.labels.clinicalFindings": "Avaliação clínica / achados observados",
+  "clinical.labels.functionalClinicalImpression":
+    "Diagnóstico funcional / fisioterapêutico",
+  "clinical.labels.conclusion": "Conclusão",
+  "clinical.labels.conductRecommendations": "Conduta e recomendações",
+  "clinical.labels.additionalNotes": "Observações complementares",
   "clinical.labels.weeklyFrequency": "Frequência semanal",
   "clinical.labels.durationWeeks": "Duração (semanas)",
   "clinical.labels.phasedPlan": "Plano em fases",
@@ -169,8 +180,20 @@ export const ptClinical: TranslationMap = {
   "clinical.status.clinicalBaseInitial": "Inicial",
   "clinical.status.clinicalBasePartial": "Parcial",
   "clinical.status.clinicalBaseComplete": "Completa",
+  "clinical.placeholders.evaluationReason":
+    "Descreva o motivo da avaliação ou da emissão do laudo. Exemplo: paciente comparece para avaliação de dor lombar persistente, com limitação funcional para atividades diárias.",
+  "clinical.placeholders.clinicalHistory":
+    "Descreva de forma objetiva o histórico clínico relevante, incluindo início dos sintomas, tempo de evolução, fatores de melhora ou piora, tratamentos prévios e impacto na rotina do paciente.",
+  "clinical.placeholders.clinicalFindings":
+    "Descreva os achados observados durante a avaliação clínica, incluindo limitações funcionais, alterações de mobilidade, força, dor, postura, marcha, testes realizados e demais informações relevantes.",
   "clinical.placeholders.functionalDiagnosis":
-    "Descreva o diagnóstico funcional",
+    "Informe a impressão clínica, hipótese diagnóstica ou diagnóstico funcional com base na avaliação realizada. O conteúdo deve ser revisado e validado pelo profissional responsável.",
+  "clinical.placeholders.conclusion":
+    "Apresente a conclusão técnica do laudo de forma objetiva, descrevendo a condição clínica ou funcional observada e seu impacto para o paciente.",
+  "clinical.placeholders.conductRecommendations":
+    "Descreva as condutas, recomendações, encaminhamentos, orientações, restrições ou necessidade de acompanhamento/reavaliação.",
+  "clinical.placeholders.additionalNotes":
+    "Inclua observações complementares, caso necessário.",
   "clinical.placeholders.shortTermGoals":
     "Resultados esperados nas primeiras semanas",
   "clinical.placeholders.mediumTermGoals":
@@ -184,6 +207,13 @@ export const ptClinical: TranslationMap = {
   "clinical.placeholders.additionalObservations": "Observações adicionais",
   "clinical.placeholders.professionalDraftNotes":
     "Notas ou rascunho complementar do laudo",
+  "clinical.validation.evaluationReasonRequired":
+    "Motivo da avaliação é obrigatório.",
+  "clinical.validation.clinicalFindingsRequired":
+    "Avaliação clínica / achados observados é obrigatória.",
+  "clinical.validation.conclusionRequired": "Conclusão é obrigatória.",
+  "clinical.validation.reportBodyRequired":
+    "Preencha os campos obrigatórios do corpo do laudo antes de finalizar.",
   "clinical.validation.functionalDiagnosisRequired":
     "Diagnóstico funcional é obrigatório",
   "clinical.validation.aiSuggestionConfirmationRequired":
@@ -217,6 +247,7 @@ export const enClinical: TranslationMap = {
   "clinical.sections.evolution": "Evolution",
   "clinical.sections.report": "Report",
   "clinical.sections.clinicalTemplate": "Clinical Template",
+  "clinical.sections.reportBody": "Clinical report body",
   "clinical.sections.functionalDiagnosis": "Functional Diagnosis",
   "clinical.sections.treatmentGoals": "Treatment Goals",
   "clinical.sections.carePlan": "Care Plan",
@@ -305,6 +336,8 @@ export const enClinical: TranslationMap = {
   "clinical.messages.lastEditedAt": "Last edited",
   "clinical.messages.applyInitialTemplateHint":
     "Apply an initial template and adjust it to the case.",
+  "clinical.messages.reportBodyHint":
+    "Organize the main report content into clear clinical sections. AI suggestions are editable drafts only.",
   "clinical.messages.aiUsedExamReadings":
     "AI considered readings from {{total}} attached imaging exam(s).",
   "clinical.messages.aiUsedExamMetadata":
@@ -342,6 +375,14 @@ export const enClinical: TranslationMap = {
   "clinical.labels.mediumTerm": "Medium term",
   "clinical.labels.shortTermGoals": "Short-term goals",
   "clinical.labels.mediumTermGoals": "Medium-term goals",
+  "clinical.labels.evaluationReason": "Evaluation reason",
+  "clinical.labels.clinicalHistory": "Brief clinical history",
+  "clinical.labels.clinicalFindings": "Clinical evaluation / observed findings",
+  "clinical.labels.functionalClinicalImpression":
+    "Functional diagnosis / clinical impression",
+  "clinical.labels.conclusion": "Conclusion",
+  "clinical.labels.conductRecommendations": "Conduct and recommendations",
+  "clinical.labels.additionalNotes": "Additional notes",
   "clinical.labels.weeklyFrequency": "Weekly frequency",
   "clinical.labels.durationWeeks": "Duration (weeks)",
   "clinical.labels.phasedPlan": "Phased plan",
@@ -375,8 +416,20 @@ export const enClinical: TranslationMap = {
   "clinical.status.clinicalBaseInitial": "Initial",
   "clinical.status.clinicalBasePartial": "Partial",
   "clinical.status.clinicalBaseComplete": "Complete",
+  "clinical.placeholders.evaluationReason":
+    "Describe the reason for the evaluation or report. Example: patient attends evaluation for persistent low back pain with functional limitation in daily activities.",
+  "clinical.placeholders.clinicalHistory":
+    "Objectively describe relevant clinical history, including symptom onset, evolution time, improvement or worsening factors, previous treatments and routine impact.",
+  "clinical.placeholders.clinicalFindings":
+    "Describe findings observed during clinical evaluation, including functional limitations, mobility changes, strength, pain, posture, gait, tests performed and other relevant information.",
   "clinical.placeholders.functionalDiagnosis":
-    "Describe the functional diagnosis",
+    "Enter the clinical impression, diagnostic hypothesis or functional diagnosis based on the evaluation. The content must be reviewed and validated by the responsible professional.",
+  "clinical.placeholders.conclusion":
+    "Present the technical conclusion objectively, describing the observed clinical or functional condition and its impact on the patient.",
+  "clinical.placeholders.conductRecommendations":
+    "Describe conducts, recommendations, referrals, guidance, restrictions or need for follow-up/reassessment.",
+  "clinical.placeholders.additionalNotes":
+    "Include additional notes if necessary.",
   "clinical.placeholders.shortTermGoals": "Expected results in the first weeks",
   "clinical.placeholders.mediumTermGoals": "Expected medium-term results",
   "clinical.placeholders.therapeuticConducts":
@@ -388,6 +441,13 @@ export const enClinical: TranslationMap = {
   "clinical.placeholders.additionalObservations": "Additional observations",
   "clinical.placeholders.professionalDraftNotes":
     "Notes or complementary report draft",
+  "clinical.validation.evaluationReasonRequired":
+    "Evaluation reason is required.",
+  "clinical.validation.clinicalFindingsRequired":
+    "Clinical evaluation / observed findings is required.",
+  "clinical.validation.conclusionRequired": "Conclusion is required.",
+  "clinical.validation.reportBodyRequired":
+    "Fill in the required report body fields before finalizing.",
   "clinical.validation.functionalDiagnosisRequired":
     "Functional diagnosis is required",
   "clinical.validation.aiSuggestionConfirmationRequired":
@@ -421,6 +481,7 @@ export const esClinical: TranslationMap = {
   "clinical.sections.evolution": "Evolución",
   "clinical.sections.report": "Informe",
   "clinical.sections.clinicalTemplate": "Plantilla clínica",
+  "clinical.sections.reportBody": "Cuerpo del informe clínico",
   "clinical.sections.functionalDiagnosis": "Diagnóstico funcional",
   "clinical.sections.treatmentGoals": "Objetivos del tratamiento",
   "clinical.sections.carePlan": "Plan de atención",
@@ -511,6 +572,8 @@ export const esClinical: TranslationMap = {
   "clinical.messages.lastEditedAt": "Última edición",
   "clinical.messages.applyInitialTemplateHint":
     "Aplique una plantilla inicial y ajústela según el caso.",
+  "clinical.messages.reportBodyHint":
+    "Organice el contenido principal del informe en secciones clínicas claras. La sugerencia de IA es solo un borrador editable.",
   "clinical.messages.aiUsedExamReadings":
     "La IA consideró lectura de {{total}} examen(es) de imagen adjunto(s).",
   "clinical.messages.aiUsedExamMetadata":
@@ -549,6 +612,15 @@ export const esClinical: TranslationMap = {
   "clinical.labels.mediumTerm": "Medio plazo",
   "clinical.labels.shortTermGoals": "Objetivos de corto plazo",
   "clinical.labels.mediumTermGoals": "Objetivos de medio plazo",
+  "clinical.labels.evaluationReason": "Motivo de la evaluación",
+  "clinical.labels.clinicalHistory": "Historial clínico resumido",
+  "clinical.labels.clinicalFindings":
+    "Evaluación clínica / hallazgos observados",
+  "clinical.labels.functionalClinicalImpression":
+    "Diagnóstico funcional / impresión clínica",
+  "clinical.labels.conclusion": "Conclusión",
+  "clinical.labels.conductRecommendations": "Conducta y recomendaciones",
+  "clinical.labels.additionalNotes": "Observaciones complementarias",
   "clinical.labels.weeklyFrequency": "Frecuencia semanal",
   "clinical.labels.durationWeeks": "Duración (semanas)",
   "clinical.labels.phasedPlan": "Plan por fases",
@@ -582,8 +654,20 @@ export const esClinical: TranslationMap = {
   "clinical.status.clinicalBaseInitial": "Inicial",
   "clinical.status.clinicalBasePartial": "Parcial",
   "clinical.status.clinicalBaseComplete": "Completa",
+  "clinical.placeholders.evaluationReason":
+    "Describa el motivo de la evaluación o de la emisión del informe. Ejemplo: paciente acude para evaluación de dolor lumbar persistente, con limitación funcional para actividades diarias.",
+  "clinical.placeholders.clinicalHistory":
+    "Describa de forma objetiva el historial clínico relevante, incluyendo inicio de síntomas, tiempo de evolución, factores de mejora o empeoramiento, tratamientos previos e impacto en la rutina.",
+  "clinical.placeholders.clinicalFindings":
+    "Describa los hallazgos observados durante la evaluación clínica, incluyendo limitaciones funcionales, movilidad, fuerza, dolor, postura, marcha, pruebas realizadas y demás información relevante.",
   "clinical.placeholders.functionalDiagnosis":
-    "Describa el diagnóstico funcional",
+    "Informe la impresión clínica, hipótesis diagnóstica o diagnóstico funcional con base en la evaluación realizada. El contenido debe ser revisado y validado por el profesional responsable.",
+  "clinical.placeholders.conclusion":
+    "Presente la conclusión técnica del informe de forma objetiva, describiendo la condición clínica o funcional observada y su impacto para el paciente.",
+  "clinical.placeholders.conductRecommendations":
+    "Describa conductas, recomendaciones, derivaciones, orientaciones, restricciones o necesidad de seguimiento/reevaluación.",
+  "clinical.placeholders.additionalNotes":
+    "Incluya observaciones complementarias, si es necesario.",
   "clinical.placeholders.shortTermGoals":
     "Resultados esperados en las primeras semanas",
   "clinical.placeholders.mediumTermGoals": "Resultados esperados a medio plazo",
@@ -596,6 +680,13 @@ export const esClinical: TranslationMap = {
   "clinical.placeholders.additionalObservations": "Observaciones adicionales",
   "clinical.placeholders.professionalDraftNotes":
     "Notas o borrador complementario del informe",
+  "clinical.validation.evaluationReasonRequired":
+    "El motivo de la evaluación es obligatorio.",
+  "clinical.validation.clinicalFindingsRequired":
+    "La evaluación clínica / hallazgos observados es obligatoria.",
+  "clinical.validation.conclusionRequired": "La conclusión es obligatoria.",
+  "clinical.validation.reportBodyRequired":
+    "Complete los campos obligatorios del cuerpo del informe antes de finalizar.",
   "clinical.validation.functionalDiagnosisRequired":
     "El diagnóstico funcional es obligatorio",
   "clinical.validation.aiSuggestionConfirmationRequired":

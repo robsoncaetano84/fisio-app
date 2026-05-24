@@ -195,6 +195,10 @@ export function buildCreateLaudoDraft(params: {
     examesComLeituraIa,
     payload: {
       pacienteId,
+      motivoAvaliacao: aiSuggestion.motivoAvaliacao ?? fallback.motivoAvaliacao,
+      historicoClinico:
+        aiSuggestion.historicoClinico ?? fallback.historicoClinico,
+      achadosClinicos: aiSuggestion.achadosClinicos ?? fallback.achadosClinicos,
       diagnosticoFuncional:
         aiSuggestion.diagnosticoFuncional ?? fallback.diagnosticoFuncional,
       objetivosCurtoPrazo:
@@ -203,6 +207,7 @@ export function buildCreateLaudoDraft(params: {
         aiSuggestion.objetivosMedioPrazo ?? fallback.objetivosMedioPrazo,
       frequenciaSemanal: aiSuggestion.frequenciaSemanal,
       duracaoSemanas: aiSuggestion.duracaoSemanas,
+      conclusao: aiSuggestion.conclusao ?? fallback.conclusao,
       condutas: aiSuggestion.condutas ?? fallback.condutas,
       planoTratamentoIA: appendSuggestedReferencesToPlan(
         aiSuggestion.planoTratamentoIA ?? fallback.planoTratamentoIA,
@@ -266,6 +271,10 @@ export function buildSuggestionPreview(
     confidence,
     reason,
     evidenceFields,
+    motivoAvaliacao: aiSuggestion.motivoAvaliacao ?? fallback.motivoAvaliacao,
+    historicoClinico:
+      aiSuggestion.historicoClinico ?? fallback.historicoClinico,
+    achadosClinicos: aiSuggestion.achadosClinicos ?? fallback.achadosClinicos,
     diagnosticoFuncional:
       aiSuggestion.diagnosticoFuncional ?? fallback.diagnosticoFuncional,
     objetivosCurtoPrazo:
@@ -274,6 +283,7 @@ export function buildSuggestionPreview(
       aiSuggestion.objetivosMedioPrazo ?? fallback.objetivosMedioPrazo,
     frequenciaSemanal: aiSuggestion.frequenciaSemanal ?? 2,
     duracaoSemanas: aiSuggestion.duracaoSemanas ?? 8,
+    conclusao: aiSuggestion.conclusao ?? fallback.conclusao,
     condutas: aiSuggestion.condutas ?? fallback.condutas,
     planoTratamentoIA: appendSuggestedReferencesToPlan(
       aiSuggestion.planoTratamentoIA ?? fallback.planoTratamentoIA,
@@ -461,9 +471,13 @@ function buildRuleBasedLaudoFields(
   },
 ): Pick<
   CreateLaudoDto,
+  | 'motivoAvaliacao'
+  | 'historicoClinico'
+  | 'achadosClinicos'
   | 'diagnosticoFuncional'
   | 'objetivosCurtoPrazo'
   | 'objetivosMedioPrazo'
+  | 'conclusao'
   | 'condutas'
   | 'planoTratamentoIA'
   | 'criteriosAlta'
@@ -496,6 +510,39 @@ function buildRuleBasedLaudoFields(
       : 'dor toleravel durante a tarefa e retorno ao basal em ate 24h';
 
   return {
+    motivoAvaliacao: joinSentences([
+      `Laudo emitido para documentar avaliacao de ${summary.queixaPrincipal}.`,
+      summary.areasPrioritarias.length
+        ? `Areas prioritarias informadas: ${summary.areasPrioritarias.join(', ')}.`
+        : '',
+      primaryGoal ? `Finalidade funcional relatada: ${primaryGoal}.` : '',
+    ]),
+    historicoClinico: joinSentences([
+      summary.fatoresRelevantes.length
+        ? `Contexto clinico relevante: ${summary.fatoresRelevantes.join(' | ')}.`
+        : '',
+      summary.pontosAnamnesePreenchidos.length
+        ? `Dados preenchidos na anamnese: ${summary.pontosAnamnesePreenchidos.join(', ')}.`
+        : '',
+      summary.evolucaoRecente.length
+        ? `Evolucao recente: ${summary.evolucaoRecente.join(' / ')}.`
+        : '',
+      lacunas.trim(),
+    ]),
+    achadosClinicos: joinSentences([
+      summary.areasPrioritarias.length
+        ? `Durante a avaliacao, foram priorizadas as regioes: ${summary.areasPrioritarias.join(', ')}.`
+        : '',
+      summary.ancorasEspecificidade.length
+        ? `Achados e ancoras do caso: ${summary.ancorasEspecificidade.join(' | ')}.`
+        : '',
+      options.exameFisicoHint
+        ? `Correlacao com exame fisico:${options.exameFisicoHint}`
+        : '',
+      summary.lacunasClinicas.length
+        ? `Pontos que exigem complementacao: ${summary.lacunasClinicas.join(' | ')}.`
+        : '',
+    ]),
     diagnosticoFuncional: joinSentences([
       `Hipotese funcional inicial: ${summary.queixaPrincipal}.`,
       summary.areasPrioritarias.length
@@ -547,6 +594,15 @@ function buildRuleBasedLaudoFields(
         ? `Ajustar pela evolucao recente: ${summary.evolucaoRecente.join(' / ')}.`
         : '',
       `Evidencias usadas: ${evidence}.`,
+    ]),
+    conclusao: joinSentences([
+      hasRedFlag
+        ? 'O quadro exige priorizacao de seguranca clinica e reavaliacao/encaminhamento antes de progressao terapeutica.'
+        : `O quadro avaliado sugere impacto funcional relacionado a ${primaryArea || summary.queixaPrincipal}.`,
+      primaryGoal
+        ? `Ha repercussao sobre a meta funcional relatada: ${primaryGoal}.`
+        : '',
+      `A condicao deve ser acompanhada com reavaliacao clinica e progressao conforme resposta, tolerancia e criterios objetivos.`,
     ]),
     planoTratamentoIA: [
       `Fase 1 - Controle de sintomas: controlar irritabilidade (${summary.irritabilidade}) em ${primaryArea || 'regiao sintomatica'} e confirmar lacunas clinicas. Condutas: educacao direcionada, ajuste de carga e movimento toleravel. Evidencia: ${summary.ancorasEspecificidade.slice(0, 3).join(' | ') || evidence}. Criterio: ${progressCriterion}.`,

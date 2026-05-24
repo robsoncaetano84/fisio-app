@@ -111,7 +111,11 @@ describe('LaudosService', () => {
     ({
       id: 'laudo-1',
       pacienteId: 'paciente-1',
+      motivoAvaliacao: 'Dor lombar persistente',
+      historicoClinico: 'Sintomas ha 2 semanas',
+      achadosClinicos: 'Mobilidade lombar reduzida',
       diagnosticoFuncional: 'Diagnostico anterior',
+      conclusao: 'Limitacao funcional atual',
       condutas: 'Conduta anterior',
       exameFisico: 'Exame fisico inicial',
       status: LaudoStatus.VALIDADO_PROFISSIONAL,
@@ -198,6 +202,35 @@ describe('LaudosService', () => {
         validadoEm: null,
       }),
     );
+  });
+
+  it('requires structured clinical body before professional validation', async () => {
+    const { service, laudoRepository } = makeService();
+    laudoRepository.findOne.mockResolvedValue({
+      ...makeLaudo(),
+      motivoAvaliacao: '',
+      achadosClinicos: '',
+      conclusao: '',
+    });
+
+    await expect(
+      service.validarLaudo('laudo-1', 'profissional-1'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('validates laudo when required structured body fields are filled', async () => {
+    const { service, laudoRepository } = makeService();
+    const laudo = { ...makeLaudo(), status: LaudoStatus.RASCUNHO_IA };
+    laudoRepository.findOne.mockResolvedValue(laudo);
+    laudoRepository.save.mockImplementation(async (input) => input);
+
+    const result = await service.validarLaudo('laudo-1', 'profissional-1');
+
+    expect(result).toMatchObject({
+      status: LaudoStatus.VALIDADO_PROFISSIONAL,
+      validadoPorUsuarioId: 'profissional-1',
+      validadoEm: expect.any(Date),
+    });
   });
 
   it('does not call AI when daily generation quota is unavailable', async () => {

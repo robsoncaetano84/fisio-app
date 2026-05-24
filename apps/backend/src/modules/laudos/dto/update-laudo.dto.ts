@@ -7,6 +7,18 @@ import { IsOptional, IsString, IsInt, IsIn, Min, Max } from 'class-validator';
 export class UpdateLaudoDto {
   @IsOptional()
   @IsString()
+  motivoAvaliacao?: string;
+
+  @IsOptional()
+  @IsString()
+  historicoClinico?: string;
+
+  @IsOptional()
+  @IsString()
+  achadosClinicos?: string;
+
+  @IsOptional()
+  @IsString()
   diagnosticoFuncional?: string;
 
   @IsOptional()
@@ -28,6 +40,10 @@ export class UpdateLaudoDto {
   @Min(1)
   @Max(52)
   duracaoSemanas?: number;
+
+  @IsOptional()
+  @IsString()
+  conclusao?: string;
 
   @IsOptional()
   @IsString()

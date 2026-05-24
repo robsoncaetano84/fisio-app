@@ -20,8 +20,17 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'paciente_id' })
   pacienteId: string;
 
-  @Column({ name: 'diagnostico_funcional', type: 'text' })
-  diagnosticoFuncional: string;
+  @Column({ name: 'motivo_avaliacao', type: 'text', nullable: true })
+  motivoAvaliacao: string | null;
+
+  @Column({ name: 'historico_clinico', type: 'text', nullable: true })
+  historicoClinico: string | null;
+
+  @Column({ name: 'achados_clinicos', type: 'text', nullable: true })
+  achadosClinicos: string | null;
+
+  @Column({ name: 'diagnostico_funcional', type: 'text', nullable: true })
+  diagnosticoFuncional: string | null;
 
   @Column({ name: 'objetivos_curto_prazo', type: 'text', nullable: true })
   objetivosCurtoPrazo: string | null;
@@ -35,8 +44,11 @@ export class Laudo extends BaseEntity {
   @Column({ name: 'duracao_semanas', type: 'int', nullable: true })
   duracaoSemanas: number | null;
 
-  @Column({ type: 'text' })
-  condutas: string;
+  @Column({ name: 'conclusao', type: 'text', nullable: true })
+  conclusao: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  condutas: string | null;
 
   @Column({ name: 'exame_fisico', type: 'text', nullable: true })
   exameFisico: string | null;

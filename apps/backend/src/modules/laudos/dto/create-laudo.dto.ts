@@ -18,9 +18,21 @@ export class CreateLaudoDto {
   @IsUUID()
   pacienteId: string;
 
-  @IsNotEmpty({ message: 'Diagnostico funcional e obrigatorio' })
+  @IsOptional()
   @IsString()
-  diagnosticoFuncional: string;
+  motivoAvaliacao?: string;
+
+  @IsOptional()
+  @IsString()
+  historicoClinico?: string;
+
+  @IsOptional()
+  @IsString()
+  achadosClinicos?: string;
+
+  @IsOptional()
+  @IsString()
+  diagnosticoFuncional?: string;
 
   @IsOptional()
   @IsString()
@@ -42,9 +54,13 @@ export class CreateLaudoDto {
   @Max(52)
   duracaoSemanas?: number;
 
-  @IsNotEmpty({ message: 'Condutas e obrigatoria' })
+  @IsOptional()
   @IsString()
-  condutas: string;
+  conclusao?: string;
+
+  @IsOptional()
+  @IsString()
+  condutas?: string;
 
   @IsOptional()
   @IsString()

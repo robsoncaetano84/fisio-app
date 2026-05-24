@@ -238,9 +238,10 @@ export class LaudoPdfService {
     const items =
       tipo === 'laudo'
         ? [
-            this.firstSentence(laudo.diagnosticoFuncional),
-            this.firstSentence(laudo.objetivosCurtoPrazo),
-            this.firstSentence(laudo.criteriosAlta),
+            this.firstSentence(laudo.motivoAvaliacao) ||
+              this.firstSentence(laudo.diagnosticoFuncional),
+            this.firstSentence(laudo.conclusao),
+            this.firstSentence(laudo.achadosClinicos),
           ]
         : [
             this.firstSentence(laudo.condutas),
@@ -283,72 +284,10 @@ export class LaudoPdfService {
     audience: LaudoPdfAudience,
   ) {
     if (tipo === 'laudo') {
-      this.addSections(doc, [
-        {
-          title:
-            audience === 'patient'
-              ? 'O que encontramos na avaliacao'
-              : 'Diagnostico Funcional',
-          value: laudo.diagnosticoFuncional,
-          helper:
-            audience === 'patient'
-              ? 'Explicacao funcional do problema, relacionando dor, movimento e atividades do dia a dia.'
-              : 'Hipotese funcional e correlacao dos achados clinicos.',
-        },
-        ...(laudo.exameFisico
-          ? [
-              {
-                title:
-                  audience === 'patient'
-                    ? 'Achados do exame fisico'
-                    : 'Exame Fisico',
-                value:
-                  audience === 'patient'
-                    ? formatExameFisicoForPatientDisplay(laudo.exameFisico)
-                    : formatExameFisicoForDisplay(laudo.exameFisico),
-                helper:
-                  audience === 'patient'
-                    ? 'Resumo dos achados em linguagem simples, sem substituir a conversa com o profissional.'
-                    : 'Dados observados pelo profissional durante a avaliacao.',
-              },
-            ]
-          : []),
-        ...(laudo.rascunhoProfissional
-          ? [
-              {
-                title: 'Observacoes do profissional',
-                value: laudo.rascunhoProfissional,
-                helper:
-                  'Notas clinicas adicionadas pelo profissional responsavel.',
-              },
-            ]
-          : []),
-        {
-          title: 'Objetivos iniciais',
-          value: laudo.objetivosCurtoPrazo,
-          helper:
-            'Metas esperadas nas primeiras sessoes ou na fase inicial do cuidado.',
-        },
-        {
-          title: 'Objetivos de evolucao',
-          value: laudo.objetivosMedioPrazo,
-          helper:
-            'Metas funcionais para recuperar tolerancia, movimento e autonomia.',
-        },
-        {
-          title: 'Frequencia e duracao previstas',
-          value: this.formatFrequencyDuration(laudo),
-          helper:
-            'A frequencia pode mudar conforme resposta, seguranca e reavaliacao.',
-          accent: this.theme.primarySoft,
-        },
-        {
-          title: 'Quando considerar alta ou nova reavaliacao',
-          value: laudo.criteriosAlta,
-          helper:
-            'Criterios usados para avaliar melhora, seguranca e autonomia.',
-        },
-      ]);
+      this.addSections(
+        doc,
+        this.buildClinicalReportBodySections(laudo, audience),
+      );
       this.addObservation(doc, laudo, audience);
       return;
     }
@@ -394,6 +333,125 @@ export class LaudoPdfService {
 
   private addSections(doc: PDFKit.PDFDocument, sections: TextSection[]) {
     sections.forEach((section) => this.addSection(doc, section));
+  }
+
+  private buildClinicalReportBodySections(
+    laudo: Laudo,
+    audience: LaudoPdfAudience,
+  ): TextSection[] {
+    const achados = this.joinSectionTexts([
+      laudo.achadosClinicos,
+      laudo.exameFisico
+        ? this.formatPhysicalExamForAudience(laudo.exameFisico, audience)
+        : '',
+    ]);
+    const sections: TextSection[] = [
+      {
+        title:
+          audience === 'patient'
+            ? 'Motivo da avaliacao'
+            : 'Motivo da Avaliacao',
+        value: laudo.motivoAvaliacao,
+      },
+      {
+        title:
+          audience === 'patient'
+            ? 'Historico clinico resumido'
+            : 'Historico Clinico Resumido',
+        value: laudo.historicoClinico,
+      },
+      {
+        title:
+          audience === 'patient'
+            ? 'Achados da avaliacao'
+            : 'Avaliacao Clinica / Achados Observados',
+        value: achados,
+      },
+      {
+        title:
+          audience === 'patient'
+            ? 'Impressao clinica'
+            : 'Diagnostico Funcional / Fisioterapeutico',
+        value: laudo.diagnosticoFuncional,
+      },
+      {
+        title: 'Conclusao',
+        value: laudo.conclusao,
+      },
+      {
+        title:
+          audience === 'patient'
+            ? 'Conduta e recomendacoes'
+            : 'Conduta e Recomendacoes',
+        value: laudo.condutas,
+      },
+      {
+        title:
+          audience === 'patient'
+            ? 'Observacoes complementares'
+            : 'Observacoes Complementares',
+        value:
+          audience === 'patient'
+            ? ''
+            : this.joinSectionTexts([
+                laudo.observacoes,
+                laudo.rascunhoProfissional,
+              ]),
+      },
+    ].filter((section) => this.normalizeText(section.value));
+
+    if (sections.length) {
+      return sections;
+    }
+
+    return [
+      {
+        title:
+          audience === 'patient'
+            ? 'O que encontramos na avaliacao'
+            : 'Diagnostico Funcional',
+        value: laudo.diagnosticoFuncional,
+      },
+      {
+        title: audience === 'patient' ? 'Achados da avaliacao' : 'Exame Fisico',
+        value: laudo.exameFisico
+          ? this.formatPhysicalExamForAudience(laudo.exameFisico, audience)
+          : '',
+      },
+      {
+        title:
+          audience === 'patient'
+            ? 'Conduta e recomendacoes'
+            : 'Condutas Terapeuticas',
+        value: laudo.condutas,
+      },
+      {
+        title: 'Observacoes Complementares',
+        value:
+          audience === 'patient'
+            ? ''
+            : this.joinSectionTexts([
+                laudo.observacoes,
+                laudo.rascunhoProfissional,
+              ]),
+      },
+    ].filter((section) => this.normalizeText(section.value));
+  }
+
+  private formatPhysicalExamForAudience(
+    exameFisico: string,
+    audience: LaudoPdfAudience,
+  ): string {
+    return audience === 'patient'
+      ? formatExameFisicoForPatientDisplay(exameFisico)
+      : formatExameFisicoForDisplay(exameFisico);
+  }
+
+  private joinSectionTexts(values: Array<string | null | undefined>): string {
+    return values
+      .map((value) => this.normalizeText(value))
+      .filter(Boolean)
+      .join('\n\n');
   }
 
   private addSection(doc: PDFKit.PDFDocument, section: TextSection) {
@@ -483,17 +541,15 @@ export class LaudoPdfService {
 
   private addObservation(
     doc: PDFKit.PDFDocument,
-    laudo: Laudo,
+    _laudo: Laudo,
     audience: LaudoPdfAudience,
   ) {
     const fallback =
       audience === 'patient'
         ? 'Este documento orienta seu acompanhamento, mas nao substitui conversa com o profissional responsavel. Procure atendimento se houver piora importante, sintomas novos ou sinais de alerta.'
         : 'Documento para uso clinico profissional. Reavaliar periodicamente.';
-    const observation =
-      audience === 'patient' ? fallback : laudo.observacoes || fallback;
 
-    this.addCallout(doc, 'Observacao importante', observation);
+    this.addCallout(doc, 'Observacao importante', fallback);
   }
 
   private addCallout(doc: PDFKit.PDFDocument, title: string, value: string) {

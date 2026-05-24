@@ -320,6 +320,7 @@ export class LaudosService {
 
   async validarLaudo(id: string, usuarioId: string): Promise<Laudo> {
     const laudo = await this.findOne(id, usuarioId);
+    this.validateClinicalReportBody(laudo);
     laudo.status = LaudoStatus.VALIDADO_PROFISSIONAL;
     laudo.validadoPorUsuarioId = usuarioId;
     laudo.validadoEm = new Date();
@@ -464,5 +465,24 @@ export class LaudosService {
       curatedReferences,
       updatedReferences,
     );
+  }
+
+  private validateClinicalReportBody(laudo: Laudo): void {
+    const requiredFields = [
+      laudo.motivoAvaliacao,
+      laudo.achadosClinicos,
+      laudo.conclusao,
+    ];
+    if (requiredFields.every((value) => this.hasText(value))) {
+      return;
+    }
+
+    throw new BadRequestException(
+      'Preencha os campos obrigatorios do corpo do laudo antes de finalizar.',
+    );
+  }
+
+  private hasText(value?: string | null): boolean {
+    return String(value || '').trim().length > 0;
   }
 }

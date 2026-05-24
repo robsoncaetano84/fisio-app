@@ -74,12 +74,16 @@ type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
 type LaudoDraftPayload = {
   pacienteId: string;
-  diagnosticoFuncional: string;
+  motivoAvaliacao?: string;
+  historicoClinico?: string;
+  achadosClinicos?: string;
+  diagnosticoFuncional?: string;
   objetivosCurtoPrazo?: string;
   objetivosMedioPrazo?: string;
   frequenciaSemanal?: number;
   duracaoSemanas?: number;
-  condutas: string;
+  conclusao?: string;
+  condutas?: string;
   planoTratamentoIA?: string;
   rascunhoProfissional?: string;
   observacoes?: string;
@@ -101,7 +105,11 @@ const TEMPLATE_LABEL_KEY: Record<TemplateKey, string> = {
 const TEMPLATE_CONTENT: Record<
   TemplateKey,
   {
+    motivoAvaliacao: string;
+    historicoClinico: string;
+    achadosClinicos: string;
     diagnosticoFuncional: string;
+    conclusao: string;
     objetivosCurtoPrazo: string;
     objetivosMedioPrazo: string;
     frequenciaSemanal: string;
@@ -112,8 +120,16 @@ const TEMPLATE_CONTENT: Record<
   }
 > = {
   GERAL: {
+    motivoAvaliacao:
+      "Paciente comparece para avaliacao funcional e emissao de laudo clinico, com objetivo de documentar queixa, achados observados e orientacoes iniciais.",
+    historicoClinico:
+      "Historico clinico a ser complementado pelo profissional, considerando inicio dos sintomas, tempo de evolucao, fatores de melhora/piora, tratamentos previos e impacto na rotina.",
+    achadosClinicos:
+      "Avaliacao clinica inicial com necessidade de documentar inspeção, mobilidade, força, dor ao movimento, testes especificos e limitacoes funcionais observadas.",
     diagnosticoFuncional:
       "Disfuncao funcional musculo-esqueletica com limitacao de mobilidade, dor ao esforco e impacto em atividades de vida diaria.",
+    conclusao:
+      "O quadro avaliado apresenta repercussao funcional e deve ser acompanhado com conduta terapeutica individualizada, progressao conforme resposta clinica e reavaliacao periodica.",
     objetivosCurtoPrazo:
       "Reduzir dor percebida, melhorar controle motor e tolerancia a carga nas primeiras semanas.",
     objetivosMedioPrazo:
@@ -128,8 +144,16 @@ const TEMPLATE_CONTENT: Record<
       "Dor controlada, funcao satisfatoria, independencia para exercicios domiciliares e retorno seguro as atividades.",
   },
   LOMBAR: {
+    motivoAvaliacao:
+      "Paciente comparece para avaliacao de dor lombar e emissao de laudo funcional, com impacto em atividades diarias e necessidade de orientacao terapeutica.",
+    historicoClinico:
+      "Historico sugestivo de lombalgia a ser detalhado conforme tempo de evolucao, comportamento da dor, fatores de piora, fatores de alivio, tratamentos previos e impacto laboral ou funcional.",
+    achadosClinicos:
+      "Avaliacao dirigida para coluna lombar, controle lombo-pelvico, mobilidade de tronco/quadril, dor ao movimento, tolerancia a sedestacao, marcha e testes funcionais pertinentes.",
     diagnosticoFuncional:
       "Lombalgia mecanica com reducao de mobilidade lombo-pelvica e piora da dor em flexao/prolongamento de postura.",
+    conclusao:
+      "O paciente apresenta alteracao funcional lombar com impacto nas atividades de vida diaria, sendo indicada intervencao fisioterapeutica para controle de sintomas, mobilidade e recuperacao funcional.",
     objetivosCurtoPrazo:
       "Diminuir dor lombar, reduzir rigidez e melhorar padrao de movimento de tronco.",
     objetivosMedioPrazo:
@@ -144,8 +168,16 @@ const TEMPLATE_CONTENT: Record<
       "Ausencia de dor limitante, movimento funcional sem compensacao relevante e autogestao adequada.",
   },
   CERVICAL: {
+    motivoAvaliacao:
+      "Paciente comparece para avaliacao de dor ou desconforto cervical, com objetivo de documentar achados funcionais e orientar conduta terapeutica.",
+    historicoClinico:
+      "Historico cervical a ser detalhado conforme inicio dos sintomas, tempo de evolucao, relacao com postura sustentada, cefaleia associada, fatores de alivio/piora e impacto na rotina.",
+    achadosClinicos:
+      "Avaliacao dirigida para mobilidade cervical e toracica, controle cervico-escapular, dor ao movimento, sensibilidade miofascial, postura e testes funcionais pertinentes.",
     diagnosticoFuncional:
       "Cervicalgia com sobrecarga miofascial, limitacao de amplitude cervical e sintomas associados a postura sustentada.",
+    conclusao:
+      "O quadro avaliado sugere disfuncao cervical com repercussao funcional, sendo indicada conduta fisioterapeutica para controle dos sintomas, melhora da mobilidade e endurance cervico-escapular.",
     objetivosCurtoPrazo:
       "Reduzir dor cervical e cefaleia associada, melhorar mobilidade e consciencia postural.",
     objetivosMedioPrazo:
@@ -160,8 +192,16 @@ const TEMPLATE_CONTENT: Record<
       "Mobilidade cervical funcional, dor minima/ausente e controle postural adequado em atividades prolongadas.",
   },
   JOELHO: {
+    motivoAvaliacao:
+      "Paciente comparece para avaliacao de dor ou limitacao funcional em joelho, com objetivo de documentar achados e orientar retorno seguro as atividades.",
+    historicoClinico:
+      "Historico do joelho a ser complementado com inicio dos sintomas, mecanismo de lesao, tempo de evolucao, fatores de piora, edema, tratamentos previos e impacto em marcha, escadas ou esporte.",
+    achadosClinicos:
+      "Avaliacao dirigida para amplitude de movimento, dor a carga, edema, controle neuromuscular, estabilidade dinamica, forca de membro inferior, marcha, agachamento e testes especificos.",
     diagnosticoFuncional:
       "Disfuncao de joelho com dor a carga, deficit de controle neuromuscular e limitacao para agachar/subir escadas.",
+    conclusao:
+      "O paciente apresenta limitacao funcional de joelho com necessidade de progressao terapeutica criteriosa para controle de sintomas, ganho de estabilidade e retorno funcional seguro.",
     objetivosCurtoPrazo:
       "Reduzir dor no joelho e recuperar amplitude funcional sem aumento de edema.",
     objetivosMedioPrazo:
@@ -196,11 +236,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
   const [laudoId, setLaudoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [motivoAvaliacao, setMotivoAvaliacao] = useState("");
+  const [historicoClinico, setHistoricoClinico] = useState("");
+  const [achadosClinicos, setAchadosClinicos] = useState("");
   const [diagnosticoFuncional, setDiagnosticoFuncional] = useState("");
   const [objetivosCurtoPrazo, setObjetivosCurtoPrazo] = useState("");
   const [objetivosMedioPrazo, setObjetivosMedioPrazo] = useState("");
   const [frequenciaSemanal, setFrequenciaSemanal] = useState("");
   const [duracaoSemanas, setDuracaoSemanas] = useState("");
+  const [conclusao, setConclusao] = useState("");
   const [condutas, setCondutas] = useState("");
   const [exameFisico, setExameFisico] = useState("");
   const [planoTratamentoIA, setPlanoTratamentoIA] = useState("");
@@ -325,6 +369,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     enabled: VOICE_ENABLED,
     onResult: (text) => {
       switch (activeField) {
+        case "motivoAvaliacao":
+          appendText(setMotivoAvaliacao, text);
+          break;
+        case "historicoClinico":
+          appendText(setHistoricoClinico, text);
+          break;
+        case "achadosClinicos":
+          appendText(setAchadosClinicos, text);
+          break;
         case "diagnosticoFuncional":
           appendText(setDiagnosticoFuncional, text);
           break;
@@ -339,6 +392,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           break;
         case "planoTratamentoIA":
           appendText(setPlanoTratamentoIA, text);
+          break;
+        case "conclusao":
+          appendText(setConclusao, text);
           break;
         case "criteriosAlta":
           appendText(setCriteriosAlta, text);
@@ -387,14 +443,22 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
   const shouldAutoFill = useMemo(() => {
     return (
+      !motivoAvaliacao.trim() &&
+      !historicoClinico.trim() &&
+      !achadosClinicos.trim() &&
       !diagnosticoFuncional.trim() &&
+      !conclusao.trim() &&
       !condutas.trim() &&
       !planoTratamentoIA.trim() &&
       !objetivosCurtoPrazo.trim() &&
       !objetivosMedioPrazo.trim()
     );
   }, [
+    motivoAvaliacao,
+    historicoClinico,
+    achadosClinicos,
     diagnosticoFuncional,
+    conclusao,
     condutas,
     planoTratamentoIA,
     objetivosCurtoPrazo,
@@ -483,6 +547,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         } else {
           setAiExamContextMessage("");
         }
+        if (!motivoAvaliacao.trim() && data.motivoAvaliacao) {
+          setMotivoAvaliacao(data.motivoAvaliacao);
+        }
+        if (!historicoClinico.trim() && data.historicoClinico) {
+          setHistoricoClinico(data.historicoClinico);
+        }
+        if (!achadosClinicos.trim() && data.achadosClinicos) {
+          setAchadosClinicos(data.achadosClinicos);
+        }
         if (!diagnosticoFuncional.trim() && data.diagnosticoFuncional) {
           setDiagnosticoFuncional(data.diagnosticoFuncional);
         }
@@ -497,6 +570,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         }
         if (!duracaoSemanas.trim() && data.duracaoSemanas) {
           setDuracaoSemanas(String(data.duracaoSemanas));
+        }
+        if (!conclusao.trim() && data.conclusao) {
+          setConclusao(data.conclusao);
         }
         if (!condutas.trim() && data.condutas) {
           setCondutas(data.condutas);
@@ -516,11 +592,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   };
 
   const buildSnapshot = (source: {
+    motivoAvaliacao?: string;
+    historicoClinico?: string;
+    achadosClinicos?: string;
     diagnosticoFuncional?: string;
     objetivosCurtoPrazo?: string;
     objetivosMedioPrazo?: string;
     frequenciaSemanal?: string | number;
     duracaoSemanas?: string | number;
+    conclusao?: string;
     condutas?: string;
     exameFisico?: string;
     planoTratamentoIA?: string;
@@ -529,6 +609,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     criteriosAlta?: string;
   }) =>
     JSON.stringify({
+      motivoAvaliacao: String(source.motivoAvaliacao || "").trim(),
+      historicoClinico: String(source.historicoClinico || "").trim(),
+      achadosClinicos: String(source.achadosClinicos || "").trim(),
       diagnosticoFuncional: String(source.diagnosticoFuncional || "").trim(),
       objetivosCurtoPrazo: String(source.objetivosCurtoPrazo || "").trim(),
       objetivosMedioPrazo: String(source.objetivosMedioPrazo || "").trim(),
@@ -540,6 +623,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         typeof source.duracaoSemanas === "number"
           ? String(source.duracaoSemanas)
           : String(source.duracaoSemanas || "").trim(),
+      conclusao: String(source.conclusao || "").trim(),
       condutas: String(source.condutas || "").trim(),
       exameFisico: String(source.exameFisico || "").trim(),
       planoTratamentoIA: String(source.planoTratamentoIA || "").trim(),
@@ -550,11 +634,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
   const getSnapshot = () =>
     buildSnapshot({
+      motivoAvaliacao,
+      historicoClinico,
+      achadosClinicos,
       diagnosticoFuncional,
       objetivosCurtoPrazo,
       objetivosMedioPrazo,
       frequenciaSemanal,
       duracaoSemanas,
+      conclusao,
       condutas,
       exameFisico,
       planoTratamentoIA,
@@ -665,6 +753,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
     const applyLaudoState = (laudo: any) => {
       setLaudoId(laudo.id);
+      setMotivoAvaliacao(laudo.motivoAvaliacao || "");
+      setHistoricoClinico(laudo.historicoClinico || "");
+      setAchadosClinicos(laudo.achadosClinicos || "");
       setDiagnosticoFuncional(laudo.diagnosticoFuncional || "");
       setObjetivosCurtoPrazo(laudo.objetivosCurtoPrazo || "");
       setObjetivosMedioPrazo(laudo.objetivosMedioPrazo || "");
@@ -678,6 +769,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           ? String(laudo.duracaoSemanas)
           : "",
       );
+      setConclusao(laudo.conclusao || "");
       setCondutas(laudo.condutas || "");
       setExameFisico(laudo.exameFisico || "");
       setPlanoTratamentoIA(laudo.planoTratamentoIA || "");
@@ -881,19 +973,24 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const canAutosaveDraft = () =>
     hasAnamnese &&
     !generatingAi &&
-    !!diagnosticoFuncional.trim() &&
-    !!condutas.trim() &&
+    !!motivoAvaliacao.trim() &&
+    !!achadosClinicos.trim() &&
+    !!conclusao.trim() &&
     hasValidOptionalNumber(frequenciaSemanal, 1, 7) &&
     hasValidOptionalNumber(duracaoSemanas, 1, 52);
 
   const buildDraftPayload = (): LaudoDraftPayload => ({
     pacienteId,
-    diagnosticoFuncional: diagnosticoFuncional.trim(),
+    motivoAvaliacao: motivoAvaliacao.trim(),
+    historicoClinico: historicoClinico.trim() || undefined,
+    achadosClinicos: achadosClinicos.trim(),
+    diagnosticoFuncional: diagnosticoFuncional.trim() || undefined,
     objetivosCurtoPrazo: objetivosCurtoPrazo.trim() || undefined,
     objetivosMedioPrazo: objetivosMedioPrazo.trim() || undefined,
     frequenciaSemanal: toOptionalNumber(frequenciaSemanal),
     duracaoSemanas: toOptionalNumber(duracaoSemanas),
-    condutas: condutas.trim(),
+    conclusao: conclusao.trim(),
+    condutas: condutas.trim() || undefined,
     planoTratamentoIA: planoTratamentoIA.trim() || undefined,
     rascunhoProfissional: rascunhoProfissional.trim() || undefined,
     observacoes: observacoes.trim() || undefined,
@@ -904,13 +1001,18 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const validate = () => {
     const nextErrors: Record<string, string> = {};
 
-    if (!diagnosticoFuncional.trim()) {
-      nextErrors.diagnosticoFuncional = t(
-        "clinical.validation.functionalDiagnosisRequired",
+    if (!motivoAvaliacao.trim()) {
+      nextErrors.motivoAvaliacao = t(
+        "clinical.validation.evaluationReasonRequired",
       );
     }
-    if (!condutas.trim()) {
-      nextErrors.condutas = t("clinical.validation.therapeuticConductRequired");
+    if (!achadosClinicos.trim()) {
+      nextErrors.achadosClinicos = t(
+        "clinical.validation.clinicalFindingsRequired",
+      );
+    }
+    if (!conclusao.trim()) {
+      nextErrors.conclusao = t("clinical.validation.conclusionRequired");
     }
 
     const freq = toOptionalNumber(frequenciaSemanal);
@@ -1045,11 +1147,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       }
     };
   }, [
+    motivoAvaliacao,
+    historicoClinico,
+    achadosClinicos,
     diagnosticoFuncional,
     objetivosCurtoPrazo,
     objetivosMedioPrazo,
     frequenciaSemanal,
     duracaoSemanas,
+    conclusao,
     condutas,
     planoTratamentoIA,
     rascunhoProfissional,
@@ -1062,6 +1168,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   ]);
 
   const performValidate = async () => {
+    if (!validate()) {
+      showToast({
+        message: t("clinical.validation.reportBodyRequired"),
+        type: "error",
+      });
+      return;
+    }
     if (!laudoId) {
       showToast({
         message: t("clinical.messages.waitAutosaveBeforeValidation"),
@@ -1159,7 +1272,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       suggestionType: "LAUDO_DRAFT_CONFIRMED",
       confidence: aiConfidence || "BAIXA",
       reason: "Sugestão de laudo revisada e confirmada por profissional.",
-      evidenceFields: ["diagnosticoFuncional", "condutas", "planoTratamentoIA"],
+      evidenceFields: ["motivoAvaliacao", "achadosClinicos", "conclusao"],
       patientId: pacienteId,
     }).catch(() => undefined);
   };
@@ -1193,11 +1306,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         {
           text: t("clinical.actions.apply"),
           onPress: () => {
+            setMotivoAvaliacao(template.motivoAvaliacao);
+            setHistoricoClinico(template.historicoClinico);
+            setAchadosClinicos(template.achadosClinicos);
             setDiagnosticoFuncional(template.diagnosticoFuncional);
             setObjetivosCurtoPrazo(template.objetivosCurtoPrazo);
             setObjetivosMedioPrazo(template.objetivosMedioPrazo);
             setFrequenciaSemanal(template.frequenciaSemanal);
             setDuracaoSemanas(template.duracaoSemanas);
+            setConclusao(template.conclusao);
             setCondutas(template.condutas);
             setPlanoTratamentoIA(template.planoTratamentoIA);
             setCriteriosAlta(template.criteriosAlta);
@@ -1627,9 +1744,91 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {t("clinical.sections.functionalDiagnosis")}
+            {t("clinical.sections.reportBody")}
+          </Text>
+          <Text style={styles.templateHint}>
+            {t("clinical.messages.reportBodyHint")}
           </Text>
           <Input
+            label={t("clinical.labels.evaluationReason")}
+            placeholder={t("clinical.placeholders.evaluationReason")}
+            value={motivoAvaliacao}
+            onChangeText={(text) => {
+              setMotivoAvaliacao(text);
+              if (errors.motivoAvaliacao) {
+                setErrors((prev) => ({ ...prev, motivoAvaliacao: "" }));
+              }
+            }}
+            error={errors.motivoAvaliacao}
+            multiline
+            numberOfLines={4}
+            style={{ height: 110, textAlignVertical: "top" }}
+            showCount
+            maxLength={2500}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("motivoAvaliacao") : undefined
+            }
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("motivoAvaliacao") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "motivoAvaliacao" && isRecording
+                ? partial
+                : undefined
+            }
+          />
+          <Input
+            label={t("clinical.labels.clinicalHistory")}
+            placeholder={t("clinical.placeholders.clinicalHistory")}
+            value={historicoClinico}
+            onChangeText={setHistoricoClinico}
+            multiline
+            numberOfLines={4}
+            style={{ height: 120, textAlignVertical: "top" }}
+            showCount
+            maxLength={3500}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("historicoClinico") : undefined
+            }
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("historicoClinico") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "historicoClinico" && isRecording
+                ? partial
+                : undefined
+            }
+          />
+          <Input
+            label={t("clinical.labels.clinicalFindings")}
+            placeholder={t("clinical.placeholders.clinicalFindings")}
+            value={achadosClinicos}
+            onChangeText={(text) => {
+              setAchadosClinicos(text);
+              if (errors.achadosClinicos) {
+                setErrors((prev) => ({ ...prev, achadosClinicos: "" }));
+              }
+            }}
+            error={errors.achadosClinicos}
+            multiline
+            numberOfLines={5}
+            style={{ height: 140, textAlignVertical: "top" }}
+            showCount
+            maxLength={4500}
+            rightIcon={
+              VOICE_ENABLED ? getMicIcon("achadosClinicos") : undefined
+            }
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("achadosClinicos") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "achadosClinicos" && isRecording
+                ? partial
+                : undefined
+            }
+          />
+          <Input
+            label={t("clinical.labels.functionalClinicalImpression")}
             placeholder={t("clinical.placeholders.functionalDiagnosis")}
             value={diagnosticoFuncional}
             onChangeText={(text) => {
@@ -1641,9 +1840,9 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             error={errors.diagnosticoFuncional}
             multiline
             numberOfLines={4}
-            style={{ height: 100, textAlignVertical: "top" }}
+            style={{ height: 110, textAlignVertical: "top" }}
             showCount
-            maxLength={2000}
+            maxLength={2500}
             rightIcon={
               VOICE_ENABLED ? getMicIcon("diagnosticoFuncional") : undefined
             }
@@ -1656,6 +1855,78 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               VOICE_ENABLED &&
               activeField === "diagnosticoFuncional" &&
               isRecording
+                ? partial
+                : undefined
+            }
+          />
+          <Input
+            label={t("clinical.labels.conclusion")}
+            placeholder={t("clinical.placeholders.conclusion")}
+            value={conclusao}
+            onChangeText={(text) => {
+              setConclusao(text);
+              if (errors.conclusao) {
+                setErrors((prev) => ({ ...prev, conclusao: "" }));
+              }
+            }}
+            error={errors.conclusao}
+            multiline
+            numberOfLines={4}
+            style={{ height: 110, textAlignVertical: "top" }}
+            showCount
+            maxLength={2500}
+            rightIcon={VOICE_ENABLED ? getMicIcon("conclusao") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("conclusao") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "conclusao" && isRecording
+                ? partial
+                : undefined
+            }
+          />
+          <Input
+            label={t("clinical.labels.conductRecommendations")}
+            placeholder={t("clinical.placeholders.conductRecommendations")}
+            value={condutas}
+            onChangeText={(text) => {
+              setCondutas(text);
+              if (errors.condutas) {
+                setErrors((prev) => ({ ...prev, condutas: "" }));
+              }
+            }}
+            error={errors.condutas}
+            multiline
+            numberOfLines={4}
+            style={{ height: 120, textAlignVertical: "top" }}
+            showCount
+            maxLength={5000}
+            rightIcon={VOICE_ENABLED ? getMicIcon("condutas") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("condutas") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "condutas" && isRecording
+                ? partial
+                : undefined
+            }
+          />
+          <Input
+            label={t("clinical.labels.additionalNotes")}
+            placeholder={t("clinical.placeholders.additionalNotes")}
+            value={observacoes}
+            onChangeText={setObservacoes}
+            multiline
+            numberOfLines={3}
+            style={{ height: 90, textAlignVertical: "top" }}
+            showCount
+            maxLength={1500}
+            rightIcon={VOICE_ENABLED ? getMicIcon("observacoes") : undefined}
+            onRightIconPress={
+              VOICE_ENABLED ? () => toggleVoice("observacoes") : undefined
+            }
+            hint={
+              VOICE_ENABLED && activeField === "observacoes" && isRecording
                 ? partial
                 : undefined
             }
@@ -1745,32 +2016,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             />
           </View>
           <Input
-            label={t("clinical.labels.therapeuticConducts")}
-            placeholder={t("clinical.placeholders.therapeuticConducts")}
-            value={condutas}
-            onChangeText={(text) => {
-              setCondutas(text);
-              if (errors.condutas) {
-                setErrors((prev) => ({ ...prev, condutas: "" }));
-              }
-            }}
-            error={errors.condutas}
-            multiline
-            numberOfLines={4}
-            style={{ height: 100, textAlignVertical: "top" }}
-            showCount
-            maxLength={2000}
-            rightIcon={VOICE_ENABLED ? getMicIcon("condutas") : undefined}
-            onRightIconPress={
-              VOICE_ENABLED ? () => toggleVoice("condutas") : undefined
-            }
-            hint={
-              VOICE_ENABLED && activeField === "condutas" && isRecording
-                ? partial
-                : undefined
-            }
-          />
-          <Input
             label={t("clinical.labels.aiTreatmentPlan")}
             placeholder={t("clinical.placeholders.phasedPlan")}
             value={planoTratamentoIA}
@@ -1810,26 +2055,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
             }
             hint={
               VOICE_ENABLED && activeField === "criteriosAlta" && isRecording
-                ? partial
-                : undefined
-            }
-          />
-          <Input
-            label={t("clinical.labels.observations")}
-            placeholder={t("clinical.placeholders.additionalObservations")}
-            value={observacoes}
-            onChangeText={setObservacoes}
-            multiline
-            numberOfLines={3}
-            style={{ height: 90, textAlignVertical: "top" }}
-            showCount
-            maxLength={1500}
-            rightIcon={VOICE_ENABLED ? getMicIcon("observacoes") : undefined}
-            onRightIconPress={
-              VOICE_ENABLED ? () => toggleVoice("observacoes") : undefined
-            }
-            hint={
-              VOICE_ENABLED && activeField === "observacoes" && isRecording
                 ? partial
                 : undefined
             }
