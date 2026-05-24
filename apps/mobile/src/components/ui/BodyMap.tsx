@@ -6,6 +6,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -248,8 +249,19 @@ export function BodyMap({
   const [runtimeOverrides, setRuntimeOverrides] =
     useState<BodyMapPointOverrides>({});
   const [mapWidth, setMapWidth] = useState(0);
-  const isCompactMap = mapWidth > 0 && mapWidth < 560;
-  const mapInnerWidth = Math.max(0, mapWidth - SPACING.xs * 2);
+  const { width: viewportWidth } = useWindowDimensions();
+  const measuredOrFallbackMapWidth =
+    mapWidth > 0
+      ? mapWidth
+      : Platform.OS === "web"
+        ? Math.min(Math.max(viewportWidth - SPACING.md * 2, 0), 560)
+        : 0;
+  const isCompactMap =
+    measuredOrFallbackMapWidth > 0 && measuredOrFallbackMapWidth < 560;
+  const mapInnerWidth = Math.max(
+    0,
+    measuredOrFallbackMapWidth - SPACING.xs * 2,
+  );
   const sidePanelWidth =
     mapInnerWidth > 0
       ? isCompactMap
