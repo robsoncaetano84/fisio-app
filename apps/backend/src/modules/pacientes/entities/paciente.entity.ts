@@ -65,26 +65,26 @@ export class Paciente extends BaseEntity {
   @Column({ length: 100, nullable: true })
   profissao: string;
 
-  @Column({ name: 'endereco_rua', length: 255 })
-  enderecoRua: string;
+  @Column({ name: 'endereco_rua', length: 255, nullable: true })
+  enderecoRua: string | null;
 
-  @Column({ name: 'endereco_numero', length: 20 })
-  enderecoNumero: string;
+  @Column({ name: 'endereco_numero', length: 20, nullable: true })
+  enderecoNumero: string | null;
 
   @Column({ name: 'endereco_complemento', length: 100, nullable: true })
-  enderecoComplemento: string;
+  enderecoComplemento: string | null;
 
-  @Column({ name: 'endereco_bairro', length: 100 })
-  enderecoBairro: string;
+  @Column({ name: 'endereco_bairro', length: 100, nullable: true })
+  enderecoBairro: string | null;
 
-  @Column({ name: 'endereco_cep', length: 8 })
-  enderecoCep: string;
+  @Column({ name: 'endereco_cep', length: 8, nullable: true })
+  enderecoCep: string | null;
 
-  @Column({ name: 'endereco_cidade', length: 100 })
-  enderecoCidade: string;
+  @Column({ name: 'endereco_cidade', length: 100, nullable: true })
+  enderecoCidade: string | null;
 
-  @Column({ name: 'endereco_uf', length: 2 })
-  enderecoUf: string;
+  @Column({ name: 'endereco_uf', length: 2, nullable: true })
+  enderecoUf: string | null;
 
   @Column({ name: 'contato_whatsapp', length: 11 })
   contatoWhatsapp: string;

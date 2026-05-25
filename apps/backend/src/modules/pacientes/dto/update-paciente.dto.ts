@@ -12,12 +12,21 @@ import {
   IsUUID,
   IsBoolean,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import {
   Sexo,
   EstadoCivil,
   PacienteCadastroOrigem,
   PacienteVinculoStatus,
 } from '../entities/paciente.entity';
+
+const normalizeOptionalString = (value: unknown) => {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 export class UpdatePacienteDto {
   @IsOptional()
@@ -49,32 +58,39 @@ export class UpdatePacienteDto {
   profissao?: string;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoRua?: string;
+  enderecoRua?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoNumero?: string;
+  enderecoNumero?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoComplemento?: string;
+  enderecoComplemento?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoBairro?: string;
+  enderecoBairro?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @Length(8, 8, { message: 'CEP deve ter 8 digitos' })
-  enderecoCep?: string;
+  enderecoCep?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoCidade?: string;
+  enderecoCidade?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @Length(2, 2, { message: 'UF deve ter 2 caracteres' })
-  enderecoUf?: string;
+  enderecoUf?: string | null;
 
   @IsOptional()
   @Length(10, 11, { message: 'WhatsApp deve ter 10 ou 11 digitos' })

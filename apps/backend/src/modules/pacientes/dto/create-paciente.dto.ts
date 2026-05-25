@@ -13,11 +13,20 @@ import {
   IsUUID,
   IsBoolean,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import {
   Sexo,
   EstadoCivil,
   PacienteCadastroOrigem,
 } from '../entities/paciente.entity';
+
+const normalizeOptionalString = (value: unknown) => {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 export class CreatePacienteDto {
   @IsNotEmpty({ message: 'Nome completo e obrigatorio' })
@@ -48,33 +57,40 @@ export class CreatePacienteDto {
   @IsString()
   profissao?: string;
 
-  @IsNotEmpty({ message: 'Rua e obrigatoria' })
+  @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoRua: string;
-
-  @IsNotEmpty({ message: 'Numero e obrigatorio' })
-  @IsString()
-  enderecoNumero: string;
+  enderecoRua?: string | null;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoComplemento?: string;
+  enderecoNumero?: string | null;
 
-  @IsNotEmpty({ message: 'Bairro e obrigatorio' })
+  @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoBairro: string;
+  enderecoComplemento?: string | null;
 
-  @IsNotEmpty({ message: 'CEP e obrigatorio' })
+  @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
+  @IsString()
+  enderecoBairro?: string | null;
+
+  @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @Length(8, 8, { message: 'CEP deve ter 8 digitos' })
-  enderecoCep: string;
+  enderecoCep?: string | null;
 
-  @IsNotEmpty({ message: 'Cidade e obrigatoria' })
+  @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @IsString()
-  enderecoCidade: string;
+  enderecoCidade?: string | null;
 
-  @IsNotEmpty({ message: 'UF e obrigatoria' })
+  @IsOptional()
+  @Transform(({ value }) => normalizeOptionalString(value))
   @Length(2, 2, { message: 'UF deve ter 2 caracteres' })
-  enderecoUf: string;
+  enderecoUf?: string | null;
 
   @IsNotEmpty({ message: 'WhatsApp e obrigatorio' })
   @Length(10, 11, { message: 'WhatsApp deve ter 10 ou 11 digitos' })

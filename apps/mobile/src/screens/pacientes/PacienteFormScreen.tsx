@@ -45,6 +45,14 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const optionalText = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+const optionalDigits = (value: string | null | undefined) => {
+  const digits = value?.replace(/\D/g, "");
+  return digits ? digits : undefined;
+};
 type PacienteFormMode = "view" | "edit";
 type PacienteFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteForm">;
@@ -631,13 +639,13 @@ export function PacienteFormScreen({
     sexo: payload.sexo,
     estadoCivil: payload.estadoCivil || undefined,
     profissao: payload.profissao || undefined,
-    enderecoRua: payload.endereco.rua,
-    enderecoNumero: payload.endereco.numero,
-    enderecoComplemento: payload.endereco.complemento || undefined,
-    enderecoBairro: payload.endereco.bairro,
-    enderecoCep: payload.endereco.cep,
-    enderecoCidade: payload.endereco.cidade,
-    enderecoUf: payload.endereco.uf,
+    enderecoRua: optionalText(payload.endereco.rua),
+    enderecoNumero: optionalText(payload.endereco.numero),
+    enderecoComplemento: optionalText(payload.endereco.complemento),
+    enderecoBairro: optionalText(payload.endereco.bairro),
+    enderecoCep: optionalDigits(payload.endereco.cep),
+    enderecoCidade: optionalText(payload.endereco.cidade),
+    enderecoUf: optionalText(payload.endereco.uf)?.toUpperCase(),
     contatoWhatsapp: payload.contato.whatsapp,
     contatoEmail: payload.contato.email || undefined,
     pacienteUsuarioId: payload.pacienteUsuarioId || undefined,

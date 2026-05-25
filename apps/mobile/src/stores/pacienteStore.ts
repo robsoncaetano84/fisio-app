@@ -43,13 +43,13 @@ type ApiPaciente = {
   sexo: Sexo;
   estadoCivil?: EstadoCivil | null;
   profissao?: string | null;
-  enderecoRua: string;
-  enderecoNumero: string;
+  enderecoRua: string | null;
+  enderecoNumero: string | null;
   enderecoComplemento?: string | null;
-  enderecoBairro: string;
-  enderecoCep: string;
-  enderecoCidade: string;
-  enderecoUf: string;
+  enderecoBairro: string | null;
+  enderecoCep: string | null;
+  enderecoCidade: string | null;
+  enderecoUf: string | null;
   contatoWhatsapp: string;
   contatoTelefone?: string | null;
   contatoEmail?: string | null;
@@ -90,6 +90,16 @@ const formatDateBR = (dateString: string) => {
   const date = parseDateOnlyAsLocal(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
   return date.toLocaleDateString("pt-BR");
+};
+
+const optionalText = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const optionalDigits = (value: string | null | undefined) => {
+  const digits = value?.replace(/\D/g, "");
+  return digits ? digits : undefined;
 };
 
 const calcularIdade = (dataNascimento: string) => {
@@ -153,13 +163,13 @@ const mapApiToPaciente = (p: ApiPaciente): Paciente => ({
   estadoCivil: p.estadoCivil || undefined,
   profissao: p.profissao || undefined,
   endereco: {
-    rua: p.enderecoRua,
-    numero: p.enderecoNumero,
+    rua: p.enderecoRua || "",
+    numero: p.enderecoNumero || "",
     complemento: p.enderecoComplemento || undefined,
-    bairro: p.enderecoBairro,
-    cep: p.enderecoCep,
-    cidade: p.enderecoCidade,
-    uf: p.enderecoUf,
+    bairro: p.enderecoBairro || "",
+    cep: p.enderecoCep || "",
+    cidade: p.enderecoCidade || "",
+    uf: p.enderecoUf || "",
   },
   contato: {
     whatsapp: p.contatoWhatsapp,
@@ -189,13 +199,13 @@ const mapPayloadToApi = (p: PacientePayload) => ({
   sexo: p.sexo,
   estadoCivil: p.estadoCivil || undefined,
   profissao: p.profissao || undefined,
-  enderecoRua: p.endereco.rua,
-  enderecoNumero: p.endereco.numero,
-  enderecoComplemento: p.endereco.complemento || undefined,
-  enderecoBairro: p.endereco.bairro,
-  enderecoCep: p.endereco.cep,
-  enderecoCidade: p.endereco.cidade,
-  enderecoUf: p.endereco.uf,
+  enderecoRua: optionalText(p.endereco.rua),
+  enderecoNumero: optionalText(p.endereco.numero),
+  enderecoComplemento: optionalText(p.endereco.complemento),
+  enderecoBairro: optionalText(p.endereco.bairro),
+  enderecoCep: optionalDigits(p.endereco.cep),
+  enderecoCidade: optionalText(p.endereco.cidade),
+  enderecoUf: optionalText(p.endereco.uf)?.toUpperCase(),
   contatoWhatsapp: p.contato.whatsapp,
   contatoTelefone: p.contato.telefone || undefined,
   contatoEmail: p.contato.email || undefined,
