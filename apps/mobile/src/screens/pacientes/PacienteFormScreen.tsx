@@ -583,6 +583,20 @@ export function PacienteFormScreen({
     await executarComFallback(() => compartilharConviteSistema(link));
   };
 
+  const navigateAfterSave = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      }),
+    );
+  };
+
   const buildPacientePayloadFromForm = () => ({
     nomeCompleto,
     cpf: cpf.replace(/\D/g, ""),
@@ -658,7 +672,7 @@ export function PacienteFormScreen({
           message: t("patientForm.updatedSuccess"),
           type: "success",
         });
-        navigation.goBack();
+        navigateAfterSave();
         return;
       }
 
@@ -687,7 +701,7 @@ export function PacienteFormScreen({
             });
             return;
           }
-          navigation.goBack();
+          navigateAfterSave();
           return;
         }
 
@@ -708,7 +722,7 @@ export function PacienteFormScreen({
           mode: "CONVITE_RAPIDO",
           isEditing,
         }).catch(() => undefined);
-        navigation.goBack();
+        navigateAfterSave();
         return;
       }
 
@@ -750,6 +764,12 @@ export function PacienteFormScreen({
 
       if (podeOferecerConviteAgora) {
         const pacienteId = String(pacientePersistido.id);
+
+        if (Platform.OS === "web") {
+          navigateAfterSave();
+          return;
+        }
+
         Alert.alert(
           "Enviar convite agora?",
           "Paciente cadastrado com sucesso. Deseja enviar o link de cadastro agora?",
@@ -757,7 +777,7 @@ export function PacienteFormScreen({
             {
               text: "Depois",
               style: "cancel",
-              onPress: () => navigation.goBack(),
+              onPress: () => navigateAfterSave(),
             },
             {
               text: "WhatsApp",
@@ -779,7 +799,7 @@ export function PacienteFormScreen({
                       type: "error",
                     });
                   } finally {
-                    navigation.goBack();
+                    navigateAfterSave();
                   }
                 })();
               },
@@ -804,7 +824,7 @@ export function PacienteFormScreen({
                       type: "error",
                     });
                   } finally {
-                    navigation.goBack();
+                    navigateAfterSave();
                   }
                 })();
               },
@@ -823,7 +843,7 @@ export function PacienteFormScreen({
         return;
       }
 
-      navigation.goBack();
+      navigateAfterSave();
     } catch (error: any) {
       const { message, fieldErrors } = parseApiError(error);
       trackEvent("patient_form_submit_failed", {
