@@ -113,6 +113,7 @@ export function BodyMapPoint({
       }),
     [editable, onMove, panelSize?.height, panelSize?.width, point],
   );
+  const panHandlers = editable ? panResponder.panHandlers : {};
 
   const revealLabel = () => {
     if (hideTimerRef.current) {
@@ -163,7 +164,7 @@ export function BodyMapPoint({
           marginTop: -hitSize / 2,
         },
       ]}
-      {...panResponder.panHandlers}
+      {...panHandlers}
     >
       {showLabel && (
         <View pointerEvents="none" style={styles.tooltip}>

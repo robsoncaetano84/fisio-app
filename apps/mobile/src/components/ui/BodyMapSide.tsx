@@ -3,7 +3,6 @@ import {
   Image,
   ImageSourcePropType,
   LayoutChangeEvent,
-  Platform,
   StyleSheet,
   View,
 } from "react-native";
@@ -79,18 +78,6 @@ export function BodyMapSide({
         left: imageHalf === "left" ? 0 : -effectivePanelWidth,
       }
     : null;
-  const resolvedSource = Image.resolveAssetSource(source);
-  const webImageStyle =
-    Platform.OS === "web" && resolvedSource?.uri
-      ? ({
-          backgroundImage: `url(${resolvedSource.uri})`,
-          backgroundPosition:
-            imageHalf === "left" ? "left center" : "right center",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "200% 100%",
-        } as any)
-      : null;
-
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setPanelSize({ width, height });
@@ -108,21 +95,17 @@ export function BodyMapSide({
       accessibilityRole="image"
       accessibilityLabel="Mapa corporal anatomico"
     >
-      {webImageStyle ? (
-        <View pointerEvents="none" style={[styles.webImage, webImageStyle]} />
-      ) : (
-        <Image
-          source={source}
-          resizeMode="stretch"
-          style={[
-            styles.image,
-            measuredImageStyle ||
-              (imageHalf === "left"
-                ? styles.imageLeftHalf
-                : styles.imageRightHalf),
-          ]}
-        />
-      )}
+      <Image
+        source={source}
+        resizeMode="stretch"
+        style={[
+          styles.image,
+          measuredImageStyle ||
+            (imageHalf === "left"
+              ? styles.imageLeftHalf
+              : styles.imageRightHalf),
+        ]}
+      />
       {points.map((point) => (
         <BodyMapPoint
           key={bodyMapPointKey(point)}
@@ -169,13 +152,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     width: "200%",
-    height: "100%",
-  },
-  webImage: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
     height: "100%",
   },
   imageLeftHalf: {
