@@ -20,6 +20,12 @@ export { getAuditEntries, getAuditSummary, recordAuditAction, toAuditRef } from 
 export { getOpsHealthSummary, recordApiMetric, recordSyncMetric } from "./opsMetrics";
 export { getRuntimeFeatureFlags } from "./featureFlags";
 export {
+  buildCommunitySsoCallbackUrl,
+  createCommunitySsoSession,
+  getCommunityWebUrl,
+  type CommunitySsoResponse,
+} from "./community";
+export {
   getCrmAdminProfessionals,
   getCrmAdminPatients,
   getCrmAdminProfessionalsPaged,

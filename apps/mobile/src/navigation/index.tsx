@@ -47,6 +47,7 @@ import {
 } from "../screens/laudo";
 import { PacienteHomeScreen } from "../screens/paciente/PacienteHomeScreen";
 import { PacienteAtividadeCheckinScreen } from "../screens/paciente/PacienteAtividadeCheckinScreen";
+import { CommunityWebViewScreen } from "../screens/community/CommunityWebViewScreen";
 import { useLanguage } from "../i18n/LanguageProvider";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -62,6 +63,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       PacienteInviteSignup: "cadastro-paciente",
       Home: "home",
       Settings: "settings",
+      CommunityWeb: "comunidade",
       AdminHome: "admin",
       AdminCrm: "admin/crm",
       AdminProfessionals: "admin/profissionais",
@@ -142,6 +144,11 @@ const MainStack = ({ t }: { t: (key: string) => string }) => (
       name="Settings"
       component={SettingsScreen}
       options={{ title: t("nav.settings") }}
+    />
+    <Stack.Screen
+      name="CommunityWeb"
+      component={CommunityWebViewScreen}
+      options={{ title: t("nav.community") }}
     />
     <Stack.Screen
       name="PacientesList"

@@ -103,6 +103,7 @@ export enum LaudoStatus {
 
 export enum UserRole {
   ADMIN = "ADMIN",
+  MODERATOR = "MODERATOR",
   USER = "USER",
   PACIENTE = "PACIENTE",
 }
@@ -471,6 +472,7 @@ export type RootStackParamList = {
   // Main
   Home: undefined;
   Settings: undefined;
+  CommunityWeb: { returnTo?: string } | undefined;
   AdminHome: undefined;
   AdminCrm:
     | {

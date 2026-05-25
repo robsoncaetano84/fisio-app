@@ -1101,6 +1101,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     | "PacienteForm"
     | "PacientesList"
     | "PacientesAtencao"
+    | "CommunityWeb"
     | "AnamneseForm"
     | "EvolucaoForm"
     | "ExameFisicoForm";
@@ -1125,6 +1126,12 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           attentionOnly: true,
           attentionSource: "HOME_SUMMARY",
         });
+        break;
+      case "CommunityWeb":
+        trackEvent("community_webview_opened", { source }).catch(
+          () => undefined,
+        );
+        navigation.navigate("CommunityWeb", { returnTo: "/" });
         break;
       case "AnamneseForm":
       case "EvolucaoForm":
@@ -1546,6 +1553,16 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 containerStyle={[styles.quickActionSecondary, isCompactLayout && styles.quickActionSecondaryCompact]}
                 onPress={() => {
                   handleNavigation("PacientesList").catch(() => undefined);
+                }}
+              />
+              <QuickAction
+                icon="chatbubbles-outline"
+                title={t("home.community")}
+                subtitle={t("home.communitySubtitle")}
+                color={COLORS.secondary}
+                containerStyle={[styles.quickActionSecondary, isCompactLayout && styles.quickActionSecondaryCompact]}
+                onPress={() => {
+                  handleNavigation("CommunityWeb").catch(() => undefined);
                 }}
               />
               <QuickAction
@@ -3010,7 +3027,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
 
 
 

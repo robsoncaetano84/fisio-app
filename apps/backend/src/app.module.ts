@@ -25,6 +25,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { CharlesModule } from './modules/charles/charles.module';
 import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical-governance.module';
+import { CommunityModule } from './modules/community/community.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
     MetricsModule,
     CharlesModule,
     ClinicalGovernanceModule,
+    CommunityModule,
   ],
   providers: [
     {

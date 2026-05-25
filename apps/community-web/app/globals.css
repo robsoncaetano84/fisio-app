@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --synap-primary: #2e7d5e;
+  --synap-primary-light: #4caf50;
+  --synap-primary-dark: #1b5e40;
+  --synap-secondary: #5c6bc0;
+  --synap-accent: #ff7043;
+  --synap-background: #f5f7fa;
+  --synap-surface: #ffffff;
+  --synap-text: #212121;
+  --synap-muted: #757575;
+  --synap-border: #e0e0e0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--synap-background);
+  color: var(--synap-text);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--synap-background);
+  color: var(--synap-text);
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(46, 125, 94, 0.18);
+}
+
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline-color: var(--synap-secondary);
+}

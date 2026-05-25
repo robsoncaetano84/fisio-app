@@ -6,6 +6,25 @@ import { AuthLog } from '../modules/auth/entities/auth-log.entity';
 import { ClinicalAuditLog } from '../modules/clinical-governance/entities/clinical-audit-log.entity';
 import { ClinicalProtocolVersion } from '../modules/clinical-governance/entities/clinical-protocol-version.entity';
 import { ConsentPurposeLog } from '../modules/clinical-governance/entities/consent-purpose-log.entity';
+import {
+  CommunityAuditLog,
+  CommunityBadge,
+  CommunityBookmark,
+  CommunityCategory,
+  CommunityContribution,
+  CommunityModerationReport,
+  CommunityNotification,
+  CommunityPost,
+  CommunityPostTag,
+  CommunityProfile,
+  CommunityProfileBadge,
+  CommunityReaction,
+  CommunityReply,
+  CommunityResource,
+  CommunityResourceTag,
+  CommunitySsoToken,
+  CommunityTag,
+} from '../modules/community/entities/community.entities';
 import { CrmAdminAuditLog } from '../modules/crm/entities/crm-admin-audit-log.entity';
 import { CrmInteraction } from '../modules/crm/entities/crm-interaction.entity';
 import { CrmLead } from '../modules/crm/entities/crm-lead.entity';
@@ -50,4 +69,21 @@ export const DATABASE_ENTITIES = [
   ClinicalProtocolVersion,
   ConsentPurposeLog,
   ClinicalAuditLog,
+  CommunityProfile,
+  CommunityCategory,
+  CommunityTag,
+  CommunityPost,
+  CommunityPostTag,
+  CommunityReply,
+  CommunityResource,
+  CommunityResourceTag,
+  CommunityReaction,
+  CommunityBookmark,
+  CommunityModerationReport,
+  CommunityNotification,
+  CommunityContribution,
+  CommunityBadge,
+  CommunityProfileBadge,
+  CommunityAuditLog,
+  CommunitySsoToken,
 ];

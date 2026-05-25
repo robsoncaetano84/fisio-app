@@ -1,0 +1,38 @@
+export const synapTokens = {
+  colors: {
+    primary: '#2E7D5E',
+    primaryLight: '#4CAF50',
+    primaryDark: '#1B5E40',
+    secondary: '#5C6BC0',
+    secondaryLight: '#8E99C2',
+    secondaryDark: '#3F51B5',
+    accent: '#FF7043',
+    accentLight: '#FFAB91',
+    background: '#F5F7FA',
+    surface: '#FFFFFF',
+    textPrimary: '#212121',
+    textSecondary: '#757575',
+    border: '#E0E0E0',
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    base: 16,
+    lg: 20,
+    xl: 24,
+    '2xl': 32,
+    '3xl': 40,
+    '4xl': 48,
+  },
+  radius: {
+    sm: 4,
+    md: 8,
+    lg: 12,
+    full: 9999,
+  },
+  shadows: {
+    sm: '0 1px 2px rgba(33, 33, 33, 0.08)',
+    md: '0 8px 28px rgba(33, 33, 33, 0.08)',
+  },
+} as const;

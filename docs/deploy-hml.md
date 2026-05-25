@@ -20,6 +20,7 @@ Subir um ambiente de homologação (`hml`) estável para teste remoto (incluindo
 - Copie `apps/mobile/.env.hml.example` como referência
 - Configure:
   - `EXPO_PUBLIC_API_URL`
+  - `EXPO_PUBLIC_COMMUNITY_WEB_URL`
   - `EXPO_PUBLIC_MASTER_ADMIN_EMAILS`
   - `EXPO_PUBLIC_SENTRY_DSN` (opcional/recomendado)
   - `EXPO_PUBLIC_APP_ENV=hml`
@@ -54,6 +55,7 @@ npm run quick-test -- -BaseUrl https://api-hml.seudominio.com/api
 
 ### Mobile
 - apontar `EXPO_PUBLIC_API_URL` para HML
+- apontar `EXPO_PUBLIC_COMMUNITY_WEB_URL` para o app web da comunidade em HML
 - gerar APK/test build
 - validar login/cadastro/anamnese/evolução/check-ins
 

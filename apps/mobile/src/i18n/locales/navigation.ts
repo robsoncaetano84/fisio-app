@@ -29,6 +29,7 @@ export const ptNavigation: TranslationMap = {
   "nav.patientHome": "Synap - Paciente",
   "nav.patientCheckin": "Check-in de atividade",
   "nav.settings": "Configurações",
+  "nav.community": "Comunidade",
   "nav.physicalExam": "Exame físico",
 };
 
@@ -57,6 +58,7 @@ export const enNavigation: TranslationMap = {
   "nav.patientHome": "Synap - Patient",
   "nav.patientCheckin": "Activity Check-in",
   "nav.settings": "Settings",
+  "nav.community": "Community",
   "nav.physicalExam": "Physical exam",
 };
 
@@ -85,6 +87,7 @@ export const esNavigation: TranslationMap = {
   "nav.patientHome": "Synap - Paciente",
   "nav.patientCheckin": "Check-in de Actividad",
   "nav.settings": "Configuración",
+  "nav.community": "Comunidad",
   "nav.physicalExam": "Examen físico",
 };
 

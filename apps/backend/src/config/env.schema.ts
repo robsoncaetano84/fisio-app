@@ -26,6 +26,20 @@ export const envValidationSchema = Joi.object({
   LOCKOUT_WINDOW_MIN: Joi.number().default(15),
   LOCKOUT_DURATION_MIN: Joi.number().default(30),
   REDIS_URL: Joi.string().allow('').optional(),
+  COMMUNITY_WEB_URL: Joi.string().allow('').optional(),
+  COMMUNITY_COOKIE_DOMAIN: Joi.string().allow('').optional(),
+  COMMUNITY_SESSION_COOKIE_MAX_AGE_MS: Joi.number()
+    .integer()
+    .min(60000)
+    .optional(),
+  COMMUNITY_S3_BUCKET: Joi.string().allow('').optional(),
+  COMMUNITY_S3_REGION: Joi.string().allow('').optional(),
+  COMMUNITY_S3_ENDPOINT: Joi.string().allow('').optional(),
+  COMMUNITY_S3_PUBLIC_BASE_URL: Joi.string().allow('').optional(),
+  COMMUNITY_S3_ACCESS_KEY_ID: Joi.string().allow('').optional(),
+  COMMUNITY_S3_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
+  COMMUNITY_AI_MODEL: Joi.string().allow('').optional(),
+  COMMUNITY_AI_TIMEOUT_MS: Joi.number().integer().min(1000).optional(),
   ALLOW_ADMIN_REGISTRATION: Joi.string()
     .valid('true', 'false')
     .default('false'),

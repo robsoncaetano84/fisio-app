@@ -61,6 +61,9 @@ export type AnalyticsEventName =
   | "crm_reactivation_task_prefilled"
   | "crm_kpi_clicked"
   | "home_biopsychosocial_summary_clicked"
+  | "community_webview_opened"
+  | "community_webview_sso_created"
+  | "community_webview_sso_failed"
   | "patient_form_validation_failed"
   | "patient_form_submit_started"
   | "patient_form_submit_succeeded"
@@ -608,7 +611,6 @@ async function getLocalClinicalFlowSummary(
     eventsByStage,
   };
 }
-
 
 
 
