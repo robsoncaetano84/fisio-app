@@ -71,7 +71,7 @@ describe('PacienteSelfProfileService', () => {
     role: UserRole.PACIENTE,
   } as Usuario;
 
-  it('creates self paciente with safe placeholder data for paciente users', async () => {
+  it('creates self paciente with optional address fields for paciente users', async () => {
     const { service, pacienteRepository, usuarioRepository } = makeService();
     pacienteRepository.findOne
       .mockResolvedValueOnce(null)
@@ -87,6 +87,12 @@ describe('PacienteSelfProfileService', () => {
         sexo: Sexo.OUTRO,
         usuarioId: 'usuario-paciente',
         pacienteUsuarioId: 'usuario-paciente',
+        enderecoRua: null,
+        enderecoNumero: null,
+        enderecoBairro: null,
+        enderecoCep: null,
+        enderecoCidade: null,
+        enderecoUf: null,
         anamneseLiberadaPaciente: true,
         cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
         vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
