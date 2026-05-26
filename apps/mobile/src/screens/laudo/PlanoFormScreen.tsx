@@ -126,6 +126,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const [autosaveStatus, setAutosaveStatus] =
     useState<AutosaveStatus>("idle");
   const [lastAutosavedAt, setLastAutosavedAt] = useState<string | null>(null);
+  const [clearingPlan, setClearingPlan] = useState(false);
   const autoFillRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autosaveInFlightRef = useRef(false);
@@ -145,7 +146,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const draftKey = `draft:plano:${pacienteId}`;
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
   const downloadBaseUrl = (api.defaults.baseURL || "").replace(/\/api$/, "");
-  const isBusy = loading || pdfLoading;
+  const isBusy = loading || pdfLoading || clearingPlan;
   const dateLocale =
     language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
 
@@ -168,6 +169,38 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     !planoTratamentoIA.trim() &&
     !criteriosAlta.trim() &&
     !observacoes.trim();
+
+  const hasPlanContent = (source: {
+    objetivosCurtoPrazo?: string | null;
+    objetivosMedioPrazo?: string | null;
+    frequenciaSemanal?: string | number | null;
+    duracaoSemanas?: string | number | null;
+    condutas?: string | null;
+    planoTratamentoIA?: string | null;
+    criteriosAlta?: string | null;
+    observacoes?: string | null;
+  }) =>
+    [
+      source.objetivosCurtoPrazo,
+      source.objetivosMedioPrazo,
+      source.frequenciaSemanal,
+      source.duracaoSemanas,
+      source.condutas,
+      source.planoTratamentoIA,
+      source.criteriosAlta,
+      source.observacoes,
+    ].some((value) => String(value || "").trim().length > 0);
+
+  const resetPlanFields = () => {
+    setObjetivosCurtoPrazo("");
+    setObjetivosMedioPrazo("");
+    setFrequenciaSemanal("");
+    setDuracaoSemanas("");
+    setCondutas("");
+    setPlanoTratamentoIA("");
+    setCriteriosAlta("");
+    setObservacoes("");
+  };
 
   const getValidatedPlanSnapshotKey = (id: string) =>
     `plano:validated-snapshot:v1:${id}`;
@@ -228,7 +261,9 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     };
   };
 
-  const buildPlanSnapshot = (payload = buildPlanPayload()) =>
+  const buildPlanSnapshot = (
+    payload: Partial<ReturnType<typeof buildPlanPayload>> = buildPlanPayload(),
+  ) =>
     JSON.stringify(payload);
 
   const hasValidOptionalNumber = (value: string, min: number, max: number) => {
@@ -390,6 +425,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     let active = true;
 
     const load = async () => {
+      let shouldPrefillWithAi = true;
       if (!paciente) {
         await fetchPacientes(true).catch(() => undefined);
       }
@@ -400,6 +436,16 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       if (!active) return;
       if (laudo?.id) {
         setLaudoId(laudo.id);
+        shouldPrefillWithAi = !hasPlanContent({
+          objetivosCurtoPrazo: laudo.objetivosCurtoPrazo,
+          objetivosMedioPrazo: laudo.objetivosMedioPrazo,
+          frequenciaSemanal: laudo.frequenciaSemanal,
+          duracaoSemanas: laudo.duracaoSemanas,
+          condutas: laudo.condutas,
+          planoTratamentoIA: laudo.planoTratamentoIA,
+          criteriosAlta: laudo.criteriosAlta,
+          observacoes: laudo.observacoes,
+        });
         setObjetivosCurtoPrazo(laudo.objetivosCurtoPrazo || "");
         setObjetivosMedioPrazo(laudo.objetivosMedioPrazo || "");
         setFrequenciaSemanal(
@@ -501,6 +547,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         const raw = await AsyncStorage.getItem(draftKey);
         if (raw && !laudo?.id) {
           const draft = JSON.parse(raw) as Partial<PlanoDraft>;
+          shouldPrefillWithAi = !hasPlanContent(draft);
           if (draft.objetivosCurtoPrazo !== undefined)
             setObjetivosCurtoPrazo(draft.objetivosCurtoPrazo);
           if (draft.objetivosMedioPrazo !== undefined)
@@ -524,9 +571,9 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         setDraftLoaded(true);
       }
 
-      if (!autoFillRef.current) {
+      if (shouldPrefillWithAi && !autoFillRef.current) {
         autoFillRef.current = true;
-        await applySuggestion(false);
+        await applySuggestion(true);
       }
     };
 
@@ -908,6 +955,69 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     }).catch(() => undefined);
   };
 
+  const clearPlanValidationState = async (id?: string | null) => {
+    setProfessionalValidationConfirmed(false);
+    setValidatedPlanSnapshot(null);
+    setPlanValidatedAt(null);
+    if (id) {
+      await AsyncStorage.removeItem(getValidatedPlanSnapshotKey(id)).catch(
+        () => undefined,
+      );
+    }
+  };
+
+  const handleClearPlan = async () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    setClearingPlan(true);
+    try {
+      resetPlanFields();
+      setErrors({});
+      setAiExamContextMessage("");
+      setAiSuggestionMeta(null);
+      setAiSuggestionConfirmed(true);
+      setLastDraftSavedAt(null);
+      setLastAutosavedAt(null);
+      setAutosaveStatus("idle");
+      await AsyncStorage.removeItem(draftKey).catch(() => undefined);
+      await clearPlanValidationState(laudoId);
+
+      const clearedSnapshot = buildPlanSnapshot({});
+      if (laudoId) {
+        await updateLaudo(laudoId, {
+          objetivosCurtoPrazo: "",
+          objetivosMedioPrazo: "",
+          frequenciaSemanal: null,
+          duracaoSemanas: null,
+          condutas: "",
+          planoTratamentoIA: "",
+          criteriosAlta: "",
+          observacoes: "",
+          sugestaoSource: null,
+          examesConsiderados: null,
+          examesComLeituraIa: null,
+        });
+      }
+      lastSavedPlanSnapshotRef.current = clearedSnapshot;
+
+      showToast({
+        type: "success",
+        message: t("clinical.messages.planClearedSuccessfully"),
+      });
+    } catch (error: unknown) {
+      const { message } = parseApiError(error);
+      showToast({
+        type: "error",
+        message: message || t("clinical.messages.planClearError"),
+      });
+    } finally {
+      setClearingPlan(false);
+    }
+  };
+
   const handleToggleProfessionalValidationChecklist = () => {
     if (!canToggleValidationChecklist) return;
     const nextChecked = !validationChecklistChecked;
@@ -1121,17 +1231,14 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             </View>
           ) : null}
           <Button
-            title={
-              generating
-                ? t("common.actions.generating")
-                : t("clinical.actions.fillWithAi")
-            }
-            onPress={() => applySuggestion(true)}
-            disabled={generating}
+            title={t("clinical.actions.clearPlan")}
+            onPress={handleClearPlan}
+            disabled={generating || isBusy}
+            loading={clearingPlan}
             variant="outline"
             icon={
               <Ionicons
-                name="sparkles-outline"
+                name="trash-outline"
                 size={16}
                 color={COLORS.primary}
               />
@@ -1228,14 +1335,6 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             style={{ height: 90, textAlignVertical: "top" }}
             showCount
             maxLength={1500}
-          />
-          <Button
-            title={t("clinical.actions.clearLocalDraft")}
-            variant="ghost"
-            onPress={() => {
-              AsyncStorage.removeItem(draftKey).catch(() => undefined);
-              setLastDraftSavedAt(null);
-            }}
           />
         </View>
       </ScrollView>

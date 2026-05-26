@@ -677,7 +677,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     !hasUnsavedChanges &&
     !isAutosaving &&
     hasReviewedLaudo &&
-    hasConfirmedAiReview;
+    hasConfirmedAiReview &&
+    isValidatedWithoutPendingChanges;
   const pdfGateMessage =
     !laudoId || hasUnsavedChanges || isAutosaving
       ? t("clinical.messages.waitAutosaveBeforeGeneratePdf")
@@ -685,6 +686,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         ? t("clinical.messages.confirmAiReviewBeforePdf")
         : !hasReviewedLaudo
           ? t("clinical.messages.reviewReportBeforePdf")
+          : !isValidatedWithoutPendingChanges
+            ? t("clinical.messages.reviewReportBeforePdf")
           : "";
   const autosaveStatusMessage = useMemo(() => {
     if (autosaveStatus === "pending") {
@@ -1182,14 +1185,14 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       });
       return;
     }
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges || isAutosaving) {
       showToast({
         message: t("clinical.messages.waitAutosaveChangesBeforeValidation"),
         type: "info",
       });
       return;
     }
-    if (isValidated) {
+    if (isValidatedWithoutPendingChanges) {
       showToast({
         message: t("clinical.messages.reportAlreadyValidated"),
         type: "info",
@@ -2367,7 +2370,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           </View>
           <Button
             title={
-              isValidated
+              isValidatedWithoutPendingChanges
                 ? t("clinical.actions.reportValidated")
                 : t("clinical.actions.validateAndApprove")
             }
@@ -2377,7 +2380,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               loading ||
               !laudoId ||
               hasUnsavedChanges ||
-              (isValidated && !hasCriticalChangesAfterValidation)
+              isAutosaving ||
+              isValidatedWithoutPendingChanges
             }
             fullWidth
             style={{ marginTop: SPACING.sm }}

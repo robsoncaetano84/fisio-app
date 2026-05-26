@@ -9,24 +9,24 @@ import { Laudo } from "../types";
 
 type CreateLaudoPayload = {
   pacienteId?: string;
-  motivoAvaliacao?: string;
-  historicoClinico?: string;
-  achadosClinicos?: string;
-  diagnosticoFuncional?: string;
-  objetivosCurtoPrazo?: string;
-  objetivosMedioPrazo?: string;
-  frequenciaSemanal?: number;
-  duracaoSemanas?: number;
-  conclusao?: string;
-  condutas?: string;
-  exameFisico?: string;
-  planoTratamentoIA?: string;
-  rascunhoProfissional?: string;
-  observacoes?: string;
-  criteriosAlta?: string;
-  sugestaoSource?: "ai" | "rules";
-  examesConsiderados?: number;
-  examesComLeituraIa?: number;
+  motivoAvaliacao?: string | null;
+  historicoClinico?: string | null;
+  achadosClinicos?: string | null;
+  diagnosticoFuncional?: string | null;
+  objetivosCurtoPrazo?: string | null;
+  objetivosMedioPrazo?: string | null;
+  frequenciaSemanal?: number | null;
+  duracaoSemanas?: number | null;
+  conclusao?: string | null;
+  condutas?: string | null;
+  exameFisico?: string | null;
+  planoTratamentoIA?: string | null;
+  rascunhoProfissional?: string | null;
+  observacoes?: string | null;
+  criteriosAlta?: string | null;
+  sugestaoSource?: "ai" | "rules" | null;
+  examesConsiderados?: number | null;
+  examesComLeituraIa?: number | null;
 };
 
 export const useLaudoStore = create<{

@@ -39,6 +39,7 @@ export const ptClinical: TranslationMap = {
   "clinical.actions.physicalExamValidated": "Exame Físico Validado",
   "clinical.actions.validateAnyway": "Validar mesmo assim",
   "clinical.actions.fillWithAi": "Preencher com IA",
+  "clinical.actions.clearPlan": "Limpar plano",
   "clinical.actions.clearLocalDraft": "Limpar rascunho local",
   "clinical.actions.savePlan": "Salvar Plano",
   "clinical.actions.regenerateFromAnamnesis": "Regenerar por anamnese",
@@ -57,7 +58,7 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.confirmAiReviewBeforePdf":
     "Confirme a revisão da sugestão de IA antes de gerar PDF",
   "clinical.messages.reviewReportBeforePdf":
-    "Revise o conteúdo do laudo antes de gerar PDF",
+    "Valide e aprove o laudo antes de gerar PDF",
   "clinical.messages.reviewPlanBeforePdf":
     "Valide e aprove o plano antes de gerar PDF",
   "clinical.messages.autosavePending":
@@ -118,6 +119,8 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.noPermissionEditPlan":
     "Sem permissão para editar este plano.",
   "clinical.messages.planSaveError": "Não foi possível salvar o plano.",
+  "clinical.messages.planClearedSuccessfully": "Plano limpo com sucesso.",
+  "clinical.messages.planClearError": "Não foi possível limpar o plano.",
   "clinical.messages.treatmentPlanFormSubtitle":
     "Formulário independente do laudo com sugestão inicial por IA.",
   "clinical.messages.lastEditedAt": "Última edição",
@@ -304,6 +307,7 @@ export const enClinical: TranslationMap = {
   "clinical.actions.physicalExamValidated": "Physical Exam Validated",
   "clinical.actions.validateAnyway": "Validate anyway",
   "clinical.actions.fillWithAi": "Fill with AI",
+  "clinical.actions.clearPlan": "Clear plan",
   "clinical.actions.clearLocalDraft": "Clear local draft",
   "clinical.actions.savePlan": "Save Plan",
   "clinical.actions.regenerateFromAnamnesis": "Regenerate from anamnesis",
@@ -322,7 +326,7 @@ export const enClinical: TranslationMap = {
   "clinical.messages.confirmAiReviewBeforePdf":
     "Confirm AI suggestion review before generating the PDF",
   "clinical.messages.reviewReportBeforePdf":
-    "Review the report content before generating the PDF",
+    "Validate and approve the report before generating the PDF",
   "clinical.messages.reviewPlanBeforePdf":
     "Validate and approve the plan before generating the PDF",
   "clinical.messages.autosavePending": "Changes will be saved automatically",
@@ -380,6 +384,8 @@ export const enClinical: TranslationMap = {
   "clinical.messages.noPermissionEditPlan":
     "You do not have permission to edit this plan.",
   "clinical.messages.planSaveError": "Could not save the plan.",
+  "clinical.messages.planClearedSuccessfully": "Plan cleared successfully.",
+  "clinical.messages.planClearError": "Could not clear the plan.",
   "clinical.messages.treatmentPlanFormSubtitle":
     "Independent treatment plan form with initial AI suggestion.",
   "clinical.messages.lastEditedAt": "Last edited",
@@ -564,6 +570,7 @@ export const esClinical: TranslationMap = {
   "clinical.actions.physicalExamValidated": "Examen físico validado",
   "clinical.actions.validateAnyway": "Validar de todos modos",
   "clinical.actions.fillWithAi": "Completar con IA",
+  "clinical.actions.clearPlan": "Limpiar plan",
   "clinical.actions.clearLocalDraft": "Limpiar borrador local",
   "clinical.actions.savePlan": "Guardar plan",
   "clinical.actions.regenerateFromAnamnesis": "Regenerar por anamnesis",
@@ -582,7 +589,7 @@ export const esClinical: TranslationMap = {
   "clinical.messages.confirmAiReviewBeforePdf":
     "Confirme la revisión de la sugerencia de IA antes de generar el PDF",
   "clinical.messages.reviewReportBeforePdf":
-    "Revise el contenido del informe antes de generar el PDF",
+    "Valide y apruebe el informe antes de generar el PDF",
   "clinical.messages.reviewPlanBeforePdf":
     "Valide y apruebe el plan antes de generar el PDF",
   "clinical.messages.autosavePending":
@@ -641,6 +648,8 @@ export const esClinical: TranslationMap = {
   "clinical.messages.noPermissionEditPlan":
     "Sin permiso para editar este plan.",
   "clinical.messages.planSaveError": "No fue posible guardar el plan.",
+  "clinical.messages.planClearedSuccessfully": "Plan limpiado con éxito.",
+  "clinical.messages.planClearError": "No fue posible limpiar el plan.",
   "clinical.messages.treatmentPlanFormSubtitle":
     "Formulario independiente del informe con sugerencia inicial por IA.",
   "clinical.messages.lastEditedAt": "Última edición",

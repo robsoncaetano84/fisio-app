@@ -141,7 +141,7 @@ export function ExameFisicoFormScreen({
     uploadingMovementPhoto,
     handleUploadClinicalPhoto,
   } = useClinicalPhotoWorkflow({ pacienteId, showToast });
-  const autoDorSuggestionAppliedRef = useRef(false);
+  const lastAutoDorSuggestionKeyRef = useRef<string | null>(null);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
 
@@ -206,12 +206,27 @@ export function ExameFisicoFormScreen({
 
   useEffect(() => {
     if (!exam) return;
-    if (autoDorSuggestionAppliedRef.current) return;
-    if (exam.dorPrincipal || exam.dorSubtipo) return;
     if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo)
       return;
+    const hasCurrentClassification = !!exam.dorPrincipal || !!exam.dorSubtipo;
+    const canApplyAutomaticSuggestion =
+      !hasCurrentClassification || exam.source === "rule-based";
+    if (!canApplyAutomaticSuggestion) return;
 
-    autoDorSuggestionAppliedRef.current = true;
+    const suggestionKey = [
+      effectiveDorSuggestion.principal,
+      effectiveDorSuggestion.subtipo,
+      effectiveDorSuggestion.confidence,
+      effectiveDorSuggestion.protocolVersion || "",
+    ].join(":");
+    const isSameSuggestion =
+      exam.source === "rule-based" &&
+      exam.dorPrincipal === effectiveDorSuggestion.principal &&
+      exam.dorSubtipo === effectiveDorSuggestion.subtipo;
+    if (isSameSuggestion && lastAutoDorSuggestionKeyRef.current === suggestionKey)
+      return;
+
+    lastAutoDorSuggestionKeyRef.current = suggestionKey;
     setExam((prev) =>
       prev
         ? {
@@ -233,7 +248,12 @@ export function ExameFisicoFormScreen({
       evidenceFields: effectiveDorSuggestion.evidenceFields,
       patientId: pacienteId,
     }).catch(() => undefined);
-  }, [AI_REVIEW_REQUIRED, effectiveDorSuggestion, exam, pacienteId]);
+  }, [
+    AI_REVIEW_REQUIRED,
+    effectiveDorSuggestion,
+    exam,
+    pacienteId,
+  ]);
 
   const orchestratorFocusedRegions = useMemo(() => {
     const hints = [
@@ -1095,38 +1115,6 @@ export function ExameFisicoFormScreen({
     }
   };
 
-  const handleApplyDorSuggestion = () => {
-    if (!exam) return;
-    if (!effectiveDorSuggestion.principal || !effectiveDorSuggestion.subtipo) {
-      showToast({
-        type: "error",
-        message:
-          "Nao foi possivel sugerir classificacao de dor com os dados atuais da anamnese.",
-      });
-      return;
-    }
-    setExam({
-      ...exam,
-      source: "rule-based",
-      dorPrincipal: effectiveDorSuggestion.principal,
-      dorSubtipo: effectiveDorSuggestion.subtipo,
-    });
-    setClassificationConfirmed(!AI_REVIEW_REQUIRED);
-    setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
-    logClinicalAiSuggestion({
-      stage: "EXAME_FISICO",
-      suggestionType: "DOR_CLASSIFICATION",
-      confidence: effectiveDorSuggestion.confidence,
-      reason: effectiveDorSuggestion.reason,
-      evidenceFields: effectiveDorSuggestion.evidenceFields,
-      patientId: pacienteId,
-    }).catch(() => undefined);
-    showToast({
-      type: "success",
-      message: `Sugestao aplicada (base ${dorSuggestionBaseLabel}): ${effectiveDorSuggestion.reason}`,
-    });
-  };
-
   const confirmClassificationReview = (showSuccessToast = true) => {
     setClassificationConfirmed(true);
     setExam((prev) => (prev ? { ...prev, source: "manual" } : prev));
@@ -1425,14 +1413,6 @@ export function ExameFisicoFormScreen({
               <Text style={styles.classificationSuggestionLabel}>
                 Sugestão da anamnese
               </Text>
-              <TouchableOpacity
-                style={styles.classificationSuggestionButton}
-                onPress={handleApplyDorSuggestion}
-              >
-                <Text style={styles.classificationSuggestionButtonText}>
-                  Sugerir por IA
-                </Text>
-              </TouchableOpacity>
             </View>
             <Text style={styles.classificationSuggestionText}>
               {effectiveDorSuggestion.principal &&
@@ -1445,7 +1425,7 @@ export function ExameFisicoFormScreen({
             </Text>
             {effectiveDorSuggestion.confidence === "BAIXA" ? (
               <Text style={styles.classificationLowConfidenceText}>
-                Base inicial: revise manualmente antes de aplicar.
+                Base inicial: revise manualmente antes de confirmar.
               </Text>
             ) : null}
             {effectiveDorSuggestion.evidenceFields.length > 0 ? (
@@ -3174,19 +3154,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-  },
-  classificationSuggestionButton: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: `${COLORS.primary}10`,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-  },
-  classificationSuggestionButtonText: {
-    color: COLORS.primary,
-    fontSize: FONTS.sizes.xs,
-    fontWeight: "700",
   },
   orchestratorNoticeCard: {
     borderWidth: 1,
