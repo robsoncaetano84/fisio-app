@@ -859,6 +859,9 @@ export function PacienteDetailsScreen({
       orchestratorNextAction?.nextAction?.stage || "",
     ).toUpperCase();
     const nextKey = stageKeyMap[nextStage];
+    const localStatusByKey = new Map(
+      localClinicalFlowItems.map((item) => [item.key, item.status]),
+    );
 
     const items = (Object.keys(labels) as Array<keyof typeof labels>).map(
       (key) => ({
@@ -878,6 +881,23 @@ export function PacienteDetailsScreen({
         status = "IN_PROGRESS";
       const target = items.find((item) => item.key === mappedKey);
       if (target) target.status = status;
+    }
+
+    for (const item of items) {
+      if (localStatusByKey.get(item.key) === "DONE") {
+        item.status = "DONE";
+      }
+    }
+
+    const hasInProgress = items.some((item) => item.status === "IN_PROGRESS");
+    if (!hasInProgress) {
+      const localInProgress = localClinicalFlowItems.find(
+        (item) => item.status === "IN_PROGRESS",
+      );
+      const target = items.find((item) => item.key === localInProgress?.key);
+      if (target && target.status !== "DONE" && target.status !== "BLOCKED") {
+        target.status = "IN_PROGRESS";
+      }
     }
 
     return items;
