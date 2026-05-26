@@ -223,7 +223,6 @@ export function formatExameFisicoForPatientDisplay(
     parsed.movimento?.passivo,
     parsed.movimento?.resistido,
     parsed.movimento?.reproduzDor,
-    parsed.movimento?.qualidadeMovimento,
   ]
     .map(cleanText)
     .filter(isInformative);
@@ -304,8 +303,6 @@ export function formatExameFisicoForDisplay(value?: string | null): string {
     'Passivo: ' + String(parsed.movimento?.passivo || 'Nao informado'),
     'Resistido: ' + String(parsed.movimento?.resistido || 'Nao informado'),
     'Reproduz dor: ' + String(parsed.movimento?.reproduzDor || 'Nao informado'),
-    'Qualidade do movimento: ' +
-      String(parsed.movimento?.qualidadeMovimento || 'Nao informado'),
     'Palpacao',
     'Muscular: ' + String(parsed.palpacao?.muscular || 'Nao informado'),
     'Articular: ' + String(parsed.palpacao?.articular || 'Nao informado'),

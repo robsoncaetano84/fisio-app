@@ -1589,11 +1589,6 @@ export function ExameFisicoFormScreen({
             {...getVoiceInputProps("movimento.reproduzDor")}
             error={errors.movimentoReproduzDor}
           />
-          <Input
-            label="Qualidade do movimento"
-            value={exam.movimento.qualidadeMovimento}
-            onChangeText={(v) => setField("movimento.qualidadeMovimento", v)}
-          />
         </View>
 
         <View style={styles.section}>

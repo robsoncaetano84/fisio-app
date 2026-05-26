@@ -1859,7 +1859,6 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Passivo: ${exam.movimento.passivo}`,
     `Resistido: ${exam.movimento.resistido}`,
     `Reproduz dor: ${exam.movimento.reproduzDor}`,
-    `Qualidade do movimento: ${exam.movimento.qualidadeMovimento}`,
     "",
     "Padrao de dor",
     `Local: ${exam.padraoDor.local}`,
