@@ -1248,20 +1248,10 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
 
   const handleValidate = async () => {
     if (hasSuggestedReferences && !hasConsultedAnyReference) {
-      Alert.alert(
-        t("common.titles.attention"),
-        t("clinical.messages.validateWithoutConsultedReferencesConfirm"),
-        [
-          { text: t("common.cancel"), style: "cancel" },
-          {
-            text: t("clinical.actions.validateAnyway"),
-            onPress: () => {
-              void performValidate();
-            },
-          },
-        ],
-      );
-      return;
+      showToast({
+        message: t("clinical.messages.pdfWithoutConsultedReferencesWarning"),
+        type: "info",
+      });
     }
 
     await performValidate();
