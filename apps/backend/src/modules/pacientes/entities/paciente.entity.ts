@@ -45,7 +45,7 @@ export class Paciente extends BaseEntity {
   @Column({ length: 11 })
   cpf: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   rg: string;
 
   @Column({ name: 'data_nascimento', type: 'date' })
@@ -62,37 +62,37 @@ export class Paciente extends BaseEntity {
   })
   estadoCivil: EstadoCivil;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   profissao: string;
 
-  @Column({ name: 'endereco_rua', length: 255, nullable: true })
+  @Column({ name: 'endereco_rua', type: 'varchar', length: 255, nullable: true })
   enderecoRua: string | null;
 
-  @Column({ name: 'endereco_numero', length: 20, nullable: true })
+  @Column({ name: 'endereco_numero', type: 'varchar', length: 20, nullable: true })
   enderecoNumero: string | null;
 
-  @Column({ name: 'endereco_complemento', length: 100, nullable: true })
+  @Column({ name: 'endereco_complemento', type: 'varchar', length: 100, nullable: true })
   enderecoComplemento: string | null;
 
-  @Column({ name: 'endereco_bairro', length: 100, nullable: true })
+  @Column({ name: 'endereco_bairro', type: 'varchar', length: 100, nullable: true })
   enderecoBairro: string | null;
 
-  @Column({ name: 'endereco_cep', length: 8, nullable: true })
+  @Column({ name: 'endereco_cep', type: 'varchar', length: 8, nullable: true })
   enderecoCep: string | null;
 
-  @Column({ name: 'endereco_cidade', length: 100, nullable: true })
+  @Column({ name: 'endereco_cidade', type: 'varchar', length: 100, nullable: true })
   enderecoCidade: string | null;
 
-  @Column({ name: 'endereco_uf', length: 2, nullable: true })
+  @Column({ name: 'endereco_uf', type: 'varchar', length: 2, nullable: true })
   enderecoUf: string | null;
 
   @Column({ name: 'contato_whatsapp', length: 11 })
   contatoWhatsapp: string;
 
-  @Column({ name: 'contato_telefone', length: 11, nullable: true })
+  @Column({ name: 'contato_telefone', type: 'varchar', length: 11, nullable: true })
   contatoTelefone: string;
 
-  @Column({ name: 'contato_email', length: 255, nullable: true })
+  @Column({ name: 'contato_email', type: 'varchar', length: 255, nullable: true })
   contatoEmail: string;
 
   @Column({ default: true })
