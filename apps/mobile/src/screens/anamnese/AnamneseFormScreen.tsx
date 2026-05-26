@@ -264,29 +264,76 @@ const IRRADIATION_CHAINS: Record<string, string[]> = {
   panturrilha: ["tornozelo_pe"],
 };
 
+type LateralSide = Extract<AreaAfetada["lado"], "direito" | "esquerdo">;
+
+const LATERAL_SIDES: LateralSide[] = ["direito", "esquerdo"];
+
+const FEMININE_SIDE_LABEL_AREAS = new Set([
+  "cabeca",
+  "coluna_cervical",
+  "coluna_toracica",
+  "coluna_lombar",
+  "coxa",
+  "posterior_coxa",
+  "panturrilha",
+  "tibial_anterior",
+]);
+
+const formatSideLabel = (areaId: string, lado: LateralSide) => {
+  const isFeminine = FEMININE_SIDE_LABEL_AREAS.has(areaId);
+  if (lado === "direito") return isFeminine ? "direita" : "direito";
+  return isFeminine ? "esquerda" : "esquerdo";
+};
+
 const formatAreaWithSide = (areaId: string, lado?: AreaAfetada["lado"]) => {
   const label = AREA_LABELS[areaId] || areaId;
-  if (lado === "esquerdo") return `${label} esquerdo`;
-  if (lado === "direito") return `${label} direito`;
+  if (lado === "esquerdo" || lado === "direito") {
+    return `${label} ${formatSideLabel(areaId, lado)}`;
+  }
   if (lado === "ambos") return `${label} bilateral`;
   return label;
+};
+
+const getIrradiationSuggestionSides = (
+  area: AreaAfetada,
+  areas: AreaAfetada[],
+  destinations: string[],
+): LateralSide[] => {
+  if (area.lado === "direito" || area.lado === "esquerdo") {
+    return [area.lado];
+  }
+
+  const relatedRegions = new Set([area.regiao, ...destinations]);
+  const selectedRelatedSides = LATERAL_SIDES.filter((side) =>
+    areas.some(
+      (candidate) =>
+        candidate !== area &&
+        candidate.lado === side &&
+        relatedRegions.has(candidate.regiao),
+    ),
+  );
+
+  return selectedRelatedSides.length > 0 ? selectedRelatedSides : LATERAL_SIDES;
 };
 
 const buildIrradiationSuggestions = (areas: AreaAfetada[]) => {
   const seen = new Set<string>();
   return areas.flatMap((area) => {
     const destinations = IRRADIATION_CHAINS[area.regiao] || [];
-    return destinations
-      .map((destination) => {
-        const value = `${formatAreaWithSide(area.regiao, area.lado)} -> ${formatAreaWithSide(
-          destination,
-          area.lado,
-        )}`;
-        if (seen.has(value)) return null;
-        seen.add(value);
-        return value;
-      })
-      .filter(Boolean) as string[];
+    const sides = getIrradiationSuggestionSides(area, areas, destinations);
+    return destinations.flatMap((destination) =>
+      sides
+        .map((side) => {
+          const value = `${formatAreaWithSide(area.regiao, side)} -> ${formatAreaWithSide(
+            destination,
+            side,
+          )}`;
+          if (seen.has(value)) return null;
+          seen.add(value);
+          return value;
+        })
+        .filter(Boolean),
+    ) as string[];
   });
 };
 
