@@ -88,6 +88,11 @@ type ExameFisicoFormScreenProps = {
   route: RouteProp<RootStackParamList, "ExameFisicoForm">;
 };
 type IconName = keyof typeof Ionicons.glyphMap;
+type RegisteredExameFisicoResponse = {
+  id: string;
+  laudoId?: string | null;
+  exameFisico?: string | null;
+};
 
 export function ExameFisicoFormScreen({
   route,
@@ -288,6 +293,7 @@ export function ExameFisicoFormScreen({
 
     const load = async () => {
       let loadedExam: ExameFisicoStructured | null = null;
+      let hasPersistedExam = false;
       if (!paciente) {
         await fetchPacientes(true).catch(() => undefined);
       }
@@ -297,13 +303,27 @@ export function ExameFisicoFormScreen({
       const laudo = await fetchLaudoByPaciente(pacienteId, false).catch(
         () => null,
       );
+      const registeredExam = await api
+        .get<RegisteredExameFisicoResponse | null>("/laudos/exame-fisico", {
+          params: { pacienteId },
+        })
+        .then((response) => response.data || null)
+        .catch(() => null);
       if (!active) return;
 
-      if (laudo?.id) {
-        setLaudoId(laudo.id);
-        const structured = parseStructuredExame(laudo.exameFisico);
+      if (laudo?.id || registeredExam?.laudoId) {
+        setLaudoId(registeredExam?.laudoId || laudo?.id || null);
+      }
+
+      const persistedExamText =
+        registeredExam?.exameFisico || laudo?.exameFisico || "";
+      hasPersistedExam =
+        !!registeredExam?.id || !!String(persistedExamText).trim();
+      setRecordedExamLocked(hasPersistedExam);
+
+      if (hasPersistedExam) {
+        const structured = parseStructuredExame(persistedExamText);
         if (structured) {
-          setRecordedExamLocked(true);
           loadedExam = enrichStructuredExameWithClinicalLogic(
             structured,
             latestAnamnese,
@@ -317,7 +337,7 @@ export function ExameFisicoFormScreen({
 
       try {
         const rawDraft = await AsyncStorage.getItem(draftKey);
-        if (rawDraft) {
+        if (rawDraft && !hasPersistedExam) {
           const parsed = JSON.parse(rawDraft) as {
             exam?: ExameFisicoStructured;
             lastEditedAt?: string;
@@ -340,7 +360,7 @@ export function ExameFisicoFormScreen({
         setDraftLoaded(true);
       }
 
-      if (!loadedExam) {
+      if (!loadedExam && !hasPersistedExam) {
         await generateSuggestion(true);
       }
       if (active) {
@@ -401,7 +421,7 @@ export function ExameFisicoFormScreen({
   }, [pacienteId, latestAnamnese?.id]);
 
   useEffect(() => {
-    if (!draftLoaded || !exam) return;
+    if (!draftLoaded || !exam || recordedExamLocked) return;
     const persistDraft = (reason: string) => {
       const payload = {
         exam,
@@ -424,10 +444,10 @@ export function ExameFisicoFormScreen({
       persistDraft("debounced");
     }, 800);
     return () => clearTimeout(timer);
-  }, [draftLoaded, draftKey, exam, laudoId, pacienteId]);
+  }, [draftLoaded, draftKey, exam, laudoId, pacienteId, recordedExamLocked]);
 
   useEffect(() => {
-    if (!draftLoaded || !exam) return;
+    if (!draftLoaded || !exam || recordedExamLocked) return;
     const persistDraftNow = (reason: string) => {
       const payload = {
         exam,
@@ -460,7 +480,15 @@ export function ExameFisicoFormScreen({
       beforeRemoveSub();
       persistDraftNow("unmount");
     };
-  }, [draftLoaded, draftKey, exam, laudoId, navigation, pacienteId]);
+  }, [
+    draftLoaded,
+    draftKey,
+    exam,
+    laudoId,
+    navigation,
+    pacienteId,
+    recordedExamLocked,
+  ]);
 
   useEffect(() => {
     stageOpenedAtRef.current = Date.now();
@@ -961,6 +989,19 @@ export function ExameFisicoFormScreen({
       const { message, fieldErrors } = parseApiError(error);
       if (Object.keys(fieldErrors).length > 0) {
         setErrors((prev) => ({ ...prev, ...fieldErrors }));
+      }
+
+      if (/exame fisico ja registrado/i.test(message)) {
+        setRecordedExamLocked(true);
+        await AsyncStorage.removeItem(draftKey).catch(() => undefined);
+        setLastDraftSavedAt(null);
+        showToast({
+          type: "info",
+          message: "Exame físico já registrado. O registro inicial está bloqueado.",
+        });
+        navigation.goBack();
+        setLoading(false);
+        return;
       }
 
       if (axios.isAxiosError(error)) {
