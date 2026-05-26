@@ -25,6 +25,8 @@ export type AnalyticsEventName =
   | "laudo_reference_consulted_toggled"
   | "laudo_professional_pdf_opened"
   | "laudo_validated"
+  | "plano_validated"
+  | "exame_fisico_validated"
   | "laudo_revalidation_required"
   | "audit_action"
   | "ops_sync_manual"
@@ -608,7 +610,5 @@ async function getLocalClinicalFlowSummary(
     eventsByStage,
   };
 }
-
-
 
 

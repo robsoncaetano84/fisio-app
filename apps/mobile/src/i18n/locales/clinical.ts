@@ -35,6 +35,8 @@ export const ptClinical: TranslationMap = {
   "clinical.actions.generatePlanPdf": "Gerar PDF do Plano",
   "clinical.actions.validateAndApprove": "Validar e Aprovar",
   "clinical.actions.reportValidated": "Laudo Validado",
+  "clinical.actions.planValidated": "Plano Validado",
+  "clinical.actions.physicalExamValidated": "Exame Físico Validado",
   "clinical.actions.validateAnyway": "Validar mesmo assim",
   "clinical.actions.fillWithAi": "Preencher com IA",
   "clinical.actions.clearLocalDraft": "Limpar rascunho local",
@@ -56,6 +58,8 @@ export const ptClinical: TranslationMap = {
     "Confirme a revisão da sugestão de IA antes de gerar PDF",
   "clinical.messages.reviewReportBeforePdf":
     "Revise o conteúdo do laudo antes de gerar PDF",
+  "clinical.messages.reviewPlanBeforePdf":
+    "Valide e aprove o plano antes de gerar PDF",
   "clinical.messages.autosavePending":
     "Alterações serão salvas automaticamente",
   "clinical.messages.autosaveSaving": "Salvando rascunho...",
@@ -81,9 +85,28 @@ export const ptClinical: TranslationMap = {
     "Aguarde o salvamento automático antes de validar",
   "clinical.messages.waitAutosaveChangesBeforeValidation":
     "Aguarde o salvamento automático das alterações antes de validar o laudo",
+  "clinical.messages.waitAutosaveChangesBeforePlanValidation":
+    "Aguarde o salvamento automático das alterações antes de validar o plano",
   "clinical.messages.reportAlreadyValidated": "Este laudo já está validado",
+  "clinical.messages.planAlreadyValidated": "Este plano já está validado",
+  "clinical.messages.physicalExamAlreadyValidated":
+    "Este exame físico já está validado",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Laudo e plano validados com sucesso",
+  "clinical.messages.planValidatedSuccessfully":
+    "Plano validado com sucesso",
+  "clinical.messages.physicalExamValidatedSuccessfully":
+    "Exame físico validado com sucesso",
+  "clinical.messages.planValidationError":
+    "Não foi possível validar o plano.",
+  "clinical.messages.physicalExamValidationError":
+    "Não foi possível validar o exame físico.",
+  "clinical.messages.planRevalidationPending":
+    "Alterações no plano detectadas. Revalide antes de gerar PDF.",
+  "clinical.messages.physicalExamRevalidationPending":
+    "Alterações no exame físico detectadas. Revalide antes de salvar.",
+  "clinical.messages.validatePhysicalExamBeforeSave":
+    "Valide e aprove o exame físico antes de salvar.",
   "clinical.messages.pdfGenerationError": "Não foi possível gerar o PDF",
   "clinical.messages.referenceOpenError": "Não foi possível abrir a referência",
   "clinical.messages.professionalNotesHint":
@@ -126,7 +149,11 @@ export const ptClinical: TranslationMap = {
   "clinical.messages.professionalValidationChecklistTitle":
     "Checklist de validação profissional",
   "clinical.messages.professionalValidationChecklistItem":
-    "Revisei o laudo/plano e a sugestão de IA, conferi a coerência clínica e assumo a validação profissional deste conteúdo.",
+    "Revisei o laudo e a sugestão de IA, conferi a coerência clínica e assumo a validação profissional deste conteúdo.",
+  "clinical.messages.planProfessionalValidationChecklistItem":
+    "Revisei o plano de tratamento e a sugestão de IA, conferi a coerência clínica e assumo a validação profissional deste conteúdo.",
+  "clinical.messages.physicalExamProfessionalValidationChecklistItem":
+    "Revisei o exame físico e a sugestão de IA, conferi a coerência clínica e assumo a validação profissional deste conteúdo.",
   "clinical.messages.validationChecklistRequired":
     "Confirme a validação profissional antes de aprovar o laudo.",
   "clinical.messages.pdfWithoutConsultedReferencesWarning":
@@ -273,6 +300,8 @@ export const enClinical: TranslationMap = {
   "clinical.actions.generatePlanPdf": "Generate Plan PDF",
   "clinical.actions.validateAndApprove": "Validate and Approve",
   "clinical.actions.reportValidated": "Report Validated",
+  "clinical.actions.planValidated": "Plan Validated",
+  "clinical.actions.physicalExamValidated": "Physical Exam Validated",
   "clinical.actions.validateAnyway": "Validate anyway",
   "clinical.actions.fillWithAi": "Fill with AI",
   "clinical.actions.clearLocalDraft": "Clear local draft",
@@ -294,6 +323,8 @@ export const enClinical: TranslationMap = {
     "Confirm AI suggestion review before generating the PDF",
   "clinical.messages.reviewReportBeforePdf":
     "Review the report content before generating the PDF",
+  "clinical.messages.reviewPlanBeforePdf":
+    "Validate and approve the plan before generating the PDF",
   "clinical.messages.autosavePending": "Changes will be saved automatically",
   "clinical.messages.autosaveSaving": "Saving draft...",
   "clinical.messages.autosaveSaved": "Draft saved automatically at",
@@ -317,10 +348,28 @@ export const enClinical: TranslationMap = {
     "Wait for autosave before validating",
   "clinical.messages.waitAutosaveChangesBeforeValidation":
     "Wait for autosave to finish before validating the report",
+  "clinical.messages.waitAutosaveChangesBeforePlanValidation":
+    "Wait for autosave to finish before validating the plan",
   "clinical.messages.reportAlreadyValidated":
     "This report is already validated",
+  "clinical.messages.planAlreadyValidated": "This plan is already validated",
+  "clinical.messages.physicalExamAlreadyValidated":
+    "This physical exam is already validated",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Report and plan validated successfully",
+  "clinical.messages.planValidatedSuccessfully":
+    "Plan validated successfully",
+  "clinical.messages.physicalExamValidatedSuccessfully":
+    "Physical exam validated successfully",
+  "clinical.messages.planValidationError": "Could not validate the plan.",
+  "clinical.messages.physicalExamValidationError":
+    "Could not validate the physical exam.",
+  "clinical.messages.planRevalidationPending":
+    "Plan changes detected. Revalidate before generating the PDF.",
+  "clinical.messages.physicalExamRevalidationPending":
+    "Physical exam changes detected. Revalidate before saving.",
+  "clinical.messages.validatePhysicalExamBeforeSave":
+    "Validate and approve the physical exam before saving.",
   "clinical.messages.pdfGenerationError": "Could not generate PDF",
   "clinical.messages.referenceOpenError": "Could not open the reference",
   "clinical.messages.professionalNotesHint":
@@ -362,7 +411,11 @@ export const enClinical: TranslationMap = {
   "clinical.messages.professionalValidationChecklistTitle":
     "Professional validation checklist",
   "clinical.messages.professionalValidationChecklistItem":
-    "I reviewed the report/plan and AI suggestion, checked clinical consistency, and take professional responsibility for validating this content.",
+    "I reviewed the report and AI suggestion, checked clinical consistency, and take professional responsibility for validating this content.",
+  "clinical.messages.planProfessionalValidationChecklistItem":
+    "I reviewed the treatment plan and AI suggestion, checked clinical consistency, and take professional responsibility for validating this content.",
+  "clinical.messages.physicalExamProfessionalValidationChecklistItem":
+    "I reviewed the physical exam and AI suggestion, checked clinical consistency, and take professional responsibility for validating this content.",
   "clinical.messages.validationChecklistRequired":
     "Confirm professional validation before approving the report.",
   "clinical.messages.pdfWithoutConsultedReferencesWarning":
@@ -507,6 +560,8 @@ export const esClinical: TranslationMap = {
   "clinical.actions.generatePlanPdf": "Generar PDF del plan",
   "clinical.actions.validateAndApprove": "Validar y aprobar",
   "clinical.actions.reportValidated": "Informe validado",
+  "clinical.actions.planValidated": "Plan validado",
+  "clinical.actions.physicalExamValidated": "Examen físico validado",
   "clinical.actions.validateAnyway": "Validar de todos modos",
   "clinical.actions.fillWithAi": "Completar con IA",
   "clinical.actions.clearLocalDraft": "Limpiar borrador local",
@@ -528,6 +583,8 @@ export const esClinical: TranslationMap = {
     "Confirme la revisión de la sugerencia de IA antes de generar el PDF",
   "clinical.messages.reviewReportBeforePdf":
     "Revise el contenido del informe antes de generar el PDF",
+  "clinical.messages.reviewPlanBeforePdf":
+    "Valide y apruebe el plan antes de generar el PDF",
   "clinical.messages.autosavePending":
     "Los cambios se guardarán automáticamente",
   "clinical.messages.autosaveSaving": "Guardando borrador...",
@@ -554,8 +611,25 @@ export const esClinical: TranslationMap = {
   "clinical.messages.waitAutosaveChangesBeforeValidation":
     "Espere el guardado automático de los cambios antes de validar el informe",
   "clinical.messages.reportAlreadyValidated": "Este informe ya está validado",
+  "clinical.messages.waitAutosaveChangesBeforePlanValidation":
+    "Espere el guardado automático de los cambios antes de validar el plan",
+  "clinical.messages.planAlreadyValidated": "Este plan ya está validado",
+  "clinical.messages.physicalExamAlreadyValidated":
+    "Este examen físico ya está validado",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Informe y plan validados con éxito",
+  "clinical.messages.planValidatedSuccessfully": "Plan validado con éxito",
+  "clinical.messages.physicalExamValidatedSuccessfully":
+    "Examen físico validado con éxito",
+  "clinical.messages.planValidationError": "No fue posible validar el plan.",
+  "clinical.messages.physicalExamValidationError":
+    "No fue posible validar el examen físico.",
+  "clinical.messages.planRevalidationPending":
+    "Cambios en el plan detectados. Revalide antes de generar el PDF.",
+  "clinical.messages.physicalExamRevalidationPending":
+    "Cambios en el examen físico detectados. Revalide antes de guardar.",
+  "clinical.messages.validatePhysicalExamBeforeSave":
+    "Valide y apruebe el examen físico antes de guardar.",
   "clinical.messages.pdfGenerationError": "No fue posible generar el PDF",
   "clinical.messages.referenceOpenError": "No fue posible abrir la referencia",
   "clinical.messages.professionalNotesHint":
@@ -599,7 +673,11 @@ export const esClinical: TranslationMap = {
   "clinical.messages.professionalValidationChecklistTitle":
     "Checklist de validación profesional",
   "clinical.messages.professionalValidationChecklistItem":
-    "Revisé el informe/plan y la sugerencia de IA, verifiqué la coherencia clínica y asumo la validación profesional de este contenido.",
+    "Revisé el informe y la sugerencia de IA, verifiqué la coherencia clínica y asumo la validación profesional de este contenido.",
+  "clinical.messages.planProfessionalValidationChecklistItem":
+    "Revisé el plan de tratamiento y la sugerencia de IA, verifiqué la coherencia clínica y asumo la validación profesional de este contenido.",
+  "clinical.messages.physicalExamProfessionalValidationChecklistItem":
+    "Revisé el examen físico y la sugerencia de IA, verifiqué la coherencia clínica y asumo la validación profesional de este contenido.",
   "clinical.messages.validationChecklistRequired":
     "Confirme la validación profesional antes de aprobar el informe.",
   "clinical.messages.pdfWithoutConsultedReferencesWarning":

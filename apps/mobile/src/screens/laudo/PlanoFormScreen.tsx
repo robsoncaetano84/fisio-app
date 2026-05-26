@@ -8,6 +8,7 @@ import axios from "axios";
 import {
   Linking,
   Platform,
+  TouchableOpacity,
   View,
   Text,
   StyleSheet,
@@ -60,9 +61,13 @@ type PlanoDraft = {
   lastEditedAt: string;
 };
 
+type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+
+const PLANO_AUTOSAVE_DEBOUNCE_MS = 1800;
+
 export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const { pacienteId } = route.params;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const { showToast } = useToast();
   const { getPacienteById, fetchPacientes } = usePacienteStore();
@@ -84,6 +89,12 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     generatedAt?: string | null;
   } | null>(null);
   const [aiSuggestionConfirmed, setAiSuggestionConfirmed] = useState(false);
+  const [professionalValidationConfirmed, setProfessionalValidationConfirmed] =
+    useState(false);
+  const [validatedPlanSnapshot, setValidatedPlanSnapshot] = useState<
+    string | null
+  >(null);
+  const [planValidatedAt, setPlanValidatedAt] = useState<string | null>(null);
   const aiConfidence = useMemo<"ALTA" | "MODERADA" | "BAIXA" | null>(() => {
     if (!aiSuggestionMeta) return null;
     if (
@@ -112,7 +123,14 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   }, [aiConfidence, t]);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] =
+    useState<AutosaveStatus>("idle");
+  const [lastAutosavedAt, setLastAutosavedAt] = useState<string | null>(null);
   const autoFillRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveInFlightRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const lastSavedPlanSnapshotRef = useRef<string | null>(null);
 
   const [objetivosCurtoPrazo, setObjetivosCurtoPrazo] = useState("");
   const [objetivosMedioPrazo, setObjetivosMedioPrazo] = useState("");
@@ -128,6 +146,18 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
   const downloadBaseUrl = (api.defaults.baseURL || "").replace(/\/api$/, "");
   const isBusy = loading || pdfLoading;
+  const dateLocale =
+    language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const shouldAutoFill = () =>
     !objetivosCurtoPrazo.trim() &&
@@ -138,6 +168,9 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     !planoTratamentoIA.trim() &&
     !criteriosAlta.trim() &&
     !observacoes.trim();
+
+  const getValidatedPlanSnapshotKey = (id: string) =>
+    `plano:validated-snapshot:v1:${id}`;
 
   const buildSuggestionMetaPayload = () => {
     if (!aiSuggestionMeta) return {};
@@ -194,6 +227,75 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       ...buildSuggestionMetaPayload(),
     };
   };
+
+  const buildPlanSnapshot = (payload = buildPlanPayload()) =>
+    JSON.stringify(payload);
+
+  const hasValidOptionalNumber = (value: string, min: number, max: number) => {
+    if (!value.trim()) return true;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= min && numeric <= max;
+  };
+
+  const canAutosavePlan = () =>
+    draftLoaded &&
+    hasAnamnese &&
+    !generating &&
+    !!objetivosCurtoPrazo.trim() &&
+    !!condutas.trim() &&
+    hasValidOptionalNumber(frequenciaSemanal, 1, 7) &&
+    hasValidOptionalNumber(duracaoSemanas, 1, 52) &&
+    (!AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed);
+
+  const autosaveStatusMessage = useMemo(() => {
+    if (autosaveStatus === "pending") {
+      return t("clinical.messages.autosavePending");
+    }
+    if (autosaveStatus === "saving") {
+      return t("clinical.messages.autosaveSaving");
+    }
+    if (autosaveStatus === "error") {
+      return t("clinical.messages.autosaveError");
+    }
+    if (autosaveStatus === "saved" && lastAutosavedAt) {
+      return `${t("clinical.messages.autosaveSaved")} ${new Date(
+        lastAutosavedAt,
+      ).toLocaleTimeString(dateLocale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    }
+    return "";
+  }, [autosaveStatus, dateLocale, lastAutosavedAt, t]);
+
+  const currentPlanSnapshot = buildPlanSnapshot();
+  const hasUnsavedPlanChanges =
+    currentPlanSnapshot !== lastSavedPlanSnapshotRef.current;
+  const isAutosaving = autosaveStatus === "saving";
+  const hasConfirmedRequiredAiReview =
+    !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
+  const isPlanValidatedWithoutPendingChanges =
+    !!validatedPlanSnapshot && validatedPlanSnapshot === currentPlanSnapshot;
+  const hasPlanChangesAfterValidation =
+    !!validatedPlanSnapshot && validatedPlanSnapshot !== currentPlanSnapshot;
+  const validationChecklistChecked =
+    isPlanValidatedWithoutPendingChanges ||
+    (professionalValidationConfirmed && hasConfirmedRequiredAiReview);
+  const canToggleValidationChecklist = !isPlanValidatedWithoutPendingChanges;
+  const canGeneratePlanPdf =
+    !!laudoId &&
+    !hasUnsavedPlanChanges &&
+    !isAutosaving &&
+    isPlanValidatedWithoutPendingChanges &&
+    hasConfirmedRequiredAiReview;
+  const planPdfGateMessage =
+    !laudoId || hasUnsavedPlanChanges || isAutosaving
+      ? t("clinical.messages.waitAutosaveBeforeGeneratePdf")
+      : !hasConfirmedRequiredAiReview
+        ? t("clinical.messages.confirmAiReviewBeforePdf")
+        : !isPlanValidatedWithoutPendingChanges
+          ? t("clinical.messages.reviewPlanBeforePdf")
+          : "";
 
   const applySuggestion = async (force = false) => {
     if (generating) return;
@@ -320,6 +422,50 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           laudo.sugestaoSource === "ai" || laudo.sugestaoSource === "rules"
             ? (laudo.sugestaoSource as "ai" | "rules")
             : undefined;
+        const loadedPlanSnapshot = buildPlanSnapshot({
+          objetivosCurtoPrazo: laudo.objetivosCurtoPrazo || undefined,
+          objetivosMedioPrazo: laudo.objetivosMedioPrazo || undefined,
+          frequenciaSemanal:
+            typeof laudo.frequenciaSemanal === "number"
+              ? laudo.frequenciaSemanal
+              : undefined,
+          duracaoSemanas:
+            typeof laudo.duracaoSemanas === "number"
+              ? laudo.duracaoSemanas
+              : undefined,
+          condutas: laudo.condutas || undefined,
+          planoTratamentoIA: laudo.planoTratamentoIA || undefined,
+          criteriosAlta: laudo.criteriosAlta || undefined,
+          observacoes: laudo.observacoes || undefined,
+          ...(source || examesConsiderados > 0 || examesComLeituraIa > 0
+            ? {
+                sugestaoSource: source,
+                examesConsiderados: Math.max(0, examesConsiderados),
+                examesComLeituraIa: Math.max(0, examesComLeituraIa),
+              }
+            : {}),
+        });
+        lastSavedPlanSnapshotRef.current = loadedPlanSnapshot;
+        const validatedRaw = await AsyncStorage.getItem(
+          getValidatedPlanSnapshotKey(laudo.id),
+        ).catch(() => null);
+        if (active && validatedRaw) {
+          try {
+            const parsed = JSON.parse(validatedRaw) as {
+              snapshot?: string;
+              validatedAt?: string;
+            };
+            if (parsed.snapshot) {
+              setValidatedPlanSnapshot(parsed.snapshot);
+              setPlanValidatedAt(parsed.validatedAt || null);
+              setProfessionalValidationConfirmed(
+                parsed.snapshot === loadedPlanSnapshot,
+              );
+            }
+          } catch {
+            // ignore invalid local validation snapshot
+          }
+        }
         if (source || examesConsiderados > 0 || examesComLeituraIa > 0) {
           setAiSuggestionMeta({
             source,
@@ -474,33 +620,39 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const savePlan = async ({
     navigateAfterSave,
     showSuccessToast,
+    silent = false,
   }: {
     navigateAfterSave: boolean;
     showSuccessToast: boolean;
+    silent?: boolean;
   }) => {
     if (!hasAnamnese) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "PLANO",
-        reason: "MISSING_ANAMNESE",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("clinical.messages.fillAnamnesisBeforeSavingPlan"),
-      });
-      navigation.navigate("AnamneseForm", { pacienteId });
+      if (!silent) {
+        trackEvent("clinical_flow_blocked", {
+          stage: "PLANO",
+          reason: "MISSING_ANAMNESE",
+          pacienteId,
+        }).catch(() => undefined);
+        showToast({
+          type: "error",
+          message: t("clinical.messages.fillAnamnesisBeforeSavingPlan"),
+        });
+        navigation.navigate("AnamneseForm", { pacienteId });
+      }
       return null;
     }
     if (!validate()) {
-      trackEvent("clinical_flow_blocked", {
-        stage: "PLANO",
-        reason: "MISSING_REQUIRED_FIELDS",
-        pacienteId,
-      }).catch(() => undefined);
-      showToast({
-        type: "error",
-        message: t("clinical.messages.reviewHighlightedFields"),
-      });
+      if (!silent) {
+        trackEvent("clinical_flow_blocked", {
+          stage: "PLANO",
+          reason: "MISSING_REQUIRED_FIELDS",
+          pacienteId,
+        }).catch(() => undefined);
+        showToast({
+          type: "error",
+          message: t("clinical.messages.reviewHighlightedFields"),
+        });
+      }
       return null;
     }
 
@@ -521,7 +673,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       setLaudoId(savedLaudo.id);
       await AsyncStorage.removeItem(draftKey).catch(() => undefined);
       setLastDraftSavedAt(null);
-      if (showSuccessToast) {
+      if (showSuccessToast && !silent) {
         showToast({
           type: "success",
           message: t("clinical.messages.planSavedSuccessfully"),
@@ -537,7 +689,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         setErrors((prev) => ({ ...prev, ...fieldErrors }));
       }
 
-      if (axios.isAxiosError(error)) {
+      if (axios.isAxiosError(error) && !silent) {
         const status = error.response?.status;
         if (status === 403 || status === 404) {
           showToast({
@@ -551,22 +703,104 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           return null;
         }
       }
-      showToast({
-        type: "error",
-        message: message || t("clinical.messages.planSaveError"),
-      });
+      if (!silent) {
+        showToast({
+          type: "error",
+          message: message || t("clinical.messages.planSaveError"),
+        });
+      }
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    await savePlan({
-      navigateAfterSave: true,
-      showSuccessToast: true,
-    });
+  const runAutosave = async () => {
+    if (autosaveInFlightRef.current || !canAutosavePlan()) return;
+    const snapshotBeforeSave = buildPlanSnapshot();
+    if (snapshotBeforeSave === lastSavedPlanSnapshotRef.current) return;
+
+    autosaveInFlightRef.current = true;
+    setAutosaveStatus("saving");
+    try {
+      const savedLaudo = await savePlan({
+        navigateAfterSave: false,
+        showSuccessToast: false,
+        silent: true,
+      });
+      if (!isMountedRef.current) return;
+      if (!savedLaudo?.id) {
+        setAutosaveStatus("error");
+        return;
+      }
+      lastSavedPlanSnapshotRef.current = snapshotBeforeSave;
+      if (
+        validatedPlanSnapshot &&
+        validatedPlanSnapshot !== snapshotBeforeSave
+      ) {
+        setProfessionalValidationConfirmed(false);
+      }
+      const savedAt = new Date().toISOString();
+      setLastAutosavedAt(savedAt);
+      setAutosaveStatus("saved");
+      await trackEvent("clinical_form_autosave_saved", {
+        stage: "PLANO",
+        pacienteId,
+        laudoId: savedLaudo.id,
+        source: "PlanoFormScreen",
+      });
+    } catch {
+      if (isMountedRef.current) {
+        setAutosaveStatus("error");
+      }
+    } finally {
+      autosaveInFlightRef.current = false;
+    }
   };
+
+  useEffect(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    if (!canAutosavePlan()) {
+      if (autosaveStatus === "pending" || autosaveStatus === "saving") {
+        setAutosaveStatus("idle");
+      }
+      return;
+    }
+
+    const currentSnapshot = buildPlanSnapshot();
+    if (currentSnapshot === lastSavedPlanSnapshotRef.current) return;
+
+    setAutosaveStatus("pending");
+    autosaveTimerRef.current = setTimeout(() => {
+      void runAutosave();
+    }, PLANO_AUTOSAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    objetivosCurtoPrazo,
+    objetivosMedioPrazo,
+    frequenciaSemanal,
+    duracaoSemanas,
+    condutas,
+    planoTratamentoIA,
+    criteriosAlta,
+    observacoes,
+    aiSuggestionConfirmed,
+    aiSuggestionMeta,
+    draftLoaded,
+    generating,
+    hasAnamnese,
+    validatedPlanSnapshot,
+  ]);
 
   const openPlanPdfUrl = async (id: string, webPopup?: Window | null) => {
     const endpoint = `/laudos/${id}/pdf-plano`;
@@ -623,6 +857,19 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   };
 
   const handleGeneratePlanPdf = async () => {
+    if (!canGeneratePlanPdf) {
+      showToast({
+        type: "error",
+        message:
+          planPdfGateMessage ||
+          t("clinical.messages.waitAutosaveBeforeGeneratePdf"),
+      });
+      return;
+    }
+
+    const currentLaudoId = laudoId;
+    if (!currentLaudoId) return;
+
     let webPopup: Window | null = null;
     if (Platform.OS === "web" && typeof window !== "undefined") {
       webPopup = window.open("about:blank", "_blank");
@@ -630,17 +877,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
 
     setPdfLoading(true);
     try {
-      const savedLaudo = await savePlan({
-        navigateAfterSave: false,
-        showSuccessToast: false,
-      });
-      if (!savedLaudo?.id) {
-        if (webPopup && !webPopup.closed) {
-          webPopup.close();
-        }
-        return;
-      }
-      await openPlanPdfUrl(savedLaudo.id, webPopup);
+      await openPlanPdfUrl(currentLaudoId, webPopup);
     } catch (error: unknown) {
       if (webPopup && !webPopup.closed) {
         webPopup.close();
@@ -658,7 +895,7 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     }
   };
 
-  const handleConfirmAiSuggestion = () => {
+  const confirmAiSuggestionReview = () => {
     setAiSuggestionConfirmed(true);
     setErrors((prev) => ({ ...prev, aiSuggestionConfirmation: "" }));
     logClinicalAiSuggestion({
@@ -669,10 +906,99 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       evidenceFields: ["objetivosCurtoPrazo", "condutas", "planoTratamentoIA"],
       patientId: pacienteId,
     }).catch(() => undefined);
-    showToast({
-      type: "success",
-      message: t("clinical.status.professionalConfirmed"),
-    });
+  };
+
+  const handleToggleProfessionalValidationChecklist = () => {
+    if (!canToggleValidationChecklist) return;
+    const nextChecked = !validationChecklistChecked;
+    setProfessionalValidationConfirmed(nextChecked);
+    if (nextChecked) {
+      if (AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed) {
+        confirmAiSuggestionReview();
+      }
+      return;
+    }
+    if (AI_REVIEW_REQUIRED && aiSuggestionMeta) {
+      setAiSuggestionConfirmed(false);
+    }
+  };
+
+  const handleValidatePlan = async () => {
+    if (!validate()) {
+      showToast({
+        type: "error",
+        message: t("clinical.messages.reviewHighlightedFields"),
+      });
+      return;
+    }
+    if (!laudoId) {
+      showToast({
+        type: "error",
+        message: t("clinical.messages.waitAutosaveBeforeValidation"),
+      });
+      return;
+    }
+    if (hasUnsavedPlanChanges || isAutosaving) {
+      showToast({
+        type: "info",
+        message: t("clinical.messages.waitAutosaveChangesBeforePlanValidation"),
+      });
+      return;
+    }
+    if (isPlanValidatedWithoutPendingChanges) {
+      showToast({
+        type: "info",
+        message: t("clinical.messages.planAlreadyValidated"),
+      });
+      return;
+    }
+    if (!validationChecklistChecked) {
+      showToast({
+        type: "info",
+        message: t("clinical.messages.validationChecklistRequired"),
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const validatedAt = new Date().toISOString();
+      setValidatedPlanSnapshot(currentPlanSnapshot);
+      setPlanValidatedAt(validatedAt);
+      setProfessionalValidationConfirmed(true);
+      await AsyncStorage.setItem(
+        getValidatedPlanSnapshotKey(laudoId),
+        JSON.stringify({
+          snapshot: currentPlanSnapshot,
+          validatedAt,
+        }),
+      );
+      await trackEvent("plano_validated", {
+        laudoId,
+        pacienteId,
+      });
+      await recordAuditAction(
+        "PLANO_VALIDATED",
+        {
+          laudoId,
+          pacienteId,
+          professionalValidationConfirmed: true,
+        },
+        usuario?.id,
+      );
+      showToast({
+        type: "success",
+        message: t("clinical.messages.planValidatedSuccessfully"),
+      });
+    } catch (error: unknown) {
+      const { message } = parseApiError(error);
+      showToast({
+        type: "error",
+        message: message || t("clinical.messages.planValidationError"),
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!paciente) {
@@ -761,8 +1087,38 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           {lastDraftSavedAt ? (
             <Text style={styles.draftInfo}>
               {t("clinical.messages.lastEditedAt")}:{" "}
-              {new Date(lastDraftSavedAt).toLocaleString("pt-BR")}
+              {new Date(lastDraftSavedAt).toLocaleString(dateLocale)}
             </Text>
+          ) : null}
+          {autosaveStatusMessage ? (
+            <View style={styles.autosaveStatusRow}>
+              <Ionicons
+                name={
+                  autosaveStatus === "error"
+                    ? "alert-circle-outline"
+                    : autosaveStatus === "saved"
+                      ? "cloud-done-outline"
+                      : "cloud-upload-outline"
+                }
+                size={14}
+                color={
+                  autosaveStatus === "error"
+                    ? COLORS.error
+                    : autosaveStatus === "saved"
+                      ? COLORS.success
+                      : COLORS.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.autosaveStatusText,
+                  autosaveStatus === "error" && styles.autosaveStatusError,
+                  autosaveStatus === "saved" && styles.autosaveStatusSaved,
+                ]}
+              >
+                {autosaveStatusMessage}
+              </Text>
+            </View>
           ) : null}
           <Button
             title={
@@ -890,36 +1246,84 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             {errors.aiSuggestionConfirmation}
           </Text>
         ) : null}
-        {AI_REVIEW_REQUIRED && aiSuggestionMeta && !aiSuggestionConfirmed ? (
-          <Button
-            title={t("clinical.actions.confirmAiSuggestion")}
-            onPress={handleConfirmAiSuggestion}
-            variant="outline"
-            fullWidth
-            disabled={isBusy}
-            icon={
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={18}
-                color={COLORS.primary}
-              />
-            }
-          />
-        ) : null}
+        <View style={styles.professionalValidationChecklist}>
+          <Text style={styles.professionalValidationChecklistTitle}>
+            {t("clinical.messages.professionalValidationChecklistTitle")}
+          </Text>
+          <TouchableOpacity
+            style={styles.professionalValidationChecklistRow}
+            activeOpacity={0.85}
+            disabled={!canToggleValidationChecklist}
+            onPress={handleToggleProfessionalValidationChecklist}
+          >
+            <Ionicons
+              name={
+                validationChecklistChecked
+                  ? "checkbox-outline"
+                  : "square-outline"
+              }
+              size={20}
+              color={
+                validationChecklistChecked
+                  ? COLORS.success
+                  : COLORS.textSecondary
+              }
+            />
+            <Text style={styles.professionalValidationChecklistText}>
+              {t("clinical.messages.planProfessionalValidationChecklistItem")}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <Button
-          title={t("clinical.actions.savePlan")}
-          onPress={handleSave}
+          title={
+            isPlanValidatedWithoutPendingChanges
+              ? t("clinical.actions.planValidated")
+              : t("clinical.actions.validateAndApprove")
+          }
+          onPress={handleValidatePlan}
           loading={loading}
           fullWidth
-          disabled={isBusy}
-          icon={<Ionicons name="save-outline" size={18} color={COLORS.white} />}
+          disabled={
+            loading ||
+            !laudoId ||
+            hasUnsavedPlanChanges ||
+            isAutosaving ||
+            isPlanValidatedWithoutPendingChanges
+          }
+          icon={
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={18}
+              color={COLORS.white}
+            />
+          }
         />
+        {!canGeneratePlanPdf ? (
+          <View style={styles.referencesValidateHint}>
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color={COLORS.warning}
+            />
+            <Text style={styles.referencesValidateHintText}>
+              {hasPlanChangesAfterValidation
+                ? t("clinical.messages.planRevalidationPending")
+                : planPdfGateMessage}
+            </Text>
+          </View>
+        ) : null}
+        {planValidatedAt ? (
+          <Text style={styles.draftInfo}>
+            {t("clinical.messages.validatedAt")}{" "}
+            {new Date(planValidatedAt).toLocaleString(dateLocale)}
+          </Text>
+        ) : null}
         <Button
           title={t("clinical.actions.generatePlanPdf")}
           onPress={handleGeneratePlanPdf}
           loading={pdfLoading}
           fullWidth
-          disabled={isBusy}
+          disabled={isBusy || !canGeneratePlanPdf}
           icon={
             <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
           }
@@ -936,7 +1340,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: SPACING.base,
-    paddingBottom: 132,
+    paddingBottom: 112,
   },
   section: {
     backgroundColor: COLORS.white,
@@ -961,6 +1365,22 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.xs,
     marginBottom: SPACING.sm,
   },
+  autosaveStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  autosaveStatusText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+  },
+  autosaveStatusSaved: {
+    color: COLORS.success,
+  },
+  autosaveStatusError: {
+    color: COLORS.error,
+  },
   aiMetaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -980,6 +1400,46 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     fontSize: FONTS.sizes.xs,
     marginBottom: SPACING.sm,
+  },
+  referencesValidateHint: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.warning + "44",
+    backgroundColor: COLORS.warning + "10",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.xs,
+  },
+  referencesValidateHintText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+  },
+  professionalValidationChecklist: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+  },
+  professionalValidationChecklistTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginBottom: SPACING.xs,
+  },
+  professionalValidationChecklistRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.xs,
+  },
+  professionalValidationChecklistText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
   },
   aiMetaChip: {
     borderWidth: 1,

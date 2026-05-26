@@ -28,6 +28,7 @@ import {
   getClinicalOrchestratorNextAction,
   logClinicalAiSuggestion,
   parseStructuredExame,
+  recordAuditAction,
   renderStructuredExameToText,
   serializeStructuredExame,
   trackEvent,
@@ -98,7 +99,7 @@ export function ExameFisicoFormScreen({
   route,
   navigation,
 }: ExameFisicoFormScreenProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const AI_REVIEW_REQUIRED = FEATURE_FLAGS.requireAiSuggestionConfirmation;
   const VOICE_ENABLED = FEATURE_FLAGS.speechToText;
   const { pacienteId } = route.params;
@@ -125,6 +126,12 @@ export function ExameFisicoFormScreen({
   const [serverDorSuggestion, setServerDorSuggestion] =
     useState<ExameFisicoDorSuggestionResponse | null>(null);
   const [classificationConfirmed, setClassificationConfirmed] = useState(true);
+  const [professionalValidationConfirmed, setProfessionalValidationConfirmed] =
+    useState(false);
+  const [validatedExamSnapshot, setValidatedExamSnapshot] = useState<
+    string | null
+  >(null);
+  const [examValidatedAt, setExamValidatedAt] = useState<string | null>(null);
   const {
     posturePhotosCount,
     movementPhotosCount,
@@ -139,7 +146,10 @@ export function ExameFisicoFormScreen({
   const stageOpenedAtRef = useRef<number>(Date.now());
 
   const draftKey = `draft:exame-fisico-structured:${pacienteId}`;
+  const validatedExamSnapshotKey = `exame-fisico:validated-snapshot:v1:${pacienteId}`;
   const hasAnamnese = anamneses.some((item) => item.pacienteId === pacienteId);
+  const dateLocale =
+    language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
   const getLatestAnamnese = useMemo(
     () => () => {
       const anamneseList = useAnamneseStore
@@ -269,6 +279,20 @@ export function ExameFisicoFormScreen({
     );
     return { tested, total, pending: Math.max(total - tested, 0) };
   }, [visibleRegionalGroups]);
+  const currentExamSnapshot = exam ? serializeStructuredExame(exam) : "";
+  const hasConfirmedRequiredClassification =
+    !AI_REVIEW_REQUIRED || exam?.source !== "rule-based" || classificationConfirmed;
+  const isExamValidatedWithoutPendingChanges =
+    !!validatedExamSnapshot && validatedExamSnapshot === currentExamSnapshot;
+  const hasExamChangesAfterValidation =
+    !!validatedExamSnapshot && validatedExamSnapshot !== currentExamSnapshot;
+  const validationChecklistChecked =
+    isExamValidatedWithoutPendingChanges ||
+    (professionalValidationConfirmed && hasConfirmedRequiredClassification);
+  const canToggleValidationChecklist =
+    !recordedExamLocked && !isExamValidatedWithoutPendingChanges;
+  const canSavePhysicalExam =
+    recordedExamLocked || isExamValidatedWithoutPendingChanges;
 
   const generateSuggestion = async (force = false) => {
     if (generating) return;
@@ -360,6 +384,32 @@ export function ExameFisicoFormScreen({
         setDraftLoaded(true);
       }
 
+      if (active && loadedExam) {
+        const loadedSnapshot = serializeStructuredExame(
+          sanitizeExamForForm(loadedExam),
+        );
+        const validatedRaw = await AsyncStorage.getItem(
+          validatedExamSnapshotKey,
+        ).catch(() => null);
+        if (validatedRaw) {
+          try {
+            const parsed = JSON.parse(validatedRaw) as {
+              snapshot?: string;
+              validatedAt?: string;
+            };
+            if (parsed.snapshot) {
+              setValidatedExamSnapshot(parsed.snapshot);
+              setExamValidatedAt(parsed.validatedAt || null);
+              setProfessionalValidationConfirmed(
+                parsed.snapshot === loadedSnapshot,
+              );
+            }
+          } catch {
+            // ignore invalid local validation snapshot
+          }
+        }
+      }
+
       if (!loadedExam && !hasPersistedExam) {
         await generateSuggestion(true);
       }
@@ -386,6 +436,7 @@ export function ExameFisicoFormScreen({
     getLatestAnamnese,
     paciente,
     pacienteId,
+    validatedExamSnapshotKey,
   ]);
 
   useEffect(() => {
@@ -900,6 +951,22 @@ export function ExameFisicoFormScreen({
       });
       return;
     }
+    if (!isExamValidatedWithoutPendingChanges) {
+      trackEvent("clinical_flow_blocked", {
+        stage: "EXAME_FISICO",
+        reason: hasExamChangesAfterValidation
+          ? "PENDING_PROFESSIONAL_REVALIDATION"
+          : "PENDING_PROFESSIONAL_VALIDATION",
+        pacienteId,
+      }).catch(() => undefined);
+      showToast({
+        type: "info",
+        message: hasExamChangesAfterValidation
+          ? t("clinical.messages.physicalExamRevalidationPending")
+          : t("clinical.messages.validatePhysicalExamBeforeSave"),
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -1060,7 +1127,7 @@ export function ExameFisicoFormScreen({
     });
   };
 
-  const handleConfirmClassification = () => {
+  const confirmClassificationReview = (showSuccessToast = true) => {
     setClassificationConfirmed(true);
     setExam((prev) => (prev ? { ...prev, source: "manual" } : prev));
     setErrors((prev) => ({ ...prev, classificationConfirmation: "" }));
@@ -1072,10 +1139,102 @@ export function ExameFisicoFormScreen({
       evidenceFields: effectiveDorSuggestion.evidenceFields,
       patientId: pacienteId,
     }).catch(() => undefined);
-    showToast({
-      type: "success",
-      message: "Classificação confirmada pelo profissional.",
-    });
+    if (showSuccessToast) {
+      showToast({
+        type: "success",
+        message: "Classificação confirmada pelo profissional.",
+      });
+    }
+  };
+
+  const handleConfirmClassification = () => {
+    confirmClassificationReview(true);
+  };
+
+  const handleToggleProfessionalValidationChecklist = () => {
+    if (!canToggleValidationChecklist) return;
+    const nextChecked = !validationChecklistChecked;
+    setProfessionalValidationConfirmed(nextChecked);
+    if (nextChecked) {
+      if (
+        AI_REVIEW_REQUIRED &&
+        exam?.source === "rule-based" &&
+        !classificationConfirmed
+      ) {
+        confirmClassificationReview(false);
+      }
+      return;
+    }
+    if (AI_REVIEW_REQUIRED && exam?.source === "rule-based") {
+      setClassificationConfirmed(false);
+    }
+  };
+
+  const handleValidatePhysicalExam = async () => {
+    setHasAttemptedSave(true);
+    if (!hasAnamnese) {
+      showToast({
+        type: "error",
+        message: "Preencha a anamnese antes do exame físico.",
+      });
+      navigation.navigate("AnamneseForm", { pacienteId });
+      return;
+    }
+    if (!exam || !validateForm()) {
+      showToast({
+        type: "error",
+        message: t("clinical.messages.reviewHighlightedFields"),
+      });
+      return;
+    }
+    if (isExamValidatedWithoutPendingChanges) {
+      showToast({
+        type: "info",
+        message: t("clinical.messages.physicalExamAlreadyValidated"),
+      });
+      return;
+    }
+    if (!validationChecklistChecked) {
+      showToast({
+        type: "info",
+        message: t("clinical.messages.validationChecklistRequired"),
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const validatedAt = new Date().toISOString();
+      setValidatedExamSnapshot(currentExamSnapshot);
+      setExamValidatedAt(validatedAt);
+      setProfessionalValidationConfirmed(true);
+      await AsyncStorage.setItem(
+        validatedExamSnapshotKey,
+        JSON.stringify({
+          snapshot: currentExamSnapshot,
+          validatedAt,
+        }),
+      );
+      await trackEvent("exame_fisico_validated", {
+        pacienteId,
+      });
+      await recordAuditAction("EXAME_FISICO_VALIDATED", {
+        pacienteId,
+        professionalValidationConfirmed: true,
+      });
+      showToast({
+        type: "success",
+        message: t("clinical.messages.physicalExamValidatedSuccessfully"),
+      });
+    } catch (error: unknown) {
+      const { message } = parseApiError(error);
+      showToast({
+        type: "error",
+        message: message || t("clinical.messages.physicalExamValidationError"),
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -2515,6 +2674,77 @@ export function ExameFisicoFormScreen({
       </ScrollView>
 
       <View style={styles.footer}>
+        {!recordedExamLocked ? (
+          <>
+            <View style={styles.professionalValidationChecklist}>
+              <Text style={styles.professionalValidationChecklistTitle}>
+                {t("clinical.messages.professionalValidationChecklistTitle")}
+              </Text>
+              <TouchableOpacity
+                style={styles.professionalValidationChecklistRow}
+                activeOpacity={0.85}
+                disabled={!canToggleValidationChecklist}
+                onPress={handleToggleProfessionalValidationChecklist}
+              >
+                <Ionicons
+                  name={
+                    validationChecklistChecked
+                      ? "checkbox-outline"
+                      : "square-outline"
+                  }
+                  size={20}
+                  color={
+                    validationChecklistChecked
+                      ? COLORS.success
+                      : COLORS.textSecondary
+                  }
+                />
+                <Text style={styles.professionalValidationChecklistText}>
+                  {t(
+                    "clinical.messages.physicalExamProfessionalValidationChecklistItem",
+                  )}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Button
+              title={
+                isExamValidatedWithoutPendingChanges
+                  ? t("clinical.actions.physicalExamValidated")
+                  : t("clinical.actions.validateAndApprove")
+              }
+              onPress={handleValidatePhysicalExam}
+              loading={loading}
+              disabled={loading || isExamValidatedWithoutPendingChanges}
+              icon={
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={18}
+                  color={COLORS.white}
+                />
+              }
+            />
+            {!isExamValidatedWithoutPendingChanges ? (
+              <View style={styles.referencesValidateHint}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={16}
+                  color={COLORS.warning}
+                />
+                <Text style={styles.referencesValidateHintText}>
+                  {hasExamChangesAfterValidation
+                    ? t("clinical.messages.physicalExamRevalidationPending")
+                    : t("clinical.messages.validatePhysicalExamBeforeSave")}
+                </Text>
+              </View>
+            ) : null}
+            {examValidatedAt ? (
+              <Text style={styles.draftInfo}>
+                {t("clinical.messages.validatedAt")}{" "}
+                {new Date(examValidatedAt).toLocaleString(dateLocale)}
+              </Text>
+            ) : null}
+          </>
+        ) : null}
         <Button
           title={
             recordedExamLocked
@@ -2525,6 +2755,7 @@ export function ExameFisicoFormScreen({
           }
           onPress={handleSave}
           loading={loading}
+          disabled={!recordedExamLocked && (loading || !canSavePhysicalExam)}
           icon={<Ionicons name="save-outline" size={18} color={COLORS.white} />}
         />
       </View>
@@ -2731,7 +2962,48 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     fontWeight: "600",
   },
+  referencesValidateHint: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.warning + "44",
+    backgroundColor: COLORS.warning + "10",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.xs,
+  },
+  referencesValidateHintText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+  },
+  professionalValidationChecklist: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+  },
+  professionalValidationChecklistTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginBottom: SPACING.xs,
+  },
+  professionalValidationChecklistRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.xs,
+  },
+  professionalValidationChecklistText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+  },
   footer: {
+    gap: SPACING.sm,
     paddingHorizontal: SPACING.base,
     paddingVertical: SPACING.sm,
     borderTopWidth: 1,

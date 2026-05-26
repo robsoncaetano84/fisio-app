@@ -20,6 +20,8 @@ export type AuditActionType =
   | "CHECKIN_OFFLINE_SYNCED"
   | "CHECKIN_OFFLINE_SYNC_FAILED"
   | "LAUDO_VALIDATED"
+  | "PLANO_VALIDATED"
+  | "EXAME_FISICO_VALIDATED"
   | "LAUDO_REVALIDATION_REQUIRED"
   | "LAUDO_REFERENCE_OPENED"
   | "LAUDO_REFERENCE_CONSULTED_TOGGLED"
@@ -44,6 +46,15 @@ const AUDIT_METADATA_ALLOWLIST: Record<AuditActionType, readonly string[]> = {
     "professionalValidationConfirmed",
     "consultedReferencesCount",
     "totalSuggestedReferences",
+  ],
+  PLANO_VALIDATED: [
+    "laudoId",
+    "pacienteId",
+    "professionalValidationConfirmed",
+  ],
+  EXAME_FISICO_VALIDATED: [
+    "pacienteId",
+    "professionalValidationConfirmed",
   ],
   LAUDO_REVALIDATION_REQUIRED: ["laudoId", "pacienteId"],
   LAUDO_REFERENCE_OPENED: ["laudoId", "pacienteId", "referenceId", "context"],
@@ -206,6 +217,8 @@ export async function getAuditSummary(hours = 24): Promise<{
       CHECKIN_OFFLINE_SYNCED: 0,
       CHECKIN_OFFLINE_SYNC_FAILED: 0,
       LAUDO_VALIDATED: 0,
+      PLANO_VALIDATED: 0,
+      EXAME_FISICO_VALIDATED: 0,
       LAUDO_REVALIDATION_REQUIRED: 0,
       LAUDO_REFERENCE_OPENED: 0,
       LAUDO_REFERENCE_CONSULTED_TOGGLED: 0,
