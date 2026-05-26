@@ -24,7 +24,6 @@ export type ClinicalAreaSummary = {
   regiao: string;
   lado?: string;
   vista?: string;
-  intensidade?: number | null;
   observacao?: string;
   resumo: string;
 };
@@ -200,10 +199,11 @@ referenciasUsadas (array de ids escolhidos SOMENTE da lista referenciasClinicas)
 
 Regras clinicas:
 - Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
-- Trate areasAfetadas como eixo central do raciocinio: para cada area selecionada, considere regiao, lado, vista, intensidade e observacao clinica escrita.
+- Trate areasAfetadas como eixo central do raciocinio: para cada area selecionada, considere regiao, lado, vista e observacao clinica escrita.
+- Use intensidadeDor como a unica escala numerica de dor do paciente; nao infira intensidade por area/regiao.
 - As observacoes escritas em cada area selecionada tem prioridade alta: use-as para orientar diagnostico funcional, hipoteses, condutas e criterios de progressao.
 - Quando houver multiplas areas selecionadas, diferencie area principal e areas associadas; nao compacte tudo em uma queixa generica.
-- Se uma area foi selecionada sem observacao clinica, use apenas regiao/lado/vista/intensidade e declare lacuna em vez de inventar achados.
+- Se uma area foi selecionada sem observacao clinica, use apenas regiao/lado/vista e declare lacuna em vez de inventar achados.
 - Use explicitamente os campos da anamnese: inicioProblema, mecanismoLesao, fatorAlivio, fatoresPiora, lesoesPrevias e usoMedicamentos.
 - Use tambem dorRepouso, dorNoturna, irradiacao, tipoDor, limitacoesFuncionais, atividadesQuePioram, metaPrincipalPaciente e fatores biopsicossociais quando estiverem presentes.
 - Use pontosAnamnesePreenchidos como checklist dos dados que realmente existem; cada ponto preenchido deve influenciar ao menos diagnostico, conduta, plano, criterio de progressao ou lacuna.
@@ -224,7 +224,7 @@ Regras clinicas:
 
 Regras de especificidade obrigatorias:
 - Use ancorasEspecificidade como contrato de escrita. Cada campo textual deve citar achados concretos do caso, nao frases genericas.
-- diagnosticoFuncional deve conter: area/lado/vista quando houver, intensidade/irritabilidade, observacao escrita da area, comportamento da dor, limitacao funcional e achado de exame fisico quando disponivel.
+- diagnosticoFuncional deve conter: area/lado/vista quando houver, intensidadeDor/irritabilidade, observacao escrita da area, comportamento da dor, limitacao funcional e achado de exame fisico quando disponivel.
 - objetivosCurtoPrazo e objetivosMedioPrazo devem ser mensuraveis e vinculados a area/funcao/meta do paciente; evite "melhorar funcao" sem dizer qual funcao.
 - condutas deve usar formato por item: "Conduta: ... | Evidencia do caso: ... | Criterio de progressao: ...".
 - planoTratamentoIA deve ser dividido em fases e, em cada fase, citar objetivo, condutas, regiao/area monitorada, criterio de progressao e evidencia do caso.
@@ -246,7 +246,7 @@ Regras para PDF e entendimento do paciente:
 - Em criteriosAlta, escreva criterios que o paciente possa reconhecer e o profissional possa medir.
 
 Exemplo de nivel de especificidade esperado:
-"Para ombro direito anterior com dor 6/10 e observacao de dor ao elevar o braco, iniciar exercicios ativos-assistidos em amplitude toleravel; evidencia do caso: area ombro direito + dor 6/10 + piora em elevacao; progressao: elevar amplitude sem piora sustentada por 24h."
+"Para ombro direito anterior com dor geral 6/10 e observacao de dor ao elevar o braco, iniciar exercicios ativos-assistidos em amplitude toleravel; evidencia do caso: area ombro direito + intensidadeDor 6/10 + piora em elevacao; progressao: elevar amplitude sem piora sustentada por 24h."
 
 Resumo clinico priorizado para raciocinio:
 ${JSON.stringify(input.clinicalReasoning, null, 2)}

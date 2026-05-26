@@ -348,11 +348,6 @@ export function usePacienteDetailsSummaries({
       .map((area) => {
         const detalhes = [
           area.lado ? String(area.lado) : "",
-          typeof area.intensidade === "number"
-            ? t("patientDetails.painIntensityShort", {
-                value: area.intensidade,
-              })
-            : "",
         ]
           .filter(Boolean)
           .join(", ");

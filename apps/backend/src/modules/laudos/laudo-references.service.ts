@@ -143,7 +143,6 @@ export class LaudoReferencesService {
         area.regiao,
         area.lado,
         area.vista,
-        typeof area.intensidade === 'number' ? `dor ${area.intensidade}` : '',
         area.observacao,
       ]),
     ];

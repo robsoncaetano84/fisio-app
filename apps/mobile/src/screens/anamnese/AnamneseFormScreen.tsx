@@ -58,6 +58,14 @@ type AnamneseFormScreenProps = {
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
+const removeLocalPainIntensity = (areas: AreaAfetada[] = []): AreaAfetada[] =>
+  areas.map((area) => ({
+    regiao: area.regiao,
+    lado: area.lado,
+    vista: area.vista,
+    observacao: area.observacao,
+  }));
+
 function FormSection({
   title,
   children,
@@ -609,7 +617,7 @@ export function AnamneseFormScreen({
     setCurrentAnamneseId(anamnese.id);
     setLastPersistedSavedAt(anamnese.updatedAt || anamnese.createdAt || null);
     setMotivoBusca(anamnese.motivoBusca);
-    setAreasAfetadas(anamnese.areasAfetadas || []);
+    setAreasAfetadas(removeLocalPainIntensity(anamnese.areasAfetadas || []));
     setIntensidadeDor(anamnese.intensidadeDor || 0);
     setDescricaoSintomas(anamnese.descricaoSintomas || "");
     setTempoProblema(anamnese.tempoProblema || "");
@@ -829,7 +837,9 @@ export function AnamneseFormScreen({
         };
 
         if (draft.motivoBusca !== undefined) setMotivoBusca(draft.motivoBusca);
-        if (draft.areasAfetadas) setAreasAfetadas(draft.areasAfetadas);
+        if (draft.areasAfetadas) {
+          setAreasAfetadas(removeLocalPainIntensity(draft.areasAfetadas));
+        }
         if (typeof draft.intensidadeDor === "number")
           setIntensidadeDor(draft.intensidadeDor);
         if (draft.descricaoSintomas)
@@ -1371,7 +1381,7 @@ export function AnamneseFormScreen({
       const payload = {
         pacienteId,
         motivoBusca: motivoBusca!,
-        areasAfetadas,
+        areasAfetadas: removeLocalPainIntensity(areasAfetadas),
         intensidadeDor,
         descricaoSintomas,
         tempoProblema,
@@ -1615,7 +1625,7 @@ export function AnamneseFormScreen({
                     selectedAreas={areasAfetadas}
                     sexo={(paciente as { sexo?: string } | undefined)?.sexo}
                     onAreasChange={(nextAreas) => {
-                      setAreasAfetadas(nextAreas);
+                      setAreasAfetadas(removeLocalPainIntensity(nextAreas));
                       if (errors.areasAfetadas) {
                         setErrors((prev) => ({ ...prev, areasAfetadas: "" }));
                       }

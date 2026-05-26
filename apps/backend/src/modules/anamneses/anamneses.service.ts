@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Anamnese, MotivoBusca } from './entities/anamnese.entity';
+import { Anamnese, AreaAfetada, MotivoBusca } from './entities/anamnese.entity';
 import {
   AnamneseHistorico,
   AnamneseHistoricoAcao,
@@ -37,8 +37,9 @@ export class AnamnesesService {
       createAnamneseDto.pacienteId,
       usuarioId,
     );
-    this.validateClinicalMinimum(createAnamneseDto);
-    const anamnese = this.anamneseRepository.create(createAnamneseDto);
+    const normalizedDto = this.removeLocalPainIntensity(createAnamneseDto);
+    this.validateClinicalMinimum(normalizedDto);
+    const anamnese = this.anamneseRepository.create(normalizedDto);
     const saved = await this.anamneseRepository.save(anamnese);
     await this.registrarHistorico(
       saved,
@@ -56,9 +57,10 @@ export class AnamnesesService {
     const paciente =
       await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
 
-    this.validateClinicalMinimum(createAnamneseDto);
+    const normalizedDto = this.removeLocalPainIntensity(createAnamneseDto);
+    this.validateClinicalMinimum(normalizedDto);
     const anamnese = this.anamneseRepository.create({
-      ...createAnamneseDto,
+      ...normalizedDto,
       pacienteId: paciente.id,
     });
 
@@ -222,6 +224,21 @@ export class AnamnesesService {
         `Campos obrigatorios ausentes para motivo SINTOMA_EXISTENTE: ${missing.join(', ')}`,
       );
     }
+  }
+
+  private removeLocalPainIntensity<T extends { areasAfetadas?: AreaAfetada[] }>(
+    payload: T,
+  ): T {
+    if (!payload.areasAfetadas) return payload;
+    return {
+      ...payload,
+      areasAfetadas: payload.areasAfetadas.map((area) => ({
+        regiao: area.regiao,
+        lado: area.lado,
+        vista: area.vista,
+        observacao: area.observacao,
+      })),
+    };
   }
 
   private async registrarHistorico(

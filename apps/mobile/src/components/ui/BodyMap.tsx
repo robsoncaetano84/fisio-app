@@ -154,10 +154,8 @@ const viewLabel = (view?: AreaAfetada["vista"]) =>
 const areaLabel = (area: AreaAfetada) =>
   REGION_LABELS[area.regiao] || area.regiao;
 
-const areaMetaLabel = (area: AreaAfetada, intensity?: number) =>
-  `${sideLabel(area.lado)} ${viewLabel(area.vista)} - ${
-    typeof intensity === "number" ? `dor ${intensity}/10` : "dor nao informada"
-  }`;
+const areaMetaLabel = (area: AreaAfetada) =>
+  `${sideLabel(area.lado)} ${viewLabel(area.vista)}`;
 
 const selectedRegionToPointKey = (region: SelectedBodyRegion) =>
   `${region.sex}:${region.view}:${region.id}`;
@@ -367,21 +365,6 @@ export function BodyMap({
     emitRegionChange(nextPointKeys);
   };
 
-  const changeIntensity = (selectedKey: string, delta: number) => {
-    onAreasChange?.(
-      selectedAreas.map((area) => {
-        if (areaKey(area) !== selectedKey) return area;
-        const current =
-          typeof area.intensidade === "number" &&
-          Number.isFinite(area.intensidade)
-            ? area.intensidade
-            : 0;
-        const next = Math.max(0, Math.min(10, current + delta));
-        return { ...area, intensidade: next };
-      }),
-    );
-  };
-
   const changeObservation = (selectedKey: string, observacao: string) => {
     onAreasChange?.(
       selectedAreas.map((area) =>
@@ -417,7 +400,7 @@ export function BodyMap({
     <View style={styles.container}>
       <Text style={styles.title}>Mapa corporal</Text>
       <Text style={styles.subtitle}>
-        Toque nos pontos para marcar dor e intensidade.
+        Toque nos pontos para marcar as areas de dor.
       </Text>
 
       <View
@@ -466,11 +449,6 @@ export function BodyMap({
           <View style={styles.selectedList}>
             {selectedDisplayAreas.map((area) => {
               const selectedKey = areaKey(area);
-              const intensity =
-                typeof area.intensidade === "number" &&
-                Number.isFinite(area.intensidade)
-                  ? area.intensidade
-                  : undefined;
               return (
                 <View key={selectedKey} style={styles.selectedChip}>
                   <View style={styles.selectedChipHeader}>
@@ -479,40 +457,10 @@ export function BodyMap({
                         {areaLabel(area)}
                       </Text>
                       <Text style={styles.selectedChipMeta}>
-                        {areaMetaLabel(area, intensity)}
+                        {areaMetaLabel(area)}
                       </Text>
                     </View>
-                    <View style={styles.intensityControls}>
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel={`Diminuir dor em ${areaLabel(area)}`}
-                        disabled={disabled}
-                        style={[
-                          styles.intensityButton,
-                          disabled && styles.disabledControl,
-                        ]}
-                        onPress={() => changeIntensity(selectedKey, -1)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons
-                          name="remove"
-                          size={22}
-                          color={COLORS.white}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel={`Aumentar dor em ${areaLabel(area)}`}
-                        disabled={disabled}
-                        style={[
-                          styles.intensityButton,
-                          disabled && styles.disabledControl,
-                        ]}
-                        onPress={() => changeIntensity(selectedKey, 1)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="add" size={22} color={COLORS.white} />
-                      </TouchableOpacity>
+                    <View style={styles.selectedActions}>
                       <TouchableOpacity
                         accessibilityRole="button"
                         accessibilityLabel={`Remover ${areaLabel(area)}`}
@@ -652,18 +600,10 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     marginTop: 2,
   },
-  intensityControls: {
+  selectedActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-  },
-  intensityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.22)",
   },
   removeButton: {
     width: 44,

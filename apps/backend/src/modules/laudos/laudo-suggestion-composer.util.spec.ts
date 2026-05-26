@@ -20,7 +20,6 @@ describe('laudo suggestion composer util', () => {
           {
             regiao: 'lombar',
             lado: 'ambos',
-            intensidade: 6,
             observacao: 'Dor ao flexionar e permanecer sentado.',
           },
         ],
@@ -90,13 +89,12 @@ describe('laudo suggestion composer util', () => {
         expect.objectContaining({
           regiao: 'lombar',
           lado: 'ambos',
-          intensidade: 6,
           observacao: 'Dor ao flexionar e permanecer sentado.',
         }),
       ],
       observacoesAreas: ['lombar: Dor ao flexionar e permanecer sentado.'],
       ancorasEspecificidade: expect.arrayContaining([
-        'Area selecionada: lombar (ambos, dor 6/10, Dor ao flexionar e permanecer sentado.)',
+        'Area selecionada: lombar (ambos, Dor ao flexionar e permanecer sentado.)',
         'Observacao de area: lombar: Dor ao flexionar e permanecer sentado.',
         'Dor 6/10',
         'Limitacao funcional: Dificuldade para correr',

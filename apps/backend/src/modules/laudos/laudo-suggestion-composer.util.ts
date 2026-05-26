@@ -729,19 +729,15 @@ function buildSelectedAreaSummaries(
       const lado = safeText(area.lado) || undefined;
       const vista = safeText(area.vista) || undefined;
       const observacao = shortText(area.observacao, 180) || undefined;
-      const intensidade =
-        typeof area.intensidade === 'number' ? area.intensidade : null;
       const summary: ClinicalAreaSummary = {
         regiao,
         ...(lado ? { lado } : {}),
         ...(vista ? { vista } : {}),
-        intensidade,
         ...(observacao ? { observacao } : {}),
         resumo: formatAffectedArea({
           regiao,
           lado,
           vista,
-          intensidade,
           observacao,
         }),
       };
@@ -871,7 +867,6 @@ function formatAffectedArea(
   const details = [
     area.lado ? safeText(area.lado) : '',
     area.vista ? safeText(area.vista) : '',
-    typeof area.intensidade === 'number' ? `dor ${area.intensidade}/10` : '',
     area.observacao ? shortText(area.observacao, 80) : '',
   ].filter(Boolean);
   return details.length ? `${regiao} (${details.join(', ')})` : regiao;

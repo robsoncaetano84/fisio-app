@@ -28,15 +28,14 @@ describe('LaudoAiSuggestionService', () => {
         {
           regiao: 'lombar',
           lado: 'ambos',
-          intensidade: 6,
           observacao: 'Dor ao flexionar.',
-          resumo: 'lombar (ambos, dor 6/10, Dor ao flexionar.)',
+          resumo: 'lombar (ambos, Dor ao flexionar.)',
         },
       ],
       observacoesAreas: ['lombar: Dor ao flexionar.'],
       pontosAnamnesePreenchidos: ['areasAfetadas', 'areasAfetadas.observacao'],
       ancorasEspecificidade: [
-        'Area selecionada: lombar (ambos, dor 6/10, Dor ao flexionar.)',
+        'Area selecionada: lombar (ambos, Dor ao flexionar.)',
         'Observacao de area: lombar: Dor ao flexionar.',
         'Dor 6/10',
       ],
