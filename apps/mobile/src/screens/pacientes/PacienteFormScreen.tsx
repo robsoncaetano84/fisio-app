@@ -45,13 +45,13 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const nullableText = (value: string | null | undefined) => {
+const optionalText = (value: string | null | undefined) => {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+  return trimmed ? trimmed : undefined;
 };
-const nullableDigits = (value: string | null | undefined) => {
+const optionalDigits = (value: string | null | undefined) => {
   const digits = value?.replace(/\D/g, "");
-  return digits ? digits : null;
+  return digits ? digits : undefined;
 };
 type PacienteFormMode = "view" | "edit";
 type PacienteFormScreenProps = {
@@ -639,13 +639,13 @@ export function PacienteFormScreen({
     sexo: payload.sexo,
     estadoCivil: payload.estadoCivil || undefined,
     profissao: payload.profissao || undefined,
-    enderecoRua: nullableText(payload.endereco.rua),
-    enderecoNumero: nullableText(payload.endereco.numero),
-    enderecoComplemento: nullableText(payload.endereco.complemento),
-    enderecoBairro: nullableText(payload.endereco.bairro),
-    enderecoCep: nullableDigits(payload.endereco.cep),
-    enderecoCidade: nullableText(payload.endereco.cidade),
-    enderecoUf: nullableText(payload.endereco.uf)?.toUpperCase() ?? null,
+    enderecoRua: optionalText(payload.endereco.rua),
+    enderecoNumero: optionalText(payload.endereco.numero),
+    enderecoComplemento: optionalText(payload.endereco.complemento),
+    enderecoBairro: optionalText(payload.endereco.bairro),
+    enderecoCep: optionalDigits(payload.endereco.cep),
+    enderecoCidade: optionalText(payload.endereco.cidade),
+    enderecoUf: optionalText(payload.endereco.uf)?.toUpperCase(),
     contatoWhatsapp: payload.contato.whatsapp,
     contatoEmail: payload.contato.email || undefined,
     pacienteUsuarioId: payload.pacienteUsuarioId || undefined,

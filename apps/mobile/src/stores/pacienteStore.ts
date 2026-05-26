@@ -92,14 +92,14 @@ const formatDateBR = (dateString: string) => {
   return date.toLocaleDateString("pt-BR");
 };
 
-const nullableText = (value: string | null | undefined) => {
+const optionalText = (value: string | null | undefined) => {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+  return trimmed ? trimmed : undefined;
 };
 
-const nullableDigits = (value: string | null | undefined) => {
+const optionalDigits = (value: string | null | undefined) => {
   const digits = value?.replace(/\D/g, "");
-  return digits ? digits : null;
+  return digits ? digits : undefined;
 };
 
 const calcularIdade = (dataNascimento: string) => {
@@ -199,13 +199,13 @@ const mapPayloadToApi = (p: PacientePayload) => ({
   sexo: p.sexo,
   estadoCivil: p.estadoCivil || undefined,
   profissao: p.profissao || undefined,
-  enderecoRua: nullableText(p.endereco.rua),
-  enderecoNumero: nullableText(p.endereco.numero),
-  enderecoComplemento: nullableText(p.endereco.complemento),
-  enderecoBairro: nullableText(p.endereco.bairro),
-  enderecoCep: nullableDigits(p.endereco.cep),
-  enderecoCidade: nullableText(p.endereco.cidade),
-  enderecoUf: nullableText(p.endereco.uf)?.toUpperCase() ?? null,
+  enderecoRua: optionalText(p.endereco.rua),
+  enderecoNumero: optionalText(p.endereco.numero),
+  enderecoComplemento: optionalText(p.endereco.complemento),
+  enderecoBairro: optionalText(p.endereco.bairro),
+  enderecoCep: optionalDigits(p.endereco.cep),
+  enderecoCidade: optionalText(p.endereco.cidade),
+  enderecoUf: optionalText(p.endereco.uf)?.toUpperCase(),
   contatoWhatsapp: p.contato.whatsapp,
   contatoTelefone: p.contato.telefone || undefined,
   contatoEmail: p.contato.email || undefined,
