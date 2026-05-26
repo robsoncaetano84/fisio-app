@@ -21,11 +21,11 @@ import {
 } from '../entities/paciente.entity';
 
 const normalizeOptionalString = (value: unknown) => {
-  if (value === null || value === undefined) return value;
+  if (value === null || value === undefined) return undefined;
   if (typeof value !== 'string') return value;
 
   const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return trimmed.length > 0 ? trimmed : undefined;
 };
 
 export class UpdatePacienteDto {
