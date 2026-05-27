@@ -776,9 +776,6 @@ export function ExameFisicoFormScreen({
       grupo.regiao === regiao ? { ...grupo, adm } : grupo,
     );
     const latest = getLatestAnamnese();
-    if (String(adm || "").trim() && errors.admRegioes) {
-      setErrors((prev) => ({ ...prev, admRegioes: "" }));
-    }
     setExam(
       enrichStructuredExameWithClinicalLogic(
         { ...exam, avaliacaoRegioes },
@@ -852,14 +849,6 @@ export function ExameFisicoFormScreen({
         "clinical.validation.atLeastOneRegionalTestRequired",
       );
     }
-    const groupsForAdmValidation = visibleRegionalGroups;
-    const missingAdm = groupsForAdmValidation.some(
-      (grupo) => !String(grupo.adm || "").trim(),
-    );
-    if (missingAdm) {
-      nextErrors.admRegioes = "Registre ADM nas regioes exibidas/em foco.";
-    }
-
     if (exam.redFlags.criticalTriggered) {
       if (!String(exam.redFlags.referralDestination || "").trim()) {
         nextErrors.referralDestination = t(
@@ -900,17 +889,6 @@ export function ExameFisicoFormScreen({
       grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
     );
     if (!hasAtLeastOneRegionalResult) fields.push("avaliacaoRegioes");
-    const groupsForAdmValidation =
-      showAllRegions || !relevantRegionSet.size
-        ? source.avaliacaoRegioes
-        : source.avaliacaoRegioes.filter((grupo) =>
-            relevantRegionSet.has(grupo.regiao),
-          );
-    if (
-      groupsForAdmValidation.some((grupo) => !String(grupo.adm || "").trim())
-    ) {
-      fields.push("admRegioes");
-    }
     if (source.redFlags.criticalTriggered) {
       if (!String(source.redFlags.referralDestination || "").trim()) {
         fields.push("referralDestination");
@@ -928,6 +906,18 @@ export function ExameFisicoFormScreen({
     }
     return fields;
   };
+  const validationFieldLabels: Record<string, string> = {
+    movimentoReproduzDor: "Dor reproduzida no movimento",
+    hipotesePrincipal: "Hipótese principal",
+    conduta: "Direção de conduta",
+    avaliacaoRegioes: "Ao menos um teste regional",
+    referralDestination: "Destino de encaminhamento",
+    referralReason: "Justificativa do encaminhamento",
+    classificationConfirmation: "Classificação de dor",
+  };
+  const pendingValidationLabels = Object.keys(errors)
+    .map((field) => validationFieldLabels[field])
+    .filter(Boolean);
 
   const handleSave = async () => {
     if (recordedExamLocked) {
@@ -1373,7 +1363,21 @@ export function ExameFisicoFormScreen({
           ) : null}
         </View>
 
-        <View style={styles.section}>
+        {hasAttemptedSave && pendingValidationLabels.length > 0 ? (
+          <View style={styles.validationSummary}>
+            <Text style={styles.validationSummaryTitle}>Campos pendentes</Text>
+            <Text style={styles.validationSummaryText}>
+              {pendingValidationLabels.join(", ")}
+            </Text>
+          </View>
+        ) : null}
+
+        <View
+          style={[
+            styles.section,
+            errors.classificationConfirmation && styles.sectionWithError,
+          ]}
+        >
           <Text style={styles.blockTitle}>Classificacao de dor</Text>
           <View style={styles.classificationStatusRow}>
             <View
@@ -1509,7 +1513,13 @@ export function ExameFisicoFormScreen({
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            (errors.referralDestination || errors.referralReason) &&
+              styles.sectionWithError,
+          ]}
+        >
           <Text style={styles.blockTitle}>Triagem de sinais de alerta</Text>
           <Text style={styles.subtitle}>
             Bloco obrigatório. Se crítico, o fluxo clínico deve ser interrompido
@@ -1593,7 +1603,12 @@ export function ExameFisicoFormScreen({
           ) : null}
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            errors.movimentoReproduzDor && styles.sectionWithError,
+          ]}
+        >
           <Text style={styles.blockTitle}>Observacao e movimento</Text>
           <View style={styles.photoRow}>
             <Text style={styles.photoCountText}>
@@ -1954,7 +1969,12 @@ export function ExameFisicoFormScreen({
           />
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            errors.avaliacaoRegioes && styles.sectionWithError,
+          ]}
+        >
           <Text style={styles.blockTitle}>
             Avaliacao por regioes (marque o resultado de cada teste)
           </Text>
@@ -2035,6 +2055,9 @@ export function ExameFisicoFormScreen({
                 style={[
                   styles.regionCard,
                   testedCount === 0 && styles.regionCardPending,
+                  errors.avaliacaoRegioes &&
+                    testedCount === 0 &&
+                    styles.regionCardValidationMissing,
                 ]}
               >
                 <View style={styles.regionTitleRow}>
@@ -2146,12 +2169,15 @@ export function ExameFisicoFormScreen({
               {errors.avaliacaoRegioes}
             </Text>
           ) : null}
-          {errors.admRegioes ? (
-            <Text style={styles.validationErrorText}>{errors.admRegioes}</Text>
-          ) : null}
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            (errors.hipotesePrincipal || errors.conduta) &&
+              styles.sectionWithError,
+          ]}
+        >
           <Text style={styles.blockTitle}>Integracao clinica final</Text>
           <Input
             label="Hipótese principal"
@@ -2777,6 +2803,30 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.base,
     ...SHADOWS.sm,
   },
+  sectionWithError: {
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    backgroundColor: `${COLORS.error}06`,
+  },
+  validationSummary: {
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    backgroundColor: `${COLORS.error}08`,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.base,
+  },
+  validationSummaryTitle: {
+    color: COLORS.error,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  validationSummaryText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+  },
   title: {
     fontSize: FONTS.sizes.lg,
     fontWeight: "700",
@@ -3249,6 +3299,10 @@ const styles = StyleSheet.create({
   regionCardPending: {
     borderColor: `${COLORS.warning}80`,
     backgroundColor: `${COLORS.warning}08`,
+  },
+  regionCardValidationMissing: {
+    borderColor: COLORS.error,
+    backgroundColor: `${COLORS.error}08`,
   },
   regionTestRow: {
     marginBottom: SPACING.sm,
