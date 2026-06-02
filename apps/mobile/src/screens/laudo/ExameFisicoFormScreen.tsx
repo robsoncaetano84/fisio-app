@@ -60,6 +60,7 @@ import {
   RegionalTestGroup,
   TestResult,
 } from "../../services/physicalExamModel";
+import { CONFIDENCE_RULES } from "../../services/physicalExamScoring";
 import {
   buildHipomobilidadeSummary,
   prettyEnum,
@@ -93,6 +94,14 @@ type RegisteredExameFisicoResponse = {
   id: string;
   laudoId?: string | null;
   exameFisico?: string | null;
+};
+
+type EvidenceStrengthLabel = "Alta" | "Moderada" | "Baixa";
+
+const getEvidenceStrengthLabel = (score: number): EvidenceStrengthLabel => {
+  if (score >= CONFIDENCE_RULES.highScore) return "Alta";
+  if (score >= CONFIDENCE_RULES.moderateScore) return "Moderada";
+  return "Baixa";
 };
 
 export function ExameFisicoFormScreen({
@@ -1334,6 +1343,9 @@ export function ExameFisicoFormScreen({
     "Pé",
     exam.cadeiaCinetica.pe,
   );
+  const evidenceStrengthLabel = getEvidenceStrengthLabel(
+    exam.cruzamentoFinal.scoreEvidencia,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -2568,9 +2580,45 @@ export function ExameFisicoFormScreen({
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.statusText}>
-            Score de evidência: {exam.cruzamentoFinal.scoreEvidencia}
-          </Text>
+          <View style={styles.evidenceScoreCard}>
+            <View style={styles.evidenceScoreHeader}>
+              <Text style={styles.evidenceScoreLabel}>
+                Força da evidência clínica
+              </Text>
+              <View
+                style={[
+                  styles.evidenceStrengthBadge,
+                  evidenceStrengthLabel === "Alta" &&
+                    styles.evidenceStrengthBadgeHigh,
+                  evidenceStrengthLabel === "Moderada" &&
+                    styles.evidenceStrengthBadgeModerate,
+                  evidenceStrengthLabel === "Baixa" &&
+                    styles.evidenceStrengthBadgeLow,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.evidenceStrengthText,
+                    evidenceStrengthLabel === "Alta" &&
+                      styles.evidenceStrengthTextHigh,
+                    evidenceStrengthLabel === "Moderada" &&
+                      styles.evidenceStrengthTextModerate,
+                    evidenceStrengthLabel === "Baixa" &&
+                      styles.evidenceStrengthTextLow,
+                  ]}
+                >
+                  {evidenceStrengthLabel}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.evidenceScoreTechnical}>
+              Score técnico: {exam.cruzamentoFinal.scoreEvidencia} pontos
+            </Text>
+            <Text style={styles.evidenceScoreHint}>
+              Calculado por testes positivos, achados funcionais e perfil de
+              scoring. Não representa porcentagem.
+            </Text>
+          </View>
           <Text style={styles.label}>Perfil de scoring</Text>
           <View style={styles.optionsRow}>
             {SCORING_PROFILE_OPTIONS.map((item) => (
@@ -2886,6 +2934,69 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: "600",
     marginTop: SPACING.xs,
+  },
+  evidenceScoreCard: {
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}33`,
+    backgroundColor: `${COLORS.primary}08`,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+    gap: 4,
+  },
+  evidenceScoreHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
+  },
+  evidenceScoreLabel: {
+    flex: 1,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textPrimary,
+    fontWeight: "700",
+  },
+  evidenceStrengthBadge: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  evidenceStrengthBadgeHigh: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}14`,
+  },
+  evidenceStrengthBadgeModerate: {
+    borderColor: COLORS.warning,
+    backgroundColor: `${COLORS.warning}14`,
+  },
+  evidenceStrengthBadgeLow: {
+    borderColor: COLORS.error,
+    backgroundColor: `${COLORS.error}10`,
+  },
+  evidenceStrengthText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  evidenceStrengthTextHigh: {
+    color: COLORS.primary,
+  },
+  evidenceStrengthTextModerate: {
+    color: COLORS.warning,
+  },
+  evidenceStrengthTextLow: {
+    color: COLORS.error,
+  },
+  evidenceScoreTechnical: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textPrimary,
+    fontWeight: "600",
+  },
+  evidenceScoreHint: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
   flagRow: {
     borderWidth: 1,

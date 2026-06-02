@@ -13,6 +13,7 @@ import { CrmTask } from '../modules/crm/entities/crm-task.entity';
 import { Evolucao } from '../modules/evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from '../modules/laudos/entities/laudo-ai-generation.entity';
 import { LaudoExameFisico } from '../modules/laudos/entities/laudo-exame-fisico.entity';
+import { LaudoExameHistorico } from '../modules/laudos/entities/laudo-exame-historico.entity';
 import { Laudo } from '../modules/laudos/entities/laudo.entity';
 import { ClinicalFlowEvent } from '../modules/metrics/entities/clinical-flow-event.entity';
 import { PatientCheckClickEvent } from '../modules/metrics/entities/patient-check-click-event.entity';
@@ -30,6 +31,7 @@ export const DATABASE_ENTITIES = [
   Anamnese,
   AnamneseHistorico,
   LaudoExameFisico,
+  LaudoExameHistorico,
   Evolucao,
   Laudo,
   LaudoAiGeneration,
