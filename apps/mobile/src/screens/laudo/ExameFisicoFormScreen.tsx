@@ -125,6 +125,9 @@ export function ExameFisicoFormScreen({
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [recordedExamLocked, setRecordedExamLocked] = useState(false);
+  const [persistedExamText, setPersistedExamText] = useState<string | null>(
+    null,
+  );
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeField, setActiveField] = useState<string | null>(null);
@@ -368,14 +371,18 @@ export function ExameFisicoFormScreen({
         setLaudoId(registeredExam?.laudoId || laudo?.id || null);
       }
 
-      const persistedExamText =
-        registeredExam?.exameFisico || laudo?.exameFisico || "";
+      const persistedExamTextValue = String(
+        registeredExam?.exameFisico || laudo?.exameFisico || "",
+      ).trim();
       hasPersistedExam =
-        !!registeredExam?.id || !!String(persistedExamText).trim();
+        !!registeredExam?.id || !!persistedExamTextValue;
       setRecordedExamLocked(hasPersistedExam);
+      let persistedExamPreviewText = hasPersistedExam
+        ? persistedExamTextValue
+        : null;
 
       if (hasPersistedExam) {
-        const structured = parseStructuredExame(persistedExamText);
+        const structured = parseStructuredExame(persistedExamTextValue);
         if (structured) {
           loadedExam = enrichStructuredExameWithClinicalLogic(
             structured,
@@ -384,9 +391,21 @@ export function ExameFisicoFormScreen({
               overwrite: false,
             },
           );
+          const sanitizedExam = sanitizeExamForForm(loadedExam);
+          persistedExamPreviewText = renderStructuredExameToText(sanitizedExam);
+          setExam(sanitizedExam);
+        } else {
+          loadedExam = enrichStructuredExameWithClinicalLogic(
+            buildStructuredExameFromAnamnese(latestAnamnese),
+            latestAnamnese,
+            {
+              overwrite: false,
+            },
+          );
           setExam(sanitizeExamForForm(loadedExam));
         }
       }
+      setPersistedExamText(persistedExamPreviewText);
 
       try {
         const rawDraft = await AsyncStorage.getItem(draftKey);
@@ -1000,7 +1019,7 @@ export function ExameFisicoFormScreen({
           }
         : exam;
 
-      const exameSerialized = serializeStructuredExame(effectiveExam);
+      const exameFisicoTexto = renderStructuredExameToText(effectiveExam).trim();
       const diagnostico =
         effectiveExam.diagnosticoFuncionalIa.disfuncaoPrincipal.trim() ||
         effectiveExam.cruzamentoFinal.hipotesePrincipal.trim() ||
@@ -1021,7 +1040,7 @@ export function ExameFisicoFormScreen({
 
       await api.post("/laudos/exame-fisico", {
         pacienteId,
-        exameFisico: exameSerialized,
+        exameFisico: exameFisicoTexto,
         diagnosticoFuncional: diagnostico,
         condutas,
       });
@@ -2670,7 +2689,11 @@ export function ExameFisicoFormScreen({
             {t("clinical.sections.clinicalPreview")}
           </Text>
           <Input
-            value={renderStructuredExameToText(exam)}
+            value={
+              recordedExamLocked && persistedExamText
+                ? persistedExamText
+                : renderStructuredExameToText(exam)
+            }
             multiline
             numberOfLines={12}
             editable={false}
