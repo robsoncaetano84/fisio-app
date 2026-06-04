@@ -1442,13 +1442,24 @@ export function enrichStructuredExameWithClinicalLogic(
     );
     return uniqueStructures.slice(0, 2).join(" + ");
   })();
-  const neuralEvidence =
-    structureHints.some((h) => h.tipoLesao === "Neural") ||
-    anamnese?.tipoDor === "NEUROPATICA";
-  const inflamEvidence =
-    structureHints.some((h) => h.tipoLesao === "Inflamatoria") ||
-    anamnese?.tipoDor === "INFLAMATORIA";
+  const neuralHintCount = structureHints.filter(
+    (h) => h.tipoLesao === "Neural",
+  ).length;
+  const mechanicalHintCount = structureHints.filter(
+    (h) => h.tipoLesao === "Mecanica",
+  ).length;
+  const inflammatoryHintCount = structureHints.filter(
+    (h) => h.tipoLesao === "Inflamatoria",
+  ).length;
+  const anamneseNeuralEvidence = anamnese?.tipoDor === "NEUROPATICA";
+  const anamneseInflamEvidence = anamnese?.tipoDor === "INFLAMATORIA";
+  const neuralEvidence = neuralHintCount >= 2 || anamneseNeuralEvidence;
+  const inflamEvidence = inflammatoryHintCount >= 2 || anamneseInflamEvidence;
   const traumaEvidence = anamnese?.mecanismoLesao === "TRAUMA";
+  const structureSuggestionWithClinicalWeight =
+    neuralHintCount === 1 && mechanicalHintCount > 0 && !anamneseNeuralEvidence
+      ? `${structureSuggestion} (sinal neural como hipotese secundaria; correlacionar com padrao mecanico).`
+      : structureSuggestion;
   const onsetHint =
     anamnese?.inicioProblema === "REPENTINO"
       ? "início agudo"
@@ -1480,10 +1491,19 @@ export function enrichStructuredExameWithClinicalLogic(
       },
       { Mecanica: 0, Inflamatoria: 0, Neural: 0 },
     );
-    if (score.Neural >= score.Inflamatoria && score.Neural >= score.Mecanica) {
+    if (
+      (anamneseNeuralEvidence || score.Neural >= 2) &&
+      score.Neural >= score.Inflamatoria &&
+      score.Neural >= score.Mecanica
+    ) {
       return "Neural";
     }
-    if (score.Inflamatoria >= score.Mecanica) return "Inflamatoria";
+    if (
+      (anamneseInflamEvidence || score.Inflamatoria >= 2) &&
+      score.Inflamatoria >= score.Mecanica
+    ) {
+      return "Inflamatoria";
+    }
     return "Mecanica";
   })();
 
@@ -1585,7 +1605,7 @@ export function enrichStructuredExameWithClinicalLogic(
       ),
       estruturaEnvolvida: pickText(
         preparedExam.raciocinioClinico.estruturaEnvolvida,
-        structureSuggestion,
+        structureSuggestionWithClinicalWeight,
         shouldRecalculateText,
       ),
       tipoLesao: pickText(

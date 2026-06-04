@@ -108,6 +108,151 @@ const normalizeErrorMessage = (message: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+const normalizeTestName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const getRegionalTestDescription = (
+  testName: string,
+  regionTitle: string,
+): string => {
+  const name = normalizeTestName(testName);
+  if (name.includes("sharp purser")) {
+    return "Triagem de instabilidade atlantoaxial; use com cautela clínica.";
+  }
+  if (name.includes("dekleyn")) {
+    return "Triagem vascular cervical antes de posições provocativas.";
+  }
+  if (
+    name.includes("spurling") ||
+    (name.includes("distra") && name.includes("cervical")) ||
+    (name.includes("compress") && name.includes("cervical")) ||
+    name.includes("jackson")
+  ) {
+    return "Provocação/alívio radicular cervical.";
+  }
+  if (name.includes("roos") || name.includes("adson")) {
+    return "Triagem de desfiladeiro torácico.";
+  }
+  if (
+    name.includes("expans") ||
+    name.includes("mobilidade segmentar") ||
+    (name.includes("rota") && name.includes("tor")) ||
+    name.includes("inclinacao lateral") ||
+    name.includes("inclina")
+  ) {
+    return "Mobilidade torácica e reprodução de sintomas.";
+  }
+  if (name.includes("schepelmann")) {
+    return "Diferencia dor intercostal/pleural na inclinação lateral.";
+  }
+  if (name.includes("lasegue") || name.includes("slump")) {
+    return "Triagem de tensão neural e irradiação.";
+  }
+  if (name.includes("schober")) return "Mobilidade lombar em flexão.";
+  if (name.includes("kemp") || name.includes("extensao lombar")) {
+    return "Provocação facetária/extensão lombar.";
+  }
+  if (name.includes("instabilidade lombar")) {
+    return "Controle segmentar lombar sob carga.";
+  }
+  if (name.includes("elevacao bilateral") || name.includes("eleva")) {
+    return "Força abdominal e controle lombo-pélvico.";
+  }
+  if (name.includes("faber") || name.includes("fadir")) {
+    return "Provocação coxofemoral e sacroilíaca.";
+  }
+  if (
+    name.includes("gaenslen") ||
+    (name.includes("compress") && name.includes("pelv")) ||
+    (name.includes("distra") && name.includes("pelv")) ||
+    name.includes("thigh thrust") ||
+    name.includes("sacral thrust")
+  ) {
+    return "Provocação sacroilíaca; correlacione com testes em cluster.";
+  }
+  if (name.includes("thomas") || name.includes("ely")) {
+    return "Flexibilidade de cadeia anterior do quadril/coxa.";
+  }
+  if (name.includes("ober")) {
+    return "Flexibilidade do trato iliotibial e controle lateral do quadril.";
+  }
+  if (name.includes("trendelenburg")) {
+    return "Controle abdutor do quadril e estabilidade pélvica.";
+  }
+  if (name.includes("log roll")) {
+    return "Irritabilidade intra-articular coxofemoral.";
+  }
+  if (name.includes("lachman") || name.includes("gaveta")) {
+    return "Estabilidade ligamentar.";
+  }
+  if (name.includes("pivot shift")) {
+    return "Instabilidade rotatória do joelho.";
+  }
+  if (name.includes("mcmurray") || name.includes("apley")) {
+    return "Triagem meniscal/articular.";
+  }
+  if (name.includes("estresse em valgo") || name.includes("estresse em varo")) {
+    return "Estabilidade colateral sob estresse.";
+  }
+  if (name.includes("clarke")) {
+    return "Provocação patelofemoral.";
+  }
+  if (
+    name.includes("gaveta anterior do tornozelo") ||
+    name.includes("inclinacao talar") ||
+    (name.includes("inclina") && name.includes("talar")) ||
+    name.includes("kleiger") ||
+    (name.includes("compress") && name.includes("fib"))
+  ) {
+    return "Estabilidade ligamentar/sindesmose do tornozelo.";
+  }
+  if (name.includes("thompson")) {
+    return "Integridade do tendão de Aquiles.";
+  }
+  if (name.includes("windlass") || name.includes("navicular drop")) {
+    return "Arco plantar, fáscia plantar e controle do pé.";
+  }
+  if (name.includes("neer") || name.includes("hawkins")) {
+    return "Provocação subacromial/ombro.";
+  }
+  if (
+    name.includes("jobe") ||
+    name.includes("drop arm") ||
+    name.includes("lift-off") ||
+    name.includes("belly press")
+  ) {
+    return "Função do manguito rotador.";
+  }
+  if (name.includes("speed") || name.includes("yergason")) {
+    return "Provocação do tendão da cabeça longa do bíceps.";
+  }
+  if (name.includes("apprehension") || name.includes("relocation")) {
+    return "Instabilidade anterior do ombro.";
+  }
+  if (name.includes("cozen") || name.includes("mill")) {
+    return "Provocação de epicondilalgia lateral.";
+  }
+  if (name.includes("golfer")) {
+    return "Provocação de epicondilalgia medial.";
+  }
+  if (name.includes("phalen") || name.includes("tinel")) {
+    return "Triagem neural periférica.";
+  }
+  if (name.includes("finkelstein")) {
+    return "Provocação de tenossinovite de De Quervain.";
+  }
+  if (name.includes("compressao do carpo")) {
+    return "Triagem compressiva do túnel do carpo.";
+  }
+  if (name.includes("watson")) {
+    return "Estabilidade escafolunar.";
+  }
+  return `Use se houver hipótese ou sintoma em ${regionTitle.toLowerCase()}.`;
+};
+
 export function ExameFisicoFormScreen({
   route,
   navigation,
@@ -1344,8 +1489,8 @@ export function ExameFisicoFormScreen({
         <View style={styles.section}>
           <Text style={styles.title}>Exame físico orientado por decisão</Text>
           <Text style={styles.subtitle}>
-            Etapas: observação, movimento, palpação, testes, cadeia cinética e
-            cruzamento final.
+            Etapas: observação, movimento, palpação, testes funcionais,
+            avaliação por regiões e cruzamento final.
           </Text>
           {lastDraftSavedAt ? (
             <Text style={styles.draftInfo}>
@@ -1956,8 +2101,8 @@ export function ExameFisicoFormScreen({
             testados â€¢ {regionalProgress.pending} pendente(s)
           </Text>
           <Text style={styles.sectionHint}>
-            Atalhos: aplique uma bateria sugerida e depois marque
-            positivo/negativo.
+            A tela sugere a região principal pela anamnese. Use "Mostrar todas"
+            para avaliar outras regiões somente quando houver hipótese clínica.
           </Text>
           <View style={styles.presetRow}>
             {EXAM_PRESETS.map((preset) => (
@@ -2029,7 +2174,12 @@ export function ExameFisicoFormScreen({
                     ]}
                   >
                     <View style={styles.regionTestHeader}>
-                      <Text style={styles.regionTestName}>{teste.nome}</Text>
+                      <View style={styles.regionTestCopy}>
+                        <Text style={styles.regionTestName}>{teste.nome}</Text>
+                        <Text style={styles.regionTestDescription}>
+                          {getRegionalTestDescription(teste.nome, grupo.titulo)}
+                        </Text>
+                      </View>
                       <TouchableOpacity
                         style={[
                           styles.regionSuggestToggle,
@@ -2113,6 +2263,9 @@ export function ExameFisicoFormScreen({
               setField("cruzamentoFinal.hipotesePrincipal", v)
             }
             error={errors.hipotesePrincipal}
+            multiline
+            numberOfLines={3}
+            style={{ minHeight: 84, textAlignVertical: "top" }}
           />
           <Input
             label="Hipóteses secundárias"
@@ -2417,7 +2570,12 @@ export function ExameFisicoFormScreen({
               scoring. Não representa porcentagem.
             </Text>
           </View>
-          <Text style={styles.label}>Perfil de scoring</Text>
+          <Text style={styles.label}>Perfil de cálculo da evidência</Text>
+          <Text style={styles.subtitle}>
+            Define quais regiões e testes pesam mais no score. Use "Geral" se
+            não quiser priorizar coluna, membro inferior, membro superior ou
+            esporte.
+          </Text>
           <View style={styles.optionsRow}>
             {SCORING_PROFILE_OPTIONS.map((item) => (
               <TouchableOpacity
@@ -3231,9 +3389,13 @@ const styles = StyleSheet.create({
   },
   regionTestHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: SPACING.xs,
+  },
+  regionTestCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   regionSuggestToggle: {
     borderWidth: 1,
@@ -3258,8 +3420,14 @@ const styles = StyleSheet.create({
   regionTestName: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textPrimary,
-    marginBottom: 6,
     fontWeight: "600",
+  },
+  regionTestDescription: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 17,
+    marginTop: 2,
+    marginBottom: 6,
   },
   regionTestOptions: {
     flexDirection: "row",

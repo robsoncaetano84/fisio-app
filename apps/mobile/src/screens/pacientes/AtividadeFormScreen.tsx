@@ -192,7 +192,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     if (referenciasFinal) setReferenciasBibliograficas(referenciasFinal);
   };
 
-  const generateAutomaticSuggestion = async () => {
+  const generateAutomaticSuggestion = async (silent = false) => {
     setGeneratingAi(true);
     autoSuggestionAttemptedRef.current = true;
     try {
@@ -208,12 +208,20 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       });
       if (response.data) {
         applyAutomaticSuggestion(response.data);
+        if (!silent) {
+          showToast({
+            message: "Rascunho de atividade gerado pela IA",
+            type: "success",
+          });
+        }
       }
     } catch {
-      showToast({
-        message: "Não foi possível gerar rascunho automático agora",
-        type: "info",
-      });
+      if (!silent) {
+        showToast({
+          message: "Não foi possível gerar rascunho automático agora",
+          type: "info",
+        });
+      }
     } finally {
       setGeneratingAi(false);
     }
@@ -230,7 +238,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     if (titulo.trim() || descricao.trim() || referenciasBibliograficas.trim())
       return;
     if (autoSuggestionAttemptedRef.current) return;
-    generateAutomaticSuggestion().catch(() => undefined);
+    generateAutomaticSuggestion(true).catch(() => undefined);
   }, [
     loadingAtividades,
     pacienteId,
@@ -479,6 +487,21 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
               </Text>
             </View>
           ) : null}
+          <Button
+            title="Gerar prescrição com IA"
+            onPress={() => generateAutomaticSuggestion()}
+            loading={generatingAi}
+            disabled={saving || generatingAi}
+            variant="outline"
+            icon={
+              <Ionicons
+                name="sparkles-outline"
+                size={16}
+                color={COLORS.primary}
+              />
+            }
+            style={styles.aiButton}
+          />
 
           <Input
             label="Título da atividade"
@@ -986,6 +1009,7 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     marginBottom: SPACING.xs,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: SPACING.sm,
@@ -995,6 +1019,7 @@ const styles = StyleSheet.create({
   },
   itemMeta: {
     flex: 1,
+    minWidth: 160,
   },
   acceptanceBadge: {
     alignSelf: "flex-start",
@@ -1119,8 +1144,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: SPACING.sm,
     marginTop: SPACING.md,
+  },
+  aiButton: {
+    alignSelf: "flex-start",
+    marginBottom: SPACING.sm,
   },
   batchHeader: {
     marginBottom: SPACING.sm,

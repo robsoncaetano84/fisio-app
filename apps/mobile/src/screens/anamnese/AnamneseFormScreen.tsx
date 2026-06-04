@@ -1636,7 +1636,12 @@ export function AnamneseFormScreen({
                   )}
                 </FormSection>
 
-                <FormSection title={t("clinical.labels.intensity")}>
+                <FormSection title="Intensidade da dor principal">
+                  <Text style={styles.hintText}>
+                    Se houver mais de uma área, informe a intensidade da dor
+                    principal ou mais forte. Diferencie as demais áreas na
+                    descrição dos sintomas.
+                  </Text>
                   <PainScale
                     value={intensidadeDor}
                     onChange={(value) => {
@@ -1662,7 +1667,7 @@ export function AnamneseFormScreen({
           <>
             <FormSection title="Descreva os sintomas principais">
               <Input
-                placeholder="Descreva o que voce sente..."
+                placeholder="Descreva o que voce sente. Se marcou mais de uma área, informe qual é a principal e se a intensidade muda entre elas."
                 value={descricaoSintomas}
                 onChangeText={(text) => {
                   setDescricaoSintomas(text);
@@ -2129,7 +2134,7 @@ export function AnamneseFormScreen({
       case 2:
         return (
           <>
-            <FormSection title="Já teve sintomas parecidos antes?">
+            <FormSection title="Já teve episódios parecidos antes?">
               <View style={styles.optionsRow}>
                 <SelectOption
                   label="Sim"
@@ -2145,7 +2150,7 @@ export function AnamneseFormScreen({
 
               {problemaAnterior && (
                 <Input
-                  placeholder="Quando foi? Houve tratamento?"
+                  placeholder="Quando foi e como evoluiu? Ex.: há 2 anos, melhorou em 3 semanas, voltou após corrida."
                   value={quandoProblemaAnterior}
                   onChangeText={(text) => {
                     setQuandoProblemaAnterior(text);
@@ -2177,7 +2182,12 @@ export function AnamneseFormScreen({
               )}
             </FormSection>
 
-            <FormSection title="Já realizou tratamento para esta queixa?">
+            <FormSection title="Tratamentos já realizados para esta queixa">
+              <Text style={styles.hintText}>
+                Marque somente os tratamentos feitos para este episódio ou para
+                episódios parecidos. Detalhes como datas e resposta podem ficar
+                no campo anterior.
+              </Text>
               <View style={styles.optionsGrid}>
                 {TRATAMENTOS.map((tratamento) => (
                   <SelectOption
@@ -3119,6 +3129,7 @@ const styles = StyleSheet.create({
   },
   optionsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: SPACING.sm,
   },
   optionsGrid: {
@@ -3130,6 +3141,8 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   option: {
+    maxWidth: "100%",
+    flexShrink: 1,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
@@ -3144,6 +3157,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textPrimary,
+    flexShrink: 1,
   },
   optionTextSelected: {
     color: COLORS.white,

@@ -64,6 +64,10 @@ type PlanoDraft = {
 type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
 const PLANO_AUTOSAVE_DEBOUNCE_MS = 1800;
+const DEFAULT_PLAN_FREQUENCY = "2";
+const DEFAULT_PLAN_DURATION_WEEKS = "6";
+const DEFAULT_DISCHARGE_CRITERIA =
+  "Alta quando houver dor controlada, ganho funcional compatível com a meta do paciente, execução segura dos exercícios domiciliares e ausência de piora progressiva.";
 
 export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
   const { pacienteId } = route.params;
@@ -396,11 +400,19 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       if (!objetivosMedioPrazo.trim() && data.objetivosMedioPrazo) {
         setObjetivosMedioPrazo(data.objetivosMedioPrazo);
       }
-      if (!frequenciaSemanal.trim() && data.frequenciaSemanal) {
-        setFrequenciaSemanal(String(data.frequenciaSemanal));
+      if (!frequenciaSemanal.trim()) {
+        setFrequenciaSemanal(
+          data.frequenciaSemanal
+            ? String(data.frequenciaSemanal)
+            : DEFAULT_PLAN_FREQUENCY,
+        );
       }
-      if (!duracaoSemanas.trim() && data.duracaoSemanas) {
-        setDuracaoSemanas(String(data.duracaoSemanas));
+      if (!duracaoSemanas.trim()) {
+        setDuracaoSemanas(
+          data.duracaoSemanas
+            ? String(data.duracaoSemanas)
+            : DEFAULT_PLAN_DURATION_WEEKS,
+        );
       }
       if (!condutas.trim() && data.condutas) {
         setCondutas(data.condutas);
@@ -408,8 +420,8 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       if (!planoTratamentoIA.trim() && data.planoTratamentoIA) {
         setPlanoTratamentoIA(data.planoTratamentoIA);
       }
-      if (!criteriosAlta.trim() && data.criteriosAlta) {
-        setCriteriosAlta(data.criteriosAlta);
+      if (!criteriosAlta.trim()) {
+        setCriteriosAlta(data.criteriosAlta || DEFAULT_DISCHARGE_CRITERIA);
       }
     } catch {
       showToast({
@@ -451,16 +463,23 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         setFrequenciaSemanal(
           typeof laudo.frequenciaSemanal === "number"
             ? String(laudo.frequenciaSemanal)
-            : "",
+            : shouldPrefillWithAi
+              ? ""
+              : DEFAULT_PLAN_FREQUENCY,
         );
         setDuracaoSemanas(
           typeof laudo.duracaoSemanas === "number"
             ? String(laudo.duracaoSemanas)
-            : "",
+            : shouldPrefillWithAi
+              ? ""
+              : DEFAULT_PLAN_DURATION_WEEKS,
         );
         setCondutas(laudo.condutas || "");
         setPlanoTratamentoIA(laudo.planoTratamentoIA || "");
-        setCriteriosAlta(laudo.criteriosAlta || "");
+        setCriteriosAlta(
+          laudo.criteriosAlta ||
+            (shouldPrefillWithAi ? "" : DEFAULT_DISCHARGE_CRITERIA),
+        );
         setObservacoes(laudo.observacoes || "");
         const examesConsiderados = Number(laudo.examesConsiderados || 0);
         const examesComLeituraIa = Number(laudo.examesComLeituraIa || 0);
@@ -1033,6 +1052,13 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     }
   };
 
+  const handleOpenActivityPrescription = () => {
+    navigation.navigate("AtividadeForm", {
+      pacienteId,
+      pacienteNome: paciente?.nomeCompleto,
+    });
+  };
+
   const handleValidatePlan = async () => {
     if (!validate()) {
       showToast({
@@ -1427,6 +1453,15 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
             <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
           }
         />
+        <Button
+          title="Prescrever atividade com IA"
+          onPress={handleOpenActivityPrescription}
+          fullWidth
+          variant="outline"
+          icon={
+            <Ionicons name="fitness-outline" size={18} color={COLORS.primary} />
+          }
+        />
       </View>
     </SafeAreaView>
   );
@@ -1572,10 +1607,12 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: SPACING.sm,
   },
   half: {
     flex: 1,
+    minWidth: 140,
   },
   footer: {
     gap: SPACING.sm,
