@@ -102,6 +102,12 @@ const getEvidenceStrengthLabel = (score: number): EvidenceStrengthLabel => {
   return "Baixa";
 };
 
+const normalizeErrorMessage = (message: string) =>
+  String(message || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
 export function ExameFisicoFormScreen({
   route,
   navigation,
@@ -1094,7 +1100,9 @@ export function ExameFisicoFormScreen({
         setErrors((prev) => ({ ...prev, ...fieldErrors }));
       }
 
-      if (/exame fisico ja registrado/i.test(message)) {
+      if (
+        normalizeErrorMessage(message).includes("exame fisico ja registrado")
+      ) {
         setRecordedExamLocked(true);
         await AsyncStorage.removeItem(draftKey).catch(() => undefined);
         setLastDraftSavedAt(null);
@@ -1219,13 +1227,13 @@ export function ExameFisicoFormScreen({
           validatedAt,
         }),
       );
-      await trackEvent("exame_fisico_validated", {
+      trackEvent("exame_fisico_validated", {
         pacienteId,
-      });
-      await recordAuditAction("EXAME_FISICO_VALIDATED", {
+      }).catch(() => undefined);
+      recordAuditAction("EXAME_FISICO_VALIDATED", {
         pacienteId,
         professionalValidationConfirmed: true,
-      });
+      }).catch(() => undefined);
       showToast({
         type: "success",
         message: t("clinical.messages.physicalExamValidatedSuccessfully"),
@@ -1786,12 +1794,6 @@ export function ExameFisicoFormScreen({
             {...getVoiceInputProps("palpacao.articular")}
           />
           <Input
-            label={palpacaoDinamicaInput.label}
-            value={palpacaoDinamicaInput.value}
-            onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)}
-            {...getVoiceInputProps("palpacao.dinamicaVertebral")}
-          />
-          <Input
             label="Temperatura local"
             value={exam.palpacao.temperatura}
             onChangeText={(v) => setField("palpacao.temperatura", v)}
@@ -1819,6 +1821,12 @@ export function ExameFisicoFormScreen({
             value={exam.palpacao.hipomobilidadeSegmentar.lombar}
             onChangeText={(v) => setHipomobilidadeSegmentarField("lombar", v)}
             placeholder="Ex.: L4-L5 com rigidez segmentar"
+          />
+          <Input
+            label={palpacaoDinamicaInput.label}
+            value={palpacaoDinamicaInput.value}
+            onChangeText={(v) => setField("palpacao.dinamicaVertebral", v)}
+            {...getVoiceInputProps("palpacao.dinamicaVertebral")}
           />
           <Input
             label="Sacro (base posterior D/E)"
