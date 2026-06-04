@@ -1846,9 +1846,6 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Subtipo clinico: ${exam.dorSubtipo || "Nao classificado"}`,
     "",
     "Observacao",
-    `Postura: ${exam.observacao.postura}`,
-    `Assimetria: ${exam.observacao.assimetria}`,
-    `Protecao: ${exam.observacao.protecao}`,
     `Padrao de movimento: ${exam.observacao.padraoMovimento}`,
     `Edema: ${exam.observacao.edema}`,
     `Atrofia muscular: ${exam.observacao.atrofiaMuscular}`,
@@ -1887,11 +1884,6 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Estabilidade: ${exam.testesFuncionais.estabilidade}`,
     `Controle motor: ${exam.testesFuncionais.controleMotor}`,
     "",
-    "Testes",
-    `Biomecanicos: ${exam.testes.biomecanicos}`,
-    `Ortopedicos: ${exam.testes.ortopedicos}`,
-    `Imagem: ${exam.testes.imagem}`,
-    "",
     "Avaliacao por regioes",
     ...exam.avaliacaoRegioes.flatMap((group) => {
       const lines = [`${group.titulo}`, `- ADM: ${safeText(group.adm)}`];
@@ -1911,12 +1903,6 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
       });
       return lines;
     }),
-    "",
-    "Cadeia cinetica",
-    `Coxofemoral: ${exam.cadeiaCinetica.quadril}`,
-    `Pelve: ${exam.cadeiaCinetica.pelve}`,
-    `Coluna toracica: ${exam.cadeiaCinetica.colunaToracica}`,
-    `Pe: ${exam.cadeiaCinetica.pe}`,
     "",
     "Cruzamento final",
     `Hipotese principal: ${exam.cruzamentoFinal.hipotesePrincipal}`,

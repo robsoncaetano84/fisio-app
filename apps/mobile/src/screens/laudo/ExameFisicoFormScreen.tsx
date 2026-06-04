@@ -40,7 +40,6 @@ import {
   inferClinicalRegionsFromHints,
   mapClinicalChainCodeToLabel,
   resolveRelevantClinicalRegions,
-  shouldShowChainField,
 } from "../../utils/clinicalRegionContext";
 import { FEATURE_FLAGS } from "../../constants/featureFlags";
 import {
@@ -71,7 +70,6 @@ import {
 } from "./ExameFisicoFormScreen.utils";
 import {
   CADEIA_OPTIONS,
-  CONDUTA_PRESETS,
   CONFIANCA_OPTIONS,
   DOR_PRINCIPAL_OPTIONS,
   DOR_SUBTIPO_OPTIONS,
@@ -1272,16 +1270,6 @@ export function ExameFisicoFormScreen({
   const redFlagCount = exam.redFlags.answers.filter(
     (item) => item.positive,
   ).length;
-  const observacaoPosturaInput = resolveInputSuggestionPresentation(
-    "observacao.postura",
-    "Postura",
-    exam.observacao.postura,
-  );
-  const observacaoAssimetriaInput = resolveInputSuggestionPresentation(
-    "observacao.assimetria",
-    "Assimetria",
-    exam.observacao.assimetria,
-  );
   const observacaoPadraoInput = resolveInputSuggestionPresentation(
     "observacao.padraoMovimento",
     "Padrão de movimento",
@@ -1326,41 +1314,6 @@ export function ExameFisicoFormScreen({
     "palpacao.dinamicaVertebral",
     "Palpação dinâmica vertebral",
     exam.palpacao.dinamicaVertebral,
-  );
-  const testesBiomecanicosInput = resolveInputSuggestionPresentation(
-    "testes.biomecanicos",
-    "Testes biomecânicos",
-    exam.testes.biomecanicos,
-  );
-  const testesOrtopedicosInput = resolveInputSuggestionPresentation(
-    "testes.ortopedicos",
-    "Testes ortopédicos",
-    exam.testes.ortopedicos,
-  );
-  const testesImagemInput = resolveInputSuggestionPresentation(
-    "testes.imagem",
-    "Exame de imagem",
-    exam.testes.imagem,
-  );
-  const cadeiaQuadrilInput = resolveInputSuggestionPresentation(
-    "cadeiaCinetica.quadril",
-    "Coxofemoral",
-    exam.cadeiaCinetica.quadril,
-  );
-  const cadeiaPelveInput = resolveInputSuggestionPresentation(
-    "cadeiaCinetica.pelve",
-    "Pelve",
-    exam.cadeiaCinetica.pelve,
-  );
-  const cadeiaToracicaInput = resolveInputSuggestionPresentation(
-    "cadeiaCinetica.colunaToracica",
-    "Coluna torácica",
-    exam.cadeiaCinetica.colunaToracica,
-  );
-  const cadeiaPeInput = resolveInputSuggestionPresentation(
-    "cadeiaCinetica.pe",
-    "Pé",
-    exam.cadeiaCinetica.pe,
   );
   const evidenceStrengthLabel = getEvidenceStrengthLabel(
     exam.cruzamentoFinal.scoreEvidencia,
@@ -1697,23 +1650,6 @@ export function ExameFisicoFormScreen({
             </View>
           </View>
           <Input
-            label={observacaoPosturaInput.label}
-            value={observacaoPosturaInput.value}
-            onChangeText={(v) => setField("observacao.postura", v)}
-            {...getVoiceInputProps("observacao.postura")}
-          />
-          <Input
-            label={observacaoAssimetriaInput.label}
-            value={observacaoAssimetriaInput.value}
-            onChangeText={(v) => setField("observacao.assimetria", v)}
-            {...getVoiceInputProps("observacao.assimetria")}
-          />
-          <Input
-            label="Proteção"
-            value={exam.observacao.protecao}
-            onChangeText={(v) => setField("observacao.protecao", v)}
-          />
-          <Input
             label={observacaoPadraoInput.label}
             value={observacaoPadraoInput.value}
             onChangeText={(v) => setField("observacao.padraoMovimento", v)}
@@ -1914,54 +1850,6 @@ export function ExameFisicoFormScreen({
             numberOfLines={3}
             placeholder="Será montado automaticamente conforme os segmentos preenchidos"
           />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.blockTitle}>Testes e cadeia cinetica</Text>
-          <Input
-            label={testesBiomecanicosInput.label}
-            value={testesBiomecanicosInput.value}
-            onChangeText={(v) => setField("testes.biomecanicos", v)}
-          />
-          <Input
-            label={testesOrtopedicosInput.label}
-            value={testesOrtopedicosInput.value}
-            onChangeText={(v) => setField("testes.ortopedicos", v)}
-          />
-          <Input
-            label={testesImagemInput.label}
-            value={testesImagemInput.value}
-            onChangeText={(v) => setField("testes.imagem", v)}
-          />
-
-          {shouldShowChainField("quadril", relevantRegions) ? (
-            <Input
-              label={cadeiaQuadrilInput.label}
-              value={cadeiaQuadrilInput.value}
-              onChangeText={(v) => setField("cadeiaCinetica.quadril", v)}
-            />
-          ) : null}
-          {shouldShowChainField("pelve", relevantRegions) ? (
-            <Input
-              label={cadeiaPelveInput.label}
-              value={cadeiaPelveInput.value}
-              onChangeText={(v) => setField("cadeiaCinetica.pelve", v)}
-            />
-          ) : null}
-          {shouldShowChainField("colunaToracica", relevantRegions) ? (
-            <Input
-              label={cadeiaToracicaInput.label}
-              value={cadeiaToracicaInput.value}
-              onChangeText={(v) => setField("cadeiaCinetica.colunaToracica", v)}
-            />
-          ) : null}
-          {shouldShowChainField("pe", relevantRegions) ? (
-            <Input
-              label={cadeiaPeInput.label}
-              value={cadeiaPeInput.value}
-              onChangeText={(v) => setField("cadeiaCinetica.pe", v)}
-            />
-          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -2413,31 +2301,6 @@ export function ExameFisicoFormScreen({
             numberOfLines={3}
             {...getVoiceInputProps("condutaIa.tecnicaManualIndicada")}
           />
-          <View style={styles.optionsRow}>
-            {CONDUTA_PRESETS.tecnicaManual.map((item) => (
-              <TouchableOpacity
-                key={`conduta-tm-${item}`}
-                style={[
-                  styles.chip,
-                  exam.condutaIa.tecnicaManualIndicada === item &&
-                    styles.chipSelected,
-                ]}
-                onPress={() =>
-                  setField("condutaIa.tecnicaManualIndicada", item)
-                }
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    exam.condutaIa.tecnicaManualIndicada === item &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
           <Input
             label="Ajuste articular"
             value={exam.condutaIa.ajusteArticular}
@@ -2446,29 +2309,6 @@ export function ExameFisicoFormScreen({
             numberOfLines={3}
             {...getVoiceInputProps("condutaIa.ajusteArticular")}
           />
-          <View style={styles.optionsRow}>
-            {CONDUTA_PRESETS.ajusteArticular.map((item) => (
-              <TouchableOpacity
-                key={`conduta-aj-${item}`}
-                style={[
-                  styles.chip,
-                  exam.condutaIa.ajusteArticular === item &&
-                    styles.chipSelected,
-                ]}
-                onPress={() => setField("condutaIa.ajusteArticular", item)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    exam.condutaIa.ajusteArticular === item &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
           <Input
             label="Exercício corretivo"
             value={exam.condutaIa.exercicioCorretivo}
@@ -2477,29 +2317,6 @@ export function ExameFisicoFormScreen({
             numberOfLines={3}
             {...getVoiceInputProps("condutaIa.exercicioCorretivo")}
           />
-          <View style={styles.optionsRow}>
-            {CONDUTA_PRESETS.exercicio.map((item) => (
-              <TouchableOpacity
-                key={`conduta-ex-${item}`}
-                style={[
-                  styles.chip,
-                  exam.condutaIa.exercicioCorretivo === item &&
-                    styles.chipSelected,
-                ]}
-                onPress={() => setField("condutaIa.exercicioCorretivo", item)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    exam.condutaIa.exercicioCorretivo === item &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
           <Input
             label="Liberação miofascial"
             value={exam.condutaIa.liberacaoMiofascial}
@@ -2508,29 +2325,6 @@ export function ExameFisicoFormScreen({
             numberOfLines={3}
             {...getVoiceInputProps("condutaIa.liberacaoMiofascial")}
           />
-          <View style={styles.optionsRow}>
-            {CONDUTA_PRESETS.miofascial.map((item) => (
-              <TouchableOpacity
-                key={`conduta-mi-${item}`}
-                style={[
-                  styles.chip,
-                  exam.condutaIa.liberacaoMiofascial === item &&
-                    styles.chipSelected,
-                ]}
-                onPress={() => setField("condutaIa.liberacaoMiofascial", item)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    exam.condutaIa.liberacaoMiofascial === item &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
           <Input
             label="Progressão esportiva"
             value={exam.condutaIa.progressaoEsportiva}
@@ -2539,29 +2333,6 @@ export function ExameFisicoFormScreen({
             numberOfLines={3}
             {...getVoiceInputProps("condutaIa.progressaoEsportiva")}
           />
-          <View style={styles.optionsRow}>
-            {CONDUTA_PRESETS.progressao.map((item) => (
-              <TouchableOpacity
-                key={`conduta-pr-${item}`}
-                style={[
-                  styles.chip,
-                  exam.condutaIa.progressaoEsportiva === item &&
-                    styles.chipSelected,
-                ]}
-                onPress={() => setField("condutaIa.progressaoEsportiva", item)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    exam.condutaIa.progressaoEsportiva === item &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           <Text style={styles.label}>Sustentação da hipótese</Text>
           <Text style={styles.subtitle}>
