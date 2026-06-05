@@ -199,6 +199,9 @@ referenciasUsadas (array de ids escolhidos SOMENTE da lista referenciasClinicas)
 
 Regras clinicas:
 - Use como fonte primaria o exame fisico estruturado (quando disponivel) e correlacione com anamnese/evolucao.
+- Quando o exame fisico trouxer avaliacao postural, plano frontal, plano sagital ou Teste de Adams, esses achados devem influenciar achadosClinicos, diagnosticoFuncional, condutas, planoTratamentoIA e criteriosAlta/reavaliacao.
+- No Teste de Adams, use resultado, regiao, intensidade e ATR/escoliometro quando presentes. Se houver assimetria, intensidade moderada/importante ou ATR >= 5 graus, inclua monitoramento objetivo, prudencia na progressao e necessidade de correlacao/reavaliacao clinica; nao trate como achado neutro.
+- Para plano frontal/sagital, conecte desvios, assimetrias ou alteracoes posturais a controle motor, mobilidade, forca, estrategia de carga e criterio de reavaliacao. Se estiver "Nao avaliado", declare lacuna em vez de criar conduta baseada nele.
 - Trate areasAfetadas como eixo central do raciocinio: para cada area selecionada, considere regiao, lado, vista e observacao clinica escrita.
 - Use intensidadeDor como a unica escala numerica de dor do paciente; nao infira intensidade por area/regiao.
 - As observacoes escritas em cada area selecionada tem prioridade alta: use-as para orientar diagnostico funcional, hipoteses, condutas e criterios de progressao.
@@ -215,6 +218,7 @@ Regras clinicas:
 - Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
 - Em condutas, para cada intervencao proposta, descreva em texto curto a evidencia clinica correspondente (achado, teste positivo/negativo relevante, deficit funcional ou fator de risco).
 - Em planoTratamentoIA, estruture por fases com: objetivo da fase, condutas, criterio de progressao e evidencia que sustenta a fase.
+- Em planoTratamentoIA, quando houver achado postural/Adams, inclua uma linha de reavaliacao objetiva dizendo o que sera monitorado e qual achado precisa estabilizar/melhorar antes de aumentar carga, complexidade ou retorno funcional.
 - Em planoTratamentoIA, cite como cada area selecionada sera monitorada ou reavaliada quando houver mais de uma regiao marcada.
 - Evite termos vagos; relacione cada bloco a achados (dor, funcao, testes positivos/deficits funcionais).
 - Em diagnosticoFuncional, identifique (quando possivel) origem provavel da dor, estrutura envolvida, tipo de lesao (mecanica/inflamatoria/neural) e fator biomecanico associado.

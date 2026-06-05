@@ -133,6 +133,11 @@ describe('LaudoAiSuggestionService', () => {
         userContent: expect.stringContaining('Ancoras obrigatorias'),
       }),
     );
+    expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userContent: expect.stringContaining('Teste de Adams'),
+      }),
+    );
   });
 
   it('searches and normalizes updated clinical references with web search', async () => {

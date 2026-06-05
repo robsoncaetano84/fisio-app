@@ -14,6 +14,22 @@ type RegionalGroup = {
   }>;
 };
 
+type PosturalAdamsData = {
+  resultado?: string | number;
+  regiao?: string | number;
+  intensidade?: string | number;
+  atrGraus?: string | number;
+};
+
+type PosturalAssessmentData = {
+  planoFrontal?: string;
+  planoSagital?: string;
+  testeAdams?: string;
+  planoFrontalItens?: Record<string, unknown>;
+  planoSagitalItens?: Record<string, unknown>;
+  adams?: PosturalAdamsData;
+};
+
 export type StructuredExameData = {
   version?: number;
   dorPrincipal?: string;
@@ -21,6 +37,7 @@ export type StructuredExameData = {
   observacao?: {
     postura?: string;
     assimetria?: string;
+    avaliacaoPostural?: PosturalAssessmentData;
     edema?: string;
     atrofiaMuscular?: string;
     marcha?: string;
@@ -141,6 +158,7 @@ function isInformative(value?: unknown): boolean {
       'N/A',
       'NAO INFORMADO',
       'NAO_INFORMADO',
+      'NAO AVALIADO',
       'NAO TESTADO',
       'NAO_TESTADO',
       'NAO SE APLICA',
@@ -170,6 +188,127 @@ function selectedRegionalTests(
     .filter((test) => normalizeComparable(test?.resultado) === result)
     .map((test) => cleanText(test?.nome || 'Teste clinico'))
     .filter(isInformative);
+}
+
+const POSTURAL_FRONTAL_LABELS: Record<string, string> = {
+  cabeca: 'Cabeca',
+  ombros: 'Ombros',
+  escapulas: 'Escapulas',
+  pelve: 'Pelve',
+  joelhos: 'Joelhos',
+  pes: 'Pes/apoio',
+};
+
+const POSTURAL_SAGITAL_LABELS: Record<string, string> = {
+  cabeca: 'Cabeca',
+  cifoseToracica: 'Cifose toracica',
+  lordoseLombar: 'Lordose lombar',
+  pelve: 'Pelve',
+  joelhos: 'Joelhos',
+  apoioPlantar: 'Apoio plantar',
+};
+
+function isInstructionPlaceholder(value?: unknown): boolean {
+  const normalized = normalizeComparable(value);
+  return (
+    normalized.startsWith('AVALIAR ') ||
+    normalized.startsWith('REALIZAR FLEXAO ANTERIOR')
+  );
+}
+
+function isClinicalFinding(value?: unknown): boolean {
+  return isInformative(value) && !isInstructionPlaceholder(value);
+}
+
+function formatPosturalItems(
+  source: unknown,
+  labels: Record<string, string>,
+): string {
+  if (!isRecord(source)) return '';
+  return Object.entries(labels)
+    .map(([key, label]) => {
+      const value = source[key];
+      return isClinicalFinding(value) ? `${label}: ${cleanText(value)}` : '';
+    })
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function parseAtrDegrees(value?: unknown): number | null {
+  const normalized = cleanText(value).replace(',', '.');
+  if (!normalized) return null;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function hasAdamsClinicalAlert(adams?: PosturalAdamsData): boolean {
+  if (!adams) return false;
+  const resultado = normalizeComparable(adams.resultado);
+  const intensidade = normalizeComparable(adams.intensidade);
+  const atr = parseAtrDegrees(adams.atrGraus);
+  return (
+    resultado.includes('ASSIMETRIA') ||
+    intensidade === 'MODERADA' ||
+    intensidade === 'IMPORTANTE' ||
+    (typeof atr === 'number' && atr >= 5)
+  );
+}
+
+function formatAdamsAssessment(adams?: PosturalAdamsData): string {
+  if (!adams) return '';
+  return [
+    isClinicalFinding(adams.resultado)
+      ? `Resultado: ${cleanText(adams.resultado)}`
+      : '',
+    isClinicalFinding(adams.regiao) ? `Regiao: ${cleanText(adams.regiao)}` : '',
+    isClinicalFinding(adams.intensidade)
+      ? `Intensidade: ${cleanText(adams.intensidade)}`
+      : '',
+    isClinicalFinding(adams.atrGraus)
+      ? `ATR/escoliometro: ${cleanText(adams.atrGraus)} graus`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function formatPosturalAssessmentLines(parsed: StructuredExameData): string[] {
+  const postural = parsed.observacao?.avaliacaoPostural;
+  if (!postural) return [];
+
+  const frontalItems = formatPosturalItems(
+    postural.planoFrontalItens,
+    POSTURAL_FRONTAL_LABELS,
+  );
+  const sagitalItems = formatPosturalItems(
+    postural.planoSagitalItens,
+    POSTURAL_SAGITAL_LABELS,
+  );
+  const adamsStructured = formatAdamsAssessment(postural.adams);
+  const lines: string[] = [];
+
+  const frontal = [frontalItems, cleanText(postural.planoFrontal)]
+    .filter(isClinicalFinding)
+    .join(' | ');
+  if (frontal) lines.push(`Plano frontal: ${frontal}`);
+
+  const sagital = [sagitalItems, cleanText(postural.planoSagital)]
+    .filter(isClinicalFinding)
+    .join(' | ');
+  if (sagital) lines.push(`Plano sagital: ${sagital}`);
+
+  const adams = [adamsStructured, cleanText(postural.testeAdams)]
+    .filter(isClinicalFinding)
+    .join(' | ');
+  if (adams) lines.push(`Teste de Adams: ${adams}`);
+
+  if (hasAdamsClinicalAlert(postural.adams)) {
+    lines.push(
+      'Alerta Adams: assimetria/rotacao troncular relevante; considerar reavaliacao, monitoramento objetivo e correlacao clinica antes de progressao agressiva.',
+    );
+  }
+
+  return lines;
 }
 
 function formatPatientRegionalGroup(group: RegionalGroup): string {
@@ -230,6 +369,11 @@ export function formatExameFisicoForPatientDisplay(
     lines.push(`Movimento e funcao: ${movement.join(' | ')}.`);
   }
 
+  const posturalLines = formatPosturalAssessmentLines(parsed);
+  if (posturalLines.length) {
+    lines.push(`Avaliacao postural: ${posturalLines.join(' ')}`);
+  }
+
   const regionalSummaries = (parsed.avaliacaoRegioes || [])
     .map(formatPatientRegionalGroup)
     .filter(Boolean);
@@ -278,6 +422,7 @@ export function formatExameFisicoForDisplay(value?: string | null): string {
   const regionalNotTestedCount = allRegionalTests.filter(
     (test) => String(test?.resultado || 'NAO_TESTADO') === 'NAO_TESTADO',
   ).length;
+  const posturalLines = formatPosturalAssessmentLines(parsed);
 
   const lines = [
     'Classificacao de dor',
@@ -294,6 +439,9 @@ export function formatExameFisicoForDisplay(value?: string | null): string {
       String(parsed.observacao?.marcha || 'Nao informado'),
     'Padrao de movimento observado: ' +
       String(parsed.observacao?.padraoMovimento || 'Nao informado'),
+    ...(posturalLines.length
+      ? ['', 'Avaliacao postural direcionada', ...posturalLines]
+      : []),
     '',
     'Padrao de dor',
     'Dor local: ' + String(parsed.padraoDor?.local || 'Nao informado'),

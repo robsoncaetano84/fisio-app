@@ -179,6 +179,41 @@ describe('laudo suggestion composer util', () => {
     );
   });
 
+  it('prioritizes postural and Adams findings from long physical exam text', () => {
+    const contextWithPosturalExam: LaudoSuggestionContext = {
+      ...context,
+      exameFisicoResumo: [
+        'Classificacao de dor',
+        'Principal: MECANICA',
+        'Texto intermediario sem prioridade '.repeat(30),
+        'Plano frontal - checklist: Ombros: Direita mais alta/desviada | Pelve: Normal',
+        'Plano sagital - checklist: Cabeca: Anteriorizada | Cifose toracica: Aumentada',
+        'Teste de Adams - estruturado: Resultado: Assimetria a direita | Regiao: Toracica | Intensidade: Moderada | ATR/escoliometro: 6 graus',
+        'Alerta Adams: assimetria/rotacao troncular relevante.',
+      ].join('\n'),
+    };
+
+    const draft = buildCreateLaudoDraft({
+      pacienteId: 'paciente-1',
+      context: contextWithPosturalExam,
+      aiSuggestion: {},
+    });
+
+    expect(draft.payload.achadosClinicos).toContain(
+      'Teste de Adams - estruturado',
+    );
+    expect(draft.payload.condutas).toContain(
+      'ajustar intervencoes e reavaliacao a partir do exame fisico',
+    );
+    expect(draft.payload.condutas).toContain('ATR/escoliometro: 6 graus');
+    expect(draft.payload.planoTratamentoIA).toContain(
+      'Reavaliacao postural/exame fisico',
+    );
+    expect(draft.payload.criteriosAlta).toContain(
+      'Reavaliacao do exame fisico',
+    );
+  });
+
   it('builds high-confidence preview when AI and interpreted exams are present', () => {
     const preview = buildSuggestionPreview(context, {
       diagnosticoFuncional: 'Disfuncao funcional confirmada.',

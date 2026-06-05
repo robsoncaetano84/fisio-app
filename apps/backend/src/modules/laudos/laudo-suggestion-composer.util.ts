@@ -316,7 +316,9 @@ export function buildClinicalReasoningSummary(
   );
   const redFlags = normalizeStringArray(latestAnamnese?.redFlags);
   const yellowFlags = normalizeStringArray(latestAnamnese?.yellowFlags);
-  const exameFisicoResumo = shortText(context.exameFisicoResumo, 260);
+  const exameFisicoResumo = buildExameFisicoReasoningSummary(
+    context.exameFisicoResumo,
+  );
   const latestEvolucoes = context.evolucoes.slice(0, 2);
   const examesComIa = context.exames.filter((exame) => !!exame.aiInterpretacao);
   const intensidadeDor =
@@ -508,6 +510,9 @@ function buildRuleBasedLaudoFields(
     summary.irritabilidade === 'ALTA'
       ? 'sem aumento de dor em repouso/noturna e sem piora sustentada por 24h'
       : 'dor toleravel durante a tarefa e retorno ao basal em ate 24h';
+  const exameFisicoEvidence = options.exameFisicoHint
+    .replace(/^ Baseado no exame fisico:\s*/i, '')
+    .trim();
 
   return {
     motivoAvaliacao: joinSentences([
@@ -586,6 +591,9 @@ function buildRuleBasedLaudoFields(
       summary.areasSelecionadasDetalhadas.length
         ? `Priorizar avaliacao e resposta terapeutica por area selecionada: ${summary.areasSelecionadasDetalhadas.map((area) => area.resumo).join(' | ')}.`
         : '',
+      exameFisicoEvidence
+        ? `Conduta: ajustar intervencoes e reavaliacao a partir do exame fisico | Evidencia do caso: ${exameFisicoEvidence} | Criterio de progressao: manter simetria/controle observado ou documentar melhora objetiva na reavaliacao.`
+        : '',
       `Conduta: exercicios terapeuticos progressivos para ${primaryArea || 'regiao sintomatica'} | Evidencia do caso: ${summary.ancorasEspecificidade.slice(0, 4).join(' | ') || evidence} | Criterio de progressao: ${progressCriterion}.`,
       relevantFactors
         ? `Conduta: manejo de carga e educacao direcionada | Evidencia do caso: ${relevantFactors} | Criterio de progressao: execucao das atividades-alvo sem piora sustentada.`
@@ -607,6 +615,9 @@ function buildRuleBasedLaudoFields(
     planoTratamentoIA: [
       `Fase 1 - Controle de sintomas: controlar irritabilidade (${summary.irritabilidade}) em ${primaryArea || 'regiao sintomatica'} e confirmar lacunas clinicas. Condutas: educacao direcionada, ajuste de carga e movimento toleravel. Evidencia: ${summary.ancorasEspecificidade.slice(0, 3).join(' | ') || evidence}. Criterio: ${progressCriterion}.`,
       `Fase 2 - Recuperacao de movimento/forca: progredir mobilidade, controle motor e forca em ${primaryArea || 'regiao prioritaria'}. Condutas: tarefas graduadas vinculadas a ${primaryGoal || 'funcao-alvo do paciente'}. Evidencia: ${relevantFactors || evidence}. Criterio: melhora funcional objetiva e resposta estavel entre sessoes.`,
+      exameFisicoEvidence
+        ? `Reavaliacao postural/exame fisico: monitorar ${exameFisicoEvidence}. Criterio: achado estavel ou melhor antes de aumentar complexidade, carga ou retorno funcional.`
+        : '',
       `Fase 3 - Retorno a funcao: retorno funcional especifico para ${primaryGoal || 'atividade-alvo'} e prevencao de recidiva. Condutas: exposicao progressiva a demandas do caso e plano domiciliar. Criterio: tarefa-alvo executada com independencia e baixa reatividade.`,
       summary.areasSelecionadasDetalhadas.length
         ? `Monitoramento por area: ${summary.areasSelecionadasDetalhadas.map((area) => area.resumo).join(' | ')}.`
@@ -626,6 +637,9 @@ function buildRuleBasedLaudoFields(
         ? `${primaryGoal} atingida ou funcionalmente compensada.`
         : 'Meta funcional do paciente atingida ou funcionalmente compensada.',
       `Autonomia no autocuidado/plano domiciliar, com progressao baseada em ${progressCriterion}.`,
+      exameFisicoEvidence
+        ? `Reavaliacao do exame fisico sem piora dos achados usados como evidencia: ${exameFisicoEvidence}.`
+        : '',
       summary.areasPrioritarias.length
         ? `Reavaliar regioes prioritarias antes da alta: ${summary.areasPrioritarias.join(', ')}.`
         : '',
@@ -650,12 +664,47 @@ function buildExamCorrelationSuffix(examesCount: number): string {
   return ` Correlacionar com ${examesCount} exame(s) anexado(s).`;
 }
 
+function extractPriorityExameFisicoLines(exameFisicoResumo?: string | null) {
+  const raw = String(exameFisicoResumo || '').trim();
+  if (!raw) return [];
+  const patterns = [
+    /avaliacao postural/i,
+    /plano frontal/i,
+    /plano sagital/i,
+    /teste de adams/i,
+    /alerta adams/i,
+    /\batr\b|escoliometro/i,
+    /assimetr/i,
+    /reproduz dor/i,
+    /hipotese principal/i,
+    /disfuncao principal/i,
+    /direcao de conduta/i,
+  ];
+  return uniqueStrings(
+    raw
+      .split(/\r?\n/)
+      .map((line) => safeText(line))
+      .filter((line) => patterns.some((pattern) => pattern.test(line))),
+  ).slice(0, 12);
+}
+
+function buildExameFisicoReasoningSummary(
+  exameFisicoResumo?: string | null,
+): string {
+  const raw = String(exameFisicoResumo || '').trim();
+  if (!raw) return '';
+  const priorityLines = extractPriorityExameFisicoLines(raw);
+  const base = priorityLines.length
+    ? priorityLines.join(' | ')
+    : raw.replace(/\s+/g, ' ');
+  return shortText(base, priorityLines.length ? 620 : 300);
+}
+
 function buildExameFisicoHint(exameFisicoResumo?: string | null): string {
   const raw = String(exameFisicoResumo || '').trim();
   if (!raw) return '';
-  const normalized = raw.replace(/\s+/g, ' ');
-  const short =
-    normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
+  const normalized = buildExameFisicoReasoningSummary(raw);
+  const short = shortText(normalized, 620);
   return ` Baseado no exame fisico: ${short}`;
 }
 

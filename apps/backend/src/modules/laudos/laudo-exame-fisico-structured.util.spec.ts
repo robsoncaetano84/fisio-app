@@ -144,6 +144,61 @@ describe('laudo exame fisico structured util', () => {
     expect(formatted).toContain('Conduta direcionada');
   });
 
+  it('formats postural assessment and Adams findings as clinical evidence', () => {
+    const payload = buildPayload({
+      observacao: {
+        postura: 'A avaliar.',
+        assimetria: 'Nao informado',
+        avaliacaoPostural: {
+          planoFrontal: 'Ombro direito discretamente elevado.',
+          planoSagital: 'Cabeca anteriorizada.',
+          testeAdams: 'Giba toracica discreta a direita.',
+          planoFrontalItens: {
+            cabeca: 'Normal',
+            ombros: 'Direita mais alta/desviada',
+            escapulas: 'Nao avaliado',
+            pelve: 'Normal',
+            joelhos: 'Nao avaliado',
+            pes: 'Nao avaliado',
+          },
+          planoSagitalItens: {
+            cabeca: 'Anteriorizada',
+            cifoseToracica: 'Aumentada',
+            lordoseLombar: 'Nao avaliado',
+            pelve: 'Neutra',
+            joelhos: 'Nao avaliado',
+            apoioPlantar: 'Normal',
+          },
+          adams: {
+            resultado: 'Assimetria a direita',
+            regiao: 'Toracica',
+            intensidade: 'Moderada',
+            atrGraus: '6',
+          },
+        },
+      },
+    });
+
+    const formatted = formatExameFisicoForDisplay(
+      `${prefix}${JSON.stringify(payload)}`,
+    );
+    const patient = formatExameFisicoForPatientDisplay(
+      `${prefix}${JSON.stringify(payload)}`,
+    );
+
+    expect(formatted).toContain('Avaliacao postural direcionada');
+    expect(formatted).toContain('Plano frontal:');
+    expect(formatted).toContain('Ombros: Direita mais alta/desviada');
+    expect(formatted).toContain('Plano sagital:');
+    expect(formatted).toContain('Cabeca: Anteriorizada');
+    expect(formatted).toContain('Teste de Adams:');
+    expect(formatted).toContain('ATR/escoliometro: 6 graus');
+    expect(formatted).toContain('Alerta Adams');
+    expect(formatted).not.toContain('Escapulas: Nao avaliado');
+    expect(patient).toContain('Avaliacao postural');
+    expect(patient).toContain('Teste de Adams');
+  });
+
   it('formats structured exam for patients without technical placeholders', () => {
     const payload = buildPayload({
       dorPrincipal: 'Mecanica',
