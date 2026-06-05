@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import {
   AppState,
+  Image,
   View,
   Text,
   StyleSheet,
@@ -81,7 +82,6 @@ import {
   TIPO_LESAO_OPTIONS,
   type ExamPreset,
 } from "./ExameFisicoFormScreen.constants";
-import { useClinicalPhotoWorkflow } from "./useClinicalPhotoWorkflow";
 
 type ExameFisicoFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ExameFisicoForm">;
@@ -95,6 +95,119 @@ type RegisteredExameFisicoResponse = {
 };
 
 type EvidenceStrengthLabel = "Alta" | "Moderada" | "Baixa";
+
+const POSTURAL_EXAM_IMAGES = {
+  frontalMasculino: require("../../../assets/postural-exam/matriz-masculino-frontal.png"),
+  frontalFeminino: require("../../../assets/postural-exam/matriz-feminino-frontal.png"),
+  sagitalMasculino: require("../../../assets/postural-exam/matriz-masculino-perfil-esquerdo.png"),
+  sagitalFeminino: require("../../../assets/postural-exam/matriz-feminino-perfil-esquerdo.png"),
+  adamsMasculino: require("../../../assets/postural-exam/matriz-masculino-adams.png"),
+  adamsFeminino: require("../../../assets/postural-exam/matriz-feminino-adams.png"),
+};
+
+type PosturalFrontalField = keyof ExameFisicoStructured["observacao"]["avaliacaoPostural"]["planoFrontalItens"];
+type PosturalSagitalField = keyof ExameFisicoStructured["observacao"]["avaliacaoPostural"]["planoSagitalItens"];
+
+const DEFAULT_POSTURAL_FRONTAL_ITEMS: ExameFisicoStructured["observacao"]["avaliacaoPostural"]["planoFrontalItens"] = {
+  cabeca: "Nao avaliado",
+  ombros: "Nao avaliado",
+  escapulas: "Nao avaliado",
+  pelve: "Nao avaliado",
+  joelhos: "Nao avaliado",
+  pes: "Nao avaliado",
+};
+
+const DEFAULT_POSTURAL_SAGITAL_ITEMS: ExameFisicoStructured["observacao"]["avaliacaoPostural"]["planoSagitalItens"] = {
+  cabeca: "Nao avaliado",
+  cifoseToracica: "Nao avaliado",
+  lordoseLombar: "Nao avaliado",
+  pelve: "Nao avaliado",
+  joelhos: "Nao avaliado",
+  apoioPlantar: "Nao avaliado",
+};
+
+const DEFAULT_POSTURAL_ADAMS: ExameFisicoStructured["observacao"]["avaliacaoPostural"]["adams"] = {
+  resultado: "Nao avaliado",
+  regiao: "Nao avaliado",
+  intensidade: "Nao avaliado",
+  atrGraus: "",
+};
+
+const POSTURAL_FRONTAL_OPTIONS = [
+  "Nao avaliado",
+  "Normal",
+  "Direita mais alta/desviada",
+  "Esquerda mais alta/desviada",
+];
+
+const POSTURAL_FRONTAL_ITEMS: Array<{
+  field: PosturalFrontalField;
+  label: string;
+}> = [
+  { field: "cabeca", label: "Cabeça" },
+  { field: "ombros", label: "Ombros" },
+  { field: "escapulas", label: "Escápulas" },
+  { field: "pelve", label: "Pelve" },
+  { field: "joelhos", label: "Joelhos" },
+  { field: "pes", label: "Pés/apoio" },
+];
+
+const POSTURAL_SAGITAL_ITEMS: Array<{
+  field: PosturalSagitalField;
+  label: string;
+  options: string[];
+}> = [
+  {
+    field: "cabeca",
+    label: "Cabeça",
+    options: ["Nao avaliado", "Normal", "Anteriorizada", "Retraida"],
+  },
+  {
+    field: "cifoseToracica",
+    label: "Cifose torácica",
+    options: ["Nao avaliado", "Normal", "Aumentada", "Reduzida"],
+  },
+  {
+    field: "lordoseLombar",
+    label: "Lordose lombar",
+    options: ["Nao avaliado", "Normal", "Aumentada", "Reduzida"],
+  },
+  {
+    field: "pelve",
+    label: "Pelve",
+    options: ["Nao avaliado", "Neutra", "Anteversao", "Retroversao"],
+  },
+  {
+    field: "joelhos",
+    label: "Joelhos",
+    options: ["Nao avaliado", "Normal", "Hiperextensao", "Flexo"],
+  },
+  {
+    field: "apoioPlantar",
+    label: "Apoio plantar",
+    options: ["Nao avaliado", "Normal", "Anteriorizado", "Posteriorizado"],
+  },
+];
+
+const ADAMS_RESULT_OPTIONS = [
+  "Nao avaliado",
+  "Normal",
+  "Assimetria a direita",
+  "Assimetria a esquerda",
+  "Inconclusivo",
+];
+const ADAMS_REGION_OPTIONS = [
+  "Nao avaliado",
+  "Toracica",
+  "Lombar",
+  "Toracolombar",
+];
+const POSTURAL_INTENSITY_OPTIONS = [
+  "Nao avaliado",
+  "Discreta",
+  "Moderada",
+  "Importante",
+];
 
 const getEvidenceStrengthLabel = (score: number): EvidenceStrengthLabel => {
   if (score >= CONFIDENCE_RULES.highScore) return "Alta";
@@ -293,15 +406,6 @@ export function ExameFisicoFormScreen({
     string | null
   >(null);
   const [examValidatedAt, setExamValidatedAt] = useState<string | null>(null);
-  const {
-    posturePhotosCount,
-    movementPhotosCount,
-    loadingPosturePhotos,
-    loadingMovementPhotos,
-    uploadingPosturePhoto,
-    uploadingMovementPhoto,
-    handleUploadClinicalPhoto,
-  } = useClinicalPhotoWorkflow({ pacienteId, showToast });
   const lastAutoDorSuggestionKeyRef = useRef<string | null>(null);
   const didSaveRef = useRef(false);
   const stageOpenedAtRef = useRef<number>(Date.now());
@@ -769,8 +873,10 @@ export function ExameFisicoFormScreen({
     const next = { ...exam } as any;
     const segments = path.split(".");
     let current = next;
-    for (let i = 0; i < segments.length - 1; i++)
+    for (let i = 0; i < segments.length - 1; i++) {
+      if (!current[segments[i]]) current[segments[i]] = {};
       current = current[segments[i]];
+    }
     current[segments[segments.length - 1]] = value;
     setExam(next);
     if (path === "movimento.reproduzDor" && errors.movimentoReproduzDor) {
@@ -1423,6 +1529,84 @@ export function ExameFisicoFormScreen({
   const redFlagCount = exam.redFlags.answers.filter(
     (item) => item.positive,
   ).length;
+  const patientSex = String(paciente.sexo || "").toUpperCase();
+  const isFemalePatient = patientSex === "FEMININO";
+  const posturalFrontalImageSource = isFemalePatient
+    ? POSTURAL_EXAM_IMAGES.frontalFeminino
+    : POSTURAL_EXAM_IMAGES.frontalMasculino;
+  const posturalSagitalImageSource = isFemalePatient
+    ? POSTURAL_EXAM_IMAGES.sagitalFeminino
+    : POSTURAL_EXAM_IMAGES.sagitalMasculino;
+  const posturalAdamsImageSource = isFemalePatient
+    ? POSTURAL_EXAM_IMAGES.adamsFeminino
+    : POSTURAL_EXAM_IMAGES.adamsMasculino;
+  const posturalPlanoFrontalInput = resolveInputSuggestionPresentation(
+    "observacao.avaliacaoPostural.planoFrontal",
+    "Achados no plano frontal",
+    exam.observacao.avaliacaoPostural?.planoFrontal,
+  );
+  const posturalPlanoSagitalInput = resolveInputSuggestionPresentation(
+    "observacao.avaliacaoPostural.planoSagital",
+    "Achados no plano sagital",
+    exam.observacao.avaliacaoPostural?.planoSagital,
+  );
+  const posturalAdamsInput = resolveInputSuggestionPresentation(
+    "observacao.avaliacaoPostural.testeAdams",
+    "Achados no Teste de Adams",
+    exam.observacao.avaliacaoPostural?.testeAdams,
+  );
+  const avaliacaoPostural = exam.observacao.avaliacaoPostural;
+  const planoFrontalItens = {
+    ...DEFAULT_POSTURAL_FRONTAL_ITEMS,
+    ...(avaliacaoPostural?.planoFrontalItens || {}),
+  };
+  const planoSagitalItens = {
+    ...DEFAULT_POSTURAL_SAGITAL_ITEMS,
+    ...(avaliacaoPostural?.planoSagitalItens || {}),
+  };
+  const adamsAssessment = {
+    ...DEFAULT_POSTURAL_ADAMS,
+    ...(avaliacaoPostural?.adams || {}),
+  };
+  const adamsAtrValue = Number.parseFloat(
+    String(adamsAssessment.atrGraus || "").replace(",", "."),
+  );
+  const hasAdamsClinicalAlert =
+    adamsAssessment.resultado === "Assimetria a direita" ||
+    adamsAssessment.resultado === "Assimetria a esquerda" ||
+    adamsAssessment.intensidade === "Moderada" ||
+    adamsAssessment.intensidade === "Importante" ||
+    (Number.isFinite(adamsAtrValue) && adamsAtrValue >= 5);
+  const renderPosturalOptions = (
+    options: string[],
+    selectedValue: string,
+    fieldPath: string,
+  ) => (
+    <View style={styles.posturalOptionRow}>
+      {options.map((option) => {
+        const selected = selectedValue === option;
+        return (
+          <TouchableOpacity
+            key={option}
+            style={[
+              styles.posturalOptionChip,
+              selected && styles.posturalOptionChipSelected,
+            ]}
+            onPress={() => setField(fieldPath, option)}
+          >
+            <Text
+              style={[
+                styles.posturalOptionText,
+                selected && styles.posturalOptionTextSelected,
+              ]}
+            >
+              {option}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
   const observacaoPadraoInput = resolveInputSuggestionPresentation(
     "observacao.padraoMovimento",
     "Padrão de movimento",
@@ -1747,59 +1931,177 @@ export function ExameFisicoFormScreen({
           ]}
         >
           <Text style={styles.blockTitle}>Observacao e movimento</Text>
-          <View style={styles.photoRow}>
-            <Text style={styles.photoCountText}>
-              {loadingPosturePhotos
-                ? "Carregando foto de observacao..."
-                : `${posturePhotosCount} foto(s) de observacao`}
-            </Text>
-            <View style={styles.photoActions}>
-              <TouchableOpacity
-                style={[
-                  styles.actionChip,
-                  uploadingPosturePhoto && styles.actionChipDisabled,
-                ]}
-                onPress={() =>
-                  handleUploadClinicalPhoto(
-                    "FOTO_POSTURAL_FRONTAL",
-                    "ANTERIOR",
-                    "camera",
-                  )
-                }
-                disabled={uploadingPosturePhoto}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="camera-outline"
-                  size={16}
-                  color={COLORS.primary}
+          <View style={styles.posturalExamGrid}>
+            <View style={styles.posturalExamCard}>
+              <Text style={styles.posturalExamTitle}>
+                Avaliação postural no plano frontal
+              </Text>
+              <View style={styles.posturalExamImageFrame}>
+                <Image
+                  source={posturalFrontalImageSource}
+                  resizeMode="contain"
+                  style={styles.posturalExamImage}
                 />
-                <Text style={styles.actionChipText}>
-                  {uploadingPosturePhoto ? "Enviando..." : "Camera"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.actionChip,
-                  uploadingPosturePhoto && styles.actionChipDisabled,
-                ]}
-                onPress={() =>
-                  handleUploadClinicalPhoto(
-                    "FOTO_POSTURAL_FRONTAL",
-                    "ANTERIOR",
-                    "gallery",
-                  )
+              </View>
+              <Text style={styles.posturalExamHint}>
+                Observe alinhamento de cabeça, ombros, escápulas, pelve,
+                joelhos, tornozelos e apoio dos pés.
+              </Text>
+              <View style={styles.posturalChecklist}>
+                {POSTURAL_FRONTAL_ITEMS.map((item) => (
+                  <View key={item.field} style={styles.posturalChecklistItem}>
+                    <Text style={styles.posturalChecklistLabel}>
+                      {item.label}
+                    </Text>
+                    {renderPosturalOptions(
+                      POSTURAL_FRONTAL_OPTIONS,
+                      planoFrontalItens[item.field],
+                      `observacao.avaliacaoPostural.planoFrontalItens.${item.field}`,
+                    )}
+                  </View>
+                ))}
+              </View>
+              <Input
+                label={posturalPlanoFrontalInput.label}
+                value={posturalPlanoFrontalInput.value}
+                onChangeText={(v) =>
+                  setField("observacao.avaliacaoPostural.planoFrontal", v)
                 }
-                disabled={uploadingPosturePhoto}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="images-outline"
-                  size={16}
-                  color={COLORS.primary}
+                multiline
+                numberOfLines={3}
+                style={{ minHeight: 86, textAlignVertical: "top" }}
+                {...getVoiceInputProps(
+                  "observacao.avaliacaoPostural.planoFrontal",
+                )}
+              />
+            </View>
+
+            <View style={styles.posturalExamCard}>
+              <Text style={styles.posturalExamTitle}>
+                Avaliação postural no plano sagital
+              </Text>
+              <View style={styles.posturalExamImageFrame}>
+                <Image
+                  source={posturalSagitalImageSource}
+                  resizeMode="contain"
+                  style={styles.posturalExamImage}
                 />
-                <Text style={styles.actionChipText}>Galeria</Text>
-              </TouchableOpacity>
+              </View>
+              <Text style={styles.posturalExamHint}>
+                Observe anteriorização da cabeça, curvas da coluna, pelve,
+                joelhos e distribuição do apoio.
+              </Text>
+              <View style={styles.posturalChecklist}>
+                {POSTURAL_SAGITAL_ITEMS.map((item) => (
+                  <View key={item.field} style={styles.posturalChecklistItem}>
+                    <Text style={styles.posturalChecklistLabel}>
+                      {item.label}
+                    </Text>
+                    {renderPosturalOptions(
+                      item.options,
+                      planoSagitalItens[item.field],
+                      `observacao.avaliacaoPostural.planoSagitalItens.${item.field}`,
+                    )}
+                  </View>
+                ))}
+              </View>
+              <Input
+                label={posturalPlanoSagitalInput.label}
+                value={posturalPlanoSagitalInput.value}
+                onChangeText={(v) =>
+                  setField("observacao.avaliacaoPostural.planoSagital", v)
+                }
+                multiline
+                numberOfLines={3}
+                style={{ minHeight: 86, textAlignVertical: "top" }}
+                {...getVoiceInputProps(
+                  "observacao.avaliacaoPostural.planoSagital",
+                )}
+              />
+            </View>
+
+            <View style={styles.posturalExamCard}>
+              <Text style={styles.posturalExamTitle}>Teste de Adams</Text>
+              <View style={styles.posturalExamImageFrame}>
+                <Image
+                  source={posturalAdamsImageSource}
+                  resizeMode="contain"
+                  style={styles.posturalExamImage}
+                />
+              </View>
+              <Text style={styles.posturalExamHint}>
+                Observe flexão anterior do tronco, giba costal/lombar,
+                rotação vertebral e assimetria entre hemitórax.
+              </Text>
+              <View style={styles.posturalChecklist}>
+                <View style={styles.posturalChecklistItem}>
+                  <Text style={styles.posturalChecklistLabel}>Resultado</Text>
+                  {renderPosturalOptions(
+                    ADAMS_RESULT_OPTIONS,
+                    adamsAssessment.resultado,
+                    "observacao.avaliacaoPostural.adams.resultado",
+                  )}
+                </View>
+                <View style={styles.posturalChecklistItem}>
+                  <Text style={styles.posturalChecklistLabel}>Região</Text>
+                  {renderPosturalOptions(
+                    ADAMS_REGION_OPTIONS,
+                    adamsAssessment.regiao,
+                    "observacao.avaliacaoPostural.adams.regiao",
+                  )}
+                </View>
+                <View style={styles.posturalChecklistItem}>
+                  <Text style={styles.posturalChecklistLabel}>
+                    Intensidade do desnível
+                  </Text>
+                  {renderPosturalOptions(
+                    POSTURAL_INTENSITY_OPTIONS,
+                    adamsAssessment.intensidade,
+                    "observacao.avaliacaoPostural.adams.intensidade",
+                  )}
+                </View>
+                <Input
+                  label="ATR / escoliômetro (graus)"
+                  value={adamsAssessment.atrGraus}
+                  onChangeText={(v) =>
+                    setField("observacao.avaliacaoPostural.adams.atrGraus", v)
+                  }
+                  keyboardType="numeric"
+                  placeholder="Ex.: 4"
+                />
+                {hasAdamsClinicalAlert ? (
+                  <View style={styles.posturalAlertBox}>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={18}
+                      color={COLORS.warning}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.posturalAlertTitle}>
+                        Achado relevante no Adams
+                      </Text>
+                      <Text style={styles.posturalAlertText}>
+                        Registrar lado, região e ATR. Se o achado for
+                        consistente ou ATR ≥ 5°, considerar acompanhamento
+                        clínico e avaliação complementar conforme contexto.
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+              <Input
+                label={posturalAdamsInput.label}
+                value={posturalAdamsInput.value}
+                onChangeText={(v) =>
+                  setField("observacao.avaliacaoPostural.testeAdams", v)
+                }
+                multiline
+                numberOfLines={3}
+                style={{ minHeight: 86, textAlignVertical: "top" }}
+                {...getVoiceInputProps(
+                  "observacao.avaliacaoPostural.testeAdams",
+                )}
+              />
             </View>
           </View>
           <Input
@@ -1830,61 +2132,6 @@ export function ExameFisicoFormScreen({
             onChangeText={(v) => setField("movimento.ativo", v)}
             {...getVoiceInputProps("movimento.ativo")}
           />
-          <View style={styles.photoRow}>
-            <Text style={styles.photoCountText}>
-              {loadingMovementPhotos
-                ? "Carregando foto de movimento..."
-                : `${movementPhotosCount} foto(s) de movimento/ADM`}
-            </Text>
-            <View style={styles.photoActions}>
-              <TouchableOpacity
-                style={[
-                  styles.actionChip,
-                  uploadingMovementPhoto && styles.actionChipDisabled,
-                ]}
-                onPress={() =>
-                  handleUploadClinicalPhoto(
-                    "FOTO_MOVIMENTO_ADM",
-                    "MOVIMENTO",
-                    "camera",
-                  )
-                }
-                disabled={uploadingMovementPhoto}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="camera-outline"
-                  size={16}
-                  color={COLORS.primary}
-                />
-                <Text style={styles.actionChipText}>
-                  {uploadingMovementPhoto ? "Enviando..." : "Camera"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.actionChip,
-                  uploadingMovementPhoto && styles.actionChipDisabled,
-                ]}
-                onPress={() =>
-                  handleUploadClinicalPhoto(
-                    "FOTO_MOVIMENTO_ADM",
-                    "MOVIMENTO",
-                    "gallery",
-                  )
-                }
-                disabled={uploadingMovementPhoto}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="images-outline"
-                  size={16}
-                  color={COLORS.primary}
-                />
-                <Text style={styles.actionChipText}>Galeria</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
           <Input
             label={movimentoPassivoInput.label}
             value={movimentoPassivoInput.value}
@@ -3049,19 +3296,107 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: FONTS.sizes.xs,
   },
-  photoRow: {
-    marginTop: SPACING.sm,
+  posturalExamGrid: {
     gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  photoActions: {
+  posturalExamCard: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.sm,
+  },
+  posturalExamTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    marginBottom: SPACING.xs,
+  },
+  posturalExamImageFrame: {
+    width: "100%",
+    height: 220,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.white,
+    overflow: "hidden",
+    marginBottom: SPACING.xs,
+  },
+  posturalExamImage: {
+    width: "100%",
+    height: "100%",
+  },
+  posturalExamHint: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 18,
+    marginBottom: SPACING.xs,
+  },
+  posturalChecklist: {
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  posturalChecklistItem: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.gray50,
+    padding: SPACING.xs,
+  },
+  posturalChecklistLabel: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  posturalOptionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: SPACING.sm,
+    gap: 6,
   },
-  photoCountText: {
-    color: COLORS.textSecondary,
-    fontSize: FONTS.sizes.sm,
+  posturalOptionChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  posturalOptionChipSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  posturalOptionText: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
     fontWeight: "600",
+  },
+  posturalOptionTextSelected: {
+    color: COLORS.white,
+  },
+  posturalAlertBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.warning + "55",
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.warning + "12",
+    padding: SPACING.xs,
+  },
+  posturalAlertTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  posturalAlertText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 17,
   },
   referencesValidateHint: {
     padding: SPACING.sm,

@@ -75,6 +75,31 @@ export interface RegionalTestGroup {
   testes: RegionalTest[];
 }
 
+export type PosturalFrontalItems = {
+  cabeca: string;
+  ombros: string;
+  escapulas: string;
+  pelve: string;
+  joelhos: string;
+  pes: string;
+};
+
+export type PosturalSagitalItems = {
+  cabeca: string;
+  cifoseToracica: string;
+  lordoseLombar: string;
+  pelve: string;
+  joelhos: string;
+  apoioPlantar: string;
+};
+
+export type PosturalAdamsAssessment = {
+  resultado: string;
+  regiao: string;
+  intensidade: string;
+  atrGraus: string;
+};
+
 export interface ExameFisicoStructured {
   version: 2;
   source: "rule-based" | "manual";
@@ -85,6 +110,14 @@ export interface ExameFisicoStructured {
     postura: string;
     assimetria: string;
     protecao: string;
+    avaliacaoPostural: {
+      planoFrontal: string;
+      planoSagital: string;
+      testeAdams: string;
+      planoFrontalItens: PosturalFrontalItems;
+      planoSagitalItens: PosturalSagitalItems;
+      adams: PosturalAdamsAssessment;
+    };
     padraoMovimento: string;
     edema: string;
     atrofiaMuscular: string;
@@ -198,6 +231,122 @@ const boolLabel = (value?: boolean | null) => {
 const safeText = (value?: string | null, fallback = "Nao informado") => {
   const parsed = String(value || "").trim();
   return parsed || fallback;
+};
+
+const defaultPosturalFrontalItems = (): PosturalFrontalItems => ({
+  cabeca: "Nao avaliado",
+  ombros: "Nao avaliado",
+  escapulas: "Nao avaliado",
+  pelve: "Nao avaliado",
+  joelhos: "Nao avaliado",
+  pes: "Nao avaliado",
+});
+
+const defaultPosturalSagitalItems = (): PosturalSagitalItems => ({
+  cabeca: "Nao avaliado",
+  cifoseToracica: "Nao avaliado",
+  lordoseLombar: "Nao avaliado",
+  pelve: "Nao avaliado",
+  joelhos: "Nao avaliado",
+  apoioPlantar: "Nao avaliado",
+});
+
+const defaultPosturalAdams = (): PosturalAdamsAssessment => ({
+  resultado: "Nao avaliado",
+  regiao: "Nao avaliado",
+  intensidade: "Nao avaliado",
+  atrGraus: "",
+});
+
+const POSTURAL_FRONTAL_LABELS: Record<keyof PosturalFrontalItems, string> = {
+  cabeca: "Cabeca",
+  ombros: "Ombros",
+  escapulas: "Escapulas",
+  pelve: "Pelve",
+  joelhos: "Joelhos",
+  pes: "Pes/apoio",
+};
+
+const POSTURAL_SAGITAL_LABELS: Record<keyof PosturalSagitalItems, string> = {
+  cabeca: "Cabeca",
+  cifoseToracica: "Cifose toracica",
+  lordoseLombar: "Lordose lombar",
+  pelve: "Pelve",
+  joelhos: "Joelhos",
+  apoioPlantar: "Apoio plantar",
+};
+
+const normalizePosturalItems = <T extends Record<string, string>>(
+  source: unknown,
+  defaults: T,
+): T => {
+  const parsed =
+    source && typeof source === "object"
+      ? (source as Record<string, unknown>)
+      : {};
+  return Object.keys(defaults).reduce((acc, key) => {
+    acc[key as keyof T] = safeText(
+      typeof parsed[key] === "string" ? parsed[key] : "",
+      defaults[key as keyof T],
+    ) as T[keyof T];
+    return acc;
+  }, { ...defaults });
+};
+
+const normalizePosturalAdams = (
+  source: unknown,
+): PosturalAdamsAssessment => {
+  const parsed =
+    source && typeof source === "object"
+      ? (source as Record<string, unknown>)
+      : {};
+  const defaults = defaultPosturalAdams();
+  return {
+    resultado: safeText(
+      typeof parsed.resultado === "string" ? parsed.resultado : "",
+      defaults.resultado,
+    ),
+    regiao: safeText(
+      typeof parsed.regiao === "string" ? parsed.regiao : "",
+      defaults.regiao,
+    ),
+    intensidade: safeText(
+      typeof parsed.intensidade === "string" ? parsed.intensidade : "",
+      defaults.intensidade,
+    ),
+    atrGraus:
+      typeof parsed.atrGraus === "string" ||
+      typeof parsed.atrGraus === "number"
+        ? String(parsed.atrGraus).trim()
+        : defaults.atrGraus,
+  };
+};
+
+const formatPosturalItems = <T extends Record<string, string>>(
+  items: T,
+  labels: Record<keyof T, string>,
+) =>
+  (Object.keys(labels) as Array<keyof T>)
+    .map((key) => `${labels[key]}: ${safeText(items[key])}`)
+    .join(" | ");
+
+const parseAtrDegrees = (value?: string | null) => {
+  const normalized = String(value || "").replace(",", ".").trim();
+  if (!normalized) return null;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const hasAdamsClinicalAlert = (adams: PosturalAdamsAssessment) => {
+  const resultado = adams.resultado.toLowerCase();
+  const intensidade = adams.intensidade.toLowerCase();
+  const atr = parseAtrDegrees(adams.atrGraus);
+  return (
+    resultado.includes("assimetria") ||
+    intensidade === "moderada" ||
+    intensidade === "importante" ||
+    (typeof atr === "number" && atr >= 5)
+  );
 };
 
 const buildBiomechanicalFactorsSummary = (anamnese?: Anamnese): string => {
@@ -811,6 +960,17 @@ export function buildStructuredExameFromAnamnese(
       postura: "Avaliar alinhamento global e estrategias posturais.",
       assimetria: "Comparar hemicorpos e desvios relevantes.",
       protecao: safeText(anamnese?.atividadesQuePioram, "Sem protecao descrita."),
+      avaliacaoPostural: {
+        planoFrontal:
+          "Avaliar alinhamento de cabeca, ombros, escapulas, pelve, joelhos e pes no plano frontal.",
+        planoSagital:
+          "Avaliar cabeca anteriorizada, curvas fisiologicas, pelve, joelhos e apoio plantar no plano sagital.",
+        testeAdams:
+          "Realizar flexao anterior do tronco observando giba costal/lombar e assimetrias.",
+        planoFrontalItens: defaultPosturalFrontalItems(),
+        planoSagitalItens: defaultPosturalSagitalItems(),
+        adams: defaultPosturalAdams(),
+      },
       padraoMovimento: "Observar estrategia antalgica durante tarefas funcionais.",
       edema: "Nao informado",
       atrofiaMuscular: "Nao informado",
@@ -1738,6 +1898,31 @@ export function parseStructuredExame(raw?: string | null): ExameFisicoStructured
         postura: safeText(parsed.observacao?.postura),
         assimetria: safeText(parsed.observacao?.assimetria),
         protecao: safeText(parsed.observacao?.protecao),
+        avaliacaoPostural: {
+          planoFrontal: safeText(
+            parsed.observacao?.avaliacaoPostural?.planoFrontal,
+            "Avaliar alinhamento de cabeca, ombros, escapulas, pelve, joelhos e pes no plano frontal.",
+          ),
+          planoSagital: safeText(
+            parsed.observacao?.avaliacaoPostural?.planoSagital,
+            "Avaliar cabeca anteriorizada, curvas fisiologicas, pelve, joelhos e apoio plantar no plano sagital.",
+          ),
+          testeAdams: safeText(
+            parsed.observacao?.avaliacaoPostural?.testeAdams,
+            "Realizar flexao anterior do tronco observando giba costal/lombar e assimetrias.",
+          ),
+          planoFrontalItens: normalizePosturalItems(
+            parsed.observacao?.avaliacaoPostural?.planoFrontalItens,
+            defaultPosturalFrontalItems(),
+          ),
+          planoSagitalItens: normalizePosturalItems(
+            parsed.observacao?.avaliacaoPostural?.planoSagitalItens,
+            defaultPosturalSagitalItems(),
+          ),
+          adams: normalizePosturalAdams(
+            parsed.observacao?.avaliacaoPostural?.adams,
+          ),
+        },
         padraoMovimento: safeText(parsed.observacao?.padraoMovimento),
         edema: safeText(parsed.observacao?.edema),
         atrofiaMuscular: safeText(parsed.observacao?.atrofiaMuscular),
@@ -1859,6 +2044,28 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     .filter((item) => item.positive)
     .map((item) => `- ${item.question}`)
     .join("\n");
+  const avaliacaoPostural = exam.observacao.avaliacaoPostural || {
+    planoFrontal: "Nao informado",
+    planoSagital: "Nao informado",
+    testeAdams: "Nao informado",
+  };
+  const planoFrontalItens = normalizePosturalItems(
+    avaliacaoPostural.planoFrontalItens,
+    defaultPosturalFrontalItems(),
+  );
+  const planoSagitalItens = normalizePosturalItems(
+    avaliacaoPostural.planoSagitalItens,
+    defaultPosturalSagitalItems(),
+  );
+  const adams = normalizePosturalAdams(avaliacaoPostural.adams);
+  const adamsResumo = [
+    `Resultado: ${adams.resultado}`,
+    `Regiao: ${adams.regiao}`,
+    `Intensidade: ${adams.intensidade}`,
+    adams.atrGraus ? `ATR/escoliometro: ${adams.atrGraus} graus` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 
   return [
     "Classificacao de dor",
@@ -1866,6 +2073,22 @@ export function renderStructuredExameToText(exam: ExameFisicoStructured): string
     `Subtipo clinico: ${exam.dorSubtipo || "Nao classificado"}`,
     "",
     "Observacao",
+    "Avaliacao postural",
+    `Plano frontal: ${avaliacaoPostural.planoFrontal}`,
+    `Plano frontal - checklist: ${formatPosturalItems(
+      planoFrontalItens,
+      POSTURAL_FRONTAL_LABELS,
+    )}`,
+    `Plano sagital: ${avaliacaoPostural.planoSagital}`,
+    `Plano sagital - checklist: ${formatPosturalItems(
+      planoSagitalItens,
+      POSTURAL_SAGITAL_LABELS,
+    )}`,
+    `Teste de Adams: ${avaliacaoPostural.testeAdams}`,
+    `Teste de Adams - estruturado: ${adamsResumo}`,
+    hasAdamsClinicalAlert(adams)
+      ? "Alerta Adams: assimetria/rotação troncular relevante. Considerar avaliação complementar conforme idade, sintomas e evolução."
+      : "",
     `Padrao de movimento: ${exam.observacao.padraoMovimento}`,
     `Edema: ${exam.observacao.edema}`,
     `Atrofia muscular: ${exam.observacao.atrofiaMuscular}`,

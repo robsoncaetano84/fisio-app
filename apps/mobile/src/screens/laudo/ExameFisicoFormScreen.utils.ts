@@ -3,6 +3,12 @@ import type { ExameFisicoStructured } from "../../services/physicalExamModel";
 const EXAM_FIELD_SUGGESTION_HINTS: Record<string, string> = {
   "observacao.postura": "Avaliar alinhamento global e estrategias posturais.",
   "observacao.assimetria": "Comparar hemicorpos e desvios relevantes.",
+  "observacao.avaliacaoPostural.planoFrontal":
+    "Avaliar alinhamento de cabeca, ombros, escapulas, pelve, joelhos e pes no plano frontal.",
+  "observacao.avaliacaoPostural.planoSagital":
+    "Avaliar cabeca anteriorizada, curvas fisiologicas, pelve, joelhos e apoio plantar no plano sagital.",
+  "observacao.avaliacaoPostural.testeAdams":
+    "Realizar flexao anterior do tronco observando giba costal/lombar e assimetrias.",
   "observacao.padraoMovimento": "Observar estrategia antalgica durante tarefas funcionais.",
   "movimento.ativo": "Testar movimentos ativos da regiao",
   "movimento.passivo": "Comparar amplitude e qualidade com ativo.",
@@ -24,6 +30,11 @@ const EXAM_FIELD_SUGGESTION_HINTS: Record<string, string> = {
 const EXAM_FIELD_SUGGESTION_LABELS: Record<string, string> = {
   "observacao.postura": "Avaliar alinhamento global e compensacoes",
   "observacao.assimetria": "Comparar hemicorpos e desvios relevantes",
+  "observacao.avaliacaoPostural.planoFrontal":
+    "Registrar achados do plano frontal",
+  "observacao.avaliacaoPostural.planoSagital":
+    "Registrar achados do plano sagital",
+  "observacao.avaliacaoPostural.testeAdams": "Registrar achados do Adams",
   "observacao.padraoMovimento": "Observar estrategia antalgica durante tarefas funcionais",
   "movimento.ativo": "Testar movimentos ativos da regiao principal",
   "movimento.passivo": "Comparar amplitude e qualidade com ativo",
@@ -142,6 +153,70 @@ export const sanitizeExamForForm = (
     version: 2,
     observacao: {
       ...source.observacao,
+      avaliacaoPostural: {
+        planoFrontal: normalizeNoInfoText(
+          source.observacao.avaliacaoPostural?.planoFrontal,
+        ),
+        planoSagital: normalizeNoInfoText(
+          source.observacao.avaliacaoPostural?.planoSagital,
+        ),
+        testeAdams: normalizeNoInfoText(
+          source.observacao.avaliacaoPostural?.testeAdams,
+        ),
+        planoFrontalItens: {
+          cabeca:
+            source.observacao.avaliacaoPostural?.planoFrontalItens?.cabeca ||
+            "Nao avaliado",
+          ombros:
+            source.observacao.avaliacaoPostural?.planoFrontalItens?.ombros ||
+            "Nao avaliado",
+          escapulas:
+            source.observacao.avaliacaoPostural?.planoFrontalItens
+              ?.escapulas || "Nao avaliado",
+          pelve:
+            source.observacao.avaliacaoPostural?.planoFrontalItens?.pelve ||
+            "Nao avaliado",
+          joelhos:
+            source.observacao.avaliacaoPostural?.planoFrontalItens?.joelhos ||
+            "Nao avaliado",
+          pes:
+            source.observacao.avaliacaoPostural?.planoFrontalItens?.pes ||
+            "Nao avaliado",
+        },
+        planoSagitalItens: {
+          cabeca:
+            source.observacao.avaliacaoPostural?.planoSagitalItens?.cabeca ||
+            "Nao avaliado",
+          cifoseToracica:
+            source.observacao.avaliacaoPostural?.planoSagitalItens
+              ?.cifoseToracica || "Nao avaliado",
+          lordoseLombar:
+            source.observacao.avaliacaoPostural?.planoSagitalItens
+              ?.lordoseLombar || "Nao avaliado",
+          pelve:
+            source.observacao.avaliacaoPostural?.planoSagitalItens?.pelve ||
+            "Nao avaliado",
+          joelhos:
+            source.observacao.avaliacaoPostural?.planoSagitalItens?.joelhos ||
+            "Nao avaliado",
+          apoioPlantar:
+            source.observacao.avaliacaoPostural?.planoSagitalItens
+              ?.apoioPlantar || "Nao avaliado",
+        },
+        adams: {
+          resultado:
+            source.observacao.avaliacaoPostural?.adams?.resultado ||
+            "Nao avaliado",
+          regiao:
+            source.observacao.avaliacaoPostural?.adams?.regiao ||
+            "Nao avaliado",
+          intensidade:
+            source.observacao.avaliacaoPostural?.adams?.intensidade ||
+            "Nao avaliado",
+          atrGraus:
+            source.observacao.avaliacaoPostural?.adams?.atrGraus || "",
+        },
+      },
       edema: normalizeNoInfoText(source.observacao.edema),
       atrofiaMuscular: normalizeNoInfoText(source.observacao.atrofiaMuscular),
       marcha: normalizeNoInfoText(source.observacao.marcha),
