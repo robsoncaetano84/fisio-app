@@ -270,6 +270,12 @@ export const ptClinical: TranslationMap = {
     "Informe o destino de encaminhamento.",
   "clinical.validation.referralReasonRequired":
     "Descreva o motivo clínico do encaminhamento.",
+  "clinical.validation.posturalAdamsRegionRequired":
+    "Informe a região do achado quando o Teste de Adams estiver alterado.",
+  "clinical.validation.posturalAdamsAtrInvalid":
+    "Informe um ATR válido em graus, usando número maior ou igual a 0.",
+  "clinical.validation.posturalAdamsDescriptionRequired":
+    "Descreva o achado clínico do Adams quando o ATR for maior ou igual a 5°.",
 };
 
 export const enClinical: TranslationMap = {
@@ -533,6 +539,12 @@ export const enClinical: TranslationMap = {
     "Inform the referral destination.",
   "clinical.validation.referralReasonRequired":
     "Describe the clinical reason for referral.",
+  "clinical.validation.posturalAdamsRegionRequired":
+    "Inform the finding region when the Adams test is altered.",
+  "clinical.validation.posturalAdamsAtrInvalid":
+    "Inform a valid ATR in degrees, using a number greater than or equal to 0.",
+  "clinical.validation.posturalAdamsDescriptionRequired":
+    "Describe the clinical Adams finding when ATR is greater than or equal to 5°.",
 };
 
 export const esClinical: TranslationMap = {
@@ -801,4 +813,10 @@ export const esClinical: TranslationMap = {
     "Informe el destino de derivación.",
   "clinical.validation.referralReasonRequired":
     "Describa el motivo clínico de la derivación.",
+  "clinical.validation.posturalAdamsRegionRequired":
+    "Informe la región del hallazgo cuando la prueba de Adams esté alterada.",
+  "clinical.validation.posturalAdamsAtrInvalid":
+    "Informe un ATR válido en grados, usando un número mayor o igual a 0.",
+  "clinical.validation.posturalAdamsDescriptionRequired":
+    "Describa el hallazgo clínico de Adams cuando el ATR sea mayor o igual a 5°.",
 };

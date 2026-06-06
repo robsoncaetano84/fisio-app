@@ -82,6 +82,10 @@ import {
   TIPO_LESAO_OPTIONS,
   type ExamPreset,
 } from "./ExameFisicoFormScreen.constants";
+import {
+  hasRelevantPosturalAdamsFinding,
+  validatePosturalAssessment,
+} from "./ExameFisicoFormScreen.postural";
 
 type ExameFisicoFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ExameFisicoForm">;
@@ -897,6 +901,15 @@ export function ExameFisicoFormScreen({
     if (path === "redFlags.referralReason" && errors.referralReason) {
       setErrors((prev) => ({ ...prev, referralReason: "" }));
     }
+    if (path.startsWith("observacao.avaliacaoPostural")) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.posturalAdamsRegion;
+        delete next.posturalAdamsAtr;
+        delete next.posturalAdamsDescription;
+        return next;
+      });
+    }
   };
 
   const setHipomobilidadeSegmentarField = (
@@ -1132,6 +1145,11 @@ export function ExameFisicoFormScreen({
         "clinical.validation.atLeastOneRegionalTestRequired",
       );
     }
+    validatePosturalAssessment(exam.observacao.avaliacaoPostural).forEach(
+      (issue) => {
+        nextErrors[issue.field] = t(issue.messageKey);
+      },
+    );
     if (exam.redFlags.criticalTriggered) {
       if (!String(exam.redFlags.referralDestination || "").trim()) {
         nextErrors.referralDestination = t(
@@ -1172,6 +1190,9 @@ export function ExameFisicoFormScreen({
       grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
     );
     if (!hasAtLeastOneRegionalResult) fields.push("avaliacaoRegioes");
+    validatePosturalAssessment(
+      source.observacao.avaliacaoPostural,
+    ).forEach((issue) => fields.push(issue.field));
     if (source.redFlags.criticalTriggered) {
       if (!String(source.redFlags.referralDestination || "").trim()) {
         fields.push("referralDestination");
@@ -1194,6 +1215,9 @@ export function ExameFisicoFormScreen({
     hipotesePrincipal: "Hipótese principal",
     conduta: "Direção de conduta",
     avaliacaoRegioes: "Ao menos um teste regional",
+    posturalAdamsRegion: "Teste de Adams - região",
+    posturalAdamsAtr: "Teste de Adams - ATR",
+    posturalAdamsDescription: "Teste de Adams - descrição",
     referralDestination: "Destino de encaminhamento",
     referralReason: "Justificativa do encaminhamento",
     classificationConfirmation: "Classificação de dor",
@@ -1568,15 +1592,23 @@ export function ExameFisicoFormScreen({
     ...DEFAULT_POSTURAL_ADAMS,
     ...(avaliacaoPostural?.adams || {}),
   };
-  const adamsAtrValue = Number.parseFloat(
-    String(adamsAssessment.atrGraus || "").replace(",", "."),
+  const posturalAssessmentForValidation: ExameFisicoStructured["observacao"][
+    "avaliacaoPostural"
+  ] = {
+    planoFrontal: avaliacaoPostural?.planoFrontal || "",
+    planoSagital: avaliacaoPostural?.planoSagital || "",
+    testeAdams: avaliacaoPostural?.testeAdams || "",
+    planoFrontalItens,
+    planoSagitalItens,
+    adams: adamsAssessment,
+  };
+  const hasAdamsClinicalAlert = hasRelevantPosturalAdamsFinding(
+    posturalAssessmentForValidation,
   );
-  const hasAdamsClinicalAlert =
-    adamsAssessment.resultado === "Assimetria a direita" ||
-    adamsAssessment.resultado === "Assimetria a esquerda" ||
-    adamsAssessment.intensidade === "Moderada" ||
-    adamsAssessment.intensidade === "Importante" ||
-    (Number.isFinite(adamsAtrValue) && adamsAtrValue >= 5);
+  const hasPosturalValidationError =
+    !!errors.posturalAdamsRegion ||
+    !!errors.posturalAdamsAtr ||
+    !!errors.posturalAdamsDescription;
   const renderPosturalOptions = (
     options: string[],
     selectedValue: string,
@@ -1927,7 +1959,8 @@ export function ExameFisicoFormScreen({
         <View
           style={[
             styles.section,
-            errors.movimentoReproduzDor && styles.sectionWithError,
+            (errors.movimentoReproduzDor || hasPosturalValidationError) &&
+              styles.sectionWithError,
           ]}
         >
           <Text style={styles.blockTitle}>Observacao e movimento</Text>
@@ -2049,6 +2082,11 @@ export function ExameFisicoFormScreen({
                     adamsAssessment.regiao,
                     "observacao.avaliacaoPostural.adams.regiao",
                   )}
+                  {errors.posturalAdamsRegion ? (
+                    <Text style={styles.posturalErrorText}>
+                      {errors.posturalAdamsRegion}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.posturalChecklistItem}>
                   <Text style={styles.posturalChecklistLabel}>
@@ -2068,6 +2106,7 @@ export function ExameFisicoFormScreen({
                   }
                   keyboardType="numeric"
                   placeholder="Ex.: 4"
+                  error={errors.posturalAdamsAtr}
                 />
                 {hasAdamsClinicalAlert ? (
                   <View style={styles.posturalAlertBox}>
@@ -2101,6 +2140,7 @@ export function ExameFisicoFormScreen({
                 {...getVoiceInputProps(
                   "observacao.avaliacaoPostural.testeAdams",
                 )}
+                error={errors.posturalAdamsDescription}
               />
             </View>
           </View>
@@ -3397,6 +3437,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
     lineHeight: 17,
+  },
+  posturalErrorText: {
+    color: COLORS.error,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 17,
+    marginTop: 6,
   },
   referencesValidateHint: {
     padding: SPACING.sm,
