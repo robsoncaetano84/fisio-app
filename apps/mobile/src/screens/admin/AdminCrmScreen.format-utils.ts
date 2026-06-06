@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, type ViewStyle } from "react-native";
 
 export const money = (n: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -36,12 +36,12 @@ export const formatDurationMs = (value: number) => {
   return `${minutes.toFixed(1)}min`;
 };
 
-export const webStickyHeaderStyle =
+export const webStickyHeaderStyle: ViewStyle | null =
   Platform.OS === "web"
-    ? {
+    ? ({
         top: 0,
         zIndex: 5,
         position: "sticky" as const,
         boxShadow: "0 1px 0 rgba(0,0,0,0.03)",
-      }
+      } as unknown as ViewStyle)
     : null;

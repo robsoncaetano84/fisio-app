@@ -6,7 +6,16 @@ import type {
   CrmPipelineSummary,
 } from "../../services/crm";
 import { Action, Chip, Metric } from "./AdminCrmScreen.components";
-import type { ClinicalPipelineStatusFilter, TabKey } from "./AdminCrmScreen.types";
+import type {
+  ClinicalPipelineStatusFilter,
+  PacEmotionalFilter,
+  PacLinkFilter,
+  PacStatusFilter,
+  ProfAccountStatusFilter,
+  ProfActiveFilter,
+  ProfEmotionalConcentrationFilter,
+  TabKey,
+} from "./AdminCrmScreen.types";
 import type { PacRow, ProfRow } from "./AdminCrmScreen.utils";
 import { money } from "./AdminCrmScreen.utils";
 import { styles } from "./AdminCrmScreen.styles";
@@ -31,18 +40,14 @@ type DashboardControlsProps = {
   loadMain: () => Promise<void>;
   loadGovernance: () => Promise<void>;
   setTab: Dispatch<SetStateAction<TabKey>>;
-  setProfActiveFilter: Dispatch<SetStateAction<"TODOS" | "ATIVOS">>;
-  setProfAccountStatusFilter: Dispatch<
-    SetStateAction<"TODOS" | "HEALTHY" | "ATTENTION" | "RISK">
-  >;
+  setProfActiveFilter: Dispatch<SetStateAction<ProfActiveFilter>>;
+  setProfAccountStatusFilter: Dispatch<SetStateAction<ProfAccountStatusFilter>>;
   setProfEmotionalConcentrationFilter: Dispatch<
-    SetStateAction<"TODOS" | "ALTA">
+    SetStateAction<ProfEmotionalConcentrationFilter>
   >;
-  setPacLinkFilter: Dispatch<
-    SetStateAction<"TODOS" | "VINCULADOS" | "SEM_USUARIO">
-  >;
-  setPacStatusFilter: Dispatch<SetStateAction<"TODOS" | "ATIVO" | "RISCO">>;
-  setPacEmotionalFilter: Dispatch<SetStateAction<"TODOS" | "EMOCIONAL">>;
+  setPacLinkFilter: Dispatch<SetStateAction<PacLinkFilter>>;
+  setPacStatusFilter: Dispatch<SetStateAction<PacStatusFilter>>;
+  setPacEmotionalFilter: Dispatch<SetStateAction<PacEmotionalFilter>>;
   setWindowDays: Dispatch<SetStateAction<number>>;
   setSemEvolucaoDias: Dispatch<SetStateAction<number>>;
   setClinicalPipelineStatusFilter: Dispatch<

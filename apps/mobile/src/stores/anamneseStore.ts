@@ -15,6 +15,7 @@ import {
   MecanismoLesao,
   FenotipoDorEvidencias,
 } from "../types";
+import { isJsonRecord, parseJsonArrayOrNull } from "../utils/safeJson";
 
 type AnamnesePayload = {
   pacienteId?: string;
@@ -77,13 +78,18 @@ const withDerivedFields = (anamnese: Anamnese): Anamnese => ({
 });
 
 const safeParseAnamneses = (raw: string | null): Anamnese[] | null => {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Anamnese[];
-    return Array.isArray(parsed) ? parsed.map(withDerivedFields) : null;
-  } catch {
-    return null;
-  }
+  const parsed = parseJsonArrayOrNull<Anamnese>(raw);
+  return parsed
+    ? parsed
+        .filter(
+          (anamnese): anamnese is Anamnese =>
+            isJsonRecord(anamnese) &&
+            typeof anamnese.id === "string" &&
+            typeof anamnese.pacienteId === "string" &&
+            typeof anamnese.createdAt === "string",
+        )
+        .map(withDerivedFields)
+    : null;
 };
 
 const persistAnamneses = async (pacienteId: string, anamneses: Anamnese[]) => {

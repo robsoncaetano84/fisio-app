@@ -13,13 +13,17 @@ import {
   type CrmAdminProfessional,
   type CrmClinicalDashboardSummary,
   type CrmLead,
-  type CrmLeadStage,
   type CrmPhysicalExamTestsSummary,
   type CrmPipelineSummary,
   type CrmTask,
 } from "../../services/crm";
 import { parseApiError } from "../../utils/apiErrors";
-import type { ClinicalPipelineStatusFilter } from "./AdminCrmScreen.types";
+import type {
+  ClinicalPipelineStatusFilter,
+  CrmLeadStageFilter,
+  PacLinkFilter,
+  ProfActiveFilter,
+} from "./AdminCrmScreen.types";
 
 type MainDataToast = {
   type: "error";
@@ -30,11 +34,11 @@ type MainDataParams = {
   isMaster: boolean;
   isWeb: boolean;
   query: string;
-  stageFilter: CrmLeadStage | "TODOS";
+  stageFilter: CrmLeadStageFilter;
   profPage: number;
   pacPage: number;
-  profActiveFilter: "TODOS" | "ATIVOS";
-  pacLinkFilter: "TODOS" | "VINCULADOS" | "SEM_USUARIO";
+  profActiveFilter: ProfActiveFilter;
+  pacLinkFilter: PacLinkFilter;
   profEspecialidadeFilter: string;
   pacCidadeFilter: string;
   pacUfFilter: string;

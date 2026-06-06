@@ -8,6 +8,7 @@ import {
   getProfileRegionWeight,
   getWeightedPositiveScore,
 } from "./physicalExamScoring";
+import { parseJsonObject } from "../utils/safeJson";
 
 export type DorClassificacaoPrincipal =
   | "NOCICEPTIVA"
@@ -1842,6 +1843,10 @@ export function serializeStructuredExame(exam: ExameFisicoStructured): string {
   return `${STRUCTURED_EXAME_PREFIX}${JSON.stringify(exam)}`;
 }
 
+type ParsedStructuredExame = Omit<Partial<ExameFisicoStructured>, "version"> & {
+  version?: number;
+};
+
 export function parseStructuredExame(raw?: string | null): ExameFisicoStructured | null {
   const text = String(raw || "").trim();
   const prefix = text.startsWith(STRUCTURED_EXAME_PREFIX)
@@ -1852,15 +1857,15 @@ export function parseStructuredExame(raw?: string | null): ExameFisicoStructured
   if (!prefix) return null;
   const json = text.slice(prefix.length);
   if (!json) return null;
-  try {
-    const parsed = JSON.parse(json) as any;
-    if (!parsed || (parsed.version !== 1 && parsed.version !== 2)) return null;
+  const parsed = parseJsonObject<ParsedStructuredExame>(json);
+  if (!parsed || (parsed.version !== 1 && parsed.version !== 2)) return null;
 
+  try {
     const rawAnswers = Array.isArray(parsed.redFlags?.answers)
       ? parsed.redFlags.answers
       : [];
     const redFlagAnswers = initialRedFlagAnswers().map((base) => {
-      const found = rawAnswers.find((answer: any) => answer?.key === base.key);
+      const found = rawAnswers.find((answer) => answer?.key === base.key);
       return found
         ? {
             ...base,

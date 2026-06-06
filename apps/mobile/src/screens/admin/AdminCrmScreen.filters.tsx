@@ -4,22 +4,23 @@ import type { CrmLeadStage } from "../../services/crm";
 import { Chip, Tab } from "./AdminCrmScreen.components";
 import { STAGES } from "./AdminCrmScreen.constants";
 import { styles } from "./AdminCrmScreen.styles";
-import type { TabKey } from "./AdminCrmScreen.types";
-import type { AccountHealthStatus } from "./AdminCrmScreen.utils";
+import type {
+  CrmLeadStageFilter,
+  PacEmotionalFilter,
+  PacLinkFilter,
+  PacStatusFilter,
+  ProfAccountStatusFilter,
+  ProfActiveFilter,
+  ProfEmotionalConcentrationFilter,
+  TabKey,
+} from "./AdminCrmScreen.types";
 import { useLanguage } from "../../i18n/LanguageProvider";
-
-type ProfActiveFilter = "TODOS" | "ATIVOS";
-type ProfAccountStatusFilter = "TODOS" | AccountHealthStatus;
-type ProfEmotionalConcentrationFilter = "TODOS" | "ALTA";
-type PacLinkFilter = "TODOS" | "VINCULADOS" | "SEM_USUARIO";
-type PacStatusFilter = "TODOS" | "ATIVO" | "RISCO";
-type PacEmotionalFilter = "TODOS" | "EMOCIONAL";
 
 type CrmFiltersCardProps = {
   tabs: Array<{ key: TabKey; label: string }>;
   tab: TabKey;
   stageLabel: Record<CrmLeadStage, string>;
-  stageFilter: CrmLeadStage | "TODOS";
+  stageFilter: CrmLeadStageFilter;
   profActiveFilter: ProfActiveFilter;
   profAccountStatusFilter: ProfAccountStatusFilter;
   profEmotionalConcentrationFilter: ProfEmotionalConcentrationFilter;
@@ -30,7 +31,7 @@ type CrmFiltersCardProps = {
   pacCidadeFilter: string;
   pacUfFilter: string;
   onTabChange: (value: TabKey) => void;
-  onStageFilterChange: (value: CrmLeadStage | "TODOS") => void;
+  onStageFilterChange: (value: CrmLeadStageFilter) => void;
   onProfActiveFilterChange: (value: ProfActiveFilter) => void;
   onProfAccountStatusFilterChange: (value: ProfAccountStatusFilter) => void;
   onProfEmotionalConcentrationFilterChange: (

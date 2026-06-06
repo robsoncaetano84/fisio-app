@@ -36,7 +36,11 @@ import {
   PacienteCadastroOrigem,
   UserRole,
 } from "../../types";
-import { usePacienteStore } from "../../stores/pacienteStore";
+import {
+  mapPacientePayloadToApi,
+  usePacienteStore,
+  type PacientePayload,
+} from "../../stores/pacienteStore";
 import { useAuthStore } from "../../stores/authStore";
 import { parseApiError } from "../../utils/apiErrors";
 import { api } from "../../services";
@@ -45,14 +49,6 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const optionalText = (value: string | null | undefined) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-};
-const optionalDigits = (value: string | null | undefined) => {
-  const digits = value?.replace(/\D/g, "");
-  return digits ? digits : undefined;
-};
 type PacienteFormMode = "view" | "edit";
 type PacienteFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteForm">;
@@ -346,7 +342,7 @@ export function PacienteFormScreen({
       setBairro(data.bairro || "");
       setCidade(data.localidade || "");
       setUf(data.uf || "");
-    } catch (error: any) {
+    } catch {
       showToast({ message: t("patientForm.cepFetchError"), type: "error" });
     }
   };
@@ -605,7 +601,7 @@ export function PacienteFormScreen({
     );
   };
 
-  const buildPacientePayloadFromForm = () => ({
+  const buildPacientePayloadFromForm = (): PacientePayload => ({
     nomeCompleto,
     cpf: cpf.replace(/\D/g, ""),
     dataNascimento: toApiDate(dataNascimento),
@@ -630,30 +626,6 @@ export function PacienteFormScreen({
     cadastroOrigem,
   });
 
-  const mapPayloadToApi = (
-    payload: ReturnType<typeof buildPacientePayloadFromForm>,
-  ) => ({
-    nomeCompleto: payload.nomeCompleto,
-    cpf: payload.cpf,
-    dataNascimento: payload.dataNascimento,
-    sexo: payload.sexo,
-    estadoCivil: payload.estadoCivil || undefined,
-    profissao: payload.profissao || undefined,
-    enderecoRua: optionalText(payload.endereco.rua),
-    enderecoNumero: optionalText(payload.endereco.numero),
-    enderecoComplemento: optionalText(payload.endereco.complemento),
-    enderecoBairro: optionalText(payload.endereco.bairro),
-    enderecoCep: optionalDigits(payload.endereco.cep),
-    enderecoCidade: optionalText(payload.endereco.cidade),
-    enderecoUf: optionalText(payload.endereco.uf)?.toUpperCase(),
-    contatoWhatsapp: payload.contato.whatsapp,
-    contatoEmail: payload.contato.email || undefined,
-    pacienteUsuarioId: payload.pacienteUsuarioId || undefined,
-    anamneseLiberadaPaciente: payload.anamneseLiberadaPaciente ?? false,
-    cadastroOrigem:
-      payload.cadastroOrigem || PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
-  });
-
   const handleSave = async () => {
     if (!validate()) {
       trackEvent("patient_form_validation_failed", {
@@ -673,9 +645,13 @@ export function PacienteFormScreen({
     try {
       if (isSelfEditMode) {
         const pacienteData = buildPacientePayloadFromForm();
-        await api.patch("/pacientes/me", mapPayloadToApi(pacienteData), {
-          timeout: 45000,
-        });
+        await api.patch(
+          "/pacientes/me",
+          mapPacientePayloadToApi(pacienteData),
+          {
+            timeout: 45000,
+          },
+        );
         showToast({
           message: t("patientForm.updatedSuccess"),
           type: "success",
@@ -688,7 +664,7 @@ export function PacienteFormScreen({
         if (isEditing && isUuid(routePacienteId)) {
           const pacienteAtualizado = await updatePaciente(
             routePacienteId,
-            buildPacientePayloadFromForm() as any,
+            buildPacientePayloadFromForm(),
           );
           const link = await gerarLinkConvitePaciente(routePacienteId);
           await enviarConviteRapidoPosCadastro(link);
@@ -740,10 +716,10 @@ export function PacienteFormScreen({
       if (isEditing && isUuid(routePacienteId)) {
         pacientePersistido = await updatePaciente(
           routePacienteId,
-          pacienteData as any,
+          pacienteData,
         );
       } else {
-        pacientePersistido = await createPaciente(pacienteData as any);
+        pacientePersistido = await createPaciente(pacienteData);
       }
 
       if (pacientePersistido?.id) {
@@ -852,7 +828,7 @@ export function PacienteFormScreen({
       }
 
       navigateAfterSave();
-    } catch (error: any) {
+    } catch (error) {
       const { message, fieldErrors } = parseApiError(error);
       trackEvent("patient_form_submit_failed", {
         mode: isQuickInviteMode ? "CONVITE_RAPIDO" : "CADASTRO_ASSISTIDO",

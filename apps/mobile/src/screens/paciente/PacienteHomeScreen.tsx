@@ -40,10 +40,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
   getExamErrorMessage,
+  inferExamMimeType,
   isAllowedExamFile,
   MAX_EXAME_SIZE_BYTES,
   withExamRetry,
 } from "../../utils/examUpload";
+import { createNativeUploadFile } from "../../utils/formDataUpload";
 
 const parseDatePreservingDateOnly = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -387,18 +389,7 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       }
 
       const formData = new FormData();
-      const lowerName = file.name.toLowerCase();
-      const inferredMime =
-        file.mimeType ||
-        (lowerName.endsWith(".pdf")
-          ? "application/pdf"
-          : lowerName.endsWith(".png")
-            ? "image/png"
-            : lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")
-              ? "image/jpeg"
-              : lowerName.endsWith(".webp")
-                ? "image/webp"
-                : "application/octet-stream");
+      const inferredMime = inferExamMimeType(file.name, file.mimeType);
       if (!isAllowedExamFile(file.name, inferredMime)) {
         showToast({ type: "error", message: t("patient.examErrorUnsupportedType") });
         return;
@@ -413,11 +404,14 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
           formData.append("file", blob, file.name);
         }
       } else {
-        formData.append("file", {
-          uri: file.uri,
-          name: file.name,
-          type: inferredMime,
-        } as unknown as Blob);
+        formData.append(
+          "file",
+          createNativeUploadFile({
+            uri: file.uri,
+            name: file.name,
+            type: inferredMime,
+          }),
+        );
       }
 
       setIsUploadingExame(true);

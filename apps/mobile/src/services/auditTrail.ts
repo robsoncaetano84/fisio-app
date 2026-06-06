@@ -4,6 +4,7 @@
 // ==========================================
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { trackEvent } from "./analytics";
+import { isJsonRecord, parseJsonArray } from "../utils/safeJson";
 
 const STORAGE_KEY = "audit:trail:v1";
 const MAX_ITEMS = 500;
@@ -75,15 +76,25 @@ const AUDIT_METADATA_ALLOWLIST: Record<AuditActionType, readonly string[]> = {
   QUICK_MESSAGE_SENT: ["pacienteId", "templateId"],
 };
 
-const parseEntries = (raw: string | null): AuditEntry[] => {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as AuditEntry[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
+const isAuditActionType = (value: unknown): value is AuditActionType =>
+  typeof value === "string" &&
+  Object.prototype.hasOwnProperty.call(AUDIT_METADATA_ALLOWLIST, value);
+
+const parseEntries = (raw: string | null): AuditEntry[] =>
+  parseJsonArray<unknown>(raw)
+    .filter((entry): entry is AuditEntry => {
+      if (!isJsonRecord(entry)) return false;
+      return (
+        typeof entry.id === "string" &&
+        isAuditActionType(entry.action) &&
+        typeof entry.at === "string" &&
+        (entry.actorId === undefined ||
+          entry.actorId === null ||
+          typeof entry.actorId === "string") &&
+        (entry.metadata === undefined || isJsonRecord(entry.metadata))
+      );
+    })
+    .slice(0, MAX_ITEMS);
 
 const persistEntries = async (entries: AuditEntry[]) => {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, MAX_ITEMS)));

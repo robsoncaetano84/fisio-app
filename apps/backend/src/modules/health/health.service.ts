@@ -4,10 +4,7 @@
 // ==========================================
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-
-type CountRow = {
-  total?: number | string | null;
-};
+import { isRecord } from '../../common/safe-json';
 
 @Injectable()
 export class HealthService {
@@ -103,7 +100,7 @@ export class HealthService {
     const rows: unknown = await this.dataSource.query(sql);
     if (!Array.isArray(rows)) return 0;
 
-    const [first] = rows as CountRow[];
+    const first = rows.find(isRecord);
     return Number(first?.total ?? 0) || 0;
   }
 }

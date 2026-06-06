@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, Pressable, Text, View, type ViewStyle } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 import { webStickyHeaderStyle, type SortDir } from "./AdminCrmScreen.utils";
 import {
   focusStyle,
@@ -54,9 +54,7 @@ export function HeadSortable<T extends string>({
     <View
       style={[
         styles.head,
-        Platform.OS === "web"
-          ? (webStickyHeaderStyle as unknown as ViewStyle)
-          : null,
+        Platform.OS === "web" ? webStickyHeaderStyle : null,
       ]}
     >
       {cols.map((col) => {

@@ -5,12 +5,19 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { isRecord, parseJsonObject } from '../../common/safe-json';
 
 type LockoutRecord = {
   count: number;
   firstAttemptAt: number;
   lockedUntil?: number;
 };
+
+const isLockoutRecord = (value: unknown): value is LockoutRecord =>
+  isRecord(value) &&
+  typeof value.count === 'number' &&
+  typeof value.firstAttemptAt === 'number' &&
+  (value.lockedUntil === undefined || typeof value.lockedUntil === 'number');
 
 @Injectable()
 export class LockoutService {
@@ -51,7 +58,8 @@ export class LockoutService {
   private async getRecord(email: string): Promise<LockoutRecord | null> {
     if (this.useRedis && this.redis) {
       const raw = await this.redis.get(this.getKey(email));
-      return raw ? (JSON.parse(raw) as LockoutRecord) : null;
+      const parsed = parseJsonObject(raw);
+      return isLockoutRecord(parsed) ? parsed : null;
     }
     return this.inMemory.get(email) ?? null;
   }

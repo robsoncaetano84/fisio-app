@@ -104,6 +104,8 @@ export type GenerateLaudoSuggestionInput = {
   referenciasClinicas?: LaudoReferenceSuggestionResponse;
 };
 
+type LaudoSuggestionAiResponse = Record<string, unknown>;
+
 @Injectable()
 export class LaudoAiSuggestionService {
   private readonly clinicalReferenceDomains = [
@@ -289,55 +291,58 @@ ${JSON.stringify(input, null, 2)}
       if (!response) {
         return {};
       }
-      const parsed = response.parsed;
-
-      const freq =
-        typeof parsed.frequenciaSemanal === 'number'
-          ? Math.min(7, Math.max(1, Math.round(parsed.frequenciaSemanal)))
-          : undefined;
-      const dur =
-        typeof parsed.duracaoSemanas === 'number'
-          ? Math.min(52, Math.max(1, Math.round(parsed.duracaoSemanas)))
-          : undefined;
-
-      return {
-        motivoAvaliacao: this.normalizeSuggestionText(
-          parsed.motivoAvaliacao,
-          2500,
-        ),
-        historicoClinico: this.normalizeSuggestionText(
-          parsed.historicoClinico,
-          3500,
-        ),
-        achadosClinicos: this.normalizeSuggestionText(
-          parsed.achadosClinicos,
-          4500,
-        ),
-        diagnosticoFuncional: this.normalizeSuggestionText(
-          parsed.diagnosticoFuncional,
-          2500,
-        ),
-        objetivosCurtoPrazo: this.normalizeSuggestionText(
-          parsed.objetivosCurtoPrazo,
-          2000,
-        ),
-        objetivosMedioPrazo: this.normalizeSuggestionText(
-          parsed.objetivosMedioPrazo,
-          2000,
-        ),
-        frequenciaSemanal: freq,
-        duracaoSemanas: dur,
-        conclusao: this.normalizeSuggestionText(parsed.conclusao, 2500),
-        condutas: this.normalizeSuggestionText(parsed.condutas, 5000),
-        planoTratamentoIA: this.normalizeSuggestionText(
-          parsed.planoTratamentoIA,
-          5000,
-        ),
-        criteriosAlta: this.normalizeSuggestionText(parsed.criteriosAlta, 2500),
-      };
+      return this.normalizeLaudoSuggestionResponse(response.parsed);
     } catch {
       return {};
     }
+  }
+
+  private normalizeLaudoSuggestionResponse(
+    parsed: LaudoSuggestionAiResponse,
+  ): Partial<CreateLaudoDto> {
+    return {
+      motivoAvaliacao: this.normalizeSuggestionText(
+        parsed.motivoAvaliacao,
+        2500,
+      ),
+      historicoClinico: this.normalizeSuggestionText(
+        parsed.historicoClinico,
+        3500,
+      ),
+      achadosClinicos: this.normalizeSuggestionText(
+        parsed.achadosClinicos,
+        4500,
+      ),
+      diagnosticoFuncional: this.normalizeSuggestionText(
+        parsed.diagnosticoFuncional,
+        2500,
+      ),
+      objetivosCurtoPrazo: this.normalizeSuggestionText(
+        parsed.objetivosCurtoPrazo,
+        2000,
+      ),
+      objetivosMedioPrazo: this.normalizeSuggestionText(
+        parsed.objetivosMedioPrazo,
+        2000,
+      ),
+      frequenciaSemanal: this.normalizeSuggestionInteger(
+        parsed.frequenciaSemanal,
+        1,
+        7,
+      ),
+      duracaoSemanas: this.normalizeSuggestionInteger(
+        parsed.duracaoSemanas,
+        1,
+        52,
+      ),
+      conclusao: this.normalizeSuggestionText(parsed.conclusao, 2500),
+      condutas: this.normalizeSuggestionText(parsed.condutas, 5000),
+      planoTratamentoIA: this.normalizeSuggestionText(
+        parsed.planoTratamentoIA,
+        5000,
+      ),
+      criteriosAlta: this.normalizeSuggestionText(parsed.criteriosAlta, 2500),
+    };
   }
 
   async findUpdatedClinicalReferences(
@@ -440,6 +445,21 @@ ${JSON.stringify(input.referenciasClinicas || null, null, 2)}
       .trim();
     if (!normalized) return undefined;
     return normalized.slice(0, maxLen);
+  }
+
+  private normalizeSuggestionInteger(
+    value: unknown,
+    min: number,
+    max: number,
+  ): number | undefined {
+    const parsed =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number.parseInt(value, 10)
+          : Number.NaN;
+    if (!Number.isFinite(parsed)) return undefined;
+    return Math.min(max, Math.max(min, Math.round(parsed)));
   }
 
   private normalizeReferenceUpdate(

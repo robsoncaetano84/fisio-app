@@ -42,6 +42,7 @@ import {
   SPACING,
 } from "../../constants/theme";
 import { parseApiError } from "../../utils/apiErrors";
+import { parseJsonObject } from "../../utils/safeJson";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 type PlanoFormScreenProps = {
@@ -516,11 +517,11 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
         ).catch(() => null);
         if (active && validatedRaw) {
           try {
-            const parsed = JSON.parse(validatedRaw) as {
+            const parsed = parseJsonObject<{
               snapshot?: string;
               validatedAt?: string;
-            };
-            if (parsed.snapshot) {
+            }>(validatedRaw);
+            if (parsed?.snapshot) {
               setValidatedPlanSnapshot(parsed.snapshot);
               setPlanValidatedAt(parsed.validatedAt || null);
               setProfessionalValidationConfirmed(
@@ -565,24 +566,26 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
       try {
         const raw = await AsyncStorage.getItem(draftKey);
         if (raw && !laudo?.id) {
-          const draft = JSON.parse(raw) as Partial<PlanoDraft>;
-          shouldPrefillWithAi = !hasPlanContent(draft);
-          if (draft.objetivosCurtoPrazo !== undefined)
-            setObjetivosCurtoPrazo(draft.objetivosCurtoPrazo);
-          if (draft.objetivosMedioPrazo !== undefined)
-            setObjetivosMedioPrazo(draft.objetivosMedioPrazo);
-          if (draft.frequenciaSemanal !== undefined)
-            setFrequenciaSemanal(draft.frequenciaSemanal);
-          if (draft.duracaoSemanas !== undefined)
-            setDuracaoSemanas(draft.duracaoSemanas);
-          if (draft.condutas !== undefined) setCondutas(draft.condutas);
-          if (draft.planoTratamentoIA !== undefined)
-            setPlanoTratamentoIA(draft.planoTratamentoIA);
-          if (draft.criteriosAlta !== undefined)
-            setCriteriosAlta(draft.criteriosAlta);
-          if (draft.observacoes !== undefined)
-            setObservacoes(draft.observacoes);
-          if (draft.lastEditedAt) setLastDraftSavedAt(draft.lastEditedAt);
+          const draft = parseJsonObject<Partial<PlanoDraft>>(raw);
+          if (draft) {
+            shouldPrefillWithAi = !hasPlanContent(draft);
+            if (draft.objetivosCurtoPrazo !== undefined)
+              setObjetivosCurtoPrazo(draft.objetivosCurtoPrazo);
+            if (draft.objetivosMedioPrazo !== undefined)
+              setObjetivosMedioPrazo(draft.objetivosMedioPrazo);
+            if (draft.frequenciaSemanal !== undefined)
+              setFrequenciaSemanal(draft.frequenciaSemanal);
+            if (draft.duracaoSemanas !== undefined)
+              setDuracaoSemanas(draft.duracaoSemanas);
+            if (draft.condutas !== undefined) setCondutas(draft.condutas);
+            if (draft.planoTratamentoIA !== undefined)
+              setPlanoTratamentoIA(draft.planoTratamentoIA);
+            if (draft.criteriosAlta !== undefined)
+              setCriteriosAlta(draft.criteriosAlta);
+            if (draft.observacoes !== undefined)
+              setObservacoes(draft.observacoes);
+            if (draft.lastEditedAt) setLastDraftSavedAt(draft.lastEditedAt);
+          }
         }
       } catch {
         // ignore local draft parse

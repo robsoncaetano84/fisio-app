@@ -25,6 +25,16 @@ const ALLOWED_EXTENSIONS = new Set([
   ".heif",
 ]);
 
+const MIME_BY_EXTENSION: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
+};
+
 export const MAX_EXAME_SIZE_BYTES = 10 * 1024 * 1024;
 const DEFAULT_RETRY_DELAY_MS = 500;
 
@@ -38,6 +48,12 @@ export const isAllowedExamFile = (fileName?: string, mimeType?: string) => {
   const normalizedMime = String(mimeType || "").trim().toLowerCase();
   const extension = getFileExtension(fileName);
   return ALLOWED_MIME_TYPES.has(normalizedMime) || ALLOWED_EXTENSIONS.has(extension);
+};
+
+export const inferExamMimeType = (fileName?: string, mimeType?: string) => {
+  const normalizedMime = String(mimeType || "").trim().toLowerCase();
+  if (normalizedMime) return normalizedMime;
+  return MIME_BY_EXTENSION[getFileExtension(fileName)] ?? "application/octet-stream";
 };
 
 const fallbackKeyByAction: Record<ExamErrorAction, string> = {

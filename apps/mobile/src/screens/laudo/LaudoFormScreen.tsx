@@ -42,8 +42,9 @@ import {
 } from "../../constants/theme";
 import { FEATURE_FLAGS } from "../../constants/featureFlags";
 import { RootStackParamList } from "../../types";
-import { LaudoStatus } from "../../types";
+import { LaudoStatus, type Laudo } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
+import { isJsonRecord, parseJsonArray } from "../../utils/safeJson";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 type LaudoFormScreenProps = {
@@ -92,6 +93,31 @@ type LaudoDraftPayload = {
   examesConsiderados?: number;
   examesComLeituraIa?: number;
 };
+
+type LaudoValidationHistoryEntry = {
+  id: string;
+  action: "VALIDADO" | "REVALIDACAO_PENDENTE";
+  at: string;
+  by: string;
+  consultedReferencesCount?: number;
+  totalSuggestedReferences?: number;
+};
+
+const normalizeValidationHistory = (
+  raw: string | null | undefined,
+): LaudoValidationHistoryEntry[] =>
+  parseJsonArray<unknown>(raw)
+    .filter((item): item is LaudoValidationHistoryEntry => {
+      if (!isJsonRecord(item)) return false;
+      const action = item.action;
+      return (
+        typeof item.id === "string" &&
+        (action === "VALIDADO" || action === "REVALIDACAO_PENDENTE") &&
+        typeof item.at === "string" &&
+        typeof item.by === "string"
+      );
+    })
+    .slice(0, 20);
 
 const LAUDO_AUTOSAVE_DEBOUNCE_MS = 1800;
 
@@ -300,14 +326,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     null,
   );
   const [validationHistory, setValidationHistory] = useState<
-    Array<{
-      id: string;
-      action: "VALIDADO" | "REVALIDACAO_PENDENTE";
-      at: string;
-      by: string;
-      consultedReferencesCount?: number;
-      totalSuggestedReferences?: number;
-    }>
+    LaudoValidationHistoryEntry[]
   >([]);
   const [referenceSuggestions, setReferenceSuggestions] =
     useState<LaudoReferenceSuggestionResponse | null>(null);
@@ -735,16 +754,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       totalSuggestedReferences: extra?.totalSuggestedReferences,
     };
     const currentRaw = await AsyncStorage.getItem(key);
-    const current = currentRaw
-      ? (JSON.parse(currentRaw) as Array<{
-          id: string;
-          action: "VALIDADO" | "REVALIDACAO_PENDENTE";
-          at: string;
-          by: string;
-          consultedReferencesCount?: number;
-          totalSuggestedReferences?: number;
-        }>)
-      : [];
+    const current = normalizeValidationHistory(currentRaw);
     const next = [entry, ...current].slice(0, 20);
     await AsyncStorage.setItem(key, JSON.stringify(next));
     setValidationHistory(next);
@@ -754,7 +764,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     let isMounted = true;
     setInitialSnapshot("");
 
-    const applyLaudoState = (laudo: any) => {
+    const applyLaudoState = (laudo: Laudo) => {
       setLaudoId(laudo.id);
       setMotivoAvaliacao(laudo.motivoAvaliacao || "");
       setHistoricoClinico(laudo.historicoClinico || "");
@@ -846,16 +856,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               setValidationHistory([]);
               return;
             }
-            setValidationHistory(
-              JSON.parse(historyRaw) as Array<{
-                id: string;
-                action: "VALIDADO" | "REVALIDACAO_PENDENTE";
-                at: string;
-                by: string;
-                consultedReferencesCount?: number;
-                totalSuggestedReferences?: number;
-              }>,
-            );
+            setValidationHistory(normalizeValidationHistory(historyRaw));
           })
           .catch(() => undefined);
       }
@@ -923,12 +924,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       .then((raw) => {
         if (!isMounted || !raw) return;
         try {
-          const parsed = JSON.parse(raw) as string[];
-          if (Array.isArray(parsed)) {
-            setConsultedReferenceIds(
-              parsed.filter((v) => typeof v === "string"),
-            );
-          }
+          setConsultedReferenceIds(
+            parseJsonArray<unknown>(raw).filter(
+              (value): value is string => typeof value === "string",
+            ),
+          );
         } catch {
           // ignore malformed local cache
         }

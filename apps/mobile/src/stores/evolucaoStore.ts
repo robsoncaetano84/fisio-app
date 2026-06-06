@@ -96,10 +96,6 @@ export const useEvolucaoStore = create<{
         return;
       }
       // Para listagem inicial, evita quebrar UX por erros transitórios de API.
-      if (__DEV__) {
-        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-        console.warn("[evolucaoStore] fetchEvolucoesByPaciente failed", { status });
-      }
       set({ evolucoes: [], isLoading: false });
       return;
     }

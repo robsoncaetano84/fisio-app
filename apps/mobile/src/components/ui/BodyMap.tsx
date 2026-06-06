@@ -510,8 +510,8 @@ export function BodyMap({
             </TouchableOpacity>
           </View>
           <Text style={styles.calibrationHint}>
-            Arraste um ponto para ajustar xPercent/yPercent. O JSON tambem e
-            enviado ao console.
+            Arraste um ponto para ajustar xPercent/yPercent. Use Copiar JSON
+            para enviar os dados para a area de transferencia.
           </Text>
           <TextInput
             value={calibrationJson}

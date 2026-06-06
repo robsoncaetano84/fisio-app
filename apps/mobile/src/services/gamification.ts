@@ -3,6 +3,7 @@
 // GAMIFICATION
 // ==========================================
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { parseJsonObject } from "../utils/safeJson";
 
 const KEY_PREFIX = "gamification:streak:v1";
 
@@ -19,17 +20,13 @@ const INITIAL_STATE: GamificationState = {
 const toIsoDate = (date: Date) => date.toISOString().slice(0, 10);
 
 const parseState = (raw: string | null): GamificationState => {
-  if (!raw) return INITIAL_STATE;
-  try {
-    const parsed = JSON.parse(raw) as GamificationState;
-    return {
-      streak: Number.isFinite(parsed.streak) ? parsed.streak : 0,
-      lastCheckinDate:
-        typeof parsed.lastCheckinDate === "string" ? parsed.lastCheckinDate : null,
-    };
-  } catch {
-    return INITIAL_STATE;
-  }
+  const parsed = parseJsonObject<GamificationState>(raw);
+  if (!parsed) return INITIAL_STATE;
+  return {
+    streak: Number.isFinite(parsed.streak) ? parsed.streak : 0,
+    lastCheckinDate:
+      typeof parsed.lastCheckinDate === "string" ? parsed.lastCheckinDate : null,
+  };
 };
 
 const getDiffDays = (aIsoDate: string, bIsoDate: string) => {

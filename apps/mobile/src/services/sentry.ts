@@ -2,6 +2,8 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // SENTRY
 // ==========================================
+import * as SentryNative from "@sentry/react-native";
+
 type SentryUser = {
   id?: string;
   email?: string;
@@ -9,19 +11,9 @@ type SentryUser = {
   role?: string;
 } | null;
 
-type SentryLike = {
-  init: (options?: Record<string, unknown>) => void;
-  wrap: <T>(component: T) => T;
+type SentryFacade = {
+  wrap: typeof SentryNative.wrap;
   setUser: (user: SentryUser) => void;
-};
-
-// Safe no-op fallback to avoid breaking Expo/Metro dev builds.
-// We can swap this back to @sentry/react-native after validating a version compatible
-// with the current Expo SDK in a dedicated step.
-const noopSentry: SentryLike = {
-  init: () => undefined,
-  wrap: <T>(component: T) => component,
-  setUser: () => undefined,
 };
 
 let initialized = false;
@@ -31,8 +23,7 @@ export function initSentry() {
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
   if (!dsn) return;
 
-  // Intentionally no-op for now (dev-build-safe placeholder).
-  noopSentry.init({
+  SentryNative.init({
     dsn,
     environment:
       process.env.EXPO_PUBLIC_APP_ENV || (__DEV__ ? "development" : "production"),
@@ -40,4 +31,22 @@ export function initSentry() {
   initialized = true;
 }
 
-export const Sentry = noopSentry;
+const wrap: typeof SentryNative.wrap = (component, options) =>
+  initialized ? SentryNative.wrap(component, options) : component;
+
+export const Sentry: SentryFacade = {
+  wrap,
+  setUser: (user) => {
+    if (!initialized) return;
+
+    if (!user) {
+      SentryNative.setUser(null);
+      SentryNative.setTag("role", "");
+      return;
+    }
+
+    const { role, ...sentryUser } = user;
+    SentryNative.setUser(sentryUser);
+    SentryNative.setTag("role", role || "");
+  },
+};

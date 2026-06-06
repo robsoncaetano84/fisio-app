@@ -18,8 +18,13 @@ import {
   PacienteVinculoStatus,
 } from "../types";
 import { APP_CONFIG } from "../constants/theme";
+import {
+  isJsonRecord,
+  parseJsonArrayOrNull,
+  parseJsonObject,
+} from "../utils/safeJson";
 
-type PacientePayload = {
+export type PacientePayload = {
   nomeCompleto: string;
   cpf: string;
   rg?: string;
@@ -122,20 +127,25 @@ const withDerivedPaciente = (paciente: Paciente): Paciente => ({
 });
 
 const safeParsePacientes = (raw: string | null): Paciente[] | null => {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Paciente[];
-    return Array.isArray(parsed) ? parsed.map(withDerivedPaciente) : null;
-  } catch {
-    return null;
-  }
+  const parsed = parseJsonArrayOrNull<Paciente>(raw);
+  return parsed
+    ? parsed
+        .filter(
+          (paciente): paciente is Paciente =>
+            isJsonRecord(paciente) &&
+            typeof paciente.id === "string" &&
+            typeof paciente.nomeCompleto === "string" &&
+            typeof paciente.dataNascimento === "string",
+        )
+        .map(withDerivedPaciente)
+    : null;
 };
 
 const getPacientesCacheKey = async () => {
   try {
     const rawUser = await AsyncStorage.getItem(APP_CONFIG.storage.userKey);
     if (!rawUser) return `${PACIENTES_CACHE_KEY_PREFIX}:anon`;
-    const parsed = JSON.parse(rawUser) as { id?: string };
+    const parsed = parseJsonObject<{ id?: string }>(rawUser);
     return `${PACIENTES_CACHE_KEY_PREFIX}:${parsed?.id || "anon"}`;
   } catch {
     return `${PACIENTES_CACHE_KEY_PREFIX}:anon`;
@@ -191,7 +201,7 @@ const mapApiToPaciente = (p: ApiPaciente): Paciente => ({
   updatedAt: p.updatedAt,
 });
 
-const mapPayloadToApi = (p: PacientePayload) => ({
+export const mapPacientePayloadToApi = (p: PacientePayload) => ({
   nomeCompleto: p.nomeCompleto,
   cpf: p.cpf,
   rg: p.rg || undefined,
@@ -383,7 +393,7 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
       set({ isLoading: true });
       const response = await api.post<ApiPaciente>(
         "/pacientes",
-        mapPayloadToApi(paciente),
+        mapPacientePayloadToApi(paciente),
       );
       const novoPaciente = mapApiToPaciente(response.data);
       const nextPacientes = [novoPaciente, ...get().pacientes];
@@ -406,7 +416,7 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
       set({ isLoading: true });
       const response = await api.patch<ApiPaciente>(
         `/pacientes/${id}`,
-        mapPayloadToApi(paciente),
+        mapPacientePayloadToApi(paciente),
       );
       const pacienteAtualizado = mapApiToPaciente(response.data);
       const nextPacientes = get().pacientes.map((p) =>
@@ -448,10 +458,6 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
 
   getPacienteById: (id) => get().pacientes.find((p) => p.id === id),
 }));
-
-
-
-
 
 
 

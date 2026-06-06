@@ -36,6 +36,7 @@ import {
   type ClinicalFlowGuard,
 } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
+import { parseJsonObject } from "../../utils/safeJson";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { useQuickActions } from "../../hooks/useQuickActions";
 import {
@@ -249,11 +250,12 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
     AsyncStorage.getItem(filtersStorageKey)
       .then((raw) => {
         if (!mounted || !raw || quickAction) return;
-        const parsed = JSON.parse(raw) as {
+        const parsed = parseJsonObject<{
           attentionOnly?: boolean;
           quickFilter?: PacientesQuickFilter;
           attentionFocus?: PacientesAttentionFocus | null;
-        };
+        }>(raw);
+        if (!parsed) return;
         if (route.params?.attentionOnly !== undefined) return;
         setAttentionOnly(!!parsed.attentionOnly);
         if (parsed.quickFilter) setQuickFilter(parsed.quickFilter);
@@ -972,7 +974,6 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmptyList}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={140}
           removeClippedSubviews
           onRefresh={handleRefresh}
           refreshing={refreshing}

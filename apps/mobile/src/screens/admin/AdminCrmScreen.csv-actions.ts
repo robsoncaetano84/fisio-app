@@ -7,6 +7,12 @@ import type {
   CrmLeadStage,
   CrmTask,
 } from "../../services/crm";
+import type {
+  CrmLeadStageFilter,
+  PacLinkFilter,
+  ProfActiveFilter,
+  ProfEmotionalConcentrationFilter,
+} from "./AdminCrmScreen.types";
 import {
   buildCurrentPatientRows,
   buildCurrentProfessionalRows,
@@ -47,16 +53,16 @@ type CsvActionsParams = {
   profEmotionalConcentrationMap: Map<string, EmotionalConcentration>;
   profAccountScores: Map<string, AccountHealthScore>;
   query: string;
-  profActiveFilter: "TODOS" | "ATIVOS";
+  profActiveFilter: ProfActiveFilter;
   profEspecialidadeFilter: string;
-  profEmotionalConcentrationFilter: "TODOS" | "ALTA";
-  pacLinkFilter: "TODOS" | "VINCULADOS" | "SEM_USUARIO";
+  profEmotionalConcentrationFilter: ProfEmotionalConcentrationFilter;
+  pacLinkFilter: PacLinkFilter;
   pacCidadeFilter: string;
   pacUfFilter: string;
   profSort: { key: ProfSortKey; dir: SortDir };
   pacSort: { key: PacSortKey; dir: SortDir };
   leads: CrmLead[];
-  stageFilter: CrmLeadStage | "TODOS";
+  stageFilter: CrmLeadStageFilter;
   stageLabel: Record<CrmLeadStage, string>;
   tasks: CrmTask[];
   taskLeadMap: Map<string, CrmLead>;

@@ -4,7 +4,11 @@ import type {
   ExamChartMode,
   PhysicalExamCoverage,
 } from "./AdminCrmScreen.utils";
-import type { TabKey } from "./AdminCrmScreen.types";
+import type {
+  PacEmotionalFilter,
+  PacStatusFilter,
+  TabKey,
+} from "./AdminCrmScreen.types";
 
 type PhysicalExamTopInsights = {
   topRegionLabel: string;
@@ -16,8 +20,8 @@ type PhysicalExamNavigationParams = {
   coverage: PhysicalExamCoverage;
   topInsights: PhysicalExamTopInsights;
   setTab: Dispatch<SetStateAction<TabKey>>;
-  setPacStatusFilter: Dispatch<SetStateAction<"TODOS" | "ATIVO" | "RISCO">>;
-  setPacEmotionalFilter: Dispatch<SetStateAction<"TODOS" | "EMOCIONAL">>;
+  setPacStatusFilter: Dispatch<SetStateAction<PacStatusFilter>>;
+  setPacEmotionalFilter: Dispatch<SetStateAction<PacEmotionalFilter>>;
 };
 
 export function usePhysicalExamNavigationActions({

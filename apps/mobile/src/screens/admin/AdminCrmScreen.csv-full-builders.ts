@@ -3,6 +3,11 @@ import {
   getCrmAdminPatients,
   getCrmAdminProfessionals,
 } from "../../services/crm";
+import type {
+  PacLinkFilter,
+  ProfActiveFilter,
+  ProfEmotionalConcentrationFilter,
+} from "./AdminCrmScreen.types";
 import {
   accountHealthStatusLabel,
   comparePac,
@@ -116,9 +121,9 @@ export async function buildFullProfessionalRows({
   profSort,
 }: {
   query: string;
-  profActiveFilter: "TODOS" | "ATIVOS";
+  profActiveFilter: ProfActiveFilter;
   profEspecialidadeFilter: string;
-  profEmotionalConcentrationFilter: "TODOS" | "ALTA";
+  profEmotionalConcentrationFilter: ProfEmotionalConcentrationFilter;
   profSort: { key: ProfSortKey; dir: SortDir };
 }) {
   const allPatientsForEmotional = await getCrmAdminPatients();
@@ -193,7 +198,7 @@ export async function buildFullPatientRows({
   noLinkLabel,
 }: {
   query: string;
-  pacLinkFilter: "TODOS" | "VINCULADOS" | "SEM_USUARIO";
+  pacLinkFilter: PacLinkFilter;
   pacCidadeFilter: string;
   pacUfFilter: string;
   pacSort: { key: PacSortKey; dir: SortDir };

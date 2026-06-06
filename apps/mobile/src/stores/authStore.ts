@@ -1,9 +1,16 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AuthState, Usuario, LoginCredentials, LoginResponse } from "../types";
+import {
+  AuthState,
+  Usuario,
+  LoginCredentials,
+  LoginResponse,
+  UserRole,
+} from "../types";
 import { APP_CONFIG } from "../constants/theme";
 import { api, getRuntimeFeatureFlags, setOnSessionExpired, setIsLoggingOut } from "../services";
 import { applyRuntimeFeatureFlags } from "../constants/featureFlags";
+import { isJsonRecord, parseJsonObject } from "../utils/safeJson";
 
 interface AuthStore extends AuthState {
   pendingInviteToken: string | null;
@@ -16,6 +23,17 @@ interface AuthStore extends AuthState {
   clearPendingInviteToken: () => void;
   updateUsuario: (usuario: Usuario) => Promise<void>;
 }
+
+const isUserRole = (value: unknown): value is UserRole =>
+  typeof value === "string" &&
+  (Object.values(UserRole) as string[]).includes(value);
+
+const isStoredUsuario = (value: unknown): value is Usuario =>
+  isJsonRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.nome === "string" &&
+  typeof value.email === "string" &&
+  isUserRole(value.role);
 
 export const useAuthStore = create<AuthStore>((set) => ({
   usuario: null,
@@ -143,7 +161,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
       const userJson = await AsyncStorage.getItem(APP_CONFIG.storage.userKey);
 
       if (token && refreshToken && userJson) {
-        const usuario: Usuario = JSON.parse(userJson);
+        const usuario = parseJsonObject<Record<string, unknown>>(userJson);
+        if (!isStoredUsuario(usuario)) {
+          set({ isLoading: false });
+          return;
+        }
         api.defaults.headers.common.Authorization = `Bearer ${token}`;
         try {
           const runtimeFlags = await getRuntimeFeatureFlags();
@@ -163,9 +185,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
         set({ isLoading: false });
       }
     } catch {
-      if (__DEV__) {
-        console.warn("[authStore] loadStoredAuth failed");
-      }
       set({ isLoading: false });
     }
   },

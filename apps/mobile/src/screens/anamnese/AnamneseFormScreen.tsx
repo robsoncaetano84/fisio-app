@@ -48,6 +48,7 @@ import {
   FenotipoDorEvidencias,
 } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
+import { parseJsonObject } from "../../utils/safeJson";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { trackEvent } from "../../services";
 
@@ -795,7 +796,7 @@ export function AnamneseFormScreen({
           setDraftLoaded(true);
           return;
         }
-        const draft = JSON.parse(raw) as {
+        const draft = parseJsonObject<{
           motivoBusca?: MotivoBusca | null;
           areasAfetadas?: AreaAfetada[];
           intensidadeDor?: number;
@@ -834,7 +835,8 @@ export function AnamneseFormScreen({
           observacoesEstiloVida?: string;
           currentStep?: number;
           lastEditedAt?: string;
-        };
+        }>(raw);
+        if (!draft) return;
 
         if (draft.motivoBusca !== undefined) setMotivoBusca(draft.motivoBusca);
         if (draft.areasAfetadas) {

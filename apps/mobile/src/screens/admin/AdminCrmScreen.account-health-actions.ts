@@ -1,15 +1,17 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { trackEvent } from "../../services/analytics";
-import type { TabKey } from "./AdminCrmScreen.types";
+import type {
+  ProfAccountStatusFilter,
+  ProfEmotionalConcentrationFilter,
+  TabKey,
+} from "./AdminCrmScreen.types";
 import type { AccountHealthStatus } from "./AdminCrmScreen.utils";
 
 type AccountHealthActionsParams = {
   setTab: Dispatch<SetStateAction<TabKey>>;
-  setProfAccountStatusFilter: Dispatch<
-    SetStateAction<"TODOS" | "HEALTHY" | "ATTENTION" | "RISK">
-  >;
+  setProfAccountStatusFilter: Dispatch<SetStateAction<ProfAccountStatusFilter>>;
   setProfEmotionalConcentrationFilter: Dispatch<
-    SetStateAction<"TODOS" | "ALTA">
+    SetStateAction<ProfEmotionalConcentrationFilter>
   >;
 };
 

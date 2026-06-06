@@ -36,6 +36,7 @@ import {
   updateRedFlagAnswer,
 } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
+import { parseJsonObject } from "../../utils/safeJson";
 import {
   CLINICAL_REGION_LABELS,
   inferClinicalRegionsFromHints,
@@ -63,10 +64,12 @@ import {
 import { CONFIDENCE_RULES } from "../../services/physicalExamScoring";
 import {
   buildHipomobilidadeSummary,
+  getNestedStringValue,
   prettyEnum,
   prettyEvidenceField,
   resolveInputSuggestionPresentation,
   sanitizeExamForForm,
+  setNestedStringValue,
   type HipomobilidadeSegmentarField,
 } from "./ExameFisicoFormScreen.utils";
 import {
@@ -667,11 +670,11 @@ export function ExameFisicoFormScreen({
       try {
         const rawDraft = await AsyncStorage.getItem(draftKey);
         if (rawDraft && !hasPersistedExam) {
-          const parsed = JSON.parse(rawDraft) as {
+          const parsed = parseJsonObject<{
             exam?: ExameFisicoStructured;
             lastEditedAt?: string;
-          };
-          if (!loadedExam && parsed.exam) {
+          }>(rawDraft);
+          if (!loadedExam && parsed?.exam) {
             loadedExam = enrichStructuredExameWithClinicalLogic(
               parsed.exam,
               latestAnamnese,
@@ -681,7 +684,7 @@ export function ExameFisicoFormScreen({
             );
             setExam(sanitizeExamForForm(loadedExam));
           }
-          if (parsed.lastEditedAt) setLastDraftSavedAt(parsed.lastEditedAt);
+          if (parsed?.lastEditedAt) setLastDraftSavedAt(parsed.lastEditedAt);
         }
       } catch {
         // ignore draft parse
@@ -698,11 +701,11 @@ export function ExameFisicoFormScreen({
         ).catch(() => null);
         if (validatedRaw) {
           try {
-            const parsed = JSON.parse(validatedRaw) as {
+            const parsed = parseJsonObject<{
               snapshot?: string;
               validatedAt?: string;
-            };
-            if (parsed.snapshot) {
+            }>(validatedRaw);
+            if (parsed?.snapshot) {
               setValidatedExamSnapshot(parsed.snapshot);
               setExamValidatedAt(parsed.validatedAt || null);
               setProfessionalValidationConfirmed(
@@ -874,15 +877,7 @@ export function ExameFisicoFormScreen({
 
   const setField = (path: string, value: string) => {
     if (!exam) return;
-    const next = { ...exam } as any;
-    const segments = path.split(".");
-    let current = next;
-    for (let i = 0; i < segments.length - 1; i++) {
-      if (!current[segments[i]]) current[segments[i]] = {};
-      current = current[segments[i]];
-    }
-    current[segments[segments.length - 1]] = value;
-    setExam(next);
+    setExam(setNestedStringValue(exam, path, value));
     if (path === "movimento.reproduzDor" && errors.movimentoReproduzDor) {
       setErrors((prev) => ({ ...prev, movimentoReproduzDor: "" }));
     }
@@ -937,9 +932,7 @@ export function ExameFisicoFormScreen({
     enabled: VOICE_ENABLED,
     onResult: (text) => {
       if (!exam || !activeField) return;
-      const currentValue = activeField
-        .split(".")
-        .reduce<any>((acc, segment) => (acc ? acc[segment] : ""), exam);
+      const currentValue = getNestedStringValue(exam, activeField);
       setField(activeField, appendFieldValue(String(currentValue || ""), text));
     },
     onError: (message) => {

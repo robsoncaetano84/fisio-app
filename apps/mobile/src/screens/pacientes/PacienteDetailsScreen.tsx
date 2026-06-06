@@ -23,7 +23,10 @@ import { RouteProp } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, useToast } from "../../components/ui";
-import { usePacienteStore } from "../../stores/pacienteStore";
+import {
+  usePacienteStore,
+  type PacientePayload,
+} from "../../stores/pacienteStore";
 import { useAnamneseStore } from "../../stores/anamneseStore";
 import { useEvolucaoStore } from "../../stores/evolucaoStore";
 import { useLaudoStore } from "../../stores/laudoStore";
@@ -45,10 +48,12 @@ import {
 } from "../../services";
 import {
   getExamErrorMessage,
+  inferExamMimeType,
   isAllowedExamFile,
   MAX_EXAME_SIZE_BYTES,
   withExamRetry,
 } from "../../utils/examUpload";
+import { createNativeUploadFile } from "../../utils/formDataUpload";
 import { useAuthStore } from "../../stores/authStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
@@ -373,18 +378,7 @@ export function PacienteDetailsScreen({
       }
 
       const formData = new FormData();
-      const lowerName = file.name.toLowerCase();
-      const inferredMime =
-        file.mimeType ||
-        (lowerName.endsWith(".pdf")
-          ? "application/pdf"
-          : lowerName.endsWith(".png")
-            ? "image/png"
-            : lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")
-              ? "image/jpeg"
-              : lowerName.endsWith(".webp")
-                ? "image/webp"
-                : "application/octet-stream");
+      const inferredMime = inferExamMimeType(file.name, file.mimeType);
       if (!isAllowedExamFile(file.name, inferredMime)) {
         showToast({
           type: "error",
@@ -403,11 +397,14 @@ export function PacienteDetailsScreen({
           formData.append("file", blob, file.name);
         }
       } else {
-        formData.append("file", {
-          uri: file.uri,
-          name: file.name,
-          type: inferredMime,
-        } as unknown as Blob);
+        formData.append(
+          "file",
+          createNativeUploadFile({
+            uri: file.uri,
+            name: file.name,
+            type: inferredMime,
+          }),
+        );
       }
 
       setIsUploadingExame(true);
@@ -699,7 +696,7 @@ export function PacienteDetailsScreen({
     setUpdatingAnamnesePermission(true);
 
     try {
-      await updatePaciente(paciente.id, {
+      const payload: PacientePayload = {
         nomeCompleto: paciente.nomeCompleto,
         cpf: paciente.cpf,
         rg: paciente.rg,
@@ -712,7 +709,8 @@ export function PacienteDetailsScreen({
         pacienteUsuarioId: paciente.pacienteUsuarioId,
         cadastroOrigem: paciente.cadastroOrigem,
         anamneseLiberadaPaciente: nextPermission,
-      } as any);
+      };
+      await updatePaciente(paciente.id, payload);
 
       showToast({
         type: "success",

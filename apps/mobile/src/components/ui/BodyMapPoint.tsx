@@ -18,6 +18,11 @@ type PanelSize = {
   height: number;
 };
 
+type WebKeyboardProps = {
+  tabIndex?: 0 | -1;
+  onKeyDown?: (event: { key?: string; preventDefault?: () => void }) => void;
+};
+
 interface BodyMapPointProps {
   point: BodyMapPointModel;
   selected: boolean;
@@ -132,9 +137,9 @@ export function BodyMapPoint({
     onToggle(point);
   };
 
-  const webKeyboardProps =
+  const webKeyboardProps: WebKeyboardProps =
     Platform.OS === "web"
-      ? ({
+      ? {
           tabIndex: disabled ? -1 : 0,
           onKeyDown: (event: { key?: string; preventDefault?: () => void }) => {
             if (disabled) return;
@@ -147,7 +152,7 @@ export function BodyMapPoint({
               onToggle(point);
             }
           },
-        } as any)
+        }
       : {};
 
   return (

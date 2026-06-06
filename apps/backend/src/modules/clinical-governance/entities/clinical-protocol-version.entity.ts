@@ -24,7 +24,7 @@ export class ClinicalProtocolVersion {
   isActive: boolean;
 
   @Column({ type: 'jsonb', default: () => "'{}'" })
-  definition: Record<string, any>;
+  definition: Record<string, unknown>;
 
   @Column({ name: 'activated_at', type: 'timestamp', nullable: true })
   activatedAt: Date | null;

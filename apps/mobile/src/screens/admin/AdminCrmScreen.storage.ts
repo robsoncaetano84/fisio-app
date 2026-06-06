@@ -1,6 +1,5 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { Platform } from "react-native";
-import type { CrmLeadStage } from "../../services/crm";
 import {
   CRM_AUTOMATIONS_DISMISSED_KEY_PREFIX,
   CRM_AUTOMATIONS_HISTORY_KEY_PREFIX,
@@ -8,6 +7,13 @@ import {
 } from "./AdminCrmScreen.constants";
 import type {
   ClinicalPipelineStatusFilter,
+  CrmLeadStageFilter,
+  PacEmotionalFilter,
+  PacLinkFilter,
+  PacStatusFilter,
+  ProfAccountStatusFilter,
+  ProfActiveFilter,
+  ProfEmotionalConcentrationFilter,
   TabKey,
   TaskBucket,
 } from "./AdminCrmScreen.types";
@@ -19,20 +25,19 @@ import type {
   ProfSortKey,
   SortDir,
 } from "./AdminCrmScreen.utils";
+import {
+  isJsonRecord,
+  parseJsonArray,
+  parseJsonObject,
+} from "../../utils/safeJson";
 
-type ProfActiveFilter = "TODOS" | "ATIVOS";
-type ProfAccountStatusFilter = "TODOS" | "HEALTHY" | "ATTENTION" | "RISK";
-type ProfEmotionalConcentrationFilter = "TODOS" | "ALTA";
-type PacLinkFilter = "TODOS" | "VINCULADOS" | "SEM_USUARIO";
-type PacStatusFilter = "TODOS" | "ATIVO" | "RISCO";
-type PacEmotionalFilter = "TODOS" | "EMOCIONAL";
 type ProfSort = { key: ProfSortKey; dir: SortDir };
 type PacSort = { key: PacSortKey; dir: SortDir };
 
 type CrmPrefsStorageParams = {
   tab: TabKey;
   query: string;
-  stageFilter: CrmLeadStage | "TODOS";
+  stageFilter: CrmLeadStageFilter;
   profSort: ProfSort;
   pacSort: PacSort;
   profActiveFilter: ProfActiveFilter;
@@ -54,7 +59,7 @@ type CrmPrefsStorageParams = {
   taskBucketFilter: TaskBucket;
   setTab: Dispatch<SetStateAction<TabKey>>;
   setQuery: Dispatch<SetStateAction<string>>;
-  setStageFilter: Dispatch<SetStateAction<CrmLeadStage | "TODOS">>;
+  setStageFilter: Dispatch<SetStateAction<CrmLeadStageFilter>>;
   setProfSort: Dispatch<SetStateAction<ProfSort>>;
   setPacSort: Dispatch<SetStateAction<PacSort>>;
   setProfActiveFilter: Dispatch<SetStateAction<ProfActiveFilter>>;
@@ -116,7 +121,8 @@ export function useCrmPrefsStorage(params: CrmPrefsStorageParams) {
     try {
       const raw = window.localStorage.getItem(CRM_PREFS_KEY);
       if (!raw) return;
-      const prefs = JSON.parse(raw) as CrmPrefs;
+      const prefs = parseJsonObject<CrmPrefs>(raw);
+      if (!prefs) return;
       if (prefs.tab) params.setTab(prefs.tab);
       if (typeof prefs.query === "string") params.setQuery(prefs.query);
       if (prefs.stageFilter) params.setStageFilter(prefs.stageFilter);
@@ -277,10 +283,11 @@ export function useAutomationStorage({
     try {
       const raw = window.localStorage.getItem(dismissedKey);
       if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setDismissedAutomationIds(parsed.filter((item) => typeof item === "string"));
-      }
+      setDismissedAutomationIds(
+        parseJsonArray<unknown>(raw).filter(
+          (item): item is string => typeof item === "string",
+        ),
+      );
     } catch {
       // ignore localStorage errors
     }
@@ -303,14 +310,13 @@ export function useAutomationStorage({
     try {
       const raw = window.localStorage.getItem(historyKey);
       if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setAutomationHistory(
-          parsed
-            .filter((item) => item && typeof item === "object")
-            .slice(0, 5) as CrmAutomationHistoryItem[],
-        );
-      }
+      setAutomationHistory(
+        parseJsonArray<unknown>(raw)
+          .filter((item): item is CrmAutomationHistoryItem =>
+            isJsonRecord(item),
+          )
+          .slice(0, 5),
+      );
     } catch {
       // ignore localStorage errors
     }

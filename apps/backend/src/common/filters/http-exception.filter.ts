@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { captureException } from '../observability/sentry';
+import { isRecord } from '../safe-json';
 
 type ErrorResponseBody = {
   statusCode: number;
@@ -32,6 +33,22 @@ function redactSensitiveUrl(value: string): string {
 
 function isServerStatus(statusCode: number): boolean {
   return statusCode >= 500;
+}
+
+function resolveExceptionMessage(
+  value: unknown,
+  fallback: string,
+): string | string[] {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return value;
+  }
+  return fallback;
+}
+
+function resolveExceptionError(value: unknown, statusCode: number): string {
+  if (typeof value === 'string' && value.trim()) return value;
+  return isServerStatus(statusCode) ? 'Internal Server Error' : 'Bad Request';
 }
 
 @Catch()
@@ -62,12 +79,12 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (exceptionResponse && typeof exceptionResponse === 'object') {
-        const body = exceptionResponse as Record<string, unknown>;
-        message = (body.message as string | string[]) ?? exception.message;
-        error =
-          (body.error as string) ??
-          (isServerStatus(status) ? 'Internal Server Error' : 'Bad Request');
+      } else if (isRecord(exceptionResponse)) {
+        message = resolveExceptionMessage(
+          exceptionResponse.message,
+          exception.message,
+        );
+        error = resolveExceptionError(exceptionResponse.error, status);
       } else {
         message = exception.message;
       }

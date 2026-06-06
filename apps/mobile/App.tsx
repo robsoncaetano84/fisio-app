@@ -30,6 +30,7 @@ import {
   loadRememberedLogin,
   saveRememberedLogin,
 } from "./src/services/rememberedLogin";
+import { parseApiError } from "./src/utils/apiErrors";
 
 const CRM_WEB_SESSION_FLAG = "crm:web:entry";
 
@@ -152,8 +153,8 @@ function WebCrmEntry() {
       writeCrmSessionFlag(true);
       await login({ identificador: normalizedEmail, senha });
       await persistRememberedCrmLogin(normalizedEmail);
-    } catch (e: any) {
-      setError(e?.response?.data?.message || "Falha no login");
+    } catch (error) {
+      setError(parseApiError(error).message || "Falha no login");
     }
   };
 
@@ -286,7 +287,7 @@ function AppRoot() {
         email: usuario.email,
         username: usuario.nome,
         role: usuario.role,
-      } as any);
+      });
       return;
     }
     Sentry.setUser(null);

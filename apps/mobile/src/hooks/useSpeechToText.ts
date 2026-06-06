@@ -3,27 +3,18 @@
 // USE SPEECH TO TEXT
 // ==========================================
 import { useEffect, useRef, useState } from "react";
-import { PermissionsAndroid, Platform } from "react-native";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+  type ExpoSpeechRecognitionErrorEvent,
+  type ExpoSpeechRecognitionResultEvent,
+} from "expo-speech-recognition";
 
 type UseSpeechToTextOptions = {
   enabled?: boolean;
   onResult?: (text: string) => void;
   onPartial?: (text: string) => void;
   onError?: (error: string) => void;
-};
-
-type SpeechResultsEvent = { value?: string[] };
-type SpeechErrorEvent = { error?: { message?: string } };
-type VoiceModule = {
-  onSpeechResults: ((event: SpeechResultsEvent) => void) | null;
-  onSpeechPartialResults: ((event: SpeechResultsEvent) => void) | null;
-  onSpeechError: ((event: SpeechErrorEvent) => void) | null;
-  onSpeechEnd: ((event?: unknown) => void) | null;
-  start: (locale: string) => Promise<void>;
-  stop: () => Promise<void>;
-  cancel: () => Promise<void>;
-  destroy: () => Promise<void>;
-  removeAllListeners: () => void;
 };
 
 export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
@@ -34,7 +25,6 @@ export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
   const onResultRef = useRef(onResult);
   const onPartialRef = useRef(onPartial);
   const onErrorRef = useRef(onError);
-  const voiceRef = useRef<VoiceModule | null>(null);
 
   useEffect(() => {
     onResultRef.current = onResult;
@@ -43,98 +33,61 @@ export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
   }, [onResult, onPartial, onError]);
 
   useEffect(() => {
+    setVoiceAvailable(ExpoSpeechRecognitionModule.isRecognitionAvailable());
+  }, [enabled]);
+
+  useSpeechRecognitionEvent("start", () => {
+    if (!enabled) return;
+    setIsRecording(true);
+  });
+
+  useSpeechRecognitionEvent("result", (event: ExpoSpeechRecognitionResultEvent) => {
+    if (!enabled) return;
+    const value = event.results[0]?.transcript?.trim() ?? "";
+    if (!value) return;
+
+    if (event.isFinal) {
+      setPartial("");
+      onResultRef.current?.(value);
+      return;
+    }
+
+    setPartial(value);
+    onPartialRef.current?.(value);
+  });
+
+  useSpeechRecognitionEvent("error", (event: ExpoSpeechRecognitionErrorEvent) => {
+    if (!enabled) return;
+    const message = event.message || "Erro ao reconhecer voz";
+    onErrorRef.current?.(message);
+    setIsRecording(false);
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    if (!enabled) return;
+    setIsRecording(false);
+    setPartial("");
+  });
+
+  const ensureSpeechPermission = async () => {
+    const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    return permission.granted;
+  };
+
+  const start = async (locale = "pt-BR") => {
     if (!enabled) {
       return;
     }
 
-    let mounted = true;
-
-    const handleResults = (event: SpeechResultsEvent) => {
-      const value = event.value?.join(" ").trim();
-      if (value) {
-        onResultRef.current?.(value);
-      }
-    };
-
-    const handlePartial = (event: SpeechResultsEvent) => {
-      const value = event.value?.join(" ").trim() ?? "";
-      setPartial(value);
-      if (value) {
-        onPartialRef.current?.(value);
-      }
-    };
-
-    const handleError = (event: SpeechErrorEvent) => {
-      const message = event.error?.message ?? "Erro ao reconhecer voz";
+    const available = ExpoSpeechRecognitionModule.isRecognitionAvailable();
+    setVoiceAvailable(available);
+    if (!available) {
+      const message = "Reconhecimento de voz indisponivel neste ambiente";
       onErrorRef.current?.(message);
-      setIsRecording(false);
-    };
-
-    const handleEnd = () => {
-      setIsRecording(false);
-      setPartial("");
-    };
-
-    const setup = async () => {
-      try {
-        const mod = await import("@react-native-voice/voice");
-        const Voice = (mod.default || mod) as unknown as VoiceModule;
-        if (!mounted) return;
-        voiceRef.current = Voice;
-        Voice.onSpeechResults = handleResults;
-        Voice.onSpeechPartialResults = handlePartial;
-        Voice.onSpeechError = handleError;
-        Voice.onSpeechEnd = handleEnd;
-        setVoiceAvailable(true);
-      } catch {
-        if (!mounted) return;
-        voiceRef.current = null;
-        setVoiceAvailable(false);
-        onErrorRef.current?.("Reconhecimento de voz indisponivel neste ambiente");
-      }
-    };
-
-    setup().catch(() => undefined);
-
-    return () => {
-      mounted = false;
-      const Voice = voiceRef.current;
-      if (!Voice) return;
-      try {
-        Voice.destroy().catch(() => undefined);
-      } catch {
-        // ignore runtime mismatch for native voice module
-      }
-      try {
-        Voice.removeAllListeners();
-      } catch {
-        // ignore runtime mismatch for native voice module
-      }
-    };
-  }, [enabled]);
-
-  const ensureMicPermission = async () => {
-    if (Platform.OS !== "android") {
-      return true;
+      throw new Error(message);
     }
 
-    const permission = PermissionsAndroid.PERMISSIONS.RECORD_AUDIO;
-    const alreadyGranted = await PermissionsAndroid.check(permission);
-    if (alreadyGranted) {
-      return true;
-    }
-
-    const result = await PermissionsAndroid.request(permission);
-    return result === PermissionsAndroid.RESULTS.GRANTED;
-  };
-
-  const start = async (locale = "pt-BR") => {
-    const Voice = voiceRef.current;
-    if (!enabled || !voiceAvailable || !Voice) {
-      return;
-    }
-
-    const hasPermission = await ensureMicPermission();
+    const hasPermission = await ensureSpeechPermission();
     if (!hasPermission) {
       const message = "Permissao de microfone negada";
       onErrorRef.current?.(message);
@@ -142,28 +95,30 @@ export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
     }
 
     setPartial("");
-    await Voice.start(locale);
+    ExpoSpeechRecognitionModule.start({
+      lang: locale,
+      interimResults: true,
+      continuous: false,
+    });
     setIsRecording(true);
   };
 
   const stop = async () => {
-    const Voice = voiceRef.current;
-    if (!enabled || !voiceAvailable || !Voice) {
+    if (!enabled || !voiceAvailable) {
       return;
     }
 
-    await Voice.stop();
+    ExpoSpeechRecognitionModule.stop();
     setIsRecording(false);
     setPartial("");
   };
 
   const cancel = async () => {
-    const Voice = voiceRef.current;
-    if (!enabled || !voiceAvailable || !Voice) {
+    if (!enabled || !voiceAvailable) {
       return;
     }
 
-    await Voice.cancel();
+    ExpoSpeechRecognitionModule.abort();
     setIsRecording(false);
     setPartial("");
   };

@@ -1,3 +1,6 @@
+import type { CrmLeadStage } from "../../services/crm";
+import type { AccountHealthStatus } from "./AdminCrmScreen.models";
+
 export type TabKey =
   | "PROFISSIONAIS"
   | "PACIENTES"
@@ -19,6 +22,14 @@ export type TaskBucket =
   | "HOJE"
   | "PROXIMAS"
   | "CONCLUIDAS";
+
+export type CrmLeadStageFilter = CrmLeadStage | "TODOS";
+export type ProfActiveFilter = "TODOS" | "ATIVOS";
+export type ProfAccountStatusFilter = "TODOS" | AccountHealthStatus;
+export type ProfEmotionalConcentrationFilter = "TODOS" | "ALTA";
+export type PacLinkFilter = "TODOS" | "VINCULADOS" | "SEM_USUARIO";
+export type PacStatusFilter = "TODOS" | "ATIVO" | "RISCO";
+export type PacEmotionalFilter = "TODOS" | "EMOCIONAL";
 
 export type ClinicalPipelineStatusFilter =
   | "TODOS"

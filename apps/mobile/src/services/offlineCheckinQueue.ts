@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "./api";
 import { recordAuditAction } from "./auditTrail";
 import { recordSyncMetric } from "./opsMetrics";
+import { isJsonRecord, parseJsonArray } from "../utils/safeJson";
 
 const STORAGE_KEY = "offline:checkins:v1";
 
@@ -33,17 +34,40 @@ type PendingCheckin = {
 const MAX_QUEUE_ITEMS = 200;
 const MAX_ITEM_AGE_HOURS = 72;
 
+const isCheckinPayload = (value: unknown): value is CheckinPayload => {
+  if (!isJsonRecord(value)) return false;
+  return (
+    typeof value.concluiu === "boolean" &&
+    (value.dorAntes === null || typeof value.dorAntes === "number") &&
+    (value.dorDepois === null || typeof value.dorDepois === "number") &&
+    (value.tempoMinutos === null || typeof value.tempoMinutos === "number") &&
+    (value.dificuldade === null || typeof value.dificuldade === "string") &&
+    (value.melhoriaSessao === null ||
+      typeof value.melhoriaSessao === "string") &&
+    (value.melhoriaDescricao === null ||
+      typeof value.melhoriaDescricao === "string") &&
+    (value.motivoNaoExecucao === null ||
+      typeof value.motivoNaoExecucao === "string") &&
+    (value.feedbackLivre === null ||
+      typeof value.feedbackLivre === "string")
+  );
+};
+
 const parseQueue = (raw: string | null): PendingCheckin[] => {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as Array<
-      PendingCheckin & {
-        retryCount?: number;
-        nextRetryAt?: string | null;
-      }
-    >;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((item) => ({
+  return parseJsonArray<PendingCheckin & {
+    retryCount?: number;
+    nextRetryAt?: string | null;
+  }>(raw)
+    .filter((item) => {
+      if (!isJsonRecord(item)) return false;
+      return (
+        typeof item.id === "string" &&
+        typeof item.atividadeId === "string" &&
+        typeof item.createdAt === "string" &&
+        isCheckinPayload(item.payload)
+      );
+    })
+    .map((item) => ({
       ...item,
       retryCount: Number.isFinite(item.retryCount) ? Number(item.retryCount) : 0,
       nextRetryAt:
@@ -51,9 +75,6 @@ const parseQueue = (raw: string | null): PendingCheckin[] => {
           ? item.nextRetryAt
           : null,
     }));
-  } catch {
-    return [];
-  }
 };
 
 const persistQueue = async (queue: PendingCheckin[]) => {

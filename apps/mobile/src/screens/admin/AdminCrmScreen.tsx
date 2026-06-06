@@ -90,6 +90,13 @@ import { useAdminCrmAnalytics } from "./AdminCrmScreen.analytics";
 import type {
   AdminCrmScreenProps,
   ClinicalPipelineStatusFilter,
+  CrmLeadStageFilter,
+  PacEmotionalFilter,
+  PacLinkFilter,
+  PacStatusFilter,
+  ProfAccountStatusFilter,
+  ProfActiveFilter,
+  ProfEmotionalConcentrationFilter,
   TabKey,
   TaskBucket,
 } from "./AdminCrmScreen.types";
@@ -109,9 +116,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     setTab(initialTab);
   }, [route?.params?.initialTab]);
   const [query, setQuery] = useState("");
-  const [stageFilter, setStageFilter] = useState<CrmLeadStage | "TODOS">(
-    "TODOS",
-  );
+  const [stageFilter, setStageFilter] =
+    useState<CrmLeadStageFilter>("TODOS");
   const [includeSensitiveData, setIncludeSensitiveData] = useState(false);
   const [sensitiveReason, setSensitiveReason] = useState("");
   const tabs = useMemo<Array<{ key: TabKey; label: string }>>(
@@ -162,25 +168,20 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     key: "nome",
     dir: "asc",
   });
-  const [profActiveFilter, setProfActiveFilter] = useState<"TODOS" | "ATIVOS">(
-    "ATIVOS",
-  );
-  const [profAccountStatusFilter, setProfAccountStatusFilter] = useState<
-    "TODOS" | "HEALTHY" | "ATTENTION" | "RISK"
-  >("TODOS");
+  const [profActiveFilter, setProfActiveFilter] =
+    useState<ProfActiveFilter>("ATIVOS");
+  const [profAccountStatusFilter, setProfAccountStatusFilter] =
+    useState<ProfAccountStatusFilter>("TODOS");
   const [
     profEmotionalConcentrationFilter,
     setProfEmotionalConcentrationFilter,
-  ] = useState<"TODOS" | "ALTA">("TODOS");
-  const [pacLinkFilter, setPacLinkFilter] = useState<
-    "TODOS" | "VINCULADOS" | "SEM_USUARIO"
-  >("TODOS");
-  const [pacStatusFilter, setPacStatusFilter] = useState<
-    "TODOS" | "ATIVO" | "RISCO"
-  >("TODOS");
-  const [pacEmotionalFilter, setPacEmotionalFilter] = useState<
-    "TODOS" | "EMOCIONAL"
-  >("TODOS");
+  ] = useState<ProfEmotionalConcentrationFilter>("TODOS");
+  const [pacLinkFilter, setPacLinkFilter] =
+    useState<PacLinkFilter>("TODOS");
+  const [pacStatusFilter, setPacStatusFilter] =
+    useState<PacStatusFilter>("TODOS");
+  const [pacEmotionalFilter, setPacEmotionalFilter] =
+    useState<PacEmotionalFilter>("TODOS");
   const [profEspecialidadeFilter, setProfEspecialidadeFilter] = useState("");
   const [pacCidadeFilter, setPacCidadeFilter] = useState("");
   const [pacUfFilter, setPacUfFilter] = useState("");

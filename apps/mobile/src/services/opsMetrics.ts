@@ -3,6 +3,7 @@
 // OPS METRICS
 // ==========================================
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { isJsonRecord, parseJsonArray } from "../utils/safeJson";
 
 const STORAGE_KEY = "ops:metrics:v1";
 const MAX_ENTRIES = 1500;
@@ -25,15 +26,25 @@ type SyncMetricEntry = {
 
 type MetricEntry = ApiMetricEntry | SyncMetricEntry;
 
-const parseEntries = (raw: string | null): MetricEntry[] => {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as MetricEntry[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+const isMetricEntry = (value: unknown): value is MetricEntry => {
+  if (!isJsonRecord(value) || typeof value.at !== "string") return false;
+  if (value.type === "API") {
+    return (
+      typeof value.durationMs === "number" &&
+      typeof value.ok === "boolean" &&
+      (value.statusCode === undefined ||
+        value.statusCode === null ||
+        typeof value.statusCode === "number")
+    );
   }
+  if (value.type === "SYNC") {
+    return typeof value.synced === "number" && typeof value.remaining === "number";
+  }
+  return false;
 };
+
+const parseEntries = (raw: string | null): MetricEntry[] =>
+  parseJsonArray<unknown>(raw).filter(isMetricEntry).slice(0, MAX_ENTRIES);
 
 const saveEntries = async (entries: MetricEntry[]) => {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));

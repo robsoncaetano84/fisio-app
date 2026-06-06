@@ -1,4 +1,5 @@
 import { UserRole } from '../usuarios/entities/usuario.entity';
+import { isRecord, parseJsonObject } from '../../common/safe-json';
 
 export interface AuthFeatureFlagsResponse {
   speechToText: boolean;
@@ -29,15 +30,30 @@ export function parseFeatureFlagsByEmailConfig(
 ): Record<string, Partial<AuthFeatureFlagsResponse>> {
   const normalized = (raw || '').trim();
   if (!normalized) return {};
-  try {
-    const parsed = JSON.parse(normalized) as Record<
-      string,
-      Partial<AuthFeatureFlagsResponse>
-    >;
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
+  const parsed = parseJsonObject(normalized);
+  if (!parsed) return {};
+  return Object.entries(parsed).reduce<
+    Record<string, Partial<AuthFeatureFlagsResponse>>
+  >((acc, [emailKey, value]) => {
+    const email = emailKey.trim().toLowerCase();
+    if (!email || !isRecord(value)) return acc;
+    const override: Partial<AuthFeatureFlagsResponse> = {};
+    if (typeof value.speechToText === 'boolean') {
+      override.speechToText = value.speechToText;
+    }
+    if (typeof value.requireAiSuggestionConfirmation === 'boolean') {
+      override.requireAiSuggestionConfirmation =
+        value.requireAiSuggestionConfirmation;
+    }
+    if (typeof value.crmAdminWeb === 'boolean') {
+      override.crmAdminWeb = value.crmAdminWeb;
+    }
+    if (typeof value.clinicalOrchestrator === 'boolean') {
+      override.clinicalOrchestrator = value.clinicalOrchestrator;
+    }
+    if (Object.keys(override).length > 0) acc[email] = override;
+    return acc;
+  }, {});
 }
 
 export function buildAuthFeatureFlags(

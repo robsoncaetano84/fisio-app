@@ -94,6 +94,52 @@ const normalizeNoInfoText = (value?: string | null) => {
   return isNoInfoText(parsed) ? "" : parsed;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const cloneWithNestedStringValue = (
+  source: unknown,
+  segments: string[],
+  index: number,
+  value: string,
+): unknown => {
+  const key = segments[index];
+  if (!key) return value;
+
+  const base = isRecord(source) ? source : {};
+  return {
+    ...base,
+    [key]:
+      index === segments.length - 1
+        ? value
+        : cloneWithNestedStringValue(base[key], segments, index + 1, value),
+  };
+};
+
+export const setNestedStringValue = <T extends object>(
+  source: T,
+  path: string,
+  value: string,
+): T => {
+  const segments = path.split(".").filter(Boolean);
+  if (!segments.length) return source;
+  return cloneWithNestedStringValue(source, segments, 0, value) as T;
+};
+
+export const getNestedStringValue = (source: unknown, path: string): string => {
+  const segments = path.split(".").filter(Boolean);
+  let current: unknown = source;
+
+  for (const segment of segments) {
+    if (!isRecord(current)) return "";
+    current = current[segment];
+  }
+
+  if (typeof current === "string") return current;
+  if (current === null || current === undefined) return "";
+  return String(current);
+};
+
 export const resolveInputSuggestionPresentation = (
   fieldKey: string,
   baseLabel: string,

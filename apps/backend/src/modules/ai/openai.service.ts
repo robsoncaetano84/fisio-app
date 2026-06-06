@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { parseJsonObject } from '../../common/safe-json';
 
 type OpenAiUserContent = string | Array<Record<string, unknown>>;
 
@@ -170,13 +171,6 @@ export class OpenAiService {
     const end = withoutFence.lastIndexOf('}');
     if (start === -1 || end === -1 || end <= start) return null;
 
-    try {
-      return JSON.parse(withoutFence.slice(start, end + 1)) as Record<
-        string,
-        unknown
-      >;
-    } catch {
-      return null;
-    }
+    return parseJsonObject(withoutFence.slice(start, end + 1));
   }
 }

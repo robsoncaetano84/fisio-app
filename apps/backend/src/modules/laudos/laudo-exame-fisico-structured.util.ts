@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { parseJsonObject } from '../../common/safe-json';
 
 export const STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V2__';
 export const LEGACY_STRUCTURED_EXAME_PREFIX = '__EXAME_FISICO_STRUCTURED_V1__';
@@ -126,7 +127,7 @@ export type StructuredExameData = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function cleanText(value?: unknown): string {
@@ -612,13 +613,8 @@ export function parseStructuredExame(
   if (!prefix) return null;
   const json = raw.slice(prefix.length);
   if (!json) return null;
-  try {
-    const parsed: unknown = JSON.parse(json);
-    if (!isRecord(parsed)) return null;
-    return parsed as StructuredExameData;
-  } catch {
-    return null;
-  }
+  const parsed = parseJsonObject(json);
+  return parsed ? (parsed as StructuredExameData) : null;
 }
 
 export function validateStructuredExameInput(value?: string | null): void {

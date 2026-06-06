@@ -299,10 +299,19 @@ export class ClinicalGovernanceService {
       { reads: number; applied: number; confirmed: number }
     >();
 
-    const resolveStage = (value?: string | null): StageKey => {
-      const normalized = String(value || '')
-        .trim()
-        .toUpperCase();
+    const toMetadataString = (value: unknown) => {
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      ) {
+        return String(value);
+      }
+      return '';
+    };
+
+    const resolveStage = (value: unknown): StageKey => {
+      const normalized = toMetadataString(value).trim().toUpperCase();
       if (normalized === 'EXAME_FISICO') return 'EXAME_FISICO';
       if (normalized === 'EVOLUCAO') return 'EVOLUCAO';
       if (normalized === 'LAUDO') return 'LAUDO';
@@ -313,8 +322,8 @@ export class ClinicalGovernanceService {
     for (const row of rows) {
       const metadata = row.metadata || {};
       const stage = resolveStage(metadata.stage);
-      const suggestionType = String(
-        metadata.suggestionType || '',
+      const suggestionType = toMetadataString(
+        metadata.suggestionType,
       ).toUpperCase();
       const isRead = row.action === 'orchestrator.ai_suggestion.read';
       const isConfirmed =
@@ -408,7 +417,7 @@ export class ClinicalGovernanceService {
     resourceType?: string | null;
     resourceId?: string | null;
     patientId?: string | null;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     try {
       const row = this.auditRepository.create({

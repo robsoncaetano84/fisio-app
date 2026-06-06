@@ -1,3 +1,5 @@
+import { parseJsonObject } from '../../common/safe-json';
+
 export type CrmAdminPermission =
   | 'dashboard.read'
   | 'crm.read'
@@ -19,12 +21,11 @@ export function parseCrmAdminPermissionsConfig(
   const raw = String(rawConfig || '').trim();
   if (!raw) return new Map();
 
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const parsed = parseJsonObject(raw);
+  if (parsed) {
     return parseJsonPermissions(parsed);
-  } catch {
-    return parsePairsPermissions(raw);
   }
+  return parsePairsPermissions(raw);
 }
 
 export function resolveCrmAdminPermissions(args: {

@@ -19,5 +19,5 @@ export class ActivateProtocolDto {
 
   @IsOptional()
   @IsObject()
-  definition?: Record<string, any>;
+  definition?: Record<string, unknown>;
 }

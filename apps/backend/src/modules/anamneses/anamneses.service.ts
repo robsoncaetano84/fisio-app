@@ -269,8 +269,7 @@ export class AnamnesesService {
   }
 
   private buildSnapshotPayload(anamnese: Anamnese): Record<string, unknown> {
-    const { id, pacienteId, createdAt, updatedAt, ...campos } =
-      anamnese as unknown as Record<string, unknown>;
+    const { id, pacienteId, createdAt, updatedAt, ...campos } = anamnese;
 
     return {
       anamneseId: id,

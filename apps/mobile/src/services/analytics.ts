@@ -4,6 +4,7 @@
 // ==========================================
 import { api, getCorrelationId } from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { isJsonRecord, parseJsonArray } from "../utils/safeJson";
 
 export type AnalyticsEventName =
   | "session_started"
@@ -213,15 +214,18 @@ const sanitizePayload = (payload: AnalyticsPayload): AnalyticsPayload => {
   return sanitized;
 };
 
-const parseStoredEvents = (raw: string | null): StoredAnalyticsEvent[] => {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as StoredAnalyticsEvent[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
+const parseStoredEvents = (raw: string | null): StoredAnalyticsEvent[] =>
+  parseJsonArray<unknown>(raw)
+    .filter((entry): entry is StoredAnalyticsEvent => {
+      if (!isJsonRecord(entry) || !isJsonRecord(entry.payload)) return false;
+      return (
+        typeof entry.event === "string" &&
+        typeof entry.at === "string" &&
+        typeof entry.payload.correlationId === "string" &&
+        entry.payload.eventVersion === 1
+      );
+    })
+    .slice(0, ANALYTICS_MAX_EVENTS);
 
 const persistEvent = async (entry: StoredAnalyticsEvent): Promise<void> => {
   const current = parseStoredEvents(await AsyncStorage.getItem(ANALYTICS_STORAGE_KEY));
@@ -240,13 +244,6 @@ export async function trackEvent(
       correlationId: getCorrelationId(),
       eventVersion: 1,
     };
-
-    if (__DEV__) {
-      console.log("[analytics]", event, {
-        correlationId: envelope.correlationId,
-        eventVersion: envelope.eventVersion,
-      });
-    }
 
     await persistEvent({
       event,
@@ -610,5 +607,3 @@ async function getLocalClinicalFlowSummary(
     eventsByStage,
   };
 }
-
-

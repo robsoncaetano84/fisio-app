@@ -11,7 +11,12 @@ import type {
   CrmTask,
 } from "../../services/crm";
 import { createEmptyTaskForm } from "./AdminCrmScreen.constants";
-import type { CrmAutomationItem, TabKey } from "./AdminCrmScreen.types";
+import type {
+  CrmAutomationItem,
+  PacLinkFilter,
+  PacStatusFilter,
+  TabKey,
+} from "./AdminCrmScreen.types";
 import type {
   AccountHealthScore,
   CrmAutomationHistoryItem,
@@ -28,10 +33,8 @@ type AutomationItemsParams = {
   clinicalSummary: CrmClinicalDashboardSummary | null;
   stageLabel: Record<CrmLeadStage, string>;
   setTab: Dispatch<SetStateAction<TabKey>>;
-  setPacStatusFilter: Dispatch<SetStateAction<"TODOS" | "ATIVO" | "RISCO">>;
-  setPacLinkFilter: Dispatch<
-    SetStateAction<"TODOS" | "VINCULADOS" | "SEM_USUARIO">
-  >;
+  setPacStatusFilter: Dispatch<SetStateAction<PacStatusFilter>>;
+  setPacLinkFilter: Dispatch<SetStateAction<PacLinkFilter>>;
   setSelectedLeadId: Dispatch<SetStateAction<string>>;
   setSelectedProfId: Dispatch<SetStateAction<string>>;
   setTaskForm: Dispatch<SetStateAction<ReturnType<typeof createEmptyTaskForm>>>;

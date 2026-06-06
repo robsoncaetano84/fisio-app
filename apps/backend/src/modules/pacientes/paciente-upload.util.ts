@@ -96,12 +96,7 @@ export function exameFileFilter(
     (!expectedMime || mimeType === expectedMime);
   const isExtensionAllowed = ALLOWED_EXTENSIONS.has(extension);
   if (!isMimeAllowed && !isExtensionAllowed) {
-    return cb(
-      new BadRequestException(
-        'Tipo de arquivo nao suportado',
-      ) as unknown as Error,
-      false,
-    );
+    return cb(new BadRequestException('Tipo de arquivo nao suportado'), false);
   }
   cb(null, true);
 }
@@ -121,12 +116,7 @@ export function clinicalPhotoFileFilter(
     ALLOWED_MIME_TYPES.has(mimeType) &&
     (!expectedMime || mimeType === expectedMime);
   if (!isImageExtensionAllowed || !isMimeAllowed) {
-    return cb(
-      new BadRequestException(
-        'Envie apenas imagem clinica',
-      ) as unknown as Error,
-      false,
-    );
+    return cb(new BadRequestException('Envie apenas imagem clinica'), false);
   }
   cb(null, true);
 }

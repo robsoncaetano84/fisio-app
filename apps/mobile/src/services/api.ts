@@ -9,14 +9,10 @@ import { APP_CONFIG } from "../constants/theme";
 import { APP_VERSION_LABEL } from "../constants/version";
 import { recordApiMetric } from "./opsMetrics";
 
-const defaultBaseUrl = Platform.select({
-  android: "http://192.168.2.100:3000/api",
-  ios: "http://localhost:3000/api",
-  default: "http://localhost:3000/api",
-});
+const LOCAL_API_URL = "http://localhost:3000/api";
 
 const baseURL =
-  (process.env.EXPO_PUBLIC_API_URL || "").trim() || defaultBaseUrl;
+  (process.env.EXPO_PUBLIC_API_URL || "").trim() || LOCAL_API_URL;
 
 const isAndroidEmulator = (() => {
   if (Platform.OS !== "android") return false;
@@ -37,8 +33,7 @@ const normalizeBaseUrlForAndroidEmulator = (url: string) => {
     .replace("http://localhost:", "http://10.0.2.2:")
     .replace("https://localhost:", "https://10.0.2.2:")
     .replace("http://127.0.0.1:", "http://10.0.2.2:")
-    .replace("https://127.0.0.1:", "https://10.0.2.2:")
-    .replace("http://192.168.2.100:", "http://10.0.2.2:");
+    .replace("https://127.0.0.1:", "https://10.0.2.2:");
 };
 
 const resolvedBaseURL = normalizeBaseUrlForAndroidEmulator(baseURL);

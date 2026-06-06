@@ -54,6 +54,7 @@ import {
   CondutaStatus,
 } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
+import { parseJsonObject } from "../../utils/safeJson";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
   CLINICAL_REGION_LABELS,
@@ -680,7 +681,7 @@ export function EvolucaoFormScreen({
           setDraftLoaded(true);
           return;
         }
-        const draft = JSON.parse(raw) as {
+        const draft = parseJsonObject<{
           subjetivo?: string;
           objetivo?: string;
           avaliacao?: string;
@@ -694,7 +695,8 @@ export function EvolucaoFormScreen({
           checkinObservacao?: string;
           observacoes?: string;
           lastEditedAt?: string;
-        };
+        }>(raw);
+        if (!draft) return;
         if (draft.subjetivo || draft.listagens)
           setSubjetivo(draft.subjetivo ?? draft.listagens ?? "");
         if (draft.objetivo || draft.legCheck)

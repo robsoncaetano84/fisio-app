@@ -264,7 +264,6 @@ export function EvolucaoListScreen({
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmptyList}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={140}
           removeClippedSubviews
         />
       )}

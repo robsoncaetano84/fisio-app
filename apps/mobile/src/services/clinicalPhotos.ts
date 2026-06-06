@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { api } from "./api";
+import { createNativeUploadFile } from "../utils/formDataUpload";
 
 export type ClinicalPhotoType =
   | "FOTO_POSTURAL_FRONTAL"
@@ -130,11 +131,14 @@ export const uploadClinicalPhoto = async (
       formData.append("file", blob, fileName);
     }
   } else {
-    formData.append("file", {
-      uri: asset.uri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
+    formData.append(
+      "file",
+      createNativeUploadFile({
+        uri: asset.uri,
+        name: fileName,
+        type: mimeType,
+      }),
+    );
   }
 
   formData.append("tipo", metadata.tipo);
