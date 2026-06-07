@@ -47,6 +47,19 @@ describe('CrmController sensitive access', () => {
         totalPages: 1,
         sync: { synced: 0, created: 0, refreshed: 0 },
       }),
+      getAutomationMetrics: jest.fn().mockResolvedValue({
+        windowDays: 30,
+        generatedAt: '2026-06-07T00:00:00.000Z',
+        totals: {
+          openActions: 0,
+          overdueOpenActions: 0,
+          resolvedActions: 0,
+          dismissedActions: 0,
+          avgResolutionHours: 0,
+        },
+        byType: [],
+        bottlenecks: { byProfessional: [], byPatient: [] },
+      }),
       updateAutomationAction: jest.fn().mockResolvedValue({ id: 'auto-1' }),
     } as any;
 
@@ -140,6 +153,21 @@ describe('CrmController sensitive access', () => {
       usuario,
       expect.objectContaining({ refresh: true, status: 'ABERTAS', limit: 8 }),
     );
+  });
+
+  it('returns automation metrics with dashboard permission', async () => {
+    const { controller, crmService } = createController(['dashboard.read']);
+    const usuario = makeUsuario();
+
+    await expect(
+      controller.getAutomationMetrics(usuario, '45'),
+    ).resolves.toMatchObject({
+      totals: expect.objectContaining({ openActions: 0 }),
+    });
+
+    expect(crmService.getAutomationMetrics).toHaveBeenCalledWith({
+      windowDays: 45,
+    });
   });
 
   it('blocks automation update without crm.write permission', async () => {

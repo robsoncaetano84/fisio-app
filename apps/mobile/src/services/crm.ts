@@ -118,11 +118,19 @@ export type CrmAutomationActionStatus =
   | "DISMISSED";
 
 export type CrmAutomationHistoryEvent = {
-  type: "CREATED" | "SEEN" | "STATUS_CHANGED" | "SLA_CHANGED" | "NOTE_ADDED";
+  type:
+    | "CREATED"
+    | "SEEN"
+    | "STATUS_CHANGED"
+    | "SLA_CHANGED"
+    | "ASSIGNED"
+    | "NOTE_ADDED";
   at: string;
   actorUsuarioId?: string | null;
   fromStatus?: CrmAutomationActionStatus | null;
   toStatus?: CrmAutomationActionStatus | null;
+  fromResponsavelUsuarioId?: string | null;
+  toResponsavelUsuarioId?: string | null;
   note?: string | null;
   metadata?: Record<string, unknown> | null;
 };
@@ -157,6 +165,40 @@ export type CrmAutomationActionsResponse =
       refreshed: number;
     };
   };
+
+export type CrmAutomationMetricsResponse = {
+  windowDays: number;
+  generatedAt: string;
+  totals: {
+    openActions: number;
+    overdueOpenActions: number;
+    resolvedActions: number;
+    dismissedActions: number;
+    avgResolutionHours: number;
+  };
+  byType: Array<{
+    type: CrmCommandCenterActionType;
+    opened: number;
+    overdue: number;
+    resolved: number;
+    dismissed: number;
+    resolutionRate: number;
+  }>;
+  bottlenecks: {
+    byProfessional: Array<{
+      id: string | null;
+      nome: string;
+      open: number;
+      overdue: number;
+    }>;
+    byPatient: Array<{
+      id: string | null;
+      nome: string;
+      open: number;
+      overdue: number;
+    }>;
+  };
+};
 
 export type CrmClinicalDashboardSummary = {
   pipeline: {
@@ -438,12 +480,23 @@ export async function getCrmAutomationActions(params?: {
   return response.data;
 }
 
+export async function getCrmAutomationMetrics(params?: {
+  windowDays?: number;
+}): Promise<CrmAutomationMetricsResponse> {
+  const response = await api.get<CrmAutomationMetricsResponse>(
+    "/crm/automations/metrics",
+    { params },
+  );
+  return response.data;
+}
+
 export async function updateCrmAutomationAction(
   id: string,
   payload: Partial<{
     status: CrmAutomationActionStatus;
     slaDueAt: string;
     note: string;
+    responsavelUsuarioId: string | null;
   }>,
 ): Promise<CrmAutomationAction> {
   const response = await api.patch<CrmAutomationAction>(

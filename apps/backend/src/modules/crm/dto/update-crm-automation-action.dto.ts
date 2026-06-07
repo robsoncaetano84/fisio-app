@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { CrmAutomationStatus } from '../entities/crm-automation-action.entity';
@@ -22,4 +23,8 @@ export class UpdateCrmAutomationActionDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @IsOptional()
+  @IsUUID()
+  responsavelUsuarioId?: string | null;
 }

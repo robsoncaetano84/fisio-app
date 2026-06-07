@@ -32,6 +32,7 @@ describe('crm command center util', () => {
         {
           id: 'patient-risk',
           nomeCompleto: 'Paciente em risco',
+          professionalId: 'professional-igor',
           profissionalNome: 'Igor',
           createdAt: daysAgo(30),
           hasAnamnese: true,
@@ -44,6 +45,7 @@ describe('crm command center util', () => {
         {
           id: 'patient-anamnese',
           nomeCompleto: 'Paciente sem anamnese',
+          professionalId: 'professional-igor',
           profissionalNome: 'Igor',
           createdAt: daysAgo(8),
           hasAnamnese: false,
@@ -54,6 +56,7 @@ describe('crm command center util', () => {
         {
           id: 'patient-invite',
           nomeCompleto: 'Paciente sem app',
+          professionalId: 'professional-igor',
           profissionalNome: 'Igor',
           createdAt: daysAgo(20),
           hasAnamnese: true,
@@ -100,6 +103,14 @@ describe('crm command center util', () => {
     expect(
       summary.nextActions.slice(0, 6).every((item) => item.severity === 'HIGH'),
     ).toBe(true);
+    expect(
+      summary.nextActions.find((item) => item.type === 'PATIENT_NO_EVOLUTION'),
+    ).toMatchObject({
+      metadata: {
+        professionalId: 'professional-igor',
+        responsavelUsuarioId: 'professional-igor',
+      },
+    });
   });
 
   it('does not raise clinical follow-up for concluded treatment', () => {

@@ -463,4 +463,27 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     padding: 12,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(17, 24, 39, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.base,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 760,
+    maxHeight: "88%",
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.gray100,
+    padding: Platform.OS === "web" ? SPACING.lg : SPACING.base,
+  },
+  modalActionsGrid: {
+    marginTop: SPACING.base,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
 });

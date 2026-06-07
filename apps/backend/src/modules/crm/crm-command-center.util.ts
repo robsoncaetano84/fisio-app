@@ -34,6 +34,7 @@ export type CrmCommandCenterTaskSignal = {
   dueAt: Date | string | null;
   leadId?: string | null;
   responsavelNome?: string | null;
+  responsavelUsuarioId?: string | null;
 };
 
 export type CrmCommandCenterLeadSignal = {
@@ -42,11 +43,13 @@ export type CrmCommandCenterLeadSignal = {
   stage: string;
   updatedAt: Date | string;
   responsavelNome?: string | null;
+  responsavelUsuarioId?: string | null;
 };
 
 export type CrmCommandCenterPatientSignal = {
   id: string;
   nomeCompleto: string;
+  professionalId?: string | null;
   profissionalNome?: string | null;
   createdAt: Date | string;
   hasAnamnese: boolean;
@@ -154,8 +157,10 @@ export function buildCrmCommandCenterSummary(
         targetId: task.id,
         occurredAt: task.dueAt,
         metadata: {
+          taskTitulo: task.titulo,
           leadId: task.leadId || null,
           responsavelNome: task.responsavelNome || null,
+          responsavelUsuarioId: task.responsavelUsuarioId || null,
         },
       };
     },
@@ -182,8 +187,10 @@ export function buildCrmCommandCenterSummary(
         targetId: lead.id,
         occurredAt: lead.updatedAt,
         metadata: {
+          leadNome: lead.nome,
           stage: lead.stage,
           responsavelNome: lead.responsavelNome || null,
+          responsavelUsuarioId: lead.responsavelUsuarioId || null,
         },
       };
     },
@@ -209,7 +216,10 @@ export function buildCrmCommandCenterSummary(
         targetId: patient.id,
         occurredAt: patient.createdAt,
         metadata: {
+          pacienteNome: patient.nomeCompleto,
+          professionalId: patient.professionalId || null,
           profissionalNome: patient.profissionalNome || null,
+          responsavelUsuarioId: patient.professionalId || null,
         },
       };
     });
@@ -233,7 +243,10 @@ export function buildCrmCommandCenterSummary(
         targetId: patient.id,
         occurredAt: patient.lastEvolucaoAt || patient.createdAt,
         metadata: {
+          pacienteNome: patient.nomeCompleto,
+          professionalId: patient.professionalId || null,
           profissionalNome: patient.profissionalNome || null,
+          responsavelUsuarioId: patient.professionalId || null,
           semEvolucaoDias: params.semEvolucaoDias,
         },
       };
@@ -260,7 +273,10 @@ export function buildCrmCommandCenterSummary(
         targetId: patient.id,
         occurredAt: patient.lastCheckinAt || patient.createdAt,
         metadata: {
+          pacienteNome: patient.nomeCompleto,
+          professionalId: patient.professionalId || null,
           profissionalNome: patient.profissionalNome || null,
+          responsavelUsuarioId: patient.professionalId || null,
           windowDays: params.windowDays,
         },
       };
@@ -285,7 +301,10 @@ export function buildCrmCommandCenterSummary(
         targetId: patient.id,
         occurredAt: patient.conviteEnviadoEm || patient.createdAt,
         metadata: {
+          pacienteNome: patient.nomeCompleto,
+          professionalId: patient.professionalId || null,
           profissionalNome: patient.profissionalNome || null,
+          responsavelUsuarioId: patient.professionalId || null,
         },
       };
     },
@@ -317,6 +336,8 @@ export function buildCrmCommandCenterSummary(
         targetId: prof.id,
         occurredAt: prof.lastPacienteUpdate || null,
         metadata: {
+          professionalId: prof.id,
+          profissionalNome: prof.nome,
           pacientesTotal: prof.pacientesTotal,
           pacientesAtivos: prof.pacientesAtivos,
         },

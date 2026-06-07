@@ -12,6 +12,7 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 import { parseApiError } from "../../utils/apiErrors";
 import type {
   CrmAutomationAction,
+  CrmCommandCenterActionType,
   CrmCommandCenterItem,
   CrmInteractionType,
   CrmLeadStage,
@@ -190,6 +191,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const [examConfidenceFilter, setExamConfidenceFilter] =
     useState<ExamConfidenceFilter>("TODOS");
   const [taskBucketFilter, setTaskBucketFilter] = useState<TaskBucket>("TODAS");
+  const [automationTypeFilter, setAutomationTypeFilter] = useState<
+    CrmCommandCenterActionType | "TODAS"
+  >("TODAS");
   const [profDetailTab, setProfDetailTab] = useState<"RESUMO" | "PACIENTES">(
     "RESUMO",
   );
@@ -285,6 +289,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     pipeline,
     commandCenter,
     automationActions,
+    automationMetrics,
     clinicalSummary,
     physicalExamSummary,
     crmProfessionals,
@@ -308,6 +313,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     profEspecialidadeFilter,
     pacCidadeFilter,
     pacUfFilter,
+    automationTypeFilter,
     includeSensitiveData,
     sensitiveReason,
     windowDays,
@@ -476,16 +482,19 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const handleCommandCenterAction = useCallback(
     (item: Pick<CrmCommandCenterItem, "type" | "targetId">) => {
       if (item.type === "TASK_OVERDUE") {
+        setAutomationTypeFilter("TASK_OVERDUE");
         setTaskBucketFilter("ATRASADAS");
         setTab("TAREFAS");
         return;
       }
       if (item.type === "LEAD_STALE") {
+        setAutomationTypeFilter("LEAD_STALE");
         setSelectedLeadId(item.targetId);
         setTab("LEADS");
         return;
       }
       if (item.type === "PENDING_INVITE") {
+        setAutomationTypeFilter("PENDING_INVITE");
         setSelectedPacId(item.targetId);
         setPacLinkFilter("SEM_USUARIO");
         setPacDetailTab("VINCULO");
@@ -497,6 +506,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         item.type === "PATIENT_NO_CHECKIN" ||
         item.type === "PENDING_ANAMNESIS"
       ) {
+        setAutomationTypeFilter(item.type);
         setSelectedPacId(item.targetId);
         setPacStatusFilter("RISCO");
         setTab("PACIENTES");
@@ -512,21 +522,31 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   );
 
   const handleAutomationStatusChange = useCallback(
-    async (item: CrmAutomationAction, status: "DONE" | "DISMISSED") => {
+    async (
+      item: CrmAutomationAction,
+      status: "DONE" | "DISMISSED" | "SNOOZED",
+      options?: { slaDueAt?: string; note?: string },
+    ) => {
       try {
         await updateCrmAutomationAction(item.id, {
           status,
+          slaDueAt: options?.slaDueAt,
           note:
-            status === "DONE"
+            options?.note ||
+            (status === "DONE"
               ? "Concluida pelo dashboard CRM"
-              : "Dispensada pelo dashboard CRM",
+              : status === "SNOOZED"
+                ? "Adiada pelo dashboard CRM"
+                : "Dispensada pelo dashboard CRM"),
         });
         showToast({
           type: "success",
           message:
             status === "DONE"
               ? "Automação concluída."
-              : "Automação dispensada.",
+              : status === "SNOOZED"
+                ? "Automação adiada."
+                : "Automação dispensada.",
         });
         await loadMain();
       } catch (error) {
@@ -538,6 +558,41 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       }
     },
     [loadMain, showToast],
+  );
+
+  const handleAutomationSnooze = useCallback(
+    async (item: CrmAutomationAction, hours: number) => {
+      const nextSla = new Date(Date.now() + hours * 60 * 60 * 1000);
+      await handleAutomationStatusChange(item, "SNOOZED", {
+        slaDueAt: nextSla.toISOString(),
+        note: `Adiada por ${hours}h pelo dashboard CRM`,
+      });
+    },
+    [handleAutomationStatusChange],
+  );
+
+  const handleAutomationAssignToMe = useCallback(
+    async (item: CrmAutomationAction) => {
+      if (!usuario?.id) return;
+      try {
+        await updateCrmAutomationAction(item.id, {
+          responsavelUsuarioId: usuario.id,
+          note: "Responsabilidade assumida no dashboard CRM",
+        });
+        showToast({
+          type: "success",
+          message: "Responsável atualizado.",
+        });
+        await loadMain();
+      } catch (error) {
+        const parsed = parseApiError(error);
+        showToast({
+          type: "error",
+          message: `Falha ao assumir automação: ${parsed.message}`,
+        });
+      }
+    },
+    [loadMain, showToast, usuario?.id],
   );
 
   useAdminCrmAnalytics({
@@ -578,6 +633,8 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       profEmotionalConcentrationFilter,
       pacStatusFilter,
       pacEmotionalFilter,
+      automationActions,
+      automationTypeFilter,
       profSort,
       pacSort,
       profPagesMeta,
@@ -762,8 +819,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             summary={commandCenter}
             onActionPress={handleCommandCenterAction}
             automationActions={automationActions}
+            automationMetrics={automationMetrics}
+            automationTypeFilter={automationTypeFilter}
+            onAutomationTypeFilterChange={setAutomationTypeFilter}
             onAutomationPress={handleCommandCenterAction}
             onAutomationStatusChange={handleAutomationStatusChange}
+            onAutomationSnooze={handleAutomationSnooze}
+            onAutomationAssignToMe={handleAutomationAssignToMe}
+            currentUserId={usuario?.id || null}
+            professionals={profs.map((prof) => ({
+              id: prof.id,
+              nome: prof.nome,
+            }))}
           />
 
           <GovernancePanel

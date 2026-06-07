@@ -1,4 +1,8 @@
 import { useMemo } from "react";
+import type {
+  CrmAutomationAction,
+  CrmCommandCenterActionType,
+} from "../../services/crm";
 import {
   comparePac,
   compareProf,
@@ -19,6 +23,8 @@ type ListStateParams = {
   profEmotionalConcentrationFilter: "TODOS" | "ALTA";
   pacStatusFilter: "TODOS" | "ATIVO" | "RISCO";
   pacEmotionalFilter: "TODOS" | "EMOCIONAL";
+  automationActions: CrmAutomationAction[];
+  automationTypeFilter: CrmCommandCenterActionType | "TODAS";
   profSort: { key: ProfSortKey; dir: SortDir };
   pacSort: { key: PacSortKey; dir: SortDir };
   profPagesMeta: number;
@@ -35,6 +41,8 @@ export function useAdminCrmListState({
   profEmotionalConcentrationFilter,
   pacStatusFilter,
   pacEmotionalFilter,
+  automationActions,
+  automationTypeFilter,
   profSort,
   pacSort,
   profPagesMeta,
@@ -77,6 +85,18 @@ export function useAdminCrmListState({
   ]);
 
   const filteredPacs = useMemo(() => {
+    const patientAutomationTargetIds =
+      automationTypeFilter === "TODAS"
+        ? null
+        : new Set(
+            automationActions
+              .filter(
+                (action) =>
+                  action.type === automationTypeFilter &&
+                  action.targetType === "PATIENT",
+              )
+              .map((action) => action.targetId),
+          );
     const base = normalizedQuery
       ? pacs.filter(
           (patient) =>
@@ -90,9 +110,21 @@ export function useAdminCrmListState({
         pacStatusFilter === "TODOS" ? true : patient.status === pacStatusFilter,
       )
       .filter((patient) =>
+        patientAutomationTargetIds
+          ? patientAutomationTargetIds.has(patient.id)
+          : true,
+      )
+      .filter((patient) =>
         pacEmotionalFilter === "TODOS" ? true : patient.emocionalVulneravel,
       );
-  }, [normalizedQuery, pacEmotionalFilter, pacStatusFilter, pacs]);
+  }, [
+    automationActions,
+    automationTypeFilter,
+    normalizedQuery,
+    pacEmotionalFilter,
+    pacStatusFilter,
+    pacs,
+  ]);
 
   const pagedProfs = useMemo(
     () =>
@@ -113,19 +145,12 @@ export function useAdminCrmListState({
         }
         return compareProf(left, right, profSort);
       }),
-    [
-      filteredProfs,
-      profAccountScores,
-      profEmotionalConcentrationMap,
-      profSort,
-    ],
+    [filteredProfs, profAccountScores, profEmotionalConcentrationMap, profSort],
   );
 
   const pagedPacs = useMemo(
     () =>
-      [...filteredPacs].sort((left, right) =>
-        comparePac(left, right, pacSort),
-      ),
+      [...filteredPacs].sort((left, right) => comparePac(left, right, pacSort)),
     [filteredPacs, pacSort],
   );
 

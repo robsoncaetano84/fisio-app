@@ -36,6 +36,7 @@ export enum CrmAutomationHistoryEventType {
   SEEN = 'SEEN',
   STATUS_CHANGED = 'STATUS_CHANGED',
   SLA_CHANGED = 'SLA_CHANGED',
+  ASSIGNED = 'ASSIGNED',
   NOTE_ADDED = 'NOTE_ADDED',
 }
 
@@ -45,6 +46,8 @@ export type CrmAutomationHistoryEvent = {
   actorUsuarioId?: string | null;
   fromStatus?: CrmAutomationStatus | null;
   toStatus?: CrmAutomationStatus | null;
+  fromResponsavelUsuarioId?: string | null;
+  toResponsavelUsuarioId?: string | null;
   note?: string | null;
   metadata?: Record<string, unknown> | null;
 };
@@ -56,6 +59,11 @@ export type CrmAutomationHistoryEvent = {
 @Index('idx_crm_automation_actions_status_sla', ['status', 'slaDueAt'])
 @Index('idx_crm_automation_actions_type_status', ['type', 'status'])
 @Index('idx_crm_automation_actions_target', ['targetType', 'targetId'])
+@Index('idx_crm_automation_actions_responsavel_status_sla', [
+  'responsavelUsuarioId',
+  'status',
+  'slaDueAt',
+])
 export class CrmAutomationAction extends BaseEntity {
   @Column({ name: 'source_key', type: 'varchar', length: 180 })
   sourceKey: string;

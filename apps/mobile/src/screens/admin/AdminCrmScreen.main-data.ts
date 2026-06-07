@@ -4,6 +4,7 @@ import {
   getCrmAdminPatientsPaged,
   getCrmAdminProfessionalsPaged,
   getCrmAutomationActions,
+  getCrmAutomationMetrics,
   getCrmCommandCenter,
   getCrmClinicalDashboardSummary,
   getCrmLeads,
@@ -14,6 +15,8 @@ import {
   type CrmAdminPatient,
   type CrmAdminProfessional,
   type CrmAutomationAction,
+  type CrmAutomationMetricsResponse,
+  type CrmCommandCenterActionType,
   type CrmCommandCenterSummary,
   type CrmClinicalDashboardSummary,
   type CrmLead,
@@ -46,6 +49,7 @@ type MainDataParams = {
   profEspecialidadeFilter: string;
   pacCidadeFilter: string;
   pacUfFilter: string;
+  automationTypeFilter: CrmCommandCenterActionType | "TODAS";
   includeSensitiveData: boolean;
   sensitiveReason: string;
   windowDays: number;
@@ -70,6 +74,7 @@ export function useAdminCrmMainData({
   profEspecialidadeFilter,
   pacCidadeFilter,
   pacUfFilter,
+  automationTypeFilter,
   includeSensitiveData,
   sensitiveReason,
   windowDays,
@@ -87,6 +92,8 @@ export function useAdminCrmMainData({
   const [automationActions, setAutomationActions] = useState<
     CrmAutomationAction[]
   >([]);
+  const [automationMetrics, setAutomationMetrics] =
+    useState<CrmAutomationMetricsResponse | null>(null);
   const [clinicalSummary, setClinicalSummary] =
     useState<CrmClinicalDashboardSummary | null>(null);
   const [physicalExamSummary, setPhysicalExamSummary] =
@@ -112,6 +119,7 @@ export function useAdminCrmMainData({
         physicalExam,
         commandCenterSummary,
         automationPaged,
+        automationMetricsSummary,
         auditPaged,
         professionalsPaged,
         patientsPaged,
@@ -152,8 +160,13 @@ export function useAdminCrmMainData({
           professionalId: selectedProfId || undefined,
           patientId: selectedPacId || undefined,
           status: "ABERTAS",
+          type:
+            automationTypeFilter === "TODAS" ? undefined : automationTypeFilter,
           page: 1,
-          limit: 8,
+          limit: automationTypeFilter === "TODAS" ? 20 : 100,
+        }),
+        getCrmAutomationMetrics({
+          windowDays: Math.max(30, windowDays),
         }),
         getCrmAdminAuditLogs({
           includeSensitive: includeSensitiveData ? true : undefined,
@@ -200,6 +213,7 @@ export function useAdminCrmMainData({
       setPipeline(pipelineSummary);
       setCommandCenter(commandCenterSummary);
       setAutomationActions(automationPaged.items || []);
+      setAutomationMetrics(automationMetricsSummary);
       setClinicalSummary(clinical);
       setPhysicalExamSummary(physicalExam);
       setCrmAuditLogs(auditPaged.items || []);
@@ -221,6 +235,7 @@ export function useAdminCrmMainData({
       setLoading(false);
     }
   }, [
+    automationTypeFilter,
     clinicalPipelineStatusFilter,
     examWindowDays,
     includeSensitiveData,
@@ -252,6 +267,7 @@ export function useAdminCrmMainData({
     pipeline,
     commandCenter,
     automationActions,
+    automationMetrics,
     clinicalSummary,
     physicalExamSummary,
     crmProfessionals,

@@ -146,6 +146,20 @@ export class CrmController {
     });
   }
 
+  @Get('automations/metrics')
+  async getAutomationMetrics(
+    @CurrentUser() usuario: Usuario,
+    @Query('windowDays') windowDays?: string,
+  ) {
+    this.requirePermission(usuario, 'dashboard.read');
+    this.auditAdminAccess(usuario, 'automation_metrics_summary', {
+      windowDays,
+    });
+    return this.crmService.getAutomationMetrics({
+      windowDays: windowDays ? Number(windowDays) : 30,
+    });
+  }
+
   @Get('automations')
   async listAutomationActions(
     @CurrentUser() usuario: Usuario,
@@ -201,7 +215,12 @@ export class CrmController {
     return this.runAudited({
       usuario,
       action: 'automation_action_update',
-      metadata: { id, status: dto.status, slaDueAt: dto.slaDueAt },
+      metadata: {
+        id,
+        status: dto.status,
+        slaDueAt: dto.slaDueAt,
+        responsavelUsuarioId: dto.responsavelUsuarioId,
+      },
       execute: () => this.crmService.updateAutomationAction(id, dto, usuario),
     });
   }

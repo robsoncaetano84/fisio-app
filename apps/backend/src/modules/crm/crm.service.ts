@@ -6,7 +6,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -69,9 +72,11 @@ import { mapCrmInteraction, mapCrmLead, mapCrmTask } from './crm-entity.mapper';
 export type { CrmAdminPermission } from './crm-admin-permissions.util';
 
 @Injectable()
-export class CrmService {
+export class CrmService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(CrmService.name);
   private permissionsCacheRaw: string | null = null;
   private permissionsCache: Map<string, Set<CrmAdminPermission>> | null = null;
+  private automationSyncInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -102,6 +107,57 @@ export class CrmService {
     @InjectRepository(CrmAutomationAction)
     private readonly crmAutomationActionRepository: Repository<CrmAutomationAction>,
   ) {}
+
+  onModuleInit(): void {
+    this.startRecurringAutomationSync();
+  }
+
+  onModuleDestroy(): void {
+    if (this.automationSyncInterval) {
+      clearInterval(this.automationSyncInterval);
+      this.automationSyncInterval = null;
+    }
+  }
+
+  private startRecurringAutomationSync(): void {
+    const enabled = String(
+      this.configService.get<string>('CRM_AUTOMATION_SYNC_ENABLED') ?? 'true',
+    ).toLowerCase();
+    if (enabled === 'false' || enabled === '0') return;
+
+    const intervalMinutes = Math.max(
+      5,
+      Math.min(
+        Number(
+          this.configService.get<string>(
+            'CRM_AUTOMATION_SYNC_INTERVAL_MINUTES',
+          ) || 30,
+        ),
+        240,
+      ),
+    );
+    this.automationSyncInterval = setInterval(
+      () => {
+        this.runRecurringAutomationSync().catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : 'unknown';
+          this.logger.warn(`crm_automation_sync_failed ${message}`);
+        });
+      },
+      intervalMinutes * 60 * 1000,
+    );
+
+    this.automationSyncInterval.unref?.();
+    this.logger.log(
+      `crm_automation_sync_enabled intervalMinutes=${intervalMinutes}`,
+    );
+  }
+
+  private async runRecurringAutomationSync(): Promise<void> {
+    const result = await this.syncAutomationActions(null, { limit: 20 });
+    this.logger.log(
+      `crm_automation_sync_completed synced=${result.synced} created=${result.created} refreshed=${result.refreshed}`,
+    );
+  }
 
   assertMasterAdmin(usuario: Usuario): void {
     if (usuario.role !== UserRole.ADMIN) {
@@ -459,6 +515,7 @@ export class CrmService {
         dueAt: task.dueAt,
         leadId: task.leadId,
         responsavelNome: task.responsavelNome,
+        responsavelUsuarioId: task.responsavelUsuarioId,
       }),
     );
     const leadSignals: CrmCommandCenterLeadSignal[] = staleLeadRows
@@ -469,6 +526,7 @@ export class CrmService {
         stage: lead.stage,
         updatedAt: lead.updatedAt,
         responsavelNome: lead.responsavelNome,
+        responsavelUsuarioId: lead.responsavelUsuarioId,
       }));
     const patientSignals: CrmCommandCenterPatientSignal[] = patients.map(
       (patient) => {
@@ -481,6 +539,7 @@ export class CrmService {
         return {
           id: patient.id,
           nomeCompleto: patient.nomeCompleto,
+          professionalId: patient.usuarioId,
           profissionalNome: patient.usuario?.nome || null,
           createdAt: patient.createdAt,
           hasAnamnese: anamneseByPatient.has(patient.id),
@@ -550,6 +609,8 @@ export class CrmService {
       actorUsuarioId?: string | null;
       fromStatus?: CrmAutomationStatus | null;
       toStatus?: CrmAutomationStatus | null;
+      fromResponsavelUsuarioId?: string | null;
+      toResponsavelUsuarioId?: string | null;
       note?: string | null;
       metadata?: Record<string, unknown> | null;
     },
@@ -562,6 +623,8 @@ export class CrmService {
         actorUsuarioId: params.actorUsuarioId || null,
         fromStatus: params.fromStatus ?? null,
         toStatus: params.toStatus ?? null,
+        fromResponsavelUsuarioId: params.fromResponsavelUsuarioId ?? null,
+        toResponsavelUsuarioId: params.toResponsavelUsuarioId ?? null,
         note: params.note?.trim() || null,
         metadata: params.metadata || null,
       },
@@ -600,6 +663,13 @@ export class CrmService {
     action.metadata = item.metadata || null;
     action.lastSeenAt = new Date();
 
+    const suggestedOwner =
+      typeof item.metadata?.responsavelUsuarioId === 'string'
+        ? item.metadata.responsavelUsuarioId
+        : null;
+    if (!action.responsavelUsuarioId && suggestedOwner) {
+      action.responsavelUsuarioId = suggestedOwner;
+    }
     if (!action.firstSeenAt) action.firstSeenAt = new Date();
     if (!action.slaDueAt) {
       action.slaDueAt = this.resolveAutomationSlaDueAt(item);
@@ -628,7 +698,7 @@ export class CrmService {
   }
 
   async syncAutomationActions(
-    usuario: Usuario,
+    usuario: Pick<Usuario, 'id'> | null,
     params?: {
       windowDays?: number;
       semEvolucaoDias?: number;
@@ -664,7 +734,7 @@ export class CrmService {
           continue;
         }
         this.applyCommandCenterItemToAutomation(current, item, {
-          actorUsuarioId: usuario.id,
+          actorUsuarioId: usuario?.id,
         });
         refreshed += 1;
         rows.push(current);
@@ -677,11 +747,11 @@ export class CrmService {
         firstSeenAt: new Date(),
         lastSeenAt: new Date(),
         resolvedAt: null,
-        responsavelUsuarioId: usuario.id,
+        responsavelUsuarioId: null,
         history: [],
       });
       this.applyCommandCenterItemToAutomation(action, item, {
-        actorUsuarioId: usuario.id,
+        actorUsuarioId: usuario?.id,
         created: true,
       });
       created += 1;
@@ -782,6 +852,171 @@ export class CrmService {
     };
   }
 
+  async getAutomationMetrics(params?: { windowDays?: number }) {
+    const windowDays = Math.max(
+      1,
+      Math.min(Number(params?.windowDays || 30), 180),
+    );
+    const now = Date.now();
+    const since = new Date(now - windowDays * 24 * 60 * 60 * 1000);
+    const openStatuses = [
+      CrmAutomationStatus.OPEN,
+      CrmAutomationStatus.IN_PROGRESS,
+      CrmAutomationStatus.SNOOZED,
+    ];
+
+    const [windowActions, openActions] = await Promise.all([
+      this.crmAutomationActionRepository
+        .createQueryBuilder('action')
+        .where('action.createdAt >= :since', { since })
+        .orWhere('action.resolvedAt >= :since', { since })
+        .orderBy('action.updatedAt', 'DESC')
+        .take(5000)
+        .getMany(),
+      this.crmAutomationActionRepository
+        .createQueryBuilder('action')
+        .where('action.status IN (:...statuses)', { statuses: openStatuses })
+        .orderBy('action.slaDueAt', 'ASC', 'NULLS LAST')
+        .take(5000)
+        .getMany(),
+    ]);
+
+    const overdueOpenActions = openActions.filter(
+      (action) => action.slaDueAt && new Date(action.slaDueAt).getTime() < now,
+    );
+    const doneActions = windowActions.filter(
+      (action) => action.status === CrmAutomationStatus.DONE,
+    );
+    const dismissedActions = windowActions.filter(
+      (action) => action.status === CrmAutomationStatus.DISMISSED,
+    );
+    const resolutionDurations = doneActions
+      .map((action) => {
+        if (!action.resolvedAt || !action.firstSeenAt) return null;
+        return (
+          new Date(action.resolvedAt).getTime() -
+          new Date(action.firstSeenAt).getTime()
+        );
+      })
+      .filter(
+        (value): value is number => typeof value === 'number' && value >= 0,
+      );
+    const avgResolutionHours =
+      resolutionDurations.length > 0
+        ? Number(
+            (
+              resolutionDurations.reduce((sum, value) => sum + value, 0) /
+              resolutionDurations.length /
+              60 /
+              60 /
+              1000
+            ).toFixed(1),
+          )
+        : 0;
+
+    const byType = Object.values(CrmAutomationActionType).map((type) => {
+      const items = windowActions.filter((action) => action.type === type);
+      const opened = openActions.filter(
+        (action) => action.type === type,
+      ).length;
+      const overdue = overdueOpenActions.filter(
+        (action) => action.type === type,
+      ).length;
+      const resolved = items.filter(
+        (action) => action.status === CrmAutomationStatus.DONE,
+      ).length;
+      const dismissed = items.filter(
+        (action) => action.status === CrmAutomationStatus.DISMISSED,
+      ).length;
+      const denominator = opened + resolved + dismissed;
+      return {
+        type,
+        opened,
+        overdue,
+        resolved,
+        dismissed,
+        resolutionRate:
+          denominator > 0
+            ? Number(((resolved / denominator) * 100).toFixed(1))
+            : 0,
+      };
+    });
+
+    const professionalMap = new Map<
+      string,
+      { id: string | null; nome: string; open: number; overdue: number }
+    >();
+    const patientMap = new Map<
+      string,
+      { id: string | null; nome: string; open: number; overdue: number }
+    >();
+    openActions.forEach((action) => {
+      const isOverdue = Boolean(
+        action.slaDueAt && new Date(action.slaDueAt).getTime() < now,
+      );
+      const professionalId =
+        (typeof action.metadata?.professionalId === 'string'
+          ? action.metadata.professionalId
+          : null) ||
+        action.responsavelUsuarioId ||
+        null;
+      const professionalName =
+        (typeof action.metadata?.profissionalNome === 'string'
+          ? action.metadata.profissionalNome
+          : null) || 'Sem responsável';
+      const professionalKey = professionalId || professionalName;
+      const professionalCurrent = professionalMap.get(professionalKey) || {
+        id: professionalId,
+        nome: professionalName,
+        open: 0,
+        overdue: 0,
+      };
+      professionalCurrent.open += 1;
+      if (isOverdue) professionalCurrent.overdue += 1;
+      professionalMap.set(professionalKey, professionalCurrent);
+
+      if (action.targetType === CrmAutomationTargetType.PATIENT) {
+        const patientName =
+          (typeof action.metadata?.pacienteNome === 'string'
+            ? action.metadata.pacienteNome
+            : null) || action.targetId;
+        const patientCurrent = patientMap.get(action.targetId) || {
+          id: action.targetId,
+          nome: patientName,
+          open: 0,
+          overdue: 0,
+        };
+        patientCurrent.open += 1;
+        if (isOverdue) patientCurrent.overdue += 1;
+        patientMap.set(action.targetId, patientCurrent);
+      }
+    });
+
+    const sortBottlenecks = <T extends { open: number; overdue: number }>(
+      items: T[],
+    ) =>
+      items
+        .sort((a, b) => b.overdue - a.overdue || b.open - a.open)
+        .slice(0, 8);
+
+    return {
+      windowDays,
+      generatedAt: new Date(now).toISOString(),
+      totals: {
+        openActions: openActions.length,
+        overdueOpenActions: overdueOpenActions.length,
+        resolvedActions: doneActions.length,
+        dismissedActions: dismissedActions.length,
+        avgResolutionHours,
+      },
+      byType,
+      bottlenecks: {
+        byProfessional: sortBottlenecks(Array.from(professionalMap.values())),
+        byPatient: sortBottlenecks(Array.from(patientMap.values())),
+      },
+    };
+  }
+
   async updateAutomationAction(
     id: string,
     dto: UpdateCrmAutomationActionDto,
@@ -791,6 +1026,29 @@ export class CrmService {
       where: { id },
     });
     if (!action) throw new NotFoundException('Automacao CRM nao encontrada');
+
+    if (dto.responsavelUsuarioId !== undefined) {
+      const nextResponsavel = dto.responsavelUsuarioId || null;
+      if (nextResponsavel) {
+        const exists = await this.usuarioRepository.findOne({
+          where: { id: nextResponsavel },
+        });
+        if (!exists)
+          throw new BadRequestException('Responsavel nao encontrado');
+      }
+      if (nextResponsavel !== action.responsavelUsuarioId) {
+        const previous = action.responsavelUsuarioId;
+        action.responsavelUsuarioId = nextResponsavel;
+        this.appendAutomationHistory(action, {
+          type: CrmAutomationHistoryEventType.ASSIGNED,
+          actorUsuarioId: usuario.id,
+          toStatus: action.status,
+          fromResponsavelUsuarioId: previous,
+          toResponsavelUsuarioId: nextResponsavel,
+          note: dto.note,
+        });
+      }
+    }
 
     if (dto.status && dto.status !== action.status) {
       const fromStatus = action.status;
