@@ -39,6 +39,15 @@ describe('CrmController sensitive access', () => {
       ),
       createAdminAuditLog: jest.fn().mockResolvedValue(undefined),
       listAdminPacientes: jest.fn().mockResolvedValue([]),
+      listAutomationActionsWithRefresh: jest.fn().mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        sync: { synced: 0, created: 0, refreshed: 0 },
+      }),
+      updateAutomationAction: jest.fn().mockResolvedValue({ id: 'auto-1' }),
     } as any;
 
     const controller = new CrmController(crmService);
@@ -103,6 +112,62 @@ describe('CrmController sensitive access', () => {
 
     expect(crmService.listAdminPacientes).toHaveBeenCalledWith(
       expect.objectContaining({ includeSensitive: true }),
+    );
+  });
+
+  it('lists backend automation actions with dashboard permission', async () => {
+    const { controller, crmService } = createController(['dashboard.read']);
+    const usuario = makeUsuario();
+
+    await expect(
+      controller.listAutomationActions(
+        usuario,
+        'true',
+        '7',
+        '10',
+        undefined,
+        undefined,
+        'ABERTAS',
+        undefined,
+        undefined,
+        undefined,
+        '1',
+        '8',
+      ),
+    ).resolves.toMatchObject({ items: [] });
+
+    expect(crmService.listAutomationActionsWithRefresh).toHaveBeenCalledWith(
+      usuario,
+      expect.objectContaining({ refresh: true, status: 'ABERTAS', limit: 8 }),
+    );
+  });
+
+  it('blocks automation update without crm.write permission', async () => {
+    const { controller } = createController(['dashboard.read']);
+    const usuario = makeUsuario();
+
+    await expect(
+      controller.updateAutomationAction(usuario, 'auto-1', {
+        status: 'DONE' as any,
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('updates automation action with crm.write permission', async () => {
+    const { controller, crmService } = createController(['crm.write']);
+    const usuario = makeUsuario();
+
+    await expect(
+      controller.updateAutomationAction(usuario, 'auto-1', {
+        status: 'DONE' as any,
+        note: 'resolvido',
+      }),
+    ).resolves.toEqual({ id: 'auto-1' });
+
+    expect(crmService.updateAutomationAction).toHaveBeenCalledWith(
+      'auto-1',
+      expect.objectContaining({ status: 'DONE' }),
+      usuario,
     );
   });
 });

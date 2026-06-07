@@ -27,11 +27,20 @@ import { CreateCrmInteractionDto } from './dto/create-crm-interaction.dto';
 import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
 import { UpdateCrmAdminProfessionalDto } from './dto/update-crm-admin-professional.dto';
 import { UpdateCrmAdminPatientDto } from './dto/update-crm-admin-patient.dto';
+import { UpdateCrmAutomationActionDto } from './dto/update-crm-automation-action.dto';
 import { CrmLead, CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTask, CrmTaskStatus } from './entities/crm-task.entity';
 import { CrmInteraction } from './entities/crm-interaction.entity';
 import { ClinicalFlowEvent } from '../metrics/entities/clinical-flow-event.entity';
 import { CrmAdminAuditLog } from './entities/crm-admin-audit-log.entity';
+import {
+  CrmAutomationAction,
+  CrmAutomationActionType,
+  CrmAutomationHistoryEventType,
+  CrmAutomationSeverity,
+  CrmAutomationStatus,
+  CrmAutomationTargetType,
+} from './entities/crm-automation-action.entity';
 import {
   parseCrmAdminPermissionsConfig,
   resolveCrmAdminPermissions,
@@ -49,6 +58,7 @@ import {
 } from './crm-clinical-dashboard-summary.util';
 import {
   buildCrmCommandCenterSummary,
+  type CrmCommandCenterItem,
   type CrmCommandCenterLeadSignal,
   type CrmCommandCenterPatientSignal,
   type CrmCommandCenterProfessionalSignal,
@@ -89,6 +99,8 @@ export class CrmService {
     private readonly clinicalFlowEventRepository: Repository<ClinicalFlowEvent>,
     @InjectRepository(CrmAdminAuditLog)
     private readonly crmAdminAuditLogRepository: Repository<CrmAdminAuditLog>,
+    @InjectRepository(CrmAutomationAction)
+    private readonly crmAutomationActionRepository: Repository<CrmAutomationAction>,
   ) {}
 
   assertMasterAdmin(usuario: Usuario): void {
@@ -505,6 +517,323 @@ export class CrmService {
       patients: patientSignals,
       professionals: professionalSignals,
     });
+  }
+
+  private mapAutomationAction(action: CrmAutomationAction) {
+    return {
+      id: action.id,
+      sourceKey: action.sourceKey,
+      type: action.type,
+      severity: action.severity,
+      status: action.status,
+      title: action.title,
+      description: action.description,
+      ctaLabel: action.ctaLabel,
+      targetType: action.targetType,
+      targetId: action.targetId,
+      responsavelUsuarioId: action.responsavelUsuarioId,
+      slaDueAt: action.slaDueAt,
+      firstSeenAt: action.firstSeenAt,
+      lastSeenAt: action.lastSeenAt,
+      resolvedAt: action.resolvedAt,
+      metadata: action.metadata,
+      history: action.history || [],
+      createdAt: action.createdAt,
+      updatedAt: action.updatedAt,
+    };
+  }
+
+  private appendAutomationHistory(
+    action: CrmAutomationAction,
+    params: {
+      type: CrmAutomationHistoryEventType;
+      actorUsuarioId?: string | null;
+      fromStatus?: CrmAutomationStatus | null;
+      toStatus?: CrmAutomationStatus | null;
+      note?: string | null;
+      metadata?: Record<string, unknown> | null;
+    },
+  ) {
+    const current = Array.isArray(action.history) ? action.history : [];
+    action.history = [
+      {
+        type: params.type,
+        at: new Date().toISOString(),
+        actorUsuarioId: params.actorUsuarioId || null,
+        fromStatus: params.fromStatus ?? null,
+        toStatus: params.toStatus ?? null,
+        note: params.note?.trim() || null,
+        metadata: params.metadata || null,
+      },
+      ...current,
+    ].slice(0, 50);
+  }
+
+  private resolveAutomationSlaDueAt(
+    item: CrmCommandCenterItem,
+    now = Date.now(),
+  ) {
+    if (item.type === 'TASK_OVERDUE') return new Date(now);
+
+    const hours =
+      item.severity === 'HIGH' ||
+      item.type === 'PATIENT_NO_EVOLUTION' ||
+      item.type === 'PATIENT_NO_CHECKIN'
+        ? 24
+        : 72;
+    return new Date(now + hours * 60 * 60 * 1000);
+  }
+
+  private applyCommandCenterItemToAutomation(
+    action: CrmAutomationAction,
+    item: CrmCommandCenterItem,
+    params?: { actorUsuarioId?: string | null; created?: boolean },
+  ) {
+    action.sourceKey = item.id;
+    action.type = item.type as CrmAutomationActionType;
+    action.severity = item.severity as CrmAutomationSeverity;
+    action.title = item.title;
+    action.description = item.description;
+    action.ctaLabel = item.ctaLabel;
+    action.targetType = item.targetType as CrmAutomationTargetType;
+    action.targetId = item.targetId;
+    action.metadata = item.metadata || null;
+    action.lastSeenAt = new Date();
+
+    if (!action.firstSeenAt) action.firstSeenAt = new Date();
+    if (!action.slaDueAt) {
+      action.slaDueAt = this.resolveAutomationSlaDueAt(item);
+    }
+    if (!action.status) {
+      action.status = CrmAutomationStatus.OPEN;
+    }
+    if (params?.created) {
+      this.appendAutomationHistory(action, {
+        type: CrmAutomationHistoryEventType.CREATED,
+        actorUsuarioId: params.actorUsuarioId,
+        toStatus: action.status,
+        metadata: {
+          sourceKey: item.id,
+          slaDueAt: action.slaDueAt?.toISOString() || null,
+        },
+      });
+    } else {
+      this.appendAutomationHistory(action, {
+        type: CrmAutomationHistoryEventType.SEEN,
+        actorUsuarioId: params?.actorUsuarioId,
+        toStatus: action.status,
+        metadata: { sourceKey: item.id },
+      });
+    }
+  }
+
+  async syncAutomationActions(
+    usuario: Usuario,
+    params?: {
+      windowDays?: number;
+      semEvolucaoDias?: number;
+      limit?: number;
+      professionalId?: string;
+      patientId?: string;
+    },
+  ) {
+    const summary = await this.getCommandCenter({
+      ...params,
+      limit: Math.max(20, Number(params?.limit || 20)),
+    });
+    const items = summary.nextActions;
+    if (!items.length) return { synced: 0, created: 0, refreshed: 0 };
+
+    const existing = await this.crmAutomationActionRepository.find({
+      where: items.map((item) => ({ sourceKey: item.id })),
+    });
+    const existingBySourceKey = new Map(
+      existing.map((item) => [item.sourceKey, item]),
+    );
+
+    let created = 0;
+    let refreshed = 0;
+    const rows: CrmAutomationAction[] = [];
+    for (const item of items) {
+      const current = existingBySourceKey.get(item.id);
+      if (current) {
+        if (
+          current.status === CrmAutomationStatus.DONE ||
+          current.status === CrmAutomationStatus.DISMISSED
+        ) {
+          continue;
+        }
+        this.applyCommandCenterItemToAutomation(current, item, {
+          actorUsuarioId: usuario.id,
+        });
+        refreshed += 1;
+        rows.push(current);
+        continue;
+      }
+
+      const action = this.crmAutomationActionRepository.create({
+        sourceKey: item.id,
+        status: CrmAutomationStatus.OPEN,
+        firstSeenAt: new Date(),
+        lastSeenAt: new Date(),
+        resolvedAt: null,
+        responsavelUsuarioId: usuario.id,
+        history: [],
+      });
+      this.applyCommandCenterItemToAutomation(action, item, {
+        actorUsuarioId: usuario.id,
+        created: true,
+      });
+      created += 1;
+      rows.push(action);
+    }
+
+    if (rows.length) {
+      await this.crmAutomationActionRepository.save(rows);
+    }
+
+    return {
+      synced: rows.length,
+      created,
+      refreshed,
+    };
+  }
+
+  async listAutomationActions(params?: {
+    status?: CrmAutomationStatus | 'TODOS' | 'ABERTAS';
+    type?: CrmAutomationActionType;
+    targetType?: CrmAutomationTargetType;
+    targetId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, Math.floor(params?.page || 1));
+    const limit = Math.max(1, Math.min(Math.floor(params?.limit || 20), 100));
+    const qb = this.crmAutomationActionRepository
+      .createQueryBuilder('action')
+      .orderBy('action.slaDueAt', 'ASC', 'NULLS LAST')
+      .addOrderBy('action.severity', 'ASC')
+      .addOrderBy('action.updatedAt', 'DESC');
+
+    const status = params?.status || 'ABERTAS';
+    if (status === 'ABERTAS') {
+      qb.where('action.status IN (:...statuses)', {
+        statuses: [
+          CrmAutomationStatus.OPEN,
+          CrmAutomationStatus.IN_PROGRESS,
+          CrmAutomationStatus.SNOOZED,
+        ],
+      });
+    } else if (status !== 'TODOS') {
+      qb.where('action.status = :status', { status });
+    }
+
+    if (params?.type) {
+      qb.andWhere('action.type = :type', { type: params.type });
+    }
+    if (params?.targetType) {
+      qb.andWhere('action.targetType = :targetType', {
+        targetType: params.targetType,
+      });
+    }
+    if (params?.targetId) {
+      qb.andWhere('action.targetId = :targetId', {
+        targetId: params.targetId,
+      });
+    }
+
+    const [items, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      items: items.map((item) => this.mapAutomationAction(item)),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  async listAutomationActionsWithRefresh(
+    usuario: Usuario,
+    params?: {
+      refresh?: boolean;
+      windowDays?: number;
+      semEvolucaoDias?: number;
+      professionalId?: string;
+      patientId?: string;
+      status?: CrmAutomationStatus | 'TODOS' | 'ABERTAS';
+      type?: CrmAutomationActionType;
+      targetType?: CrmAutomationTargetType;
+      targetId?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    const sync = params?.refresh
+      ? await this.syncAutomationActions(usuario, params)
+      : { synced: 0, created: 0, refreshed: 0 };
+    const page = await this.listAutomationActions(params);
+    return {
+      ...page,
+      sync,
+    };
+  }
+
+  async updateAutomationAction(
+    id: string,
+    dto: UpdateCrmAutomationActionDto,
+    usuario: Usuario,
+  ) {
+    const action = await this.crmAutomationActionRepository.findOne({
+      where: { id },
+    });
+    if (!action) throw new NotFoundException('Automacao CRM nao encontrada');
+
+    if (dto.status && dto.status !== action.status) {
+      const fromStatus = action.status;
+      action.status = dto.status;
+      action.resolvedAt =
+        dto.status === CrmAutomationStatus.DONE ||
+        dto.status === CrmAutomationStatus.DISMISSED
+          ? new Date()
+          : null;
+      this.appendAutomationHistory(action, {
+        type: CrmAutomationHistoryEventType.STATUS_CHANGED,
+        actorUsuarioId: usuario.id,
+        fromStatus,
+        toStatus: dto.status,
+        note: dto.note,
+      });
+    } else if (dto.note) {
+      this.appendAutomationHistory(action, {
+        type: CrmAutomationHistoryEventType.NOTE_ADDED,
+        actorUsuarioId: usuario.id,
+        toStatus: action.status,
+        note: dto.note,
+      });
+    }
+
+    if (dto.slaDueAt) {
+      const previousSla = action.slaDueAt?.toISOString() || null;
+      action.slaDueAt = new Date(dto.slaDueAt);
+      this.appendAutomationHistory(action, {
+        type: CrmAutomationHistoryEventType.SLA_CHANGED,
+        actorUsuarioId: usuario.id,
+        toStatus: action.status,
+        note: dto.note,
+        metadata: {
+          previousSla,
+          nextSla: action.slaDueAt.toISOString(),
+        },
+      });
+    }
+
+    return this.mapAutomationAction(
+      await this.crmAutomationActionRepository.save(action),
+    );
   }
 
   async listAdminProfissionais(params?: {

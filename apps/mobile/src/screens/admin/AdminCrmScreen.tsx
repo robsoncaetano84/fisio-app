@@ -2,28 +2,21 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // ADMIN CRM SCREEN
 // ==========================================
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import {
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  View,
-} from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../../constants/theme";
 import { useToast } from "../../components/ui";
 import { useAuthStore } from "../../stores/authStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import { parseApiError } from "../../utils/apiErrors";
 import type {
+  CrmAutomationAction,
   CrmCommandCenterItem,
   CrmInteractionType,
   CrmLeadStage,
 } from "../../services/crm";
+import { updateCrmAutomationAction } from "../../services/crm";
 import { UserRole } from "../../types";
 import {
   buildTaskBuckets,
@@ -81,10 +74,7 @@ import { PhysicalExamSummaryPanel } from "./AdminCrmScreen.physical-exam";
 import { ProfessionalDetailPanel } from "./AdminCrmScreen.professional-detail";
 import { useAdminCrmProfessionalActions } from "./AdminCrmScreen.professional-actions";
 import { useAdminCrmRecordActions } from "./AdminCrmScreen.record-actions";
-import {
-  buildPatientRows,
-  buildProfessionalRows,
-} from "./AdminCrmScreen.rows";
+import { buildPatientRows, buildProfessionalRows } from "./AdminCrmScreen.rows";
 import { useAdminCrmSelectionEffects } from "./AdminCrmScreen.selection-effects";
 import { useSensitiveDataToggle } from "./AdminCrmScreen.sensitive-toggle";
 import {
@@ -122,8 +112,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     setTab(initialTab);
   }, [route?.params?.initialTab]);
   const [query, setQuery] = useState("");
-  const [stageFilter, setStageFilter] =
-    useState<CrmLeadStageFilter>("TODOS");
+  const [stageFilter, setStageFilter] = useState<CrmLeadStageFilter>("TODOS");
   const [includeSensitiveData, setIncludeSensitiveData] = useState(false);
   const [sensitiveReason, setSensitiveReason] = useState("");
   const tabs = useMemo<Array<{ key: TabKey; label: string }>>(
@@ -182,8 +171,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     profEmotionalConcentrationFilter,
     setProfEmotionalConcentrationFilter,
   ] = useState<ProfEmotionalConcentrationFilter>("TODOS");
-  const [pacLinkFilter, setPacLinkFilter] =
-    useState<PacLinkFilter>("TODOS");
+  const [pacLinkFilter, setPacLinkFilter] = useState<PacLinkFilter>("TODOS");
   const [pacStatusFilter, setPacStatusFilter] =
     useState<PacStatusFilter>("TODOS");
   const [pacEmotionalFilter, setPacEmotionalFilter] =
@@ -296,6 +284,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const {
     pipeline,
     commandCenter,
+    automationActions,
     clinicalSummary,
     physicalExamSummary,
     crmProfessionals,
@@ -331,17 +320,14 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     t,
   });
 
-  const {
-    interactions,
-    loadingInteractions,
-    loadInteractions,
-  } = useAdminCrmInteractionsState({
-    selectedLeadId,
-    includeSensitiveData,
-    sensitiveReason,
-    showToast,
-    t,
-  });
+  const { interactions, loadingInteractions, loadInteractions } =
+    useAdminCrmInteractionsState({
+      selectedLeadId,
+      includeSensitiveData,
+      sensitiveReason,
+      showToast,
+      t,
+    });
 
   const [leadForm, setLeadForm] = useState(createEmptyLeadForm);
   const [taskForm, setTaskForm] = useState(() => createEmptyTaskForm());
@@ -423,20 +409,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     examConfidenceFilter,
     t,
   });
-  const {
-    exportPhysicalExamSummaryCsv,
-    copyPhysicalExamExecutiveSummary,
-  } = usePhysicalExamSummaryActions({
-    physicalExamSummary,
-    physicalExamTopInsights,
-    physicalExamTopRegionsList,
-    physicalExamTopTestsList,
-    examChartMode,
-    examMinSample,
-    examConfidenceFilter,
-    showToast,
-    t,
-  });
+  const { exportPhysicalExamSummaryCsv, copyPhysicalExamExecutiveSummary } =
+    usePhysicalExamSummaryActions({
+      physicalExamSummary,
+      physicalExamTopInsights,
+      physicalExamTopRegionsList,
+      physicalExamTopTestsList,
+      examChartMode,
+      examMinSample,
+      examConfidenceFilter,
+      showToast,
+      t,
+    });
   const {
     openPatientsInAttention,
     openPatientQueue,
@@ -490,7 +474,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     });
 
   const handleCommandCenterAction = useCallback(
-    (item: CrmCommandCenterItem) => {
+    (item: Pick<CrmCommandCenterItem, "type" | "targetId">) => {
       if (item.type === "TASK_OVERDUE") {
         setTaskBucketFilter("ATRASADAS");
         setTab("TAREFAS");
@@ -527,6 +511,35 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     [],
   );
 
+  const handleAutomationStatusChange = useCallback(
+    async (item: CrmAutomationAction, status: "DONE" | "DISMISSED") => {
+      try {
+        await updateCrmAutomationAction(item.id, {
+          status,
+          note:
+            status === "DONE"
+              ? "Concluida pelo dashboard CRM"
+              : "Dispensada pelo dashboard CRM",
+        });
+        showToast({
+          type: "success",
+          message:
+            status === "DONE"
+              ? "Automação concluída."
+              : "Automação dispensada.",
+        });
+        await loadMain();
+      } catch (error) {
+        const parsed = parseApiError(error);
+        showToast({
+          type: "error",
+          message: `Falha ao atualizar automação: ${parsed.message}`,
+        });
+      }
+    },
+    [loadMain, showToast],
+  );
+
   useAdminCrmAnalytics({
     isWeb,
     isMaster,
@@ -556,26 +569,22 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     setPacEditForm,
   });
 
-  const {
-    profTotalPages,
-    pacTotalPages,
-    pagedProfs,
-    pagedPacs,
-  } = useAdminCrmListState({
-    profs,
-    pacs,
-    query,
-    profAccountStatusFilter,
-    profEmotionalConcentrationFilter,
-    pacStatusFilter,
-    pacEmotionalFilter,
-    profSort,
-    pacSort,
-    profPagesMeta,
-    pacPagesMeta,
-    profAccountScores,
-    profEmotionalConcentrationMap,
-  });
+  const { profTotalPages, pacTotalPages, pagedProfs, pagedPacs } =
+    useAdminCrmListState({
+      profs,
+      pacs,
+      query,
+      profAccountStatusFilter,
+      profEmotionalConcentrationFilter,
+      pacStatusFilter,
+      pacEmotionalFilter,
+      profSort,
+      pacSort,
+      profPagesMeta,
+      pacPagesMeta,
+      profAccountScores,
+      profEmotionalConcentrationMap,
+    });
 
   useAdminCrmPaginationEffects({
     query,
@@ -643,23 +652,20 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     setPacEditForm(createPatientEditForm(pacRaw));
   };
 
-  const {
-    savingAdminEntity,
-    saveAdminProfessional,
-    saveAdminPatient,
-  } = useAdminCrmEntityActions({
-    selectedProfId,
-    selectedPacId,
-    profEditForm,
-    pacEditForm,
-    includeSensitiveData,
-    sensitiveReason,
-    setEditProfOpen,
-    setEditPacOpen,
-    loadMain,
-    showToast,
-    t,
-  });
+  const { savingAdminEntity, saveAdminProfessional, saveAdminPatient } =
+    useAdminCrmEntityActions({
+      selectedProfId,
+      selectedPacId,
+      profEditForm,
+      pacEditForm,
+      includeSensitiveData,
+      sensitiveReason,
+      setEditProfOpen,
+      setEditPacOpen,
+      loadMain,
+      showToast,
+      t,
+    });
 
   const {
     exportCurrentTableCsv,
@@ -755,6 +761,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
           <CommandCenterPanel
             summary={commandCenter}
             onActionPress={handleCommandCenterAction}
+            automationActions={automationActions}
+            onAutomationPress={handleCommandCenterAction}
+            onAutomationStatusChange={handleAutomationStatusChange}
           />
 
           <GovernancePanel
@@ -910,7 +919,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               emotionalConcentration={selectedProfEmotionalConcentration}
               linkedPatients={
                 selectedProf
-                  ? pacs.filter((item) => item.profissionalId === selectedProf.id)
+                  ? pacs.filter(
+                      (item) => item.profissionalId === selectedProf.id,
+                    )
                   : []
               }
               onToggleEdit={() => {

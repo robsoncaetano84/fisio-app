@@ -28,8 +28,14 @@ import { CreateCrmInteractionDto } from './dto/create-crm-interaction.dto';
 import { UpdateCrmInteractionDto } from './dto/update-crm-interaction.dto';
 import { UpdateCrmAdminProfessionalDto } from './dto/update-crm-admin-professional.dto';
 import { UpdateCrmAdminPatientDto } from './dto/update-crm-admin-patient.dto';
+import { UpdateCrmAutomationActionDto } from './dto/update-crm-automation-action.dto';
 import { CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTaskStatus } from './entities/crm-task.entity';
+import {
+  CrmAutomationActionType,
+  CrmAutomationStatus,
+  CrmAutomationTargetType,
+} from './entities/crm-automation-action.entity';
 
 @Controller('crm')
 @UseGuards(JwtAuthGuard)
@@ -137,6 +143,66 @@ export class CrmController {
       limit: limit ? Number(limit) : 8,
       professionalId,
       patientId,
+    });
+  }
+
+  @Get('automations')
+  async listAutomationActions(
+    @CurrentUser() usuario: Usuario,
+    @Query('refresh') refresh?: string,
+    @Query('windowDays') windowDays?: string,
+    @Query('semEvolucaoDias') semEvolucaoDias?: string,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+    @Query('targetType') targetType?: string,
+    @Query('targetId') targetId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    this.requirePermission(usuario, 'dashboard.read');
+    const refreshBool = parseBoolQuery(refresh);
+    this.auditAdminAccess(usuario, 'automation_actions_list', {
+      refresh: refreshBool,
+      windowDays,
+      semEvolucaoDias,
+      professionalId,
+      patientId,
+      status,
+      type,
+      targetType,
+      targetId,
+      page,
+      limit,
+    });
+    return this.crmService.listAutomationActionsWithRefresh(usuario, {
+      refresh: refreshBool,
+      windowDays: windowDays ? Number(windowDays) : 7,
+      semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
+      professionalId,
+      patientId,
+      status: status as CrmAutomationStatus | 'TODOS' | 'ABERTAS',
+      type: type as CrmAutomationActionType,
+      targetType: targetType as CrmAutomationTargetType,
+      targetId,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+    });
+  }
+
+  @Patch('automations/:id')
+  async updateAutomationAction(
+    @CurrentUser() usuario: Usuario,
+    @Param('id') id: string,
+    @Body() dto: UpdateCrmAutomationActionDto,
+  ) {
+    this.requirePermission(usuario, 'crm.write');
+    return this.runAudited({
+      usuario,
+      action: 'automation_action_update',
+      metadata: { id, status: dto.status, slaDueAt: dto.slaDueAt },
+      execute: () => this.crmService.updateAutomationAction(id, dto, usuario),
     });
   }
 

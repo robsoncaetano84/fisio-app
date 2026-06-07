@@ -3,6 +3,7 @@ import {
   getCrmAdminAuditLogs,
   getCrmAdminPatientsPaged,
   getCrmAdminProfessionalsPaged,
+  getCrmAutomationActions,
   getCrmCommandCenter,
   getCrmClinicalDashboardSummary,
   getCrmLeads,
@@ -12,6 +13,7 @@ import {
   type CrmAdminAuditLog,
   type CrmAdminPatient,
   type CrmAdminProfessional,
+  type CrmAutomationAction,
   type CrmCommandCenterSummary,
   type CrmClinicalDashboardSummary,
   type CrmLead,
@@ -82,6 +84,9 @@ export function useAdminCrmMainData({
   const [pipeline, setPipeline] = useState<CrmPipelineSummary | null>(null);
   const [commandCenter, setCommandCenter] =
     useState<CrmCommandCenterSummary | null>(null);
+  const [automationActions, setAutomationActions] = useState<
+    CrmAutomationAction[]
+  >([]);
   const [clinicalSummary, setClinicalSummary] =
     useState<CrmClinicalDashboardSummary | null>(null);
   const [physicalExamSummary, setPhysicalExamSummary] =
@@ -106,6 +111,7 @@ export function useAdminCrmMainData({
         clinical,
         physicalExam,
         commandCenterSummary,
+        automationPaged,
         auditPaged,
         professionalsPaged,
         patientsPaged,
@@ -138,6 +144,16 @@ export function useAdminCrmMainData({
           limit: 8,
           professionalId: selectedProfId || undefined,
           patientId: selectedPacId || undefined,
+        }),
+        getCrmAutomationActions({
+          refresh: true,
+          windowDays,
+          semEvolucaoDias,
+          professionalId: selectedProfId || undefined,
+          patientId: selectedPacId || undefined,
+          status: "ABERTAS",
+          page: 1,
+          limit: 8,
         }),
         getCrmAdminAuditLogs({
           includeSensitive: includeSensitiveData ? true : undefined,
@@ -183,6 +199,7 @@ export function useAdminCrmMainData({
       ]);
       setPipeline(pipelineSummary);
       setCommandCenter(commandCenterSummary);
+      setAutomationActions(automationPaged.items || []);
       setClinicalSummary(clinical);
       setPhysicalExamSummary(physicalExam);
       setCrmAuditLogs(auditPaged.items || []);
@@ -234,6 +251,7 @@ export function useAdminCrmMainData({
   return {
     pipeline,
     commandCenter,
+    automationActions,
     clinicalSummary,
     physicalExamSummary,
     crmProfessionals,

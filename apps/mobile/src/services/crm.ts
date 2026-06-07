@@ -5,7 +5,12 @@
 import { api } from "./api";
 
 export type CrmLeadStage = "NOVO" | "CONTATO" | "PROPOSTA" | "FECHADO";
-export type CrmLeadChannel = "SITE" | "WHATSAPP" | "INDICACAO" | "INSTAGRAM" | "OUTRO";
+export type CrmLeadChannel =
+  | "SITE"
+  | "WHATSAPP"
+  | "INDICACAO"
+  | "INSTAGRAM"
+  | "OUTRO";
 export type CrmTaskStatus = "PENDENTE" | "CONCLUIDA";
 export type CrmInteractionType =
   | "LIGACAO"
@@ -104,6 +109,54 @@ export type CrmCommandCenterSummary = {
   };
   nextActions: CrmCommandCenterItem[];
 };
+
+export type CrmAutomationActionStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "SNOOZED"
+  | "DONE"
+  | "DISMISSED";
+
+export type CrmAutomationHistoryEvent = {
+  type: "CREATED" | "SEEN" | "STATUS_CHANGED" | "SLA_CHANGED" | "NOTE_ADDED";
+  at: string;
+  actorUsuarioId?: string | null;
+  fromStatus?: CrmAutomationActionStatus | null;
+  toStatus?: CrmAutomationActionStatus | null;
+  note?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type CrmAutomationAction = {
+  id: string;
+  sourceKey: string;
+  type: CrmCommandCenterActionType;
+  severity: "HIGH" | "MEDIUM";
+  status: CrmAutomationActionStatus;
+  title: string;
+  description: string;
+  ctaLabel: string;
+  targetType: "TASK" | "LEAD" | "PATIENT" | "PROFESSIONAL";
+  targetId: string;
+  responsavelUsuarioId: string | null;
+  slaDueAt: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  resolvedAt: string | null;
+  metadata: Record<string, unknown> | null;
+  history: CrmAutomationHistoryEvent[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CrmAutomationActionsResponse =
+  CrmPagedResponse<CrmAutomationAction> & {
+    sync: {
+      synced: number;
+      created: number;
+      refreshed: number;
+    };
+  };
 
 export type CrmClinicalDashboardSummary = {
   pipeline: {
@@ -365,6 +418,41 @@ export async function getCrmCommandCenter(params?: {
   return response.data;
 }
 
+export async function getCrmAutomationActions(params?: {
+  refresh?: boolean;
+  windowDays?: number;
+  semEvolucaoDias?: number;
+  professionalId?: string;
+  patientId?: string;
+  status?: CrmAutomationActionStatus | "TODOS" | "ABERTAS";
+  type?: CrmCommandCenterActionType;
+  targetType?: "TASK" | "LEAD" | "PATIENT" | "PROFESSIONAL";
+  targetId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<CrmAutomationActionsResponse> {
+  const response = await api.get<CrmAutomationActionsResponse>(
+    "/crm/automations",
+    { params },
+  );
+  return response.data;
+}
+
+export async function updateCrmAutomationAction(
+  id: string,
+  payload: Partial<{
+    status: CrmAutomationActionStatus;
+    slaDueAt: string;
+    note: string;
+  }>,
+): Promise<CrmAutomationAction> {
+  const response = await api.patch<CrmAutomationAction>(
+    `/crm/automations/${id}`,
+    payload,
+  );
+  return response.data;
+}
+
 export async function getCrmAdminAuditLogs(params?: {
   q?: string;
   action?: string;
@@ -413,7 +501,10 @@ export async function getCrmAdminProfessionals(params?: {
   includeSensitive?: boolean;
   sensitiveReason?: string;
 }): Promise<CrmAdminProfessional[]> {
-  const response = await api.get<CrmAdminProfessional[]>("/crm/admin/profissionais", { params });
+  const response = await api.get<CrmAdminProfessional[]>(
+    "/crm/admin/profissionais",
+    { params },
+  );
   return response.data;
 }
 
@@ -426,7 +517,9 @@ export async function getCrmAdminPatients(params?: {
   includeSensitive?: boolean;
   sensitiveReason?: string;
 }): Promise<CrmAdminPatient[]> {
-  const response = await api.get<CrmAdminPatient[]>("/crm/admin/pacientes", { params });
+  const response = await api.get<CrmAdminPatient[]>("/crm/admin/pacientes", {
+    params,
+  });
   return response.data;
 }
 
@@ -439,7 +532,10 @@ export async function getCrmAdminProfessionalsPaged(params?: {
   page?: number;
   limit?: number;
 }): Promise<CrmPagedResponse<CrmAdminProfessional>> {
-  const response = await api.get<CrmPagedResponse<CrmAdminProfessional>>("/crm/admin/profissionais-paged", { params });
+  const response = await api.get<CrmPagedResponse<CrmAdminProfessional>>(
+    "/crm/admin/profissionais-paged",
+    { params },
+  );
   return response.data;
 }
 
@@ -454,7 +550,10 @@ export async function getCrmAdminPatientsPaged(params?: {
   page?: number;
   limit?: number;
 }): Promise<CrmPagedResponse<CrmAdminPatient>> {
-  const response = await api.get<CrmPagedResponse<CrmAdminPatient>>("/crm/admin/pacientes-paged", { params });
+  const response = await api.get<CrmPagedResponse<CrmAdminPatient>>(
+    "/crm/admin/pacientes-paged",
+    { params },
+  );
   return response.data;
 }
 
@@ -497,7 +596,12 @@ export async function updateCrmAdminPatient(
     cpf: string;
     dataNascimento: string;
     sexo: "MASCULINO" | "FEMININO" | "OUTRO";
-    estadoCivil: "SOLTEIRO" | "CASADO" | "VIUVO" | "DIVORCIADO" | "UNIAO_ESTAVEL";
+    estadoCivil:
+      | "SOLTEIRO"
+      | "CASADO"
+      | "VIUVO"
+      | "DIVORCIADO"
+      | "UNIAO_ESTAVEL";
     profissao: string;
     contatoWhatsapp: string;
     contatoTelefone: string;
@@ -597,9 +701,12 @@ export async function getCrmInteractions(
   leadId: string,
   params?: { includeSensitive?: boolean; sensitiveReason?: string },
 ): Promise<CrmInteraction[]> {
-  const response = await api.get<CrmInteraction[]>(`/crm/leads/${leadId}/interactions`, {
-    params,
-  });
+  const response = await api.get<CrmInteraction[]>(
+    `/crm/leads/${leadId}/interactions`,
+    {
+      params,
+    },
+  );
   return response.data;
 }
 
@@ -626,7 +733,10 @@ export async function updateCrmInteraction(
     occurredAt: string;
   }>,
 ): Promise<CrmInteraction> {
-  const response = await api.patch<CrmInteraction>(`/crm/interactions/${id}`, payload);
+  const response = await api.patch<CrmInteraction>(
+    `/crm/interactions/${id}`,
+    payload,
+  );
   return response.data;
 }
 
