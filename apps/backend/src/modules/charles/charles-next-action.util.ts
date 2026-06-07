@@ -94,7 +94,8 @@ export function buildCharlesNextActionResponse(
   const hasExameFisico = hasStructuredExame(latestLaudo?.exameFisico);
   const hasEvolucao = !!latestEvolucao;
   const laudoValidado =
-    latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL;
+    latestLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+    latestLaudo?.status === LaudoStatus.PUBLICADO_PACIENTE;
   const hasPlanoOuAlta = !!String(latestLaudo?.criteriosAlta || '').trim();
   const hasCriticalRedFlagResult = hasCriticalRedFlag(latestAnamnese?.redFlags);
   const context = buildCharlesClinicalContext(latestAnamnese);

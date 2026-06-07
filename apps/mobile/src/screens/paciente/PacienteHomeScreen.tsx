@@ -23,7 +23,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLayoutEffect } from "react";
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from "../../constants/theme";
-import { Atividade, PacienteProfileResponse, RootStackParamList } from "../../types";
+import {
+  Atividade,
+  LaudoStatus,
+  PacienteProfileResponse,
+  RootStackParamList,
+} from "../../types";
 import { useAuthStore } from "../../stores/authStore";
 import {
   api,
@@ -84,6 +89,7 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
   const [pacienteNome, setPacienteNome] = useState("");
   const [pacienteId, setPacienteId] = useState<string | null>(null);
   const [hasProfessionalLink, setHasProfessionalLink] = useState(false);
+  const [canFillAnamnese, setCanFillAnamnese] = useState(false);
   const [hasAnamnesePreenchida, setHasAnamnesePreenchida] = useState(false);
   const [ultimaEvolucaoEm, setUltimaEvolucaoEm] = useState<string | null>(null);
   const [ultimoLaudoAtualizadoEm, setUltimoLaudoAtualizadoEm] = useState<string | null>(null);
@@ -128,11 +134,14 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
   ];
 
   const statusLabel =
-    statusLaudo === "VALIDADO_PROFISSIONAL"
+    statusLaudo === LaudoStatus.PUBLICADO_PACIENTE
+      ? t("patient.statusPublished")
+      : statusLaudo === LaudoStatus.VALIDADO_PROFISSIONAL
       ? t("patient.statusValidated")
-      : statusLaudo === "RASCUNHO_IA"
+      : statusLaudo === LaudoStatus.RASCUNHO_IA
         ? t("patient.statusDraft")
         : t("patient.statusUnavailable");
+  const hasPublishedDocuments = statusLaudo === LaudoStatus.PUBLICADO_PACIENTE;
 
   const atividadesPorDia = useMemo<Array<{ day: number; label: string; itens: Atividade[] }>>(() => {
     const groups = new Map<number, Atividade[]>();
@@ -676,8 +685,11 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
 
       const response = await api.get<PacienteProfileResponse>("/pacientes/me");
       const linked = !!response.data?.vinculado && !!response.data?.paciente?.id;
+      const anamneseLiberada =
+        !linked || !!response.data?.paciente?.anamneseLiberadaPaciente;
 
       setHasProfessionalLink(linked);
+      setCanFillAnamnese(anamneseLiberada);
       setPacienteNome(response.data.paciente?.nomeCompleto || usuario?.nome || t("home.user"));
       setPacienteId(response.data.paciente?.id || null);
       setUltimaEvolucaoEm(response.data.resumo?.ultimaEvolucaoEm || null);
@@ -719,6 +731,7 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       const status = (error as { response?: { status?: number } }).response?.status;
       if (status === 404) {
         setHasProfessionalLink(false);
+        setCanFillAnamnese(false);
         setPacienteId(null);
         setPacienteNome(usuario?.nome || t("home.user"));
         setHasAnamnesePreenchida(false);
@@ -802,6 +815,93 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       setLoadingPdf(null);
     }
   };
+
+  const proximaAcao = useMemo(() => {
+    if (pacienteId && canFillAnamnese && !hasAnamnesePreenchida) {
+      return {
+        title: t("patient.nextActionAnamnesisTitle"),
+        description: t("patient.nextActionAnamnesisDescription"),
+        actionLabel: t("patient.nextActionAnamnesisAction"),
+        icon: "document-text-outline" as const,
+        onPress: () =>
+          navigation.navigate("AnamneseForm", {
+            pacienteId,
+            selfMode: true,
+            pacienteNome: pacienteNome || usuario?.nome || t("home.user"),
+          }),
+      };
+    }
+
+    if (
+      pacienteId &&
+      hasProfessionalLink &&
+      !canFillAnamnese &&
+      !hasAnamnesePreenchida
+    ) {
+      return {
+        title: t("patient.nextActionWaitTitle"),
+        description: t("patient.nextActionWaitDescription"),
+        actionLabel: "",
+        icon: "time-outline" as const,
+        onPress: null,
+      };
+    }
+
+    const nextCheck = proximaAtividadeHoje || primeiraAtividadeDisponivel;
+    if (hasProfessionalLink && nextCheck) {
+      return {
+        title: t("patient.nextActionCheckinTitle"),
+        description: nextCheck.titulo,
+        actionLabel: t("patient.todayChecksAction"),
+        icon: "checkmark-circle-outline" as const,
+        onPress: () =>
+          navigation.navigate("PacienteAtividadeCheckin", {
+            atividadeId: nextCheck.id,
+            titulo: nextCheck.titulo,
+          }),
+      };
+    }
+
+    if (hasProfessionalLink && hasPublishedDocuments) {
+      return {
+        title: t("patient.nextActionDocumentTitle"),
+        description: t("patient.nextActionDocumentDescription"),
+        actionLabel: t("patient.myReportPdf"),
+        icon: "document-attach-outline" as const,
+        onPress: () => openMyPdf("laudo"),
+      };
+    }
+
+    if (hasProfessionalLink && pacienteId) {
+      return {
+        title: t("patient.nextActionExamTitle"),
+        description: t("patient.nextActionExamDescription"),
+        actionLabel: t("patient.attachExam"),
+        icon: "attach-outline" as const,
+        onPress: () => handleUploadExame().catch(() => undefined),
+      };
+    }
+
+    return {
+      title: t("patient.nextActionNoLinkTitle"),
+      description: t("patient.nextActionNoLinkDescription"),
+      actionLabel: "",
+      icon: "mail-outline" as const,
+      onPress: null,
+    };
+  }, [
+    canFillAnamnese,
+    hasAnamnesePreenchida,
+    hasProfessionalLink,
+    hasPublishedDocuments,
+    navigation,
+    pacienteId,
+    pacienteNome,
+    primeiraAtividadeDisponivel,
+    proximaAtividadeHoje,
+    t,
+    usuario?.nome,
+  ]);
 
   const handleManualSync = async () => {
     try {
@@ -960,7 +1060,7 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
             <Text style={styles.subtitle}>
               {t("patient.exclusiveAccess")}
             </Text>
-            {pacienteId ? (
+            {pacienteId && canFillAnamnese ? (
               <TouchableOpacity
                 style={styles.selfAnamneseButton}
                 activeOpacity={0.85}
@@ -982,6 +1082,24 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                     ? t("patient.editMyAnamnese")
                     : t("patient.fillMyAnamnese")}
                 </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <View style={[styles.card, styles.startCard]}>
+            <View style={styles.nextActionHeader}>
+              <Ionicons name={proximaAcao.icon} size={20} color={COLORS.primary} />
+              <Text style={styles.startTitle}>{proximaAcao.title}</Text>
+            </View>
+            <Text style={styles.startDescription}>{proximaAcao.description}</Text>
+            {proximaAcao.onPress && proximaAcao.actionLabel ? (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={proximaAcao.onPress}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.startButtonText}>{proximaAcao.actionLabel}</Text>
+                <Ionicons name="arrow-forward-outline" size={16} color={COLORS.white} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -1170,42 +1288,46 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
             <Text style={styles.item}>
               {t("patient.reportStatus", { status: statusLabel })}
             </Text>
-            <View style={styles.pdfActions}>
-              <TouchableOpacity
-                style={styles.pdfButton}
-                onPress={() => openMyPdf("laudo")}
-                activeOpacity={0.85}
-                disabled={loadingPdf !== null}
-              >
-                {loadingPdf === "laudo" ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <>
-                    <Ionicons name="document-text-outline" size={16} color={COLORS.white} />
-                    <Text style={styles.pdfButtonText}>{t("patient.myReportPdf")}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pdfButton, styles.pdfButtonSecondary]}
-                onPress={() => openMyPdf("plano")}
-                activeOpacity={0.85}
-                disabled={loadingPdf !== null}
-              >
-                {loadingPdf === "plano" ? (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                ) : (
-                  <>
-                    <Ionicons name="medkit-outline" size={16} color={COLORS.primary} />
-                    <Text style={styles.pdfButtonSecondaryText}>{t("patient.myPlanPdf")}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+            {hasPublishedDocuments ? (
+              <View style={styles.pdfActions}>
+                <TouchableOpacity
+                  style={styles.pdfButton}
+                  onPress={() => openMyPdf("laudo")}
+                  activeOpacity={0.85}
+                  disabled={loadingPdf !== null}
+                >
+                  {loadingPdf === "laudo" ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <>
+                      <Ionicons name="document-text-outline" size={16} color={COLORS.white} />
+                      <Text style={styles.pdfButtonText}>{t("patient.myReportPdf")}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pdfButton, styles.pdfButtonSecondary]}
+                  onPress={() => openMyPdf("plano")}
+                  activeOpacity={0.85}
+                  disabled={loadingPdf !== null}
+                >
+                  {loadingPdf === "plano" ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="medkit-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.pdfButtonSecondaryText}>{t("patient.myPlanPdf")}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.item}>{t("patient.documentsAwaitingPublication")}</Text>
+            )}
           </View>
           ) : null}
 
-          {hasProfessionalLink ? (
+          {hasProfessionalLink && hasPublishedDocuments ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>{t("patient.recentDocuments")}</Text>
             <View style={styles.documentItem}>
@@ -1220,24 +1342,14 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                 </Text>
                 <View style={styles.documentStatusRow}>
                   <Ionicons
-                    name={
-                      statusLaudo === "VALIDADO_PROFISSIONAL"
-                        ? "checkmark-circle"
-                        : "time-outline"
-                    }
+                    name="checkmark-circle"
                     size={14}
-                    color={
-                      statusLaudo === "VALIDADO_PROFISSIONAL"
-                        ? COLORS.success
-                        : COLORS.warning
-                    }
+                    color={COLORS.success}
                   />
                   <Text
                     style={[
                       styles.documentStatusText,
-                      statusLaudo === "VALIDADO_PROFISSIONAL"
-                        ? styles.documentStatusApproved
-                        : styles.documentStatusDraft,
+                      styles.documentStatusApproved,
                     ]}
                   >
                     {statusLabel}
@@ -1634,15 +1746,6 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
           ) : null}
         </>
       )}
-
-          {hasProfessionalLink ? (
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>{t("patient.soon")}</Text>
-        <Text style={styles.item}>{t("patient.soonPlan")}</Text>
-        <Text style={styles.item}>{t("patient.soonEvolutions")}</Text>
-        <Text style={styles.item}>{t("patient.soonDocs")}</Text>
-      </View>
-          ) : null}
 
         <TouchableOpacity
           style={styles.primaryButton}
@@ -2220,6 +2323,12 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.lg,
     fontWeight: "700",
     color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  nextActionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
     marginBottom: SPACING.xs,
   },
   startDescription: {

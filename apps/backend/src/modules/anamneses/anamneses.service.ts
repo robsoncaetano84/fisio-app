@@ -4,6 +4,7 @@
 // ==========================================
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -56,6 +57,7 @@ export class AnamnesesService {
   ): Promise<Anamnese> {
     const paciente =
       await this.pacientesService.findOrCreateSelfPacienteForUsuario(usuarioId);
+    this.assertPacienteCanSubmitAnamnese(paciente, usuarioId);
 
     const normalizedDto = this.removeLocalPainIntensity(createAnamneseDto);
     this.validateClinicalMinimum(normalizedDto);
@@ -286,5 +288,19 @@ export class AnamnesesService {
     if (integer < 1) return 1;
     if (integer > max) return max;
     return integer;
+  }
+
+  private assertPacienteCanSubmitAnamnese(
+    paciente: { usuarioId: string; anamneseLiberadaPaciente?: boolean | null },
+    usuarioId: string,
+  ): void {
+    const cadastroAutonomo = paciente.usuarioId === usuarioId;
+    if (cadastroAutonomo || paciente.anamneseLiberadaPaciente) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'Anamnese ainda nao liberada pelo profissional.',
+    );
   }
 }

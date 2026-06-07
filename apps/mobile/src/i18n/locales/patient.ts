@@ -22,7 +22,24 @@ export const ptPatient: TranslationMap = {
   "patient.noLinkTitle": "Sem vínculo com profissional",
   "patient.noLinkDescription": "Você ainda não está vinculado a um profissional.",
   "patient.noLinkHint":
-    "Você já pode preencher sua anamnese. Solicite um convite para liberar planos e atividades.",
+    "Solicite o convite do seu profissional para liberar planos, atividades e documentos.",
+  "patient.nextActionAnamnesisTitle": "Próxima ação",
+  "patient.nextActionAnamnesisDescription":
+    "Preencha sua anamnese para que o profissional revise seu histórico antes do atendimento.",
+  "patient.nextActionAnamnesisAction": "Preencher anamnese",
+  "patient.nextActionWaitTitle": "Aguardando profissional",
+  "patient.nextActionWaitDescription":
+    "Seu profissional ainda não liberou a anamnese pelo app.",
+  "patient.nextActionCheckinTitle": "Check-in de hoje",
+  "patient.nextActionDocumentTitle": "Documento disponível",
+  "patient.nextActionDocumentDescription":
+    "Seu laudo/plano já foi publicado pelo profissional.",
+  "patient.nextActionExamTitle": "Enviar exame",
+  "patient.nextActionExamDescription":
+    "Anexe um exame médico em PDF ou imagem para o profissional revisar.",
+  "patient.nextActionNoLinkTitle": "Aguardando convite",
+  "patient.nextActionNoLinkDescription":
+    "Entre pelo link enviado pelo profissional para ativar seu acompanhamento no app.",
   "patient.anamneseAwaitingProfessional": "Aguardando liberação do profissional.",
   "patient.startHereTitle": "Vamos iniciar por aqui",
   "patient.startHereDescription":
@@ -128,8 +145,11 @@ export const ptPatient: TranslationMap = {
   "patient.soonEvolutions": "- Minhas evoluções",
   "patient.soonDocs": "- Documentos compartilhados",
   "patient.statusValidated": "Validado",
+  "patient.statusPublished": "Publicado",
   "patient.statusDraft": "Rascunho",
   "patient.statusUnavailable": "Indisponível",
+  "patient.documentsAwaitingPublication":
+    "Laudo e plano serão liberados aqui após publicação pelo profissional.",
   "patient.syncSuccess": "{{count}} check-in(s) offline sincronizado(s)",
   "patient.loadError": "Não foi possível carregar seus dados",
   "patient.sessionExpired": "Sessão expirada. Faça login novamente.",
@@ -177,7 +197,24 @@ export const enPatient: TranslationMap = {
   "patient.noLinkTitle": "No professional link",
   "patient.noLinkDescription": "Your account is not linked to a professional yet.",
   "patient.noLinkHint":
-    "You can already fill in your anamnesis. Ask for an invite to unlock plans and activities.",
+    "Ask your professional for an invite to unlock plans, activities, and documents.",
+  "patient.nextActionAnamnesisTitle": "Next action",
+  "patient.nextActionAnamnesisDescription":
+    "Fill your anamnesis so the professional can review your history before care.",
+  "patient.nextActionAnamnesisAction": "Fill anamnesis",
+  "patient.nextActionWaitTitle": "Waiting for professional",
+  "patient.nextActionWaitDescription":
+    "Your professional has not enabled anamnesis in the app yet.",
+  "patient.nextActionCheckinTitle": "Today's check-in",
+  "patient.nextActionDocumentTitle": "Document available",
+  "patient.nextActionDocumentDescription":
+    "Your report/plan has been published by the professional.",
+  "patient.nextActionExamTitle": "Send exam",
+  "patient.nextActionExamDescription":
+    "Attach a medical exam as PDF or image for the professional to review.",
+  "patient.nextActionNoLinkTitle": "Waiting for invite",
+  "patient.nextActionNoLinkDescription":
+    "Open the link sent by your professional to activate follow-up in the app.",
   "patient.anamneseAwaitingProfessional": "Waiting for professional release.",
   "patient.startHereTitle": "Let's start here",
   "patient.startHereDescription":
@@ -282,8 +319,11 @@ export const enPatient: TranslationMap = {
   "patient.soonEvolutions": "- My evolutions",
   "patient.soonDocs": "- Shared documents",
   "patient.statusValidated": "Validated",
+  "patient.statusPublished": "Published",
   "patient.statusDraft": "Draft",
   "patient.statusUnavailable": "Unavailable",
+  "patient.documentsAwaitingPublication":
+    "Report and plan will be available here after publication by the professional.",
   "patient.syncSuccess": "{{count}} offline check-in(s) synced",
   "patient.loadError": "Could not load your data",
   "patient.sessionExpired": "Session expired. Please sign in again.",
@@ -328,7 +368,24 @@ export const esPatient: TranslationMap = {
   "patient.noLinkTitle": "Sin vínculo con profesional",
   "patient.noLinkDescription": "Tu cuenta aún no está vinculada a un profesional.",
   "patient.noLinkHint":
-    "Ya puedes completar tu anamnesis. Solicita una invitación para desbloquear planes y actividades.",
+    "Solicita la invitación de tu profesional para liberar planes, actividades y documentos.",
+  "patient.nextActionAnamnesisTitle": "Próxima acción",
+  "patient.nextActionAnamnesisDescription":
+    "Completa tu anamnesis para que el profesional revise tu historial antes de la atención.",
+  "patient.nextActionAnamnesisAction": "Completar anamnesis",
+  "patient.nextActionWaitTitle": "Esperando al profesional",
+  "patient.nextActionWaitDescription":
+    "Tu profesional aún no habilitó la anamnesis en la app.",
+  "patient.nextActionCheckinTitle": "Check-in de hoy",
+  "patient.nextActionDocumentTitle": "Documento disponible",
+  "patient.nextActionDocumentDescription":
+    "Tu informe/plan ya fue publicado por el profesional.",
+  "patient.nextActionExamTitle": "Enviar examen",
+  "patient.nextActionExamDescription":
+    "Adjunta un examen médico en PDF o imagen para que el profesional lo revise.",
+  "patient.nextActionNoLinkTitle": "Esperando invitación",
+  "patient.nextActionNoLinkDescription":
+    "Abre el enlace enviado por tu profesional para activar tu seguimiento en la app.",
   "patient.anamneseAwaitingProfessional": "Esperando liberación del profesional.",
   "patient.startHereTitle": "Vamos empezar por aquí",
   "patient.startHereDescription":
@@ -433,8 +490,11 @@ export const esPatient: TranslationMap = {
   "patient.soonEvolutions": "- Mis evoluciones",
   "patient.soonDocs": "- Documentos compartidos",
   "patient.statusValidated": "Validado",
+  "patient.statusPublished": "Publicado",
   "patient.statusDraft": "Borrador",
   "patient.statusUnavailable": "No disponible",
+  "patient.documentsAwaitingPublication":
+    "El informe y el plan estarán disponibles aquí después de la publicación del profesional.",
   "patient.syncSuccess": "{{count}} check-in(s) offline sincronizado(s)",
   "patient.loadError": "No se pudieron cargar tus datos",
   "patient.sessionExpired": "Sesión expirada. Inicia sesión nuevamente.",

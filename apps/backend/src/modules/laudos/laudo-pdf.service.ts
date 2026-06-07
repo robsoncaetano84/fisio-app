@@ -117,9 +117,11 @@ export class LaudoPdfService {
     },
   ) {
     const statusText =
-      params.status === LaudoStatus.VALIDADO_PROFISSIONAL
-        ? 'Validado pelo profissional'
-        : 'Rascunho para revisao profissional';
+      params.status === LaudoStatus.PUBLICADO_PACIENTE
+        ? 'Publicado ao paciente'
+        : params.status === LaudoStatus.VALIDADO_PROFISSIONAL
+          ? 'Validado pelo profissional'
+          : 'Rascunho para revisao profissional';
     const professionalLabel = this.formatProfessionalLabel(params.profissional);
 
     doc.save();
@@ -646,7 +648,9 @@ export class LaudoPdfService {
     }
 
     const validationText =
-      laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL && laudo.validadoEm
+      (laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+        laudo.status === LaudoStatus.PUBLICADO_PACIENTE) &&
+      laudo.validadoEm
         ? `Validado em ${laudo.validadoEm.toLocaleDateString('pt-BR')}`
         : 'Pendente de validacao profissional';
     doc

@@ -144,7 +144,7 @@ export class LaudosController {
   @Throttle({ default: { ttl: 60, limit: 120 } })
   @Roles(UserRole.PACIENTE)
   findMyLatest(@CurrentUser() usuario: Usuario) {
-    return this.laudosService.findLatestByPacienteUsuario(usuario.id);
+    return this.laudosService.findLatestPublishedByPacienteUsuario(usuario.id);
   }
 
   @Get(':id')
@@ -235,6 +235,15 @@ export class LaudosController {
     @CurrentUser() usuario: Usuario,
   ) {
     return this.laudosService.validarLaudo(id, usuario.id);
+  }
+
+  @Post(':id/publicar-paciente')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  publicarPaciente(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.laudosService.publicarParaPaciente(id, usuario.id);
   }
 
   @Delete(':id')

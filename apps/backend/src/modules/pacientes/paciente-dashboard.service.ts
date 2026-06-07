@@ -69,7 +69,8 @@ export class PacienteDashboardService {
     for (const row of rows) {
       const lastLaudo = laudoByPaciente.get(row.pacienteId);
       const hasAltaDocumento =
-        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        (lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+          lastLaudo?.status === LaudoStatus.PUBLICADO_PACIENTE) &&
         !!lastLaudo.criteriosAlta;
       const hasActiveActivity = atividadePacienteIds.has(row.pacienteId);
       const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;

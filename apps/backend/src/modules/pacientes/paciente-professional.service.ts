@@ -234,6 +234,33 @@ export class PacienteProfessionalService {
     return saved;
   }
 
+  async revokePacienteInviteByProfessional(
+    id: string,
+    usuarioId: string,
+    isMasterAdmin = false,
+  ): Promise<Paciente> {
+    const paciente = await this.findScopedPacienteOrFail(
+      id,
+      usuarioId,
+      isMasterAdmin,
+    );
+
+    if (paciente.pacienteUsuarioId) {
+      throw new BadRequestException(
+        'Paciente ja possui acesso ativo ao app. Use desvincular acesso.',
+      );
+    }
+
+    if (paciente.vinculoStatus !== PacienteVinculoStatus.CONVITE_ENVIADO) {
+      throw new BadRequestException('Paciente nao possui convite pendente');
+    }
+
+    paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+    paciente.conviteEnviadoEm = null;
+    paciente.conviteAceitoEm = null;
+    return this.pacienteRepository.save(paciente);
+  }
+
   async remove(
     id: string,
     usuarioId: string,

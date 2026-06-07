@@ -254,8 +254,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const { fetchAnamnesesByPaciente, anamneses } = useAnamneseStore();
   const token = useAuthStore((state) => state.token);
   const usuario = useAuthStore((state) => state.usuario);
-  const { fetchLaudoByPaciente, createLaudo, updateLaudo, validarLaudo } =
-    useLaudoStore();
+  const {
+    fetchLaudoByPaciente,
+    createLaudo,
+    updateLaudo,
+    validarLaudo,
+    publicarLaudoPaciente,
+  } = useLaudoStore();
   const { showToast } = useToast();
 
   const paciente = getPacienteById(pacienteId);
@@ -670,19 +675,27 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       criteriosAlta,
     });
 
-  const isValidated = laudoStatus === LaudoStatus.VALIDADO_PROFISSIONAL;
+  const isPublishedToPatient = laudoStatus === LaudoStatus.PUBLICADO_PACIENTE;
+  const isValidated =
+    laudoStatus === LaudoStatus.VALIDADO_PROFISSIONAL || isPublishedToPatient;
   const hasUnsavedChanges =
     !!laudoId && !!lastSavedSnapshot && getSnapshot() !== lastSavedSnapshot;
   const hasCriticalChangesAfterValidation =
     isValidated && !!validatedSnapshot && validatedSnapshot !== getSnapshot();
   const isValidatedWithoutPendingChanges =
     isValidated && !hasCriticalChangesAfterValidation;
+  const isAutosaving = autosaveStatus === "saving";
   const hasConfirmedRequiredAiReview =
     !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
   const validationChecklistChecked =
     isValidatedWithoutPendingChanges ||
     (professionalValidationConfirmed && hasConfirmedRequiredAiReview);
   const canToggleValidationChecklist = !isValidatedWithoutPendingChanges;
+  const canPublishToPatient =
+    !!laudoId &&
+    laudoStatus === LaudoStatus.VALIDADO_PROFISSIONAL &&
+    !hasUnsavedChanges &&
+    !isAutosaving;
   const hasReviewedLaudo =
     isValidated ||
     (initialSnapshot
@@ -690,7 +703,6 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       : !!lastSavedSnapshot);
   const hasConfirmedAiReview =
     !AI_REVIEW_REQUIRED || !aiSuggestionMeta || aiSuggestionConfirmed;
-  const isAutosaving = autosaveStatus === "saving";
   const canGenerateLaudo =
     !!laudoId &&
     !hasUnsavedChanges &&
@@ -790,8 +802,11 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
       setObservacoes(laudo.observacoes || "");
       setCriteriosAlta(laudo.criteriosAlta || "");
       setLaudoStatus(laudo.status || LaudoStatus.RASCUNHO_IA);
+      const loadedIsValidated =
+        laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+        laudo.status === LaudoStatus.PUBLICADO_PACIENTE;
       setProfessionalValidationConfirmed(
-        laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL,
+        loadedIsValidated,
       );
       setValidadoEm(laudo.validadoEm || "");
       const examesConsiderados = Number(laudo.examesConsiderados || 0);
@@ -808,8 +823,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           generatedAt: laudo.sugestaoGeradaEm || null,
         });
         setAiSuggestionConfirmed(
-          !AI_REVIEW_REQUIRED ||
-            laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL,
+          !AI_REVIEW_REQUIRED || loadedIsValidated,
         );
         if (examesComLeituraIa > 0) {
           setAiExamContextMessage(
@@ -839,7 +853,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           .then((savedSnapshot) => {
             if (savedSnapshot) {
               setValidatedSnapshot(savedSnapshot);
-            } else if (laudo.status === LaudoStatus.VALIDADO_PROFISSIONAL) {
+            } else if (loadedIsValidated) {
               setValidatedSnapshot(loadedSnapshot);
               AsyncStorage.setItem(
                 getValidatedSnapshotKey(id),
@@ -1255,6 +1269,41 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
 
     await performValidate();
+  };
+
+  const handlePublishToPatient = async () => {
+    if (!laudoId) return;
+    if (!canPublishToPatient) {
+      showToast({
+        message: t("clinical.messages.validateBeforePatientPublication"),
+        type: "info",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const published = await publicarLaudoPaciente(laudoId);
+      setLaudoStatus(published.status || LaudoStatus.PUBLICADO_PACIENTE);
+      await trackEvent("laudo_published_to_patient", {
+        laudoId,
+        pacienteId,
+      });
+      await recordAuditAction(
+        "LAUDO_PUBLISHED_TO_PATIENT",
+        { laudoId, pacienteId },
+        usuario?.id,
+      );
+      showToast({
+        message: t("clinical.messages.reportPublishedToPatient"),
+        type: "success",
+      });
+    } catch (error: unknown) {
+      const { message } = parseApiError(error);
+      showToast({ message, type: "error" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const confirmAiSuggestionReview = () => {
@@ -2383,6 +2432,42 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
               />
             }
           />
+          <Button
+            title={
+              isPublishedToPatient
+                ? t("clinical.actions.publishedToPatient")
+                : t("clinical.actions.publishToPatient")
+            }
+            onPress={handlePublishToPatient}
+            loading={loading}
+            disabled={loading || isPublishedToPatient || !canPublishToPatient}
+            fullWidth
+            variant={isPublishedToPatient ? "outline" : "primary"}
+            style={{ marginTop: SPACING.sm }}
+            icon={
+              <Ionicons
+                name={
+                  isPublishedToPatient
+                    ? "checkmark-done-outline"
+                    : "share-social-outline"
+                }
+                size={18}
+                color={isPublishedToPatient ? COLORS.primary : COLORS.white}
+              />
+            }
+          />
+          {!isPublishedToPatient && !canPublishToPatient ? (
+            <View style={styles.referencesValidateHint}>
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color={COLORS.warning}
+              />
+              <Text style={styles.referencesValidateHintText}>
+                {t("clinical.messages.patientPublicationHint")}
+              </Text>
+            </View>
+          ) : null}
           {!canGenerateLaudo ? (
             <View style={styles.referencesValidateHint}>
               <Ionicons

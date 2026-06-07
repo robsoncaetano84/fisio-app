@@ -590,7 +590,8 @@ export class MetricsService {
       const hasAnamnesePaciente = hasAnamnese.has(paciente.id);
       const lastLaudo = latestLaudoByPaciente.get(paciente.id);
       const hasAltaDocumento =
-        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        (lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+          lastLaudo?.status === LaudoStatus.PUBLICADO_PACIENTE) &&
         !!lastLaudo.criteriosAlta;
       const tratamentoConcluido =
         hasAltaDocumento && !hasActiveActivity.has(paciente.id);

@@ -466,6 +466,19 @@ export class PacientesController {
     );
   }
 
+  @Post(':id/revogar-convite')
+  @Throttle({ default: { ttl: 60, limit: 10 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  revokePacienteInvite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.pacientesService.revokePacienteInviteByProfessional(
+      id,
+      usuario.id,
+    );
+  }
+
   @Delete(':id')
   @Throttle({ default: { ttl: 60, limit: 20 } })
   @Roles(UserRole.ADMIN, UserRole.USER)

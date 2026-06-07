@@ -156,7 +156,8 @@ export class PacienteListService {
       const hasAnamnese = anamnesePacienteIds.has(pacienteId);
       const lastLaudo = laudoByPaciente.get(pacienteId);
       const hasAltaDocumento =
-        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        (lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+          lastLaudo?.status === LaudoStatus.PUBLICADO_PACIENTE) &&
         !!lastLaudo.criteriosAlta;
       const hasActiveActivity = atividadePacienteIds.has(pacienteId);
       const tratamentoConcluido = hasAltaDocumento && !hasActiveActivity;

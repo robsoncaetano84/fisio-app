@@ -231,6 +231,30 @@ export class LaudosService {
     return this.laudoExameFisicoService.hydrateLaudo(laudo);
   }
 
+  async findLatestPublishedByPacienteUsuario(
+    usuarioId: string,
+  ): Promise<Laudo> {
+    const laudo = await this.laudoRepository
+      .createQueryBuilder('laudo')
+      .leftJoinAndSelect('laudo.paciente', 'paciente')
+      .where('paciente.paciente_usuario_id = :usuarioId', { usuarioId })
+      .andWhere('paciente.ativo = :ativo', { ativo: true })
+      .andWhere('laudo.status = :status', {
+        status: LaudoStatus.PUBLICADO_PACIENTE,
+      })
+      .orderBy('laudo.publicadoPacienteEm', 'DESC')
+      .addOrderBy('laudo.updatedAt', 'DESC')
+      .getOne();
+
+    if (!laudo) {
+      throw new NotFoundException(
+        'Laudo ainda nao publicado para este paciente',
+      );
+    }
+
+    return this.laudoExameFisicoService.hydrateLaudo(laudo);
+  }
+
   async findExameFisicoByPaciente(
     pacienteId: string,
     usuarioId: string,
@@ -301,6 +325,8 @@ export class LaudosService {
     laudo.status = LaudoStatus.RASCUNHO_IA;
     laudo.validadoPorUsuarioId = null;
     laudo.validadoEm = null;
+    laudo.publicadoPacientePorUsuarioId = null;
+    laudo.publicadoPacienteEm = null;
     const saved = await this.laudoRepository.save(laudo);
     const exameFisicoDepois = String(saved.exameFisico || '').trim();
     const exameFisicoMudou =
@@ -328,6 +354,8 @@ export class LaudosService {
     laudo.status = LaudoStatus.VALIDADO_PROFISSIONAL;
     laudo.validadoPorUsuarioId = usuarioId;
     laudo.validadoEm = new Date();
+    laudo.publicadoPacientePorUsuarioId = null;
+    laudo.publicadoPacienteEm = null;
     const saved = await this.laudoRepository.save(laudo);
     logOperationalEvent(
       this.logger,
@@ -339,6 +367,34 @@ export class LaudosService {
         status: saved.status,
       },
     );
+    return saved;
+  }
+
+  async publicarParaPaciente(id: string, usuarioId: string): Promise<Laudo> {
+    const laudo = await this.findOne(id, usuarioId);
+
+    if (laudo.status === LaudoStatus.PUBLICADO_PACIENTE) {
+      return laudo;
+    }
+
+    if (laudo.status !== LaudoStatus.VALIDADO_PROFISSIONAL) {
+      throw new BadRequestException(
+        'Valide o laudo profissionalmente antes de publicar ao paciente.',
+      );
+    }
+
+    this.validateClinicalReportBody(laudo);
+    laudo.status = LaudoStatus.PUBLICADO_PACIENTE;
+    laudo.publicadoPacientePorUsuarioId = usuarioId;
+    laudo.publicadoPacienteEm = new Date();
+
+    const saved = await this.laudoRepository.save(laudo);
+    logOperationalEvent(this.logger, 'laudo.patient_publication.succeeded', {
+      laudoId: saved.id,
+      pacienteId: saved.pacienteId,
+      usuarioId,
+      status: saved.status,
+    });
     return saved;
   }
 
@@ -371,7 +427,7 @@ export class LaudosService {
     usuarioId: string,
     tipo: 'laudo' | 'plano',
   ): Promise<Buffer> {
-    const laudo = await this.findLatestByPacienteUsuario(usuarioId);
+    const laudo = await this.findLatestPublishedByPacienteUsuario(usuarioId);
     const profissional = await this.usuariosService.findById(
       laudo.paciente.usuarioId,
     );

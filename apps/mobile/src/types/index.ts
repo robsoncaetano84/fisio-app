@@ -99,6 +99,7 @@ export enum CondutaStatus {
 export enum LaudoStatus {
   RASCUNHO_IA = "RASCUNHO_IA",
   VALIDADO_PROFISSIONAL = "VALIDADO_PROFISSIONAL",
+  PUBLICADO_PACIENTE = "PUBLICADO_PACIENTE",
 }
 
 export enum UserRole {
@@ -289,6 +290,8 @@ export interface Laudo {
   status?: LaudoStatus;
   validadoPorUsuarioId?: string;
   validadoEm?: string;
+  publicadoPacientePorUsuarioId?: string | null;
+  publicadoPacienteEm?: string | null;
   criteriosAlta?: string;
   sugestaoSource?: "ai" | "rules" | null;
   examesConsiderados?: number | null;

@@ -21,6 +21,7 @@ export type AuditActionType =
   | "CHECKIN_OFFLINE_SYNCED"
   | "CHECKIN_OFFLINE_SYNC_FAILED"
   | "LAUDO_VALIDATED"
+  | "LAUDO_PUBLISHED_TO_PATIENT"
   | "PLANO_VALIDATED"
   | "EXAME_FISICO_VALIDATED"
   | "LAUDO_REVALIDATION_REQUIRED"
@@ -48,6 +49,7 @@ const AUDIT_METADATA_ALLOWLIST: Record<AuditActionType, readonly string[]> = {
     "consultedReferencesCount",
     "totalSuggestedReferences",
   ],
+  LAUDO_PUBLISHED_TO_PATIENT: ["laudoId", "pacienteId"],
   PLANO_VALIDATED: [
     "laudoId",
     "pacienteId",

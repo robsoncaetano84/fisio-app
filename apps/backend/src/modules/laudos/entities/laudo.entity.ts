@@ -9,6 +9,7 @@ import { Paciente } from '../../pacientes/entities/paciente.entity';
 export enum LaudoStatus {
   RASCUNHO_IA = 'RASCUNHO_IA',
   VALIDADO_PROFISSIONAL = 'VALIDADO_PROFISSIONAL',
+  PUBLICADO_PACIENTE = 'PUBLICADO_PACIENTE',
 }
 
 @Entity('laudos')
@@ -74,6 +75,16 @@ export class Laudo extends BaseEntity {
 
   @Column({ name: 'validado_em', type: 'timestamp', nullable: true })
   validadoEm: Date | null;
+
+  @Column({
+    name: 'publicado_paciente_por_usuario_id',
+    type: 'uuid',
+    nullable: true,
+  })
+  publicadoPacientePorUsuarioId: string | null;
+
+  @Column({ name: 'publicado_paciente_em', type: 'timestamp', nullable: true })
+  publicadoPacienteEm: Date | null;
 
   @Column({ name: 'criterios_alta', type: 'text', nullable: true })
   criteriosAlta: string | null;

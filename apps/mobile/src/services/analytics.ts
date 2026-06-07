@@ -26,6 +26,7 @@ export type AnalyticsEventName =
   | "laudo_reference_consulted_toggled"
   | "laudo_professional_pdf_opened"
   | "laudo_validated"
+  | "laudo_published_to_patient"
   | "plano_validated"
   | "exame_fisico_validated"
   | "laudo_revalidation_required"

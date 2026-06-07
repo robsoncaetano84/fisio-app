@@ -6,6 +6,7 @@ import { LaudosService } from './laudos.service';
 describe('LaudosService', () => {
   const makeRepository = () => ({
     findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
     create: jest.fn((input) => input),
     save: jest.fn(async (input) => input),
     remove: jest.fn(),
@@ -99,7 +100,9 @@ describe('LaudosService', () => {
       service,
       laudoRepository,
       pacientesService,
+      usuariosService,
       laudoReferencesService,
+      laudoPdfService,
       laudoAiSuggestionService,
       laudoExameFisicoService,
       laudoAiGenerationQuotaService,
@@ -121,6 +124,8 @@ describe('LaudosService', () => {
       status: LaudoStatus.VALIDADO_PROFISSIONAL,
       validadoPorUsuarioId: 'profissional-1',
       validadoEm: new Date('2026-01-01T00:00:00.000Z'),
+      publicadoPacientePorUsuarioId: null,
+      publicadoPacienteEm: null,
       sugestaoSource: null,
       examesConsiderados: null,
       examesComLeituraIa: null,
@@ -194,12 +199,16 @@ describe('LaudosService', () => {
       status: LaudoStatus.RASCUNHO_IA,
       validadoPorUsuarioId: null,
       validadoEm: null,
+      publicadoPacientePorUsuarioId: null,
+      publicadoPacienteEm: null,
     });
     expect(laudoRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         status: LaudoStatus.RASCUNHO_IA,
         validadoPorUsuarioId: null,
         validadoEm: null,
+        publicadoPacientePorUsuarioId: null,
+        publicadoPacienteEm: null,
       }),
     );
   });
@@ -230,7 +239,89 @@ describe('LaudosService', () => {
       status: LaudoStatus.VALIDADO_PROFISSIONAL,
       validadoPorUsuarioId: 'profissional-1',
       validadoEm: expect.any(Date),
+      publicadoPacientePorUsuarioId: null,
+      publicadoPacienteEm: null,
     });
+  });
+
+  it('publishes a professionally validated report to the patient', async () => {
+    const { service, laudoRepository } = makeService();
+    const laudo = makeLaudo();
+    laudoRepository.findOne.mockResolvedValue(laudo);
+    laudoRepository.save.mockImplementation(async (input) => input);
+
+    const result = await service.publicarParaPaciente(
+      'laudo-1',
+      'profissional-1',
+    );
+
+    expect(result).toMatchObject({
+      status: LaudoStatus.PUBLICADO_PACIENTE,
+      publicadoPacientePorUsuarioId: 'profissional-1',
+      publicadoPacienteEm: expect.any(Date),
+    });
+  });
+
+  it('rejects patient publication before professional validation', async () => {
+    const { service, laudoRepository } = makeService();
+    laudoRepository.findOne.mockResolvedValue({
+      ...makeLaudo(),
+      status: LaudoStatus.RASCUNHO_IA,
+      validadoPorUsuarioId: null,
+      validadoEm: null,
+    });
+
+    await expect(
+      service.publicarParaPaciente('laudo-1', 'profissional-1'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('only builds patient PDF from a published report', async () => {
+    const { service, laudoRepository, laudoPdfService } = makeService();
+    const published = {
+      ...makeLaudo(),
+      status: LaudoStatus.PUBLICADO_PACIENTE,
+      paciente: {
+        usuarioId: 'profissional-1',
+        nomeCompleto: 'Maria Silva',
+      },
+    };
+    const queryBuilder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(published),
+    };
+    laudoRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    laudoPdfService.buildPdfBuffer.mockReturnValue(Buffer.from('pdf'));
+
+    await expect(
+      service.buildPdfBufferByPacienteUsuario('paciente-user-1', 'laudo'),
+    ).resolves.toEqual(Buffer.from('pdf'));
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'laudo.status = :status',
+      { status: LaudoStatus.PUBLICADO_PACIENTE },
+    );
+  });
+
+  it('blocks patient PDF when report is not published', async () => {
+    const { service, laudoRepository } = makeService();
+    const queryBuilder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(null),
+    };
+    laudoRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+    await expect(
+      service.buildPdfBufferByPacienteUsuario('paciente-user-1', 'laudo'),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('does not call AI when daily generation quota is unavailable', async () => {

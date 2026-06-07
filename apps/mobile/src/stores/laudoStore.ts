@@ -42,6 +42,7 @@ export const useLaudoStore = create<{
     payload: Partial<CreateLaudoPayload>,
   ) => Promise<Laudo>;
   validarLaudo: (id: string) => Promise<Laudo>;
+  publicarLaudoPaciente: (id: string) => Promise<Laudo>;
 }>((set) => ({
   laudoAtual: null,
   isLoading: false,
@@ -93,6 +94,18 @@ export const useLaudoStore = create<{
     try {
       set({ isLoading: true });
       const response = await api.post<Laudo>(`/laudos/${id}/validar`);
+      set({ laudoAtual: response.data, isLoading: false });
+      return response.data;
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  publicarLaudoPaciente: async (id: string) => {
+    try {
+      set({ isLoading: true });
+      const response = await api.post<Laudo>(`/laudos/${id}/publicar-paciente`);
       set({ laudoAtual: response.data, isLoading: false });
       return response.data;
     } catch (error) {

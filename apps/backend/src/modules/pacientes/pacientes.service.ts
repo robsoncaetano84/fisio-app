@@ -79,6 +79,20 @@ export class PacientesService {
     );
   }
 
+  async revokePacienteInviteByProfessional(
+    id: string,
+    usuarioId: string,
+  ): Promise<PacienteListItemDto> {
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
+    const paciente =
+      await this.pacienteProfessionalService.revokePacienteInviteByProfessional(
+        id,
+        usuarioId,
+        isMasterAdmin,
+      );
+    return this.toPacienteListItemWithCiclo(paciente);
+  }
+
   async create(
     createPacienteDto: CreatePacienteDto,
     usuarioId: string,

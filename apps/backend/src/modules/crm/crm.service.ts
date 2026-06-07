@@ -652,7 +652,8 @@ export class CrmService {
       const lastLaudo = laudoByPaciente.get(paciente.id);
       const hasActiveActivity = atividadePacienteIds.has(paciente.id);
       const hasAltaDocumento =
-        lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL &&
+        (lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+          lastLaudo?.status === LaudoStatus.PUBLICADO_PACIENTE) &&
         !!lastLaudo.criteriosAlta;
       const aguardandoVinculoPaciente =
         !paciente.pacienteUsuarioId ||

@@ -34,10 +34,10 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.prescribeActivity": "Prescrever Atividade",
   "patientDetails.recordEvolution": "Registrar Evolução",
   "patientDetails.readinessSummary": "Resumo de prontidão",
-  "patientDetails.readinessLinkTitle": "Paciente sem vínculo de app",
+  "patientDetails.readinessLinkTitle": "Paciente sem acesso ao app",
   "patientDetails.readinessLinkDescription":
-    "Vincule o paciente no app para liberar o fluxo clínico completo.",
-  "patientDetails.readinessLinkAction": "Vincular paciente",
+    "Envie o acesso para o paciente acompanhar atividades, exames e documentos pelo app.",
+  "patientDetails.readinessLinkAction": "Configurar acesso",
   "patientDetails.readinessAnamnesisTitle": "Pronto para iniciar anamnese",
   "patientDetails.readinessAnamnesisDescription":
     "Próximo passo recomendado: preencher a anamnese.",
@@ -162,7 +162,41 @@ export const ptPatientDetails: TranslationMap = {
     "Não foi possível atualizar a permissão da anamnese.",
   "patientDetails.updating": "Atualizando...",
   "patientDetails.appAccessLinkWarning":
-    "Paciente sem vínculo com acesso do app. Vincule um e-mail para liberar os recursos do paciente.",
+    "Paciente sem acesso ao app. Envie um convite para liberar acompanhamento, checks e documentos publicados.",
+  "patientAppAccess.title": "Acesso do paciente ao app",
+  "patientAppAccess.statusActive": "Acesso app ativo",
+  "patientAppAccess.statusInvited": "Convite enviado",
+  "patientAppAccess.statusMissing": "Sem acesso ao app",
+  "patientAppAccess.acceptedAt": "Aceito em {{date}}",
+  "patientAppAccess.sentAt": "Enviado em {{date}}",
+  "patientAppAccess.activeDescription":
+    "O paciente já pode acessar acompanhamento, checks, exames e documentos publicados.",
+  "patientAppAccess.pendingDescription":
+    "Aguardando o paciente aceitar o convite.",
+  "patientAppAccess.missingDescription":
+    "Envie o convite para o paciente acompanhar atividades, exames e documentos pelo app.",
+  "patientAppAccess.sendInvite": "Enviar convite",
+  "patientAppAccess.resendInvite": "Reenviar convite",
+  "patientAppAccess.copyInvite": "Copiar convite",
+  "patientAppAccess.sendWhatsapp": "Enviar pelo WhatsApp",
+  "patientAppAccess.unlinkAction": "Desvincular acesso",
+  "patientAppAccess.unlinkTitle": "Desvincular acesso ao app",
+  "patientAppAccess.unlinkMessage":
+    "O paciente deixará de acessar este acompanhamento até aceitar um novo convite.",
+  "patientAppAccess.unlinkConfirm": "Desvincular",
+  "patientAppAccess.unlinkSuccess": "Acesso removido com sucesso.",
+  "patientAppAccess.revokeTitle": "Revogar convite",
+  "patientAppAccess.revokeMessage":
+    "O link enviado deixará de ser aceito. Você poderá gerar um novo convite depois.",
+  "patientAppAccess.revokeConfirm": "Revogar",
+  "patientAppAccess.revokeSuccess": "Convite revogado com sucesso.",
+  "patientAppAccess.inviteReady": "Convite pronto para envio.",
+  "patientAppAccess.linkCopied": "Link copiado.",
+  "patientAppAccess.inviteGreeting": "Olá, {{name}}.",
+  "patientAppAccess.inviteIntro":
+    "Você recebeu um convite para acessar sua área no Synap.",
+  "patientAppAccess.inviteEmailHint": "Use este e-mail no cadastro: {{email}}",
+  "patientAppAccess.inviteLink": "Link de acesso: {{link}}",
   "patientDetails.startHereTitle": "Vamos iniciar por aqui",
   "patientDetails.startHereDescription":
     "Abra a ficha de anamnese para registrar os dados iniciais do paciente.",
@@ -291,10 +325,10 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.prescribeActivity": "Prescribe Activity",
   "patientDetails.recordEvolution": "Record Evolution",
   "patientDetails.readinessSummary": "Readiness summary",
-  "patientDetails.readinessLinkTitle": "Patient has no app link",
+  "patientDetails.readinessLinkTitle": "Patient has no app access",
   "patientDetails.readinessLinkDescription":
-    "Link the patient in the app to unlock the full clinical flow.",
-  "patientDetails.readinessLinkAction": "Link patient",
+    "Send app access so the patient can follow activities, exams, and published documents.",
+  "patientDetails.readinessLinkAction": "Configure access",
   "patientDetails.readinessAnamnesisTitle": "Ready to start anamnesis",
   "patientDetails.readinessAnamnesisDescription":
     "Recommended next step: fill out the anamnesis.",
@@ -418,7 +452,41 @@ export const enPatientDetails: TranslationMap = {
     "Could not update anamnesis permission.",
   "patientDetails.updating": "Updating...",
   "patientDetails.appAccessLinkWarning":
-    "Patient has no app access link. Link an email to unlock patient resources.",
+    "Patient has no app access. Send an invite to enable follow-up, check-ins, and published documents.",
+  "patientAppAccess.title": "Patient app access",
+  "patientAppAccess.statusActive": "App access active",
+  "patientAppAccess.statusInvited": "Invite sent",
+  "patientAppAccess.statusMissing": "No app access",
+  "patientAppAccess.acceptedAt": "Accepted on {{date}}",
+  "patientAppAccess.sentAt": "Sent on {{date}}",
+  "patientAppAccess.activeDescription":
+    "The patient can access follow-up, checks, exams, and published documents.",
+  "patientAppAccess.pendingDescription":
+    "Waiting for the patient to accept the invite.",
+  "patientAppAccess.missingDescription":
+    "Send the invite so the patient can follow activities, exams, and documents in the app.",
+  "patientAppAccess.sendInvite": "Send invite",
+  "patientAppAccess.resendInvite": "Resend invite",
+  "patientAppAccess.copyInvite": "Copy invite",
+  "patientAppAccess.sendWhatsapp": "Send via WhatsApp",
+  "patientAppAccess.unlinkAction": "Unlink access",
+  "patientAppAccess.unlinkTitle": "Unlink app access",
+  "patientAppAccess.unlinkMessage":
+    "The patient will stop accessing this follow-up until they accept a new invite.",
+  "patientAppAccess.unlinkConfirm": "Unlink",
+  "patientAppAccess.unlinkSuccess": "Access removed successfully.",
+  "patientAppAccess.revokeTitle": "Revoke invite",
+  "patientAppAccess.revokeMessage":
+    "The sent link will no longer be accepted. You can generate a new invite later.",
+  "patientAppAccess.revokeConfirm": "Revoke",
+  "patientAppAccess.revokeSuccess": "Invite revoked successfully.",
+  "patientAppAccess.inviteReady": "Invite ready to send.",
+  "patientAppAccess.linkCopied": "Link copied.",
+  "patientAppAccess.inviteGreeting": "Hello, {{name}}.",
+  "patientAppAccess.inviteIntro":
+    "You received an invite to access your area in Synap.",
+  "patientAppAccess.inviteEmailHint": "Use this email to sign up: {{email}}",
+  "patientAppAccess.inviteLink": "Access link: {{link}}",
   "patientDetails.startHereTitle": "Start here",
   "patientDetails.startHereDescription":
     "Open the anamnesis form to record the patient's initial data.",
@@ -547,10 +615,10 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.prescribeActivity": "Prescribir Actividad",
   "patientDetails.recordEvolution": "Registrar Evolución",
   "patientDetails.readinessSummary": "Resumen de preparación",
-  "patientDetails.readinessLinkTitle": "Paciente sin vínculo de app",
+  "patientDetails.readinessLinkTitle": "Paciente sin acceso a la app",
   "patientDetails.readinessLinkDescription":
-    "Vincula el paciente en la app para liberar el flujo clínico completo.",
-  "patientDetails.readinessLinkAction": "Vincular paciente",
+    "Envía el acceso para que el paciente acompañe actividades, exámenes y documentos publicados en la app.",
+  "patientDetails.readinessLinkAction": "Configurar acceso",
   "patientDetails.readinessAnamnesisTitle": "Listo para iniciar anamnesis",
   "patientDetails.readinessAnamnesisDescription":
     "Próximo paso recomendado: completar la anamnesis.",
@@ -679,7 +747,42 @@ export const esPatientDetails: TranslationMap = {
     "No se pudo actualizar el permiso de anamnesis.",
   "patientDetails.updating": "Actualizando...",
   "patientDetails.appAccessLinkWarning":
-    "Paciente sin vínculo de acceso a la app. Vincula un correo para liberar los recursos del paciente.",
+    "Paciente sin acceso a la app. Envía una invitación para liberar seguimiento, checks y documentos publicados.",
+  "patientAppAccess.title": "Acceso del paciente a la app",
+  "patientAppAccess.statusActive": "Acceso app activo",
+  "patientAppAccess.statusInvited": "Invitación enviada",
+  "patientAppAccess.statusMissing": "Sin acceso a la app",
+  "patientAppAccess.acceptedAt": "Aceptado el {{date}}",
+  "patientAppAccess.sentAt": "Enviado el {{date}}",
+  "patientAppAccess.activeDescription":
+    "El paciente puede acceder a seguimiento, checks, exámenes y documentos publicados.",
+  "patientAppAccess.pendingDescription":
+    "Esperando que el paciente acepte la invitación.",
+  "patientAppAccess.missingDescription":
+    "Envía la invitación para que el paciente acompañe actividades, exámenes y documentos en la app.",
+  "patientAppAccess.sendInvite": "Enviar invitación",
+  "patientAppAccess.resendInvite": "Reenviar invitación",
+  "patientAppAccess.copyInvite": "Copiar invitación",
+  "patientAppAccess.sendWhatsapp": "Enviar por WhatsApp",
+  "patientAppAccess.unlinkAction": "Desvincular acceso",
+  "patientAppAccess.unlinkTitle": "Desvincular acceso a la app",
+  "patientAppAccess.unlinkMessage":
+    "El paciente dejará de acceder a este seguimiento hasta aceptar una nueva invitación.",
+  "patientAppAccess.unlinkConfirm": "Desvincular",
+  "patientAppAccess.unlinkSuccess": "Acceso eliminado con éxito.",
+  "patientAppAccess.revokeTitle": "Revocar invitación",
+  "patientAppAccess.revokeMessage":
+    "El enlace enviado dejará de ser aceptado. Podrás generar una nueva invitación después.",
+  "patientAppAccess.revokeConfirm": "Revocar",
+  "patientAppAccess.revokeSuccess": "Invitación revocada con éxito.",
+  "patientAppAccess.inviteReady": "Invitación lista para enviar.",
+  "patientAppAccess.linkCopied": "Enlace copiado.",
+  "patientAppAccess.inviteGreeting": "Hola, {{name}}.",
+  "patientAppAccess.inviteIntro":
+    "Recibiste una invitación para acceder a tu área en Synap.",
+  "patientAppAccess.inviteEmailHint":
+    "Usa este correo para registrarte: {{email}}",
+  "patientAppAccess.inviteLink": "Enlace de acceso: {{link}}",
   "patientDetails.startHereTitle": "Empezar por aquí",
   "patientDetails.startHereDescription":
     "Abre la ficha de anamnesis para registrar los datos iniciales del paciente.",

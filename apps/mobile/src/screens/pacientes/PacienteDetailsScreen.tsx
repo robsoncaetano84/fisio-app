@@ -71,6 +71,7 @@ import {
   type NextBestActionCode,
 } from "./hooks/usePacienteDetailsSummaries";
 import { PatientDetailsSection } from "./components/PatientDetailsSection";
+import { PatientAppAccessCard } from "./components/PatientAppAccessCard";
 
 type PacienteDetailsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteDetails">;
@@ -1242,30 +1243,6 @@ export function PacienteDetailsScreen({
             </Text>
           </View>
 
-          {!!paciente.pacienteUsuarioId && (
-            <View style={styles.appAccessBadge}>
-              <Ionicons
-                name="phone-portrait-outline"
-                size={14}
-                color={COLORS.success}
-              />
-              <Text style={styles.appAccessBadgeText}>
-                {t("patients.appAccessActive")}
-              </Text>
-            </View>
-          )}
-          {!paciente.pacienteUsuarioId && (
-            <View style={styles.appAccessWarning}>
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color={COLORS.warning}
-              />
-              <Text style={styles.appAccessWarningText}>
-                {t("patientDetails.appAccessLinkWarning")}
-              </Text>
-            </View>
-          )}
           <View style={styles.quickActions}>
             <TouchableOpacity
               style={styles.quickAction}
@@ -1346,6 +1323,21 @@ export function PacienteDetailsScreen({
               </TouchableOpacity>
             )}
           </View>
+          {viewerRole !== UserRole.PACIENTE ? (
+            <PatientAppAccessCard
+              pacienteId={paciente.id}
+              nome={paciente.nomeCompleto}
+              email={paciente.contato.email}
+              whatsapp={paciente.contato.whatsapp}
+              pacienteUsuarioId={paciente.pacienteUsuarioId}
+              vinculoStatus={paciente.vinculoStatus}
+              conviteEnviadoEm={paciente.conviteEnviadoEm}
+              conviteAceitoEm={paciente.conviteAceitoEm}
+              onRefresh={async () => {
+                await fetchPacienteById(paciente.id);
+              }}
+            />
+          ) : null}
         </View>
 
         {viewerRole === UserRole.PACIENTE &&

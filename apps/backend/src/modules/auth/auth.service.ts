@@ -430,6 +430,13 @@ export class AuthService {
       throw new BadRequestException('Paciente do convite nao encontrado');
     }
 
+    if (
+      pacienteParaVinculo.vinculoStatus !==
+      PacienteVinculoStatus.CONVITE_ENVIADO
+    ) {
+      throw new BadRequestException('Convite invalido ou revogado');
+    }
+
     return { profissional, pacienteParaVinculo };
   }
 

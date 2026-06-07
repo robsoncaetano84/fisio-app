@@ -35,6 +35,8 @@ export const ptClinical: TranslationMap = {
   "clinical.actions.generatePlanPdf": "Gerar PDF do Plano",
   "clinical.actions.validateAndApprove": "Validar e Aprovar",
   "clinical.actions.reportValidated": "Laudo Validado",
+  "clinical.actions.publishToPatient": "Publicar ao paciente",
+  "clinical.actions.publishedToPatient": "Publicado ao paciente",
   "clinical.actions.planValidated": "Plano Validado",
   "clinical.actions.physicalExamValidated": "Exame Físico Validado",
   "clinical.actions.validateAnyway": "Validar mesmo assim",
@@ -94,6 +96,12 @@ export const ptClinical: TranslationMap = {
     "Este exame físico já está validado",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Laudo e plano validados com sucesso",
+  "clinical.messages.validateBeforePatientPublication":
+    "Valide o laudo e aguarde o salvamento antes de publicar ao paciente.",
+  "clinical.messages.reportPublishedToPatient":
+    "Laudo e plano publicados para o paciente.",
+  "clinical.messages.patientPublicationHint":
+    "A publicação ao paciente só fica disponível depois da validação profissional e sem alterações pendentes.",
   "clinical.messages.planValidatedSuccessfully":
     "Plano validado com sucesso",
   "clinical.messages.physicalExamValidatedSuccessfully":
@@ -309,6 +317,8 @@ export const enClinical: TranslationMap = {
   "clinical.actions.generatePlanPdf": "Generate Plan PDF",
   "clinical.actions.validateAndApprove": "Validate and Approve",
   "clinical.actions.reportValidated": "Report Validated",
+  "clinical.actions.publishToPatient": "Publish to patient",
+  "clinical.actions.publishedToPatient": "Published to patient",
   "clinical.actions.planValidated": "Plan Validated",
   "clinical.actions.physicalExamValidated": "Physical Exam Validated",
   "clinical.actions.validateAnyway": "Validate anyway",
@@ -367,6 +377,12 @@ export const enClinical: TranslationMap = {
     "This physical exam is already validated",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Report and plan validated successfully",
+  "clinical.messages.validateBeforePatientPublication":
+    "Validate the report and wait for saving before publishing it to the patient.",
+  "clinical.messages.reportPublishedToPatient":
+    "Report and plan published to the patient.",
+  "clinical.messages.patientPublicationHint":
+    "Patient publication is available only after professional validation and with no pending changes.",
   "clinical.messages.planValidatedSuccessfully":
     "Plan validated successfully",
   "clinical.messages.physicalExamValidatedSuccessfully":
@@ -578,6 +594,8 @@ export const esClinical: TranslationMap = {
   "clinical.actions.generatePlanPdf": "Generar PDF del plan",
   "clinical.actions.validateAndApprove": "Validar y aprobar",
   "clinical.actions.reportValidated": "Informe validado",
+  "clinical.actions.publishToPatient": "Publicar al paciente",
+  "clinical.actions.publishedToPatient": "Publicado al paciente",
   "clinical.actions.planValidated": "Plan validado",
   "clinical.actions.physicalExamValidated": "Examen físico validado",
   "clinical.actions.validateAnyway": "Validar de todos modos",
@@ -637,6 +655,12 @@ export const esClinical: TranslationMap = {
     "Este examen físico ya está validado",
   "clinical.messages.reportAndPlanValidatedSuccessfully":
     "Informe y plan validados con éxito",
+  "clinical.messages.validateBeforePatientPublication":
+    "Valide el informe y espere el guardado antes de publicarlo al paciente.",
+  "clinical.messages.reportPublishedToPatient":
+    "Informe y plan publicados para el paciente.",
+  "clinical.messages.patientPublicationHint":
+    "La publicación al paciente solo queda disponible después de la validación profesional y sin cambios pendientes.",
   "clinical.messages.planValidatedSuccessfully": "Plan validado con éxito",
   "clinical.messages.physicalExamValidatedSuccessfully":
     "Examen físico validado con éxito",
