@@ -6,6 +6,18 @@
 
 $ErrorActionPreference = "Stop"
 
+$JsonContentType = "application/json; charset=utf-8"
+
+function ConvertTo-Utf8JsonBody {
+  param(
+    [Parameter(Mandatory = $true)][object]$Body,
+    [int]$Depth = 20
+  )
+
+  $json = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Depth $Depth }
+  return [System.Text.Encoding]::UTF8.GetBytes($json)
+}
+
 function Invoke-ApiJson {
   param(
     [string]$Method,
@@ -13,15 +25,24 @@ function Invoke-ApiJson {
     [object]$Body,
     [hashtable]$Headers
   )
-  $json = if ($null -ne $Body) { $Body | ConvertTo-Json -Depth 20 } else { $null }
-  if ($json) {
-    return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $json
+
+  $request = @{
+    Method = $Method
+    Uri = $Uri
   }
-  return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
+  if ($null -ne $Headers -and $Headers.Count -gt 0) {
+    $request.Headers = $Headers
+  }
+  if ($null -ne $Body) {
+    $request.ContentType = $JsonContentType
+    $request.Body = ConvertTo-Utf8JsonBody -Body $Body -Depth 20
+  }
+
+  return Invoke-RestMethod @request
 }
 
 Write-Host "[QA] Login..."
-$login = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/login" -ContentType "application/json" -Body (@{ email = $Email; senha = $Senha } | ConvertTo-Json)
+$login = Invoke-ApiJson -Method Post -Uri "$BaseUrl/auth/login" -Body @{ email = $Email; senha = $Senha }
 if (-not $login.token) { throw "Token não retornado no login" }
 $headers = @{ Authorization = "Bearer $($login.token)" }
 

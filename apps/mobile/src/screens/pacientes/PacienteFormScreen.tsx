@@ -43,12 +43,11 @@ import {
 } from "../../stores/pacienteStore";
 import { useAuthStore } from "../../stores/authStore";
 import { parseApiError } from "../../utils/apiErrors";
+import { isUuid } from "../../utils/uuid";
 import { api } from "../../services";
 import { trackEvent } from "../../services/analytics";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type PacienteFormMode = "view" | "edit";
 type PacienteFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteForm">;
@@ -193,9 +192,6 @@ export function PacienteFormScreen({
 
     setScreenMode("edit");
   }, [isEditing, isSelfEditMode, route.params?.mode, route.params?.pacienteId]);
-
-  const isUuid = (value: string | null | undefined) =>
-    !!value && UUID_REGEX.test(value.trim());
 
   const sanitizeProfissao = (value: string | null | undefined) => {
     const normalized = (value || "").replace(/\u00A0/g, " ").trim();

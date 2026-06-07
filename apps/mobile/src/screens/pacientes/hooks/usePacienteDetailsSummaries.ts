@@ -8,11 +8,20 @@ type TranslateFn = (
 ) => string;
 
 export type NextBestActionCode =
+  | "SCHEDULE_FIRST_APPOINTMENT"
   | "SEND_CHECKIN_REMINDER"
   | "SEND_ADHERENCE_REMINDER"
   | "SCHEDULE_RETURN"
   | "OPEN_ADHERENCE_PANEL"
   | "RECORD_EVOLUTION";
+
+export type FollowUpStatus = "PENDING_FIRST_SESSION" | "ACTIVE";
+
+export type AdherenceRiskLevel =
+  | "AGUARDANDO_DADOS"
+  | "ALTO"
+  | "MODERADO"
+  | "BAIXO";
 
 export type AdherenceRiskReasonCode =
   | "NO_EVOLUTION"
@@ -51,6 +60,7 @@ interface UsePacienteDetailsSummariesParams {
   anamneses: Anamnese[];
   evolucoesDoPaciente: Evolucao[];
   pacienteId: string;
+  pacienteCreatedAt?: string;
   latestAnamnese?: Anamnese;
   latestEvolucao?: Evolucao;
   dateLocale: string;
@@ -82,6 +92,7 @@ export function usePacienteDetailsSummaries({
   anamneses,
   evolucoesDoPaciente,
   pacienteId,
+  pacienteCreatedAt,
   latestAnamnese,
   latestEvolucao,
   dateLocale,
@@ -92,6 +103,7 @@ export function usePacienteDetailsSummaries({
     const last28Days = 28 * 24 * 60 * 60 * 1000;
     const last14Days = 14 * 24 * 60 * 60 * 1000;
     const last7Days = 7 * 24 * 60 * 60 * 1000;
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
 
     const ultimaAnamnese = anamneses
       .filter((a) => a.pacienteId === pacienteId)
@@ -100,32 +112,67 @@ export function usePacienteDetailsSummaries({
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )[0];
 
+    const evolucoesOrdenadas = [...evolucoesDoPaciente].sort(
+      (a, b) =>
+        parseDatePreservingDateOnly(b.data).getTime() -
+        parseDatePreservingDateOnly(a.data).getTime(),
+    );
+    const hasSessionHistory = evolucoesOrdenadas.length > 0;
+
     const sessionsIn28Days = evolucoesDoPaciente.filter((e) => {
       const time = parseDatePreservingDateOnly(e.data).getTime();
       if (Number.isNaN(time)) return false;
       return now - time <= last28Days;
     }).length;
 
-    const score = Math.max(
-      0,
-      Math.min(100, Math.round((sessionsIn28Days / 4) * 100)),
-    );
+    const score = hasSessionHistory
+      ? Math.max(0, Math.min(100, Math.round((sessionsIn28Days / 4) * 100)))
+      : 0;
 
-    const lastSession = evolucoesDoPaciente[0];
+    const lastSession = evolucoesOrdenadas[0];
     const lastSessionMs = lastSession
       ? parseDatePreservingDateOnly(lastSession.data).getTime()
       : NaN;
     const daysWithoutSession = Number.isNaN(lastSessionMs)
       ? null
       : Math.floor((now - lastSessionMs) / (24 * 60 * 60 * 1000));
+    const patientCreatedAtMs = pacienteCreatedAt
+      ? new Date(pacienteCreatedAt).getTime()
+      : NaN;
+    const isRecentPatient =
+      !Number.isNaN(patientCreatedAtMs) && now - patientCreatedAtMs <= sevenDays;
 
     const riskReasons: AdherenceRiskReasonCode[] = [];
     let riskScore = 0;
 
-    if (daysWithoutSession === null) {
-      riskScore += 80;
-      riskReasons.push("NO_EVOLUTION");
-    } else if (now - lastSessionMs > last14Days) {
+    if (!hasSessionHistory) {
+      return {
+        followUpStatus: "PENDING_FIRST_SESSION" as FollowUpStatus,
+        isRecentPatient,
+        isAdherenceMeasurable: false,
+        sessionsIn28Days,
+        score,
+        riskScore,
+        riskReasons,
+        daysWithoutSession,
+        risco: "AGUARDANDO_DADOS" as AdherenceRiskLevel,
+        sessionLabel: t("patientDetails.sessionNotStarted"),
+        adherenceLabel: t("patientDetails.adherenceNotMeasurable"),
+        riskLabel: t("patientDetails.riskAwaitingData"),
+        followUpNote: t(
+          isRecentPatient
+            ? "patientDetails.followUpRecentPatientNote"
+            : "patientDetails.followUpPendingFirstSessionNote",
+        ),
+        proximaSessaoSugerida: new Date(now + 24 * 60 * 60 * 1000),
+        nextBestAction:
+          "SCHEDULE_FIRST_APPOINTMENT" as NextBestActionCode,
+        hasEmotionalVulnerability: false,
+        hasHighEmotionalVulnerability: false,
+      };
+    }
+
+    if (now - lastSessionMs > last14Days) {
       riskScore += 60;
       riskReasons.push("LONG_GAP");
     } else if (now - lastSessionMs > last7Days) {
@@ -169,7 +216,7 @@ export function usePacienteDetailsSummaries({
 
     riskScore = Math.max(0, Math.min(100, riskScore));
 
-    let risco: "ALTO" | "MODERADO" | "BAIXO" = "BAIXO";
+    let risco: AdherenceRiskLevel = "BAIXO";
     if (riskScore >= 70) {
       risco = "ALTO";
     } else if (riskScore >= 40) {
@@ -206,18 +253,30 @@ export function usePacienteDetailsSummaries({
     }
 
     return {
+      followUpStatus: "ACTIVE" as FollowUpStatus,
+      isRecentPatient,
+      isAdherenceMeasurable: true,
       sessionsIn28Days,
       score,
       riskScore,
       riskReasons,
       daysWithoutSession,
       risco,
+      sessionLabel:
+        daysWithoutSession === null
+          ? t("patientDetails.noSession")
+          : t("patientDetails.daysWithoutSession", {
+              days: daysWithoutSession,
+            }),
+      adherenceLabel: `${score}%`,
+      riskLabel: risco,
+      followUpNote: "",
       proximaSessaoSugerida,
       nextBestAction,
       hasEmotionalVulnerability,
       hasHighEmotionalVulnerability,
     };
-  }, [evolucoesDoPaciente, anamneses, pacienteId]);
+  }, [evolucoesDoPaciente, anamneses, pacienteCreatedAt, pacienteId, t]);
 
   const resumoEstiloVidaEmocional = useMemo<LifestyleSummary | null>(() => {
     const ultimaAnamnese = anamneses

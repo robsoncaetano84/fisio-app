@@ -578,6 +578,7 @@ export function PacienteDetailsScreen({
 
   const quickMessages: Array<{
     id:
+      | "FIRST_APPOINTMENT"
       | "CHECKIN"
       | "ADHERENCE"
       | "SCHEDULE"
@@ -627,6 +628,7 @@ export function PacienteDetailsScreen({
     text: string,
     label: string,
     templateId?:
+      | "FIRST_APPOINTMENT"
       | "CHECKIN"
       | "ADHERENCE"
       | "SCHEDULE"
@@ -1072,6 +1074,7 @@ export function PacienteDetailsScreen({
     evolucoesDoPaciente,
     latestAnamnese,
     latestEvolucao,
+    pacienteCreatedAt: paciente.createdAt,
     pacienteId,
     t,
   });
@@ -1086,6 +1089,24 @@ export function PacienteDetailsScreen({
         onPress: () => void;
       }
     > = {
+      SCHEDULE_FIRST_APPOINTMENT: {
+        title: t("patientDetails.nextActionFirstAppointmentTitle"),
+        description:
+          t(
+            adesao.isRecentPatient
+              ? "patientDetails.nextActionFirstAppointmentRecentDescription"
+              : "patientDetails.nextActionFirstAppointmentPendingDescription",
+          ) + contextualNextActionHint,
+        ctaLabel: t("patientDetails.quickMessageFirstAppointmentLabel"),
+        onPress: () =>
+          handleQuickMessage(
+            t("patientDetails.quickMessageFirstAppointmentText", {
+              name: paciente.nomeCompleto,
+            }),
+            t("patientDetails.quickMessageFirstAppointmentLabel"),
+            "FIRST_APPOINTMENT",
+          ).catch(() => undefined),
+      },
       SEND_CHECKIN_REMINDER: {
         title: t("patientDetails.nextActionCheckinTitle"),
         description:
@@ -1185,9 +1206,11 @@ export function PacienteDetailsScreen({
   }, [
     adesao.hasEmotionalVulnerability,
     adesao.hasHighEmotionalVulnerability,
+    adesao.isRecentPatient,
     adesao.nextBestAction,
     navigation,
     paciente.id,
+    paciente.nomeCompleto,
     quickMessages,
     contextualNextActionHint,
     hasFunctionalContextForMessage,
@@ -1787,16 +1810,16 @@ export function PacienteDetailsScreen({
                 {t("patientDetails.lastSession")}
               </Text>
               <Text style={styles.followUpMetricValue}>
-                {adesao.daysWithoutSession === null
-                  ? t("patientDetails.noSession")
-                  : `${adesao.daysWithoutSession} dia(s)`}
+                {adesao.sessionLabel}
               </Text>
             </View>
             <View style={styles.followUpMetric}>
               <Text style={styles.followUpMetricLabel}>
                 {t("patientDetails.adherence")}
               </Text>
-              <Text style={styles.followUpMetricValue}>{adesao.score}%</Text>
+              <Text style={styles.followUpMetricValue}>
+                {adesao.adherenceLabel}
+              </Text>
             </View>
             <View style={styles.followUpMetric}>
               <Text style={styles.followUpMetricLabel}>
@@ -1809,14 +1832,18 @@ export function PacienteDetailsScreen({
                     ? styles.riskHighText
                     : adesao.risco === "MODERADO"
                       ? styles.riskMediumText
-                      : styles.riskLowText,
+                      : adesao.risco === "AGUARDANDO_DADOS"
+                        ? styles.riskNeutralText
+                        : styles.riskLowText,
                 ]}
               >
-                {adesao.risco}
+                {adesao.riskLabel}
               </Text>
             </View>
           </View>
-          {adesao.riskReasons.length > 0 ? (
+          {adesao.followUpNote ? (
+            <Text style={styles.followUpNote}>{adesao.followUpNote}</Text>
+          ) : adesao.riskReasons.length > 0 ? (
             <Text style={styles.followUpNote}>
               {adesao.riskReasons
                 .slice(0, 2)
@@ -2149,6 +2176,9 @@ const styles = StyleSheet.create({
   },
   riskLowText: {
     color: COLORS.success,
+  },
+  riskNeutralText: {
+    color: COLORS.textSecondary,
   },
   nextActionCard: {
     borderWidth: 1,

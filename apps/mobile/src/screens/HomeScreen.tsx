@@ -57,6 +57,7 @@ import {
   UserRole,
 } from "../types";
 import { useLanguage } from "../i18n/LanguageProvider";
+import { isUuid } from "../utils/uuid";
 import { QuickAction, StatCard } from "./HomeScreen.components";
 
 type HomeScreenProps = {
@@ -67,6 +68,14 @@ type HomeRiskActionCode =
   | "OPEN_ADHERENCE"
   | "OPEN_PATIENT_DETAILS"
   | "RECORD_EVOLUTION";
+
+const isValidAtividadeUpdate = (
+  update: unknown,
+): update is AtividadeUpdate => {
+  if (!update || typeof update !== "object") return false;
+  const candidate = update as Partial<AtividadeUpdate>;
+  return isUuid(candidate.checkinId) && isUuid(candidate.pacienteId);
+};
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
   const { usuario, logout } = useAuthStore();
@@ -654,7 +663,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
 
   const loadUpdates = useCallback(async () => {
     try {
-      const nextUpdates =
+      const rawUpdates =
         (await cachedGet<AtividadeUpdate[]>(
           api,
           "/atividades/updates",
@@ -663,6 +672,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           },
           8_000,
         )) || [];
+      const nextUpdates = rawUpdates.filter(isValidAtividadeUpdate);
       setUpdates(nextUpdates);
 
       if (!nextUpdates.length) {
@@ -700,6 +710,23 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       setUpdates([]);
     }
   }, [showToast, t]);
+
+  const openAdesaoFromUpdate = useCallback(
+    (update: AtividadeUpdate) => {
+      if (!isUuid(update.pacienteId)) {
+        showToast({
+          type: "error",
+          message: "Atualizacao sem vinculo de paciente valido.",
+        });
+        return;
+      }
+
+      navigation.navigate("PacienteAdesao", {
+        pacienteId: update.pacienteId,
+      });
+    },
+    [navigation, showToast],
+  );
 
   const loadAuditSummary = async () => {
     try {
@@ -1934,11 +1961,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 <TouchableOpacity
                   key={update.checkinId}
                   style={styles.updateItem}
-                  onPress={() =>
-                    navigation.navigate("PacienteAdesao", {
-                      pacienteId: update.pacienteId,
-                    })
-                  }
+                  onPress={() => openAdesaoFromUpdate(update)}
                   activeOpacity={0.8}
                 >
                   <View style={styles.updateIconWrap}>
@@ -3010,9 +3033,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
-
-
 
 
 

@@ -28,6 +28,7 @@ import {
   RootStackParamList,
 } from "../../types";
 import { parseApiError } from "../../utils/apiErrors";
+import { isUuid } from "../../utils/uuid";
 import { useToast } from "../../components/ui";
 
 type Props = {
@@ -61,6 +62,17 @@ export function PacienteAdesaoScreen({ route }: Props) {
   const [checkins, setCheckins] = useState<AtividadeCheckinTimeline[]>([]);
 
   const loadData = async () => {
+    if (!isUuid(pacienteId)) {
+      setAtividades([]);
+      setCheckins([]);
+      setLoading(false);
+      showToast({
+        message: "Paciente invalido para consulta de aderencia.",
+        type: "error",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const [atividadesRes, checkinsRes] = await Promise.all([

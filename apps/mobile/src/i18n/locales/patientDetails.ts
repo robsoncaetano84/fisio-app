@@ -99,6 +99,9 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.quickMessageScheduleLabel": "Agendar retorno",
   "patientDetails.quickMessageScheduleText":
     "Oi {{name}}, vamos agendar seu retorno para revisar sua evolução e ajustar o plano.",
+  "patientDetails.quickMessageFirstAppointmentLabel": "Agendar primeira consulta",
+  "patientDetails.quickMessageFirstAppointmentText":
+    "Oi {{name}}, vamos agendar sua primeira consulta para iniciar o acompanhamento e definir o plano com segurança.",
   "patientDetails.quickMessageEmotionalSupportLabel": "Contato acolhedor",
   "patientDetails.quickMessageEmotionalSupportText":
     "Oi {{name}}, estou passando para saber como você está se sentindo. Se estiver difícil manter a rotina, me conte para ajustarmos o plano com mais conforto.",
@@ -178,6 +181,14 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.showAllDocuments": "Ver todos os documentos",
   "patientDetails.followUp": "Acompanhamento",
   "patientDetails.noSession": "Sem sessão",
+  "patientDetails.sessionNotStarted": "Não iniciada",
+  "patientDetails.daysWithoutSession": "{{days}} dia(s)",
+  "patientDetails.adherenceNotMeasurable": "Sem plano ativo",
+  "patientDetails.riskAwaitingData": "Aguardando dados",
+  "patientDetails.followUpRecentPatientNote":
+    "Cadastro recente. O risco de evasão será calculado após a primeira consulta registrada.",
+  "patientDetails.followUpPendingFirstSessionNote":
+    "Paciente ainda sem primeira consulta registrada. Acompanhe o início do cuidado antes de medir evasão.",
   "patientDetails.adherence": "Aderência",
   "patientDetails.risk": "Risco",
   "patientDetails.recommendedAction": "Ação recomendada",
@@ -225,6 +236,11 @@ export const ptPatientDetails: TranslationMap = {
     "Considere alinhar a condução à meta principal: {{value}}.",
   "patientDetails.contextLimitationsHint":
     "Priorize condutas voltadas às limitações funcionais relatadas.",
+  "patientDetails.nextActionFirstAppointmentTitle": "Agendar primeira consulta",
+  "patientDetails.nextActionFirstAppointmentRecentDescription":
+    "Paciente recém-cadastrado e ainda sem primeira consulta registrada. Inicie o acompanhamento antes de medir risco de evasão.",
+  "patientDetails.nextActionFirstAppointmentPendingDescription":
+    "Paciente ainda sem primeira consulta registrada. Priorize o primeiro contato clínico para estabelecer plano e cadência.",
   "patientDetails.nextActionCheckinTitle": "Enviar lembrete de check-in",
   "patientDetails.nextActionCheckinVulnerableDescription":
     "Há sinais de vulnerabilidade emocional/rotina. Faça um contato acolhedor e incentive um check-in breve para entender como o paciente está.",
@@ -339,6 +355,9 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.quickMessageScheduleLabel": "Schedule follow-up",
   "patientDetails.quickMessageScheduleText":
     "Hi {{name}}, let's schedule your follow-up to review progress and adjust the plan.",
+  "patientDetails.quickMessageFirstAppointmentLabel": "Schedule first appointment",
+  "patientDetails.quickMessageFirstAppointmentText":
+    "Hi {{name}}, let's schedule your first appointment so we can start follow-up and define the plan safely.",
   "patientDetails.quickMessageEmotionalSupportLabel": "Supportive check-in",
   "patientDetails.quickMessageEmotionalSupportText":
     "Hi {{name}}, I wanted to check how you've been feeling. If your routine has been difficult, let me know so we can adjust the plan with more comfort.",
@@ -418,6 +437,14 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.showAllDocuments": "View all documents",
   "patientDetails.followUp": "Follow-up",
   "patientDetails.noSession": "No session",
+  "patientDetails.sessionNotStarted": "Not started",
+  "patientDetails.daysWithoutSession": "{{days}} day(s)",
+  "patientDetails.adherenceNotMeasurable": "No active plan",
+  "patientDetails.riskAwaitingData": "Awaiting data",
+  "patientDetails.followUpRecentPatientNote":
+    "Recent registration. Dropout risk will be calculated after the first recorded appointment.",
+  "patientDetails.followUpPendingFirstSessionNote":
+    "Patient has no first appointment recorded yet. Start care before measuring dropout risk.",
   "patientDetails.adherence": "Adherence",
   "patientDetails.risk": "Risk",
   "patientDetails.recommendedAction": "Recommended action",
@@ -464,6 +491,11 @@ export const enPatientDetails: TranslationMap = {
     "Consider aligning care to the main goal: {{value}}.",
   "patientDetails.contextLimitationsHint":
     "Prioritize interventions aimed at the reported functional limitations.",
+  "patientDetails.nextActionFirstAppointmentTitle": "Schedule first appointment",
+  "patientDetails.nextActionFirstAppointmentRecentDescription":
+    "Patient was recently registered and has no first appointment recorded yet. Start follow-up before measuring dropout risk.",
+  "patientDetails.nextActionFirstAppointmentPendingDescription":
+    "Patient has no first appointment recorded yet. Prioritize the first clinical contact to establish plan and cadence.",
   "patientDetails.nextActionCheckinTitle": "Send check-in reminder",
   "patientDetails.nextActionCheckinVulnerableDescription":
     "There are signs of emotional/routine vulnerability. Make a supportive contact and encourage a brief check-in to understand how the patient is doing.",
@@ -581,6 +613,9 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.quickMessageScheduleLabel": "Agendar retorno",
   "patientDetails.quickMessageScheduleText":
     "Hola {{name}}, vamos a agendar tu retorno para revisar tu evolución y ajustar el plan.",
+  "patientDetails.quickMessageFirstAppointmentLabel": "Agendar primera consulta",
+  "patientDetails.quickMessageFirstAppointmentText":
+    "Hola {{name}}, vamos a agendar tu primera consulta para iniciar el seguimiento y definir el plan con seguridad.",
   "patientDetails.quickMessageEmotionalSupportLabel": "Contacto de apoyo",
   "patientDetails.quickMessageEmotionalSupportText":
     "Hola {{name}}, quería saber cómo te has estado sintiendo. Si mantener la rutina está difícil, cuéntame para ajustar el plan con más comodidad.",
@@ -663,6 +698,14 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.showAllDocuments": "Ver todos los documentos",
   "patientDetails.followUp": "Seguimiento",
   "patientDetails.noSession": "Sin sesión",
+  "patientDetails.sessionNotStarted": "No iniciada",
+  "patientDetails.daysWithoutSession": "{{days}} día(s)",
+  "patientDetails.adherenceNotMeasurable": "Sin plan activo",
+  "patientDetails.riskAwaitingData": "Esperando datos",
+  "patientDetails.followUpRecentPatientNote":
+    "Registro reciente. El riesgo de abandono se calculará después de la primera consulta registrada.",
+  "patientDetails.followUpPendingFirstSessionNote":
+    "Paciente aún sin primera consulta registrada. Inicia el cuidado antes de medir riesgo de abandono.",
   "patientDetails.adherence": "Adherencia",
   "patientDetails.risk": "Riesgo",
   "patientDetails.recommendedAction": "Acción recomendada",
@@ -709,6 +752,11 @@ export const esPatientDetails: TranslationMap = {
     "Considera alinear la conducta con la meta principal: {{value}}.",
   "patientDetails.contextLimitationsHint":
     "Prioriza conductas orientadas a las limitaciones funcionales reportadas.",
+  "patientDetails.nextActionFirstAppointmentTitle": "Agendar primera consulta",
+  "patientDetails.nextActionFirstAppointmentRecentDescription":
+    "Paciente registrado recientemente y aún sin primera consulta. Inicia el seguimiento antes de medir riesgo de abandono.",
+  "patientDetails.nextActionFirstAppointmentPendingDescription":
+    "Paciente aún sin primera consulta registrada. Prioriza el primer contacto clínico para establecer plan y cadencia.",
   "patientDetails.nextActionCheckinTitle": "Enviar recordatorio de check-in",
   "patientDetails.nextActionCheckinVulnerableDescription":
     "Hay señales de vulnerabilidad emocional/rutina. Haz un contacto de apoyo e incentiva un check-in breve para entender cómo está el paciente.",

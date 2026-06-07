@@ -37,6 +37,19 @@ const normalizeBaseUrlForAndroidEmulator = (url: string) => {
 };
 
 const resolvedBaseURL = normalizeBaseUrlForAndroidEmulator(baseURL);
+const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+const JSON_BODY_METHODS = new Set(["post", "put", "patch", "delete"]);
+
+const isFormDataPayload = (data: unknown) => {
+  if (!data || typeof data !== "object") return false;
+  if (typeof FormData !== "undefined" && data instanceof FormData) return true;
+  const candidate = data as { append?: unknown; getParts?: unknown };
+  return (
+    typeof candidate.append === "function" &&
+    typeof candidate.getParts === "function"
+  );
+};
+
 type RequestMetaConfig = AxiosRequestConfig & {
   _startedAt?: number;
   _correlationId?: string;
@@ -60,6 +73,9 @@ export const api = axios.create({
 const refreshClient = axios.create({
   baseURL: resolvedBaseURL,
   timeout: 15000,
+  headers: {
+    "Content-Type": JSON_CONTENT_TYPE,
+  },
 });
 
 type RefreshResponse = {
@@ -213,6 +229,19 @@ api.interceptors.request.use((config) => {
     const headers = AxiosHeaders.from(nextConfig.headers || {});
     headers.set("X-Correlation-Id", nextConfig._correlationId);
     headers.set("X-App-Version", APP_VERSION_LABEL);
+    nextConfig.headers = headers;
+  }
+  const headers = AxiosHeaders.from(nextConfig.headers || {});
+  const method = String(nextConfig.method || "get").toLowerCase();
+  const currentContentType =
+    headers.get("Content-Type") || headers.get("content-type");
+  if (
+    nextConfig.data != null &&
+    JSON_BODY_METHODS.has(method) &&
+    !currentContentType &&
+    !isFormDataPayload(nextConfig.data)
+  ) {
+    headers.set("Content-Type", JSON_CONTENT_TYPE);
     nextConfig.headers = headers;
   }
   return nextConfig;

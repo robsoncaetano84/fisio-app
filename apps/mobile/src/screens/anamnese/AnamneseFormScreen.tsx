@@ -2920,7 +2920,7 @@ export function AnamneseFormScreen({
           />
         ) : isViewingRecordedAnamnese ? (
           <Button
-            title="Voltar"
+            title={isSelfMode ? "Voltar ao início" : "Voltar ao paciente"}
             onPress={handleBack}
             variant="outline"
             style={styles.navButton}

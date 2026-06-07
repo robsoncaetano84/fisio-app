@@ -12,6 +12,39 @@
 
 $ErrorActionPreference = "Stop"
 
+$JsonContentType = "application/json; charset=utf-8"
+
+function ConvertTo-Utf8JsonBody {
+  param(
+    [Parameter(Mandatory = $true)][object]$Body,
+    [int]$Depth = 20
+  )
+
+  $json = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Depth $Depth }
+  return [System.Text.Encoding]::UTF8.GetBytes($json)
+}
+
+function Invoke-JsonPost {
+  param(
+    [string]$Uri,
+    [object]$Body,
+    [hashtable]$Headers,
+    [int]$Depth = 20
+  )
+
+  $request = @{
+    Method = "Post"
+    Uri = $Uri
+    ContentType = $JsonContentType
+    Body = (ConvertTo-Utf8JsonBody -Body $Body -Depth $Depth)
+  }
+  if ($null -ne $Headers -and $Headers.Count -gt 0) {
+    $request.Headers = $Headers
+  }
+
+  return Invoke-RestMethod @request
+}
+
 function New-RandomEmail {
   param([string]$BaseEmail)
   $parts = $BaseEmail.Split("@");
@@ -22,9 +55,9 @@ function New-RandomEmail {
 
 function Try-Login {
   param([string]$Email, [string]$Senha, [string]$BaseUrl)
-  $loginBody = @{ email = $Email; senha = $Senha } | ConvertTo-Json
+  $loginBody = @{ email = $Email; senha = $Senha }
   try {
-    $login = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/login" -ContentType "application/json" -Body $loginBody
+    $login = Invoke-JsonPost -Uri "$BaseUrl/auth/login" -Body $loginBody
     return $login.token
   } catch {
     return $null
@@ -47,8 +80,8 @@ if (-not $token) {
       especialidade = $Especialidade
       role = $Role
       consentProfessionalLgpdRequired = $true
-    } | ConvertTo-Json
-    Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/registro" -ContentType "application/json" -Body $registroBody | Out-Null
+    }
+    Invoke-JsonPost -Uri "$BaseUrl/auth/registro" -Body $registroBody | Out-Null
   } catch {
     if ($_.Exception.Response.StatusCode.value__ -eq 409) {
       $attemptEmail = New-RandomEmail $Email
@@ -62,8 +95,8 @@ if (-not $token) {
         especialidade = $Especialidade
         role = $Role
         consentProfessionalLgpdRequired = $true
-      } | ConvertTo-Json
-      Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/registro" -ContentType "application/json" -Body $registroBody | Out-Null
+      }
+      Invoke-JsonPost -Uri "$BaseUrl/auth/registro" -Body $registroBody | Out-Null
     } else {
       throw
     }
@@ -102,9 +135,9 @@ $pacienteBody = @{
   enderecoBairro = "Centro"
   enderecoCidade = "Sao Paulo"
   enderecoUf = "SP"
-} | ConvertTo-Json -Depth 6
+}
 
-$paciente = Invoke-RestMethod -Method Post -Uri "$BaseUrl/pacientes" -Headers $headers -ContentType "application/json" -Body $pacienteBody
+$paciente = Invoke-JsonPost -Uri "$BaseUrl/pacientes" -Headers $headers -Body $pacienteBody -Depth 6
 $pacienteId = $paciente.id
 if (-not $pacienteId) {
   throw "Paciente nao retornou id."
@@ -128,9 +161,9 @@ $anamneseBody = @{
   problemaAnterior = $false
   quandoProblemaAnterior = ""
   tratamentosAnteriores = @("Massagens")
-} | ConvertTo-Json -Depth 6
+}
 
-$anamnese = Invoke-RestMethod -Method Post -Uri "$BaseUrl/anamneses" -Headers $headers -ContentType "application/json" -Body $anamneseBody
+$anamnese = Invoke-JsonPost -Uri "$BaseUrl/anamneses" -Headers $headers -Body $anamneseBody -Depth 6
 $anamneseId = $anamnese.id
 Write-Host "Anamnese criada: $anamneseId"
 
@@ -143,9 +176,9 @@ $evolucaoBody = @{
   ajustes = "Ajuste em T4-T5"
   orientacoes = "Alongamentos diarios"
   observacoes = "Evolucao positiva"
-} | ConvertTo-Json -Depth 6
+}
 
-$evolucao = Invoke-RestMethod -Method Post -Uri "$BaseUrl/evolucoes" -Headers $headers -ContentType "application/json" -Body $evolucaoBody
+$evolucao = Invoke-JsonPost -Uri "$BaseUrl/evolucoes" -Headers $headers -Body $evolucaoBody -Depth 6
 $evolucaoId = $evolucao.id
 Write-Host "Evolucao criada: $evolucaoId"
 

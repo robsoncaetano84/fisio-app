@@ -12,6 +12,37 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$JsonContentType = "application/json; charset=utf-8"
+
+function ConvertTo-Utf8JsonBody {
+  param(
+    [Parameter(Mandatory = $true)][object]$Body,
+    [int]$Depth = 20,
+    [switch]$Compress
+  )
+
+  $json = if ($Compress) {
+    $Body | ConvertTo-Json -Depth $Depth -Compress
+  } else {
+    $Body | ConvertTo-Json -Depth $Depth
+  }
+  return [System.Text.Encoding]::UTF8.GetBytes($json)
+}
+
+function Invoke-JsonPost {
+  param(
+    [string]$Uri,
+    [object]$Body,
+    [switch]$Compress
+  )
+
+  return Invoke-RestMethod `
+    -Method Post `
+    -Uri $Uri `
+    -ContentType $JsonContentType `
+    -Body (ConvertTo-Utf8JsonBody -Body $Body -Compress:$Compress)
+}
+
 if ($WindowMinutes -lt 1) { $WindowMinutes = 1 }
 if ($IntervalSeconds -lt 5) { $IntervalSeconds = 5 }
 
@@ -36,9 +67,8 @@ if (($UseEnvCredentials -or (-not $Identifier -and -not $Password)) -and $envIde
 
 $authMode = "none"
 if (-not $BearerToken -and $Identifier -and $Password) {
-  $payload = @{ identificador = $Identifier; senha = $Password } | ConvertTo-Json -Compress
   try {
-    $loginObj = Invoke-RestMethod -Method Post -Uri "$BaseUrl/auth/login" -ContentType "application/json" -Body $payload
+    $loginObj = Invoke-JsonPost -Uri "$BaseUrl/auth/login" -Body @{ identificador = $Identifier; senha = $Password } -Compress
     if ($loginObj.token) {
       $BearerToken = [string]$loginObj.token
       $authMode = "credentials"

@@ -140,7 +140,7 @@ export class OpenAiService {
     return fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
