@@ -11,6 +11,7 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Modal,
   TouchableOpacity,
   Platform,
 } from "react-native";
@@ -330,6 +331,8 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const [validatedSnapshot, setValidatedSnapshot] = useState<string | null>(
     null,
   );
+  const [showPatientPublicationPreview, setShowPatientPublicationPreview] =
+    useState(false);
   const [validationHistory, setValidationHistory] = useState<
     LaudoValidationHistoryEntry[]
   >([]);
@@ -740,6 +743,78 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
     return "";
   }, [autosaveStatus, dateLocale, lastAutosavedAt, t]);
+
+  const patientPublicationPreviewSections = useMemo(
+    () =>
+      [
+        {
+          key: "motivo",
+          title: t("clinical.patientPreview.reason"),
+          content: motivoAvaliacao.trim(),
+        },
+        {
+          key: "diagnostico",
+          title: t("clinical.patientPreview.functionalDiagnosis"),
+          content: diagnosticoFuncional.trim(),
+        },
+        {
+          key: "achados",
+          title: t("clinical.patientPreview.clinicalFindings"),
+          content: achadosClinicos.trim(),
+        },
+        {
+          key: "conclusao",
+          title: t("clinical.patientPreview.conclusion"),
+          content: conclusao.trim(),
+        },
+        {
+          key: "objetivos",
+          title: t("clinical.patientPreview.goals"),
+          content: [objetivosCurtoPrazo.trim(), objetivosMedioPrazo.trim()]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
+        {
+          key: "plano",
+          title: t("clinical.patientPreview.treatmentPlan"),
+          content: [
+            condutas.trim(),
+            planoTratamentoIA.trim(),
+            frequenciaSemanal.trim()
+              ? t("clinical.patientPreview.weeklyFrequency", {
+                  value: frequenciaSemanal.trim(),
+                })
+              : "",
+            duracaoSemanas.trim()
+              ? t("clinical.patientPreview.durationWeeks", {
+                  value: duracaoSemanas.trim(),
+                })
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
+        {
+          key: "alta",
+          title: t("clinical.patientPreview.dischargeCriteria"),
+          content: criteriosAlta.trim(),
+        },
+      ].filter((section) => section.content.length > 0),
+    [
+      achadosClinicos,
+      conclusao,
+      condutas,
+      criteriosAlta,
+      diagnosticoFuncional,
+      duracaoSemanas,
+      frequenciaSemanal,
+      motivoAvaliacao,
+      objetivosCurtoPrazo,
+      objetivosMedioPrazo,
+      planoTratamentoIA,
+      t,
+    ],
+  );
 
   const getValidationHistoryKey = (id: string) =>
     `laudo:validation-history:v1:${id}`;
@@ -1271,20 +1346,13 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     await performValidate();
   };
 
-  const handlePublishToPatient = async () => {
+  const confirmPublishToPatient = async () => {
     if (!laudoId) return;
-    if (!canPublishToPatient) {
-      showToast({
-        message: t("clinical.messages.validateBeforePatientPublication"),
-        type: "info",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const published = await publicarLaudoPaciente(laudoId);
       setLaudoStatus(published.status || LaudoStatus.PUBLICADO_PACIENTE);
+      setShowPatientPublicationPreview(false);
       await trackEvent("laudo_published_to_patient", {
         laudoId,
         pacienteId,
@@ -1304,6 +1372,18 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePublishToPatient = async () => {
+    if (!laudoId) return;
+    if (!canPublishToPatient) {
+      showToast({
+        message: t("clinical.messages.validateBeforePatientPublication"),
+        type: "info",
+      });
+      return;
+    }
+    setShowPatientPublicationPreview(true);
   };
 
   const confirmAiSuggestionReview = () => {
@@ -2497,6 +2577,76 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           />
         </View>
       </ScrollView>
+      <Modal
+        visible={showPatientPublicationPreview}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPatientPublicationPreview(false)}
+      >
+        <View style={styles.patientPreviewOverlay}>
+          <View style={styles.patientPreviewModal}>
+            <View style={styles.patientPreviewHeader}>
+              <View style={styles.patientPreviewTitleWrap}>
+                <Ionicons name="eye-outline" size={22} color={COLORS.primary} />
+                <Text style={styles.patientPreviewTitle}>
+                  {t("clinical.patientPreview.title")}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.patientPreviewClose}
+                onPress={() => setShowPatientPublicationPreview(false)}
+                activeOpacity={0.85}
+                accessibilityLabel={t("common.cancel")}
+              >
+                <Ionicons name="close-outline" size={22} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.patientPreviewDescription}>
+              {t("clinical.patientPreview.description")}
+            </Text>
+            <ScrollView style={styles.patientPreviewScroll}>
+              {patientPublicationPreviewSections.length > 0 ? (
+                patientPublicationPreviewSections.map((section) => (
+                  <View key={section.key} style={styles.patientPreviewSection}>
+                    <Text style={styles.patientPreviewSectionTitle}>
+                      {section.title}
+                    </Text>
+                    <Text style={styles.patientPreviewSectionText}>
+                      {section.content}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.patientPreviewEmpty}>
+                  {t("clinical.patientPreview.empty")}
+                </Text>
+              )}
+            </ScrollView>
+            <View style={styles.patientPreviewActions}>
+              <Button
+                title={t("common.cancel")}
+                onPress={() => setShowPatientPublicationPreview(false)}
+                variant="outline"
+                style={styles.patientPreviewAction}
+              />
+              <Button
+                title={t("clinical.patientPreview.confirmPublish")}
+                onPress={confirmPublishToPatient}
+                loading={loading}
+                disabled={loading}
+                style={styles.patientPreviewAction}
+                icon={
+                  <Ionicons
+                    name="share-social-outline"
+                    size={18}
+                    color={COLORS.white}
+                  />
+                }
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -2505,6 +2655,85 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  patientPreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.42)",
+    justifyContent: "center",
+    padding: SPACING.md,
+  },
+  patientPreviewModal: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    maxHeight: "88%",
+    ...SHADOWS.lg,
+  },
+  patientPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
+  },
+  patientPreviewTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    flex: 1,
+  },
+  patientPreviewTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.lg,
+    fontWeight: "700",
+  },
+  patientPreviewClose: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.gray50,
+  },
+  patientPreviewDescription: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    lineHeight: 20,
+    marginTop: SPACING.xs,
+  },
+  patientPreviewScroll: {
+    marginTop: SPACING.md,
+  },
+  patientPreviewSection: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    backgroundColor: COLORS.background,
+  },
+  patientPreviewSectionTitle: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  patientPreviewSectionText: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    lineHeight: 20,
+  },
+  patientPreviewEmpty: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    lineHeight: 20,
+  },
+  patientPreviewActions: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  patientPreviewAction: {
+    flex: 1,
   },
   errorContainer: {
     flex: 1,

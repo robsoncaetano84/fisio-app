@@ -33,6 +33,38 @@ export enum PacienteVinculoStatus {
   BLOQUEADO_CONFLITO = 'BLOQUEADO_CONFLITO',
 }
 
+export enum PacienteAppAccessEventType {
+  INVITE_SENT = 'INVITE_SENT',
+  INVITE_RESENT = 'INVITE_RESENT',
+  INVITE_ACCEPTED = 'INVITE_ACCEPTED',
+  INVITE_REVOKED = 'INVITE_REVOKED',
+  ACCESS_UNLINKED = 'ACCESS_UNLINKED',
+}
+
+export type PacienteAppAccessEvent = {
+  type: PacienteAppAccessEventType;
+  at: string;
+  actorUsuarioId?: string | null;
+};
+
+export const appendPacienteAppAccessEvent = (
+  paciente: Paciente,
+  type: PacienteAppAccessEventType,
+  actorUsuarioId?: string | null,
+) => {
+  const previous = Array.isArray(paciente.appAccessEvents)
+    ? paciente.appAccessEvents
+    : [];
+  paciente.appAccessEvents = [
+    {
+      type,
+      at: new Date().toISOString(),
+      actorUsuarioId: actorUsuarioId || null,
+    },
+    ...previous,
+  ].slice(0, 30);
+};
+
 @Entity('pacientes')
 @Index('IDX_PACIENTE_USUARIO_ATIVO', ['usuarioId', 'ativo'])
 @Index('IDX_PACIENTE_USUARIO_NOME', ['usuarioId', 'nomeCompleto'])
@@ -201,4 +233,7 @@ export class Paciente extends BaseEntity {
 
   @Column({ name: 'convite_aceito_em', type: 'timestamp', nullable: true })
   conviteAceitoEm: Date | null;
+
+  @Column({ name: 'app_access_events', type: 'jsonb', default: [] })
+  appAccessEvents: PacienteAppAccessEvent[];
 }

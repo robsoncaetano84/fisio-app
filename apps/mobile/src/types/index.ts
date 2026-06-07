@@ -121,6 +121,20 @@ export enum PacienteVinculoStatus {
   BLOQUEADO_CONFLITO = "BLOQUEADO_CONFLITO",
 }
 
+export enum PacienteAppAccessEventType {
+  INVITE_SENT = "INVITE_SENT",
+  INVITE_RESENT = "INVITE_RESENT",
+  INVITE_ACCEPTED = "INVITE_ACCEPTED",
+  INVITE_REVOKED = "INVITE_REVOKED",
+  ACCESS_UNLINKED = "ACCESS_UNLINKED",
+}
+
+export interface PacienteAppAccessEvent {
+  type: PacienteAppAccessEventType;
+  at: string;
+  actorUsuarioId?: string | null;
+}
+
 export enum PacienteCicloStatus {
   AGUARDANDO_ANAMNESE = "AGUARDANDO_ANAMNESE",
   EM_TRATAMENTO = "EM_TRATAMENTO",
@@ -173,6 +187,7 @@ export interface Paciente {
   statusCiclo?: PacienteCicloStatus;
   conviteEnviadoEm?: string;
   conviteAceitoEm?: string;
+  appAccessEvents?: PacienteAppAccessEvent[];
   ativo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -192,9 +207,18 @@ export interface AreaAfetada {
 
 export type FenotipoDorEvidencias = Record<string, boolean>;
 
+export enum AnamneseOrigem {
+  PROFISSIONAL = "PROFISSIONAL",
+  PACIENTE = "PACIENTE",
+}
+
 export interface Anamnese {
   id: string;
   pacienteId: string;
+  origem?: AnamneseOrigem;
+  validadaPorUsuarioId?: string | null;
+  validadaEm?: string | null;
+  validacaoObservacao?: string | null;
   motivoBusca: MotivoBusca;
   areasAfetadas: AreaAfetada[];
   intensidadeDor: number;

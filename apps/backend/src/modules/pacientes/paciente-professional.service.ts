@@ -9,7 +9,9 @@ import { Repository } from 'typeorm';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import {
+  appendPacienteAppAccessEvent,
   Paciente,
+  PacienteAppAccessEventType,
   PacienteCadastroOrigem,
   PacienteVinculoStatus,
 } from './entities/paciente.entity';
@@ -180,8 +182,18 @@ export class PacienteProfessionalService {
 
       if (!pacienteUsuarioId) {
         paciente.conviteAceitoEm = null;
+        appendPacienteAppAccessEvent(
+          paciente,
+          PacienteAppAccessEventType.ACCESS_UNLINKED,
+          usuarioId,
+        );
       } else if (!paciente.conviteAceitoEm) {
         paciente.conviteAceitoEm = new Date();
+        appendPacienteAppAccessEvent(
+          paciente,
+          PacienteAppAccessEventType.INVITE_ACCEPTED,
+          usuarioId,
+        );
       }
       shouldSyncVinculo = true;
     }
@@ -229,6 +241,11 @@ export class PacienteProfessionalService {
     paciente.pacienteUsuarioId = null;
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
     paciente.conviteAceitoEm = null;
+    appendPacienteAppAccessEvent(
+      paciente,
+      PacienteAppAccessEventType.ACCESS_UNLINKED,
+      usuarioId,
+    );
     const saved = await this.pacienteRepository.save(paciente);
     await this.pacienteVinculoService.closeVinculoAtivoByPaciente(saved.id);
     return saved;
@@ -258,6 +275,11 @@ export class PacienteProfessionalService {
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
     paciente.conviteEnviadoEm = null;
     paciente.conviteAceitoEm = null;
+    appendPacienteAppAccessEvent(
+      paciente,
+      PacienteAppAccessEventType.INVITE_REVOKED,
+      usuarioId,
+    );
     return this.pacienteRepository.save(paciente);
   }
 
@@ -286,6 +308,11 @@ export class PacienteProfessionalService {
       // Paciente com conta no app: remove da carteira do profissional
       // mantendo o cadastro ativo para o proprio paciente.
       paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+      appendPacienteAppAccessEvent(
+        paciente,
+        PacienteAppAccessEventType.ACCESS_UNLINKED,
+        usuarioId,
+      );
       await this.pacienteRepository.save(paciente);
       await this.pacienteVinculoService.closeVinculoAtivoByPaciente(
         paciente.id,

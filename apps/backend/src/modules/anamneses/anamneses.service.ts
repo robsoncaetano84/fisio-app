@@ -10,7 +10,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Anamnese, AreaAfetada, MotivoBusca } from './entities/anamnese.entity';
+import {
+  Anamnese,
+  AnamneseOrigem,
+  AreaAfetada,
+  MotivoBusca,
+} from './entities/anamnese.entity';
 import {
   AnamneseHistorico,
   AnamneseHistoricoAcao,
@@ -40,7 +45,13 @@ export class AnamnesesService {
     );
     const normalizedDto = this.removeLocalPainIntensity(createAnamneseDto);
     this.validateClinicalMinimum(normalizedDto);
-    const anamnese = this.anamneseRepository.create(normalizedDto);
+    const anamnese = this.anamneseRepository.create({
+      ...normalizedDto,
+      origem: AnamneseOrigem.PROFISSIONAL,
+      validadaPorUsuarioId: usuarioId,
+      validadaEm: new Date(),
+      validacaoObservacao: null,
+    });
     const saved = await this.anamneseRepository.save(anamnese);
     await this.registrarHistorico(
       saved,
@@ -64,6 +75,10 @@ export class AnamnesesService {
     const anamnese = this.anamneseRepository.create({
       ...normalizedDto,
       pacienteId: paciente.id,
+      origem: AnamneseOrigem.PACIENTE,
+      validadaPorUsuarioId: null,
+      validadaEm: null,
+      validacaoObservacao: null,
     });
 
     const saved = await this.anamneseRepository.save(anamnese);
@@ -130,6 +145,31 @@ export class AnamnesesService {
     }
 
     return anamnese;
+  }
+
+  async validateByProfessional(
+    id: string,
+    usuarioId: string,
+    observacao?: string,
+  ): Promise<Anamnese> {
+    const anamnese = await this.findOne(id, usuarioId);
+
+    if (anamnese.validadaEm) {
+      return anamnese;
+    }
+
+    anamnese.validadaPorUsuarioId = usuarioId;
+    anamnese.validadaEm = new Date();
+    anamnese.validacaoObservacao = observacao?.trim() || null;
+
+    const saved = await this.anamneseRepository.save(anamnese);
+    await this.registrarHistorico(
+      saved,
+      usuarioId,
+      AnamneseHistoricoAcao.VALIDATE,
+      AnamneseHistoricoOrigem.PROFISSIONAL,
+    );
+    return saved;
   }
 
   async update(

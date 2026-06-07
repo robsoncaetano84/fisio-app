@@ -380,17 +380,47 @@ export class AtividadesService {
 
     const savedCheckin = await this.checkinRepository.save(checkin);
 
+    const painWorsened =
+      typeof savedCheckin.dorAntes === 'number' &&
+      typeof savedCheckin.dorDepois === 'number' &&
+      savedCheckin.dorDepois > savedCheckin.dorAntes;
+    const highPain =
+      typeof savedCheckin.dorDepois === 'number' && savedCheckin.dorDepois >= 7;
+    const notificationType = !dto.concluiu
+      ? 'atividade_checkin_ausente'
+      : painWorsened || highPain
+        ? 'atividade_checkin_alerta_dor'
+        : 'atividade_checkin';
+    const notificationTitle = !dto.concluiu
+      ? 'Check-in nao realizado'
+      : painWorsened || highPain
+        ? 'Alerta de dor no check-in'
+        : 'Novo check-in de atividade';
+    const notificationBody = !dto.concluiu
+      ? `${paciente.nomeCompleto} nao realizou "${atividade.titulo}".`
+      : painWorsened && typeof savedCheckin.dorDepois === 'number'
+        ? `${paciente.nomeCompleto} relatou piora de dor (${savedCheckin.dorAntes} -> ${savedCheckin.dorDepois}).`
+        : highPain
+          ? `${paciente.nomeCompleto} relatou dor elevada (${savedCheckin.dorDepois}/10) apos "${atividade.titulo}".`
+          : `${paciente.nomeCompleto} concluiu "${atividade.titulo}".`;
+
     this.notificacoesService
       .sendToUsuario(atividade.usuarioId, {
-        title: 'Novo check-in de atividade',
-        body: dto.concluiu
-          ? `${paciente.nomeCompleto} concluiu "${atividade.titulo}".`
-          : `${paciente.nomeCompleto} nao concluiu "${atividade.titulo}".`,
+        title: notificationTitle,
+        body: notificationBody,
         data: {
-          type: 'atividade_checkin',
+          type: notificationType,
           pacienteId: paciente.id,
           atividadeId: atividade.id,
           checkinId: savedCheckin.id,
+          dorAntes:
+            typeof savedCheckin.dorAntes === 'number'
+              ? String(savedCheckin.dorAntes)
+              : '',
+          dorDepois:
+            typeof savedCheckin.dorDepois === 'number'
+              ? String(savedCheckin.dorDepois)
+              : '',
         },
       })
       .catch(() => undefined);

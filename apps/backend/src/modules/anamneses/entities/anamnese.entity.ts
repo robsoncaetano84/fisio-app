@@ -42,6 +42,11 @@ export interface AreaAfetada {
 
 export type FenotipoDorEvidencias = Record<string, boolean>;
 
+export enum AnamneseOrigem {
+  PROFISSIONAL = 'PROFISSIONAL',
+  PACIENTE = 'PACIENTE',
+}
+
 @Entity('anamneses')
 export class Anamnese extends BaseEntity {
   @ManyToOne(() => Paciente)
@@ -50,6 +55,23 @@ export class Anamnese extends BaseEntity {
 
   @Column({ name: 'paciente_id' })
   pacienteId: string;
+
+  @Column({
+    name: 'origem',
+    type: 'enum',
+    enum: AnamneseOrigem,
+    default: AnamneseOrigem.PROFISSIONAL,
+  })
+  origem: AnamneseOrigem;
+
+  @Column({ name: 'validada_por_usuario_id', type: 'uuid', nullable: true })
+  validadaPorUsuarioId: string | null;
+
+  @Column({ name: 'validada_em', type: 'timestamp', nullable: true })
+  validadaEm: Date | null;
+
+  @Column({ name: 'validacao_observacao', type: 'text', nullable: true })
+  validacaoObservacao: string | null;
 
   @Column({ name: 'motivo_busca', type: 'enum', enum: MotivoBusca })
   motivoBusca: MotivoBusca;

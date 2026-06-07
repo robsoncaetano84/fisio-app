@@ -25,6 +25,7 @@ import { PacienteDashboardService } from './paciente-dashboard.service';
 import { PacienteSelfProfileService } from './paciente-self-profile.service';
 import { PacienteScopeService } from './paciente-scope.service';
 import { PacienteProfessionalService } from './paciente-professional.service';
+import { NotificacoesModule } from '../notificacoes/notificacoes.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { PacienteProfessionalService } from './paciente-professional.service';
       Anamnese,
     ]),
     OpenAiModule,
+    NotificacoesModule,
   ],
   controllers: [PacientesController],
   providers: [

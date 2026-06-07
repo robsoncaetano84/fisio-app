@@ -32,14 +32,17 @@ import {
 import { useAuthStore } from "../../stores/authStore";
 import {
   api,
+  buildCareTimeline,
   ensurePatientDailyReminder,
   getBadgeLabel,
   getGamificationState,
   getOfflineCheckinQueueStats,
+  recordAuditAction,
   syncOfflineCheckins,
   trackEvent,
 } from "../../services";
 import { useToast } from "../../components/ui";
+import { CareTimeline, type CareTimelineViewItem } from "../../components/clinical/CareTimeline";
 import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -84,7 +87,7 @@ interface PacienteExameItem {
 export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
   const { usuario, logout, token } = useAuthStore();
   const { showToast } = useToast();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [pacienteNome, setPacienteNome] = useState("");
   const [pacienteId, setPacienteId] = useState<string | null>(null);
@@ -142,6 +145,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
         ? t("patient.statusDraft")
         : t("patient.statusUnavailable");
   const hasPublishedDocuments = statusLaudo === LaudoStatus.PUBLICADO_PACIENTE;
+  const dateLocale =
+    language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
 
   const atividadesPorDia = useMemo<Array<{ day: number; label: string; itens: Atividade[] }>>(() => {
     const groups = new Map<number, Atividade[]>();
@@ -806,6 +811,15 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
           await Linking.openURL(localUri);
         }
       }
+      await recordAuditAction(
+        "PDF_VIEWED_BY_PATIENT",
+        {
+          pacienteId,
+          pdfType: type,
+          profile: "PACIENTE",
+        },
+        usuario?.id,
+      );
     } catch {
       if (webPopup && !webPopup.closed) {
         webPopup.close();
@@ -900,6 +914,101 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     primeiraAtividadeDisponivel,
     proximaAtividadeHoje,
     t,
+    usuario?.nome,
+  ]);
+
+  const formatTimelineDate = useCallback(
+    (value?: string | null) => {
+      if (!value) return null;
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return parsed.toLocaleDateString(dateLocale);
+    },
+    [dateLocale],
+  );
+
+  const careTimelineItems = useMemo<CareTimelineViewItem[]>(() => {
+    const latestExame = exames[0];
+    const timeline = buildCareTimeline({
+      hasProfessionalLink,
+      hasAppAccess: hasProfessionalLink,
+      canFillAnamnese,
+      hasAnamnese: hasAnamnesePreenchida,
+      hasExameMedico: exames.length > 0,
+      hasEvolucao: !!ultimaEvolucaoEm,
+      hasPublishedDocuments,
+      hasActivities: atividades.length > 0,
+      hasPendingCheckin: checksHoje.pendentes > 0,
+      latestExameAt: latestExame?.createdAt || latestExame?.updatedAt || null,
+      latestEvolucaoAt: ultimaEvolucaoEm,
+      latestDocumentAt: hasPublishedDocuments ? ultimoLaudoAtualizadoEm : null,
+      latestCheckinAt: ultimaDataCheckin?.toISOString() || null,
+    });
+
+    return timeline.items.map((item) => {
+      const stageKey = item.stage.toLowerCase();
+      const actionByStage: Partial<Record<string, () => void>> = {
+        ANAMNESE:
+          item.action === "FILL_ANAMNESE" && pacienteId
+            ? () =>
+                navigation.navigate("AnamneseForm", {
+                  pacienteId,
+                  selfMode: true,
+                  pacienteNome:
+                    pacienteNome || usuario?.nome || t("home.user"),
+                })
+            : undefined,
+        EXAME_MEDICO:
+          item.action === "UPLOAD_EXAM"
+            ? () => handleUploadExame().catch(() => undefined)
+            : undefined,
+        PLANO_LAUDO:
+          item.status === "DONE" ? () => openMyPdf("laudo") : undefined,
+        CHECKIN:
+          item.action === "DO_CHECKIN" &&
+          (proximaAtividadeHoje || primeiraAtividadeDisponivel)
+            ? () => {
+                const target =
+                  proximaAtividadeHoje || primeiraAtividadeDisponivel;
+                if (!target) return;
+                navigation.navigate("PacienteAtividadeCheckin", {
+                  atividadeId: target.id,
+                  titulo: target.titulo,
+                });
+              }
+            : undefined,
+      };
+
+      return {
+        id: item.stage,
+        title: t(`careTimeline.stage.${stageKey}`),
+        description: t(`careTimeline.patient.status.${item.status}`),
+        status: item.status,
+        dateLabel: formatTimelineDate(item.date),
+        actionLabel: item.action
+          ? t(`careTimeline.patient.action.${item.action}`)
+          : null,
+        onPress: actionByStage[item.stage] || null,
+      };
+    });
+  }, [
+    atividades.length,
+    canFillAnamnese,
+    checksHoje.pendentes,
+    exames,
+    formatTimelineDate,
+    hasAnamnesePreenchida,
+    hasProfessionalLink,
+    hasPublishedDocuments,
+    navigation,
+    pacienteId,
+    pacienteNome,
+    primeiraAtividadeDisponivel,
+    proximaAtividadeHoje,
+    t,
+    ultimaDataCheckin,
+    ultimaEvolucaoEm,
+    ultimoLaudoAtualizadoEm,
     usuario?.nome,
   ]);
 
@@ -1103,6 +1212,12 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          <CareTimeline
+            title={t("careTimeline.title")}
+            subtitle={t("careTimeline.patient.subtitle")}
+            items={careTimelineItems}
+          />
 
           {hasProfessionalLink ? (
             <View style={[styles.card, styles.checksCard]}>

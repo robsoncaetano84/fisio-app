@@ -24,7 +24,9 @@ import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
+  appendPacienteAppAccessEvent,
   Paciente,
+  PacienteAppAccessEventType,
   PacienteCadastroOrigem,
   PacienteVinculoStatus,
   Sexo,
@@ -612,8 +614,18 @@ export class AuthService {
     const sep = inviteBaseUrl.includes('?') ? '&' : '?';
     const link = `${inviteBaseUrl}${sep}convite=${encodeURIComponent(token)}`;
 
+    const wasPendingInvite =
+      paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO &&
+      !!paciente.conviteEnviadoEm;
     paciente.vinculoStatus = PacienteVinculoStatus.CONVITE_ENVIADO;
     paciente.conviteEnviadoEm = new Date();
+    appendPacienteAppAccessEvent(
+      paciente,
+      wasPendingInvite
+        ? PacienteAppAccessEventType.INVITE_RESENT
+        : PacienteAppAccessEventType.INVITE_SENT,
+      profissional.id,
+    );
     await this.pacienteRepository.save(paciente);
 
     return { token, link, expiraEmDias };
@@ -641,6 +653,12 @@ export class AuthService {
         pacienteParaVinculo,
         pacienteUsuario,
       );
+    appendPacienteAppAccessEvent(
+      pacienteVinculado,
+      PacienteAppAccessEventType.INVITE_ACCEPTED,
+      pacienteUsuario.id,
+    );
+    await this.pacienteRepository.save(pacienteVinculado);
     await this.syncQuickInvitePacienteDados(pacienteVinculado, pacienteUsuario);
 
     return {
@@ -695,6 +713,12 @@ export class AuthService {
         pacienteParaVinculo,
         pacienteUsuario,
       );
+    appendPacienteAppAccessEvent(
+      pacienteVinculado,
+      PacienteAppAccessEventType.INVITE_ACCEPTED,
+      pacienteUsuario.id,
+    );
+    await this.pacienteRepository.save(pacienteVinculado);
     await this.syncQuickInvitePacienteDados(pacienteVinculado, pacienteUsuario);
     const pacienteId: string | null = pacienteVinculado.id;
 

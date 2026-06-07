@@ -180,6 +180,35 @@ describe('PacienteProfessionalService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('records app access event when pending invite is revoked', async () => {
+    const { service, pacienteRepository, pacienteScopeService } = makeService();
+    pacienteScopeService.findScopedPacienteById.mockResolvedValue({
+      ...paciente,
+      pacienteUsuarioId: null,
+      vinculoStatus: PacienteVinculoStatus.CONVITE_ENVIADO,
+      conviteEnviadoEm: new Date('2026-06-07T10:00:00.000Z'),
+      appAccessEvents: [],
+    });
+
+    const result = await service.revokePacienteInviteByProfessional(
+      'paciente-1',
+      'profissional-1',
+    );
+
+    expect(result).toMatchObject({
+      vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+      conviteEnviadoEm: null,
+      conviteAceitoEm: null,
+      appAccessEvents: [
+        expect.objectContaining({
+          type: 'INVITE_REVOKED',
+          actorUsuarioId: 'profissional-1',
+        }),
+      ],
+    });
+    expect(pacienteRepository.save).toHaveBeenCalled();
+  });
+
   it('keeps linked paciente active when removing from professional wallet', async () => {
     const {
       service,

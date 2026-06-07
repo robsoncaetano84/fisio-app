@@ -1,6 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
 import { AnamnesesService } from './anamneses.service';
-import { InicioProblema, MotivoBusca } from './entities/anamnese.entity';
+import {
+  AnamneseOrigem,
+  InicioProblema,
+  MotivoBusca,
+} from './entities/anamnese.entity';
+import { AnamneseHistoricoAcao } from './entities/anamnese-historico.entity';
 
 describe('AnamnesesService', () => {
   const makeService = (paciente: {
@@ -79,6 +84,8 @@ describe('AnamnesesService', () => {
     expect(result).toMatchObject({
       pacienteId: 'paciente-1',
       motivoBusca: MotivoBusca.PREVENTIVO,
+      origem: AnamneseOrigem.PACIENTE,
+      validadaEm: null,
     });
     expect(anamneseRepository.save).toHaveBeenCalledTimes(1);
   });
@@ -93,5 +100,49 @@ describe('AnamnesesService', () => {
     await service.createForPacienteUsuario(payload, 'paciente-user-1');
 
     expect(anamneseRepository.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('formalizes professional validation for patient-filled anamnesis', async () => {
+    const {
+      service,
+      anamneseRepository,
+      anamneseHistoricoRepository,
+      pacientesService,
+    } = makeService({
+      id: 'paciente-1',
+      usuarioId: 'profissional-1',
+      anamneseLiberadaPaciente: true,
+    });
+    const patientAnamnese = {
+      id: 'anamnese-1',
+      pacienteId: 'paciente-1',
+      origem: AnamneseOrigem.PACIENTE,
+      validadaPorUsuarioId: null,
+      validadaEm: null,
+      validacaoObservacao: null,
+      createdAt: new Date('2026-06-07T10:00:00.000Z'),
+      updatedAt: new Date('2026-06-07T10:00:00.000Z'),
+      ...payload,
+    };
+    anamneseRepository.findOne.mockResolvedValue(patientAnamnese);
+    pacientesService.findOne.mockResolvedValue({ id: 'paciente-1' });
+
+    const result = await service.validateByProfessional(
+      'anamnese-1',
+      'profissional-1',
+      'Revisada com paciente em consulta.',
+    );
+
+    expect(result).toMatchObject({
+      validadaPorUsuarioId: 'profissional-1',
+      validacaoObservacao: 'Revisada com paciente em consulta.',
+    });
+    expect(result.validadaEm).toBeInstanceOf(Date);
+    expect(anamneseHistoricoRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acao: AnamneseHistoricoAcao.VALIDATE,
+        origem: 'PROFISSIONAL',
+      }),
+    );
   });
 });

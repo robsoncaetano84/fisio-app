@@ -1,5 +1,6 @@
 import {
   PacienteCadastroOrigem,
+  PacienteAppAccessEvent,
   PacienteVinculoStatus,
   Sexo,
   EstadoCivil,
@@ -42,6 +43,7 @@ export class PacienteListItemDto {
   statusCiclo: PacienteCicloStatus;
   conviteEnviadoEm: Date | null;
   conviteAceitoEm: Date | null;
+  appAccessEvents: PacienteAppAccessEvent[];
   createdAt: Date;
   updatedAt: Date;
 }

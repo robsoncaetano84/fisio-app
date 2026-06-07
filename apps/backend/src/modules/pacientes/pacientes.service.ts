@@ -24,6 +24,7 @@ import { PacienteDashboardService } from './paciente-dashboard.service';
 import { PacienteSelfProfileService } from './paciente-self-profile.service';
 import { PacienteScopeService } from './paciente-scope.service';
 import { PacienteProfessionalService } from './paciente-professional.service';
+import { NotificacoesService } from '../notificacoes/notificacoes.service';
 
 @Injectable()
 export class PacientesService {
@@ -40,6 +41,7 @@ export class PacientesService {
     private readonly pacienteSelfProfileService: PacienteSelfProfileService,
     private readonly pacienteScopeService: PacienteScopeService,
     private readonly pacienteProfessionalService: PacienteProfessionalService,
+    private readonly notificacoesService: NotificacoesService,
   ) {}
 
   private getMasterAdminEmails(): Set<string> {
@@ -337,12 +339,31 @@ export class PacientesService {
       dataExame?: Date | null;
     },
   ): Promise<PacienteExame> {
-    const { ownerUsuarioId } = await this.resolveExameScope(pacienteId, actor);
-    return this.pacienteMediaService.createExame(
+    const { paciente, ownerUsuarioId } = await this.resolveExameScope(
+      pacienteId,
+      actor,
+    );
+    const exame = await this.pacienteMediaService.createExame(
       pacienteId,
       ownerUsuarioId,
       payload,
     );
+
+    if (actor.role === UserRole.PACIENTE && ownerUsuarioId !== actor.id) {
+      this.notificacoesService
+        .sendToUsuario(ownerUsuarioId, {
+          title: 'Exame medico enviado',
+          body: `${paciente.nomeCompleto} enviou um exame para revisao.`,
+          data: {
+            type: 'paciente_exame_enviado',
+            pacienteId: paciente.id,
+            exameId: exame.id,
+          },
+        })
+        .catch(() => undefined);
+    }
+
+    return exame;
   }
 
   async findExameOrFail(

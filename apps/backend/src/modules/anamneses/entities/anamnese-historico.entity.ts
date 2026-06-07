@@ -4,6 +4,7 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 export enum AnamneseHistoricoAcao {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
+  VALIDATE = 'VALIDATE',
 }
 
 export enum AnamneseHistoricoOrigem {

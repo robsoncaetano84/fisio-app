@@ -15,6 +15,7 @@ import {
   EstadoCivil,
   PacienteCadastroOrigem,
   PacienteCicloStatus,
+  PacienteAppAccessEvent,
   PacienteVinculoStatus,
 } from "../types";
 import { APP_CONFIG } from "../constants/theme";
@@ -68,6 +69,7 @@ type ApiPaciente = {
   statusCiclo?: PacienteCicloStatus | null;
   conviteEnviadoEm?: string | null;
   conviteAceitoEm?: string | null;
+  appAccessEvents?: PacienteAppAccessEvent[] | null;
   ativo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -197,6 +199,7 @@ const mapApiToPaciente = (p: ApiPaciente): Paciente => ({
   statusCiclo: p.statusCiclo || PacienteCicloStatus.AGUARDANDO_ANAMNESE,
   conviteEnviadoEm: p.conviteEnviadoEm || undefined,
   conviteAceitoEm: p.conviteAceitoEm || undefined,
+  appAccessEvents: Array.isArray(p.appAccessEvents) ? p.appAccessEvents : [],
   createdAt: p.createdAt,
   updatedAt: p.updatedAt,
 });
@@ -458,7 +461,6 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
 
   getPacienteById: (id) => get().pacientes.find((p) => p.id === id),
 }));
-
 
 
 

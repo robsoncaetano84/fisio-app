@@ -32,6 +32,7 @@ import { useEvolucaoStore } from "../../stores/evolucaoStore";
 import { useLaudoStore } from "../../stores/laudoStore";
 import {
   api,
+  buildCareTimeline,
   getAuditEntries,
   getClinicalOrchestratorNextAction,
   clinicalFlowReadinessCopyKeys,
@@ -41,6 +42,7 @@ import {
   recordAuditAction,
   toAuditRef,
   trackEvent,
+  type AuditEntry,
   type ClinicalFlowAction,
   type ClinicalFlowGuard,
   type ClinicalFlowStageStatus,
@@ -63,7 +65,14 @@ import {
   BORDER_RADIUS,
   SHADOWS,
 } from "../../constants/theme";
-import { PacienteCicloStatus, RootStackParamList, UserRole } from "../../types";
+import {
+  LaudoStatus,
+  AnamneseOrigem,
+  PacienteCicloStatus,
+  PacienteVinculoStatus,
+  RootStackParamList,
+  UserRole,
+} from "../../types";
 import {
   getMotivoBuscaLabel,
   parseDatePreservingDateOnly,
@@ -72,6 +81,7 @@ import {
 } from "./hooks/usePacienteDetailsSummaries";
 import { PatientDetailsSection } from "./components/PatientDetailsSection";
 import { PatientAppAccessCard } from "./components/PatientAppAccessCard";
+import { CareTimeline, type CareTimelineViewItem } from "../../components/clinical/CareTimeline";
 
 type PacienteDetailsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteDetails">;
@@ -104,7 +114,12 @@ export function PacienteDetailsScreen({
   const { pacienteId } = route.params;
   const { getPacienteById, updatePaciente, fetchPacienteById } =
     usePacienteStore();
-  const { anamneses, fetchAnamnesesByPaciente, getAnamneseById } =
+  const {
+    anamneses,
+    fetchAnamnesesByPaciente,
+    getAnamneseById,
+    validateAnamnese,
+  } =
     useAnamneseStore();
   const { evolucoes, fetchEvolucoesByPaciente, getEvolucaoById } =
     useEvolucaoStore();
@@ -122,14 +137,23 @@ export function PacienteDetailsScreen({
   const [removingExameId, setRemovingExameId] = useState<string | null>(null);
   const [updatingAnamnesePermission, setUpdatingAnamnesePermission] =
     useState(false);
+  const [validatingAnamneseId, setValidatingAnamneseId] = useState<
+    string | null
+  >(null);
   const [lastEmotionalSupportContactAt, setLastEmotionalSupportContactAt] =
     useState<string | null>(null);
+  const [visibleAuditEntries, setVisibleAuditEntries] = useState<AuditEntry[]>(
+    [],
+  );
   const [showAllQuickMessages, setShowAllQuickMessages] = useState(false);
   const [showAllExames, setShowAllExames] = useState(false);
   const [laudoSnapshot, setLaudoSnapshot] = useState<{
     id: string;
     exameFisico?: string;
     condutas?: string;
+    status?: LaudoStatus;
+    updatedAt?: string;
+    publicadoPacienteEm?: string | null;
   } | null>(null);
   const [orchestratorNextAction, setOrchestratorNextAction] =
     useState<ClinicalOrchestratorNextActionResponse | null>(null);
@@ -239,7 +263,14 @@ export function PacienteDetailsScreen({
     fetchLaudoByPaciente(pacienteId, false)
       .then(
         (
-          laudo: { id: string; exameFisico?: string; condutas?: string } | null,
+          laudo: {
+            id: string;
+            exameFisico?: string;
+            condutas?: string;
+            status?: LaudoStatus;
+            updatedAt?: string;
+            publicadoPacienteEm?: string | null;
+          } | null,
         ) => {
           if (!active) return;
           if (!laudo?.id) {
@@ -250,6 +281,9 @@ export function PacienteDetailsScreen({
             id: laudo.id,
             exameFisico: laudo.exameFisico,
             condutas: laudo.condutas,
+            status: laudo.status,
+            updatedAt: laudo.updatedAt,
+            publicadoPacienteEm: laudo.publicadoPacienteEm,
           });
         },
       )
@@ -282,15 +316,24 @@ export function PacienteDetailsScreen({
   useEffect(() => {
     getAuditEntries(200)
       .then((entries) => {
+        const pacienteAuditRef = toAuditRef(pacienteId);
+        setVisibleAuditEntries(
+          entries
+            .filter((entry) => entry.metadata?.pacienteId === pacienteAuditRef)
+            .slice(0, 8),
+        );
         const last = entries.find(
           (entry) =>
             entry.action === "QUICK_MESSAGE_SENT" &&
-            entry.metadata?.pacienteId === toAuditRef(pacienteId) &&
+            entry.metadata?.pacienteId === pacienteAuditRef &&
             entry.metadata?.templateId === "EMOTIONAL_SUPPORT",
         );
         setLastEmotionalSupportContactAt(last?.at || null);
       })
-      .catch(() => setLastEmotionalSupportContactAt(null));
+      .catch(() => {
+        setVisibleAuditEntries([]);
+        setLastEmotionalSupportContactAt(null);
+      });
   }, [pacienteId]);
 
   const handleWhatsApp = () => {
@@ -777,10 +820,77 @@ export function PacienteDetailsScreen({
   const latestAnamneseId = anamnesesDoPaciente[0]?.id;
   const latestEvolucaoId = evolucoesDoPaciente[0]?.id;
   const hasAnamnese = anamneses.some((a) => a.pacienteId === pacienteId);
+  const latestAnamneseNeedsProfessionalReview =
+    latestAnamnese?.origem === AnamneseOrigem.PACIENTE &&
+    !latestAnamnese.validadaEm;
+  const latestAnamneseAlreadyReviewed =
+    !!latestAnamnese &&
+    (!!latestAnamnese.validadaEm ||
+      latestAnamnese.origem === AnamneseOrigem.PROFISSIONAL);
+  const latestAnamneseReviewStatus = latestAnamnese
+    ? latestAnamneseAlreadyReviewed
+      ? t("patientDetails.anamnesisReviewed")
+      : t("patientDetails.anamnesisPendingReview")
+    : "";
   const hasExameFisico = !!String(laudoSnapshot?.exameFisico || "").trim();
   const hasEvolucao = evolucoesDoPaciente.length > 0;
   const hasLaudoPlano = !!laudoSnapshot?.id;
   const hasVinculoAtivo = !!paciente.pacienteUsuarioId;
+
+  const auditActionLabels = useMemo<Record<string, string>>(
+    () => ({
+      LAUDO_VALIDATED: t("patientDetails.auditLaudoValidated"),
+      LAUDO_PUBLISHED_TO_PATIENT: t("patientDetails.auditLaudoPublished"),
+      ANAMNESE_VALIDATED_BY_PROFESSIONAL: t(
+        "patientDetails.auditAnamnesisReviewed",
+      ),
+      PDF_VIEWED_BY_PATIENT: t("patientDetails.auditPdfViewed"),
+      LAUDO_PROFESSIONAL_PDF_OPENED: t("patientDetails.auditProfessionalPdf"),
+      QUICK_MESSAGE_SENT: t("patientDetails.auditQuickMessage"),
+      EXAME_FISICO_VALIDATED: t("patientDetails.auditPhysicalExamValidated"),
+      PLANO_VALIDATED: t("patientDetails.auditPlanValidated"),
+      CHECKIN_OFFLINE_SYNCED: t("patientDetails.auditCheckinSynced"),
+    }),
+    [t],
+  );
+
+  const handleValidateLatestAnamnese = async () => {
+    if (!latestAnamnese?.id || !latestAnamneseNeedsProfessionalReview) return;
+    setValidatingAnamneseId(latestAnamnese.id);
+    try {
+      await validateAnamnese(
+        latestAnamnese.id,
+        t("patientDetails.anamnesisReviewDefaultNote"),
+      );
+      await fetchAnamnesesByPaciente(pacienteId);
+      await recordAuditAction(
+        "ANAMNESE_VALIDATED_BY_PROFESSIONAL",
+        {
+          anamneseId: latestAnamnese.id,
+          pacienteId,
+        },
+        actorId,
+      );
+      const entries = await getAuditEntries(200);
+      const pacienteAuditRef = toAuditRef(pacienteId);
+      setVisibleAuditEntries(
+        entries
+          .filter((entry) => entry.metadata?.pacienteId === pacienteAuditRef)
+          .slice(0, 8),
+      );
+      showToast({
+        type: "success",
+        message: t("patientDetails.anamnesisReviewedSuccess"),
+      });
+    } catch {
+      showToast({
+        type: "error",
+        message: t("patientDetails.anamnesisReviewedError"),
+      });
+    } finally {
+      setValidatingAnamneseId(null);
+    }
+  };
 
   const clinicalFlowState = useMemo(
     () => ({
@@ -1063,6 +1173,98 @@ export function PacienteDetailsScreen({
     };
   }, [clinicalFlowState, navigation, paciente.id, t]);
 
+  const formatTimelineDate = useMemo(
+    () => (value?: string | null) => {
+      if (!value) return null;
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return parsed.toLocaleDateString(dateLocale);
+    },
+    [dateLocale],
+  );
+
+  const careTimelineItems = useMemo<CareTimelineViewItem[]>(() => {
+    const latestDocumentAt =
+      laudoSnapshot?.status === LaudoStatus.PUBLICADO_PACIENTE
+        ? laudoSnapshot.publicadoPacienteEm || laudoSnapshot.updatedAt || null
+        : null;
+    const hasPublishedDocuments =
+      laudoSnapshot?.status === LaudoStatus.PUBLICADO_PACIENTE;
+    const hasAppAccess = !!paciente.pacienteUsuarioId;
+
+    const timeline = buildCareTimeline({
+      hasProfessionalLink: hasVinculoAtivo,
+      hasAppAccess,
+      hasPendingInvite:
+        !hasAppAccess &&
+        paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO,
+      canFillAnamnese: !!paciente.anamneseLiberadaPaciente,
+      hasAnamnese,
+      hasExameMedico: hasExameFisico || sortedExames.length > 0,
+      hasEvolucao,
+      hasPublishedDocuments,
+      hasActivities: hasLaudoPlano,
+      latestAnamneseAt:
+        latestAnamnese?.updatedAt || latestAnamnese?.createdAt || null,
+      latestExameAt:
+        sortedExames[0]?.createdAt || sortedExames[0]?.updatedAt || null,
+      latestEvolucaoAt: latestEvolucao?.data || null,
+      latestDocumentAt,
+    });
+
+    return timeline.items.map((item) => {
+      const stageKey = item.stage.toLowerCase();
+      const actionByStage: Partial<Record<string, () => void>> = {
+        APP_ACCESS:
+          item.action === "SEND_INVITE"
+            ? () => navigation.navigate("PacienteForm", { pacienteId })
+            : undefined,
+        ANAMNESE: item.action === "FILL_ANAMNESE" ? handleOpenAnamnese : undefined,
+        EXAME_MEDICO:
+          item.action === "UPLOAD_EXAM"
+            ? () => handleUploadExame().catch(() => undefined)
+            : undefined,
+        EVOLUCAO:
+          item.action === "RECORD_EVOLUTION" ? handleOpenEvolucao : undefined,
+        PLANO_LAUDO:
+          item.action === "PUBLISH_REPORT" ? handleOpenLaudo : undefined,
+        CHECKIN:
+          item.action === "DO_CHECKIN" || item.action === "VIEW_DOCUMENTS"
+            ? () => navigation.navigate("PacienteAdesao", { pacienteId })
+            : undefined,
+      };
+
+      return {
+        id: item.stage,
+        title: t(`careTimeline.stage.${stageKey}`),
+        description: t(`careTimeline.professional.status.${item.status}`),
+        status: item.status,
+        dateLabel: formatTimelineDate(item.date),
+        actionLabel: item.action
+          ? t(`careTimeline.professional.action.${item.action}`)
+          : null,
+        onPress: actionByStage[item.stage] || null,
+      };
+    });
+  }, [
+    formatTimelineDate,
+    hasAnamnese,
+    hasEvolucao,
+    hasExameFisico,
+    hasLaudoPlano,
+    hasVinculoAtivo,
+    laudoSnapshot,
+    latestAnamnese,
+    latestEvolucao,
+    navigation,
+    paciente.anamneseLiberadaPaciente,
+    paciente.pacienteUsuarioId,
+    paciente.vinculoStatus,
+    pacienteId,
+    sortedExames,
+    t,
+  ]);
+
   const {
     adesao,
     caseSummaryItems,
@@ -1333,10 +1535,20 @@ export function PacienteDetailsScreen({
               vinculoStatus={paciente.vinculoStatus}
               conviteEnviadoEm={paciente.conviteEnviadoEm}
               conviteAceitoEm={paciente.conviteAceitoEm}
+              appAccessEvents={paciente.appAccessEvents}
               onRefresh={async () => {
                 await fetchPacienteById(paciente.id);
               }}
             />
+          ) : null}
+          {viewerRole !== UserRole.PACIENTE ? (
+            <View style={styles.careTimelineWrap}>
+              <CareTimeline
+                title={t("careTimeline.title")}
+                subtitle={t("careTimeline.professional.subtitle")}
+                items={careTimelineItems}
+              />
+            </View>
           ) : null}
         </View>
 
@@ -1552,12 +1764,54 @@ export function PacienteDetailsScreen({
                   <Text style={styles.inlineText} numberOfLines={1}>
                     {getMotivoBuscaLabel(latestAnamnese.motivoBusca, t)}
                   </Text>
+                  <View
+                    style={[
+                      styles.reviewBadge,
+                      latestAnamneseNeedsProfessionalReview
+                        ? styles.reviewBadgePending
+                        : styles.reviewBadgeDone,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        latestAnamneseNeedsProfessionalReview
+                          ? "time-outline"
+                          : "checkmark-circle-outline"
+                      }
+                      size={13}
+                      color={
+                        latestAnamneseNeedsProfessionalReview
+                          ? COLORS.warning
+                          : COLORS.success
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.reviewBadgeText,
+                        latestAnamneseNeedsProfessionalReview
+                          ? styles.reviewBadgeTextPending
+                          : styles.reviewBadgeTextDone,
+                      ]}
+                    >
+                      {latestAnamneseReviewStatus}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ) : (
                 <Text style={styles.emptyInline}>
                   {t("patientDetails.noAnamnesis")}
                 </Text>
               )}
+              {latestAnamneseNeedsProfessionalReview ? (
+                <Button
+                  title={t("patientDetails.validateAnamnesisReview")}
+                  onPress={handleValidateLatestAnamnese}
+                  loading={validatingAnamneseId === latestAnamnese?.id}
+                  size="sm"
+                  fullWidth
+                  style={{ marginTop: SPACING.xs }}
+                />
+              ) : null}
               <Button
                 title={t("common.viewAll")}
                 onPress={() =>
@@ -1612,6 +1866,43 @@ export function PacienteDetailsScreen({
               />
             </View>
           </View>
+        </PatientDetailsSection>
+
+        <PatientDetailsSection title={t("patientDetails.visibleAudit")}>
+          {visibleAuditEntries.length === 0 ? (
+            <Text style={styles.emptyInline}>
+              {t("patientDetails.noVisibleAudit")}
+            </Text>
+          ) : (
+            <View style={styles.auditList}>
+              {visibleAuditEntries.map((entry) => {
+                const parsedAt = new Date(entry.at);
+                const atLabel = Number.isNaN(parsedAt.getTime())
+                  ? t("patientDetails.dateUnavailable")
+                  : parsedAt.toLocaleString(dateLocale, {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                return (
+                  <View key={entry.id} style={styles.auditItem}>
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <View style={styles.auditTextWrap}>
+                      <Text style={styles.auditTitle}>
+                        {auditActionLabels[entry.action] || entry.action}
+                      </Text>
+                      <Text style={styles.auditMeta}>{atLabel}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </PatientDetailsSection>
 
         <PatientDetailsSection
@@ -2087,6 +2378,10 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
     gap: SPACING.lg,
   },
+  careTimelineWrap: {
+    marginTop: SPACING.md,
+    width: "100%",
+  },
   quickAction: {
     alignItems: "center",
   },
@@ -2474,6 +2769,62 @@ const styles = StyleSheet.create({
   inlineText: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  reviewBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 3,
+    marginTop: SPACING.xs,
+  },
+  reviewBadgePending: {
+    borderColor: COLORS.warning + "66",
+    backgroundColor: COLORS.warning + "15",
+  },
+  reviewBadgeDone: {
+    borderColor: COLORS.success + "66",
+    backgroundColor: COLORS.success + "15",
+  },
+  reviewBadgeText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  reviewBadgeTextPending: {
+    color: COLORS.warning,
+  },
+  reviewBadgeTextDone: {
+    color: COLORS.success,
+  },
+  auditList: {
+    gap: SPACING.xs,
+  },
+  auditItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.gray50,
+  },
+  auditTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  auditTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  auditMeta: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
     marginTop: 2,
   },
   emptyInline: {

@@ -15,6 +15,7 @@ import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../../constants/theme"
 import { useLanguage } from "../../../i18n/LanguageProvider";
 import { api } from "../../../services";
 import {
+  PacienteAppAccessEvent,
   PacienteInviteCreateResponse,
   PacienteVinculoStatus,
 } from "../../../types";
@@ -29,6 +30,7 @@ type Props = {
   vinculoStatus?: PacienteVinculoStatus | null;
   conviteEnviadoEm?: string | null;
   conviteAceitoEm?: string | null;
+  appAccessEvents?: PacienteAppAccessEvent[];
   onRefresh?: () => Promise<void> | void;
 };
 
@@ -52,6 +54,7 @@ export function PatientAppAccessCard({
   vinculoStatus,
   conviteEnviadoEm,
   conviteAceitoEm,
+  appAccessEvents,
   onRefresh,
 }: Props) {
   const { language, t } = useLanguage();
@@ -61,6 +64,10 @@ export function PatientAppAccessCard({
   const hasAppAccess = !!pacienteUsuarioId;
   const hasPendingInvite =
     !hasAppAccess && vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO;
+  const visibleEvents = useMemo(
+    () => (Array.isArray(appAccessEvents) ? appAccessEvents.slice(0, 4) : []),
+    [appAccessEvents],
+  );
 
   const dateLocale =
     language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
@@ -74,6 +81,28 @@ export function PatientAppAccessCard({
       return parsed.toLocaleDateString(dateLocale);
     },
     [dateLocale, t],
+  );
+
+  const formatDateTime = useCallback(
+    (value: string) => {
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return t("patientDetails.dateUnavailable");
+      }
+      return parsed.toLocaleString(dateLocale, {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+    [dateLocale, t],
+  );
+
+  const getEventLabel = useCallback(
+    (type: PacienteAppAccessEvent["type"]) =>
+      t(`patientAppAccess.event.${type}`),
+    [t],
   );
 
   const status = useMemo(() => {
@@ -328,6 +357,25 @@ export function PatientAppAccessCard({
           />
         )}
       </View>
+      {visibleEvents.length > 0 ? (
+        <View style={styles.history}>
+          <Text style={styles.historyTitle}>
+            {t("patientAppAccess.historyTitle")}
+          </Text>
+          {visibleEvents.map((event, index) => (
+            <View key={`${event.type}-${event.at}-${index}`} style={styles.historyRow}>
+              <Ionicons
+                name="ellipse"
+                size={7}
+                color={index === 0 ? COLORS.primary : COLORS.gray400}
+              />
+              <Text style={styles.historyText}>
+                {getEventLabel(event.type)} · {formatDateTime(event.at)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -393,5 +441,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: COLORS.white,
+  },
+  history: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    marginTop: SPACING.md,
+    paddingTop: SPACING.sm,
+    gap: 6,
+  },
+  historyTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  historyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  historyText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    flex: 1,
   },
 });

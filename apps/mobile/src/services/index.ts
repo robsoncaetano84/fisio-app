@@ -23,7 +23,14 @@ export {
   getOfflineCheckinQueueStats,
   syncOfflineCheckins,
 } from "./offlineCheckinQueue";
-export { getAuditEntries, getAuditSummary, recordAuditAction, toAuditRef } from "./auditTrail";
+export {
+  getAuditEntries,
+  getAuditSummary,
+  recordAuditAction,
+  toAuditRef,
+  type AuditEntry,
+  type AuditActionType,
+} from "./auditTrail";
 export { getOpsHealthSummary, recordApiMetric, recordSyncMetric } from "./opsMetrics";
 export { getRuntimeFeatureFlags } from "./featureFlags";
 export {
@@ -62,6 +69,16 @@ export {
   type ClinicalFlowReadinessState,
   type ClinicalFlowStageStatus,
 } from "./clinicalFlowReadiness";
+export {
+  buildCareTimeline,
+  type CareTimelineAction,
+  type CareTimelineAudience,
+  type CareTimelineInput,
+  type CareTimelineModel,
+  type CareTimelineModelItem,
+  type CareTimelineStage,
+  type CareTimelineStatus,
+} from "./careTimeline";
 export { getLaudoAiSuggestion, buildPhysicalExamTemplateFromAnamnese } from './laudoAi';
 export {
   buildStructuredExameFromAnamnese,
@@ -95,4 +112,3 @@ export {
   type ClinicalPhotoView,
 } from "./clinicalPhotos";
 export { cachedGet, invalidateCachedGet } from "./requestCache";
-

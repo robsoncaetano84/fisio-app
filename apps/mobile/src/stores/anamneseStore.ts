@@ -111,6 +111,7 @@ export const useAnamneseStore = create<{
   fetchAnamnesesByPaciente: (pacienteId: string) => Promise<void>;
   createAnamnese: (payload: AnamnesePayload) => Promise<Anamnese>;
   updateAnamnese: (id: string, payload: AnamnesePayload) => Promise<Anamnese>;
+  validateAnamnese: (id: string, observacao?: string) => Promise<Anamnese>;
   fetchMyLatestAnamnese: () => Promise<Anamnese | null>;
   createMyAnamnese: (payload: AnamnesePayload) => Promise<Anamnese>;
   updateMyAnamnese: (id: string, payload: AnamnesePayload) => Promise<Anamnese>;
@@ -182,6 +183,27 @@ export const useAnamneseStore = create<{
       });
       if (response.data.pacienteId) {
         await persistAnamneses(response.data.pacienteId, nextAnamneses);
+      }
+      return updated;
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  validateAnamnese: async (id: string, observacao?: string) => {
+    try {
+      set({ isLoading: true });
+      const response = await api.post<Anamnese>(`/anamneses/${id}/validar`, {
+        observacao,
+      });
+      const updated = withDerivedFields(response.data);
+      const nextAnamneses = get().anamneses.map((a) =>
+        a.id === id ? updated : a,
+      );
+      set({ anamneses: nextAnamneses, isLoading: false });
+      if (updated.pacienteId) {
+        await persistAnamneses(updated.pacienteId, nextAnamneses);
       }
       return updated;
     } catch (error) {

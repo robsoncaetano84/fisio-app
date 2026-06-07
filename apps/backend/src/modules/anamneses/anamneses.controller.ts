@@ -19,6 +19,7 @@ import { AnamnesesService } from './anamneses.service';
 import { CreateAnamneseDto } from './dto/create-anamnese.dto';
 import { UpdateAnamneseDto } from './dto/update-anamnese.dto';
 import { CreateMyAnamneseDto } from './dto/create-my-anamnese.dto';
+import { ValidateAnamneseDto } from './dto/validate-anamnese.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -133,6 +134,21 @@ export class AnamnesesController {
       id,
       updateAnamneseDto,
       usuario.id,
+    );
+  }
+
+  @Post(':id/validar')
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  validateByProfessional(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ValidateAnamneseDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.anamnesesService.validateByProfessional(
+      id,
+      usuario.id,
+      dto.observacao,
     );
   }
 
