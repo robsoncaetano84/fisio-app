@@ -114,6 +114,32 @@ export class CrmController {
     return this.crmService.getPipelineSummary();
   }
 
+  @Get('command-center')
+  async getCommandCenter(
+    @CurrentUser() usuario: Usuario,
+    @Query('windowDays') windowDays?: string,
+    @Query('semEvolucaoDias') semEvolucaoDias?: string,
+    @Query('limit') limit?: string,
+    @Query('professionalId') professionalId?: string,
+    @Query('patientId') patientId?: string,
+  ) {
+    this.requirePermission(usuario, 'dashboard.read');
+    this.auditAdminAccess(usuario, 'command_center_summary', {
+      windowDays,
+      semEvolucaoDias,
+      limit,
+      professionalId,
+      patientId,
+    });
+    return this.crmService.getCommandCenter({
+      windowDays: windowDays ? Number(windowDays) : 7,
+      semEvolucaoDias: semEvolucaoDias ? Number(semEvolucaoDias) : 10,
+      limit: limit ? Number(limit) : 8,
+      professionalId,
+      patientId,
+    });
+  }
+
   @Get('clinical/dashboard-summary')
   async getClinicalDashboardSummary(
     @CurrentUser() usuario: Usuario,

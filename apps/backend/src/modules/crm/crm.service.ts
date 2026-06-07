@@ -47,6 +47,13 @@ import {
   type CrmClinicalDashboardBlockedReasonRow,
   type CrmClinicalDashboardFlowRow,
 } from './crm-clinical-dashboard-summary.util';
+import {
+  buildCrmCommandCenterSummary,
+  type CrmCommandCenterLeadSignal,
+  type CrmCommandCenterPatientSignal,
+  type CrmCommandCenterProfessionalSignal,
+  type CrmCommandCenterTaskSignal,
+} from './crm-command-center.util';
 import { mapCrmInteraction, mapCrmLead, mapCrmTask } from './crm-entity.mapper';
 
 export type { CrmAdminPermission } from './crm-admin-permissions.util';
@@ -229,6 +236,275 @@ export class CrmService {
       ),
       byStage: valueByStage,
     };
+  }
+
+  async getCommandCenter(params?: {
+    windowDays?: number;
+    semEvolucaoDias?: number;
+    limit?: number;
+    professionalId?: string;
+    patientId?: string;
+  }) {
+    const windowDays = Math.max(
+      1,
+      Math.min(Number(params?.windowDays || 7), 90),
+    );
+    const semEvolucaoDias = Math.max(
+      3,
+      Math.min(Number(params?.semEvolucaoDias || 10), 90),
+    );
+    const limit = Math.max(3, Math.min(Number(params?.limit || 8), 20));
+    const now = Date.now();
+    const nowDate = new Date(now);
+    const staleLeadBefore = new Date(now - 3 * 24 * 60 * 60 * 1000);
+    const professionalId =
+      String(params?.professionalId || '').trim() || undefined;
+    const patientId = String(params?.patientId || '').trim() || undefined;
+
+    const overdueTasksPromise = this.crmTaskRepository
+      .createQueryBuilder('task')
+      .where('task.ativo = :ativo', { ativo: true })
+      .andWhere('task.status = :status', { status: CrmTaskStatus.PENDENTE })
+      .andWhere('task.dueAt IS NOT NULL')
+      .andWhere('task.dueAt < :now', { now: nowDate })
+      .orderBy('task.dueAt', 'ASC')
+      .take(50)
+      .getMany();
+
+    const staleLeadsPromise = this.crmLeadRepository
+      .createQueryBuilder('lead')
+      .where('lead.ativo = :ativo', { ativo: true })
+      .andWhere('lead.stage IN (:...stages)', {
+        stages: [CrmLeadStage.CONTATO, CrmLeadStage.PROPOSTA],
+      })
+      .andWhere('lead.updatedAt < :staleLeadBefore', { staleLeadBefore })
+      .orderBy('lead.updatedAt', 'ASC')
+      .take(50)
+      .getMany();
+
+    const patientsQb = this.pacienteRepository
+      .createQueryBuilder('paciente')
+      .leftJoinAndSelect('paciente.usuario', 'profissional')
+      .where('paciente.ativo = :ativo', { ativo: true })
+      .orderBy('paciente.updatedAt', 'DESC')
+      .take(1000);
+    if (professionalId) {
+      patientsQb.andWhere('paciente.usuarioId = :professionalId', {
+        professionalId,
+      });
+    }
+    if (patientId) {
+      patientsQb.andWhere('paciente.id = :patientId', { patientId });
+    }
+
+    const professionalsQb = this.usuarioRepository
+      .createQueryBuilder('usuario')
+      .where('usuario.role = :role', { role: UserRole.USER })
+      .andWhere('usuario.ativo = :ativo', { ativo: true })
+      .orderBy('usuario.updatedAt', 'DESC')
+      .take(1000);
+    if (professionalId) {
+      professionalsQb.andWhere('usuario.id = :professionalId', {
+        professionalId,
+      });
+    }
+
+    const [overdueTasks, staleLeadRows, patients, professionals] =
+      await Promise.all([
+        overdueTasksPromise,
+        staleLeadsPromise,
+        patientsQb.getMany(),
+        patientId
+          ? Promise.resolve([] as Usuario[])
+          : professionalsQb.getMany(),
+      ]);
+
+    const staleLeadIds = staleLeadRows.map((lead) => lead.id);
+    const pendingTasksForStaleLeads = staleLeadIds.length
+      ? await this.crmTaskRepository
+          .createQueryBuilder('task')
+          .select('task.leadId', 'leadId')
+          .where('task.ativo = :ativo', { ativo: true })
+          .andWhere('task.status = :status', {
+            status: CrmTaskStatus.PENDENTE,
+          })
+          .andWhere('task.leadId IN (:...staleLeadIds)', { staleLeadIds })
+          .getRawMany<{ leadId: string }>()
+      : [];
+    const leadIdsWithPendingTask = new Set(
+      pendingTasksForStaleLeads.map((row) => row.leadId),
+    );
+
+    const patientIds = patients.map((patient) => patient.id);
+    const [
+      latestAnamneses,
+      latestEvolucoes,
+      latestLaudos,
+      latestCheckins,
+      activeActivityRows,
+    ] = patientIds.length
+      ? await Promise.all([
+          this.anamneseRepository
+            .createQueryBuilder('a')
+            .where('a.pacienteId IN (:...patientIds)', { patientIds })
+            .orderBy('a.pacienteId', 'ASC')
+            .addOrderBy('a.createdAt', 'DESC')
+            .getMany(),
+          this.evolucaoRepository
+            .createQueryBuilder('e')
+            .where('e.pacienteId IN (:...patientIds)', { patientIds })
+            .orderBy('e.pacienteId', 'ASC')
+            .addOrderBy('e.data', 'DESC')
+            .getMany(),
+          this.laudoRepository
+            .createQueryBuilder('l')
+            .where('l.pacienteId IN (:...patientIds)', { patientIds })
+            .orderBy('l.pacienteId', 'ASC')
+            .addOrderBy('l.updatedAt', 'DESC')
+            .getMany(),
+          this.atividadeCheckinRepository
+            .createQueryBuilder('c')
+            .select('c.pacienteId', 'pacienteId')
+            .addSelect('MAX(c.createdAt)', 'lastCheckin')
+            .where('c.pacienteId IN (:...patientIds)', { patientIds })
+            .groupBy('c.pacienteId')
+            .getRawMany<{ pacienteId: string; lastCheckin: string | null }>(),
+          this.atividadeRepository
+            .createQueryBuilder('a')
+            .select('a.pacienteId', 'pacienteId')
+            .where('a.ativo = :ativo', { ativo: true })
+            .andWhere('a.pacienteId IN (:...patientIds)', { patientIds })
+            .groupBy('a.pacienteId')
+            .getRawMany<{ pacienteId: string }>(),
+        ])
+      : [[], [], [], [], []];
+
+    const anamneseByPatient = new Map<string, Anamnese>();
+    latestAnamneses.forEach((item) => {
+      if (!anamneseByPatient.has(item.pacienteId)) {
+        anamneseByPatient.set(item.pacienteId, item);
+      }
+    });
+    const evolucaoByPatient = new Map<string, Evolucao>();
+    latestEvolucoes.forEach((item) => {
+      if (!evolucaoByPatient.has(item.pacienteId)) {
+        evolucaoByPatient.set(item.pacienteId, item);
+      }
+    });
+    const laudoByPatient = new Map<string, Laudo>();
+    latestLaudos.forEach((item) => {
+      if (!laudoByPatient.has(item.pacienteId)) {
+        laudoByPatient.set(item.pacienteId, item);
+      }
+    });
+    const lastCheckinByPatient = new Map<string, string | null>();
+    latestCheckins.forEach((row) =>
+      lastCheckinByPatient.set(row.pacienteId, row.lastCheckin),
+    );
+    const activeActivityPatientIds = new Set(
+      activeActivityRows.map((row) => row.pacienteId),
+    );
+
+    const professionalIds = professionals.map(
+      (professional) => professional.id,
+    );
+    const professionalCountRows = professionalIds.length
+      ? await this.pacienteRepository
+          .createQueryBuilder('paciente')
+          .select('paciente.usuarioId', 'usuarioId')
+          .addSelect('COUNT(*)', 'total')
+          .addSelect(
+            'SUM(CASE WHEN paciente.ativo = true THEN 1 ELSE 0 END)',
+            'ativos',
+          )
+          .addSelect('MAX(paciente.updatedAt)', 'lastPacienteUpdate')
+          .where('paciente.usuarioId IN (:...professionalIds)', {
+            professionalIds,
+          })
+          .groupBy('paciente.usuarioId')
+          .getRawMany<{
+            usuarioId: string;
+            total: string;
+            ativos: string;
+            lastPacienteUpdate: Date | null;
+          }>()
+      : [];
+    const professionalCounts = new Map(
+      professionalCountRows.map((row) => [
+        row.usuarioId,
+        {
+          total: Number(row.total || 0),
+          ativos: Number(row.ativos || 0),
+          lastPacienteUpdate: row.lastPacienteUpdate,
+        },
+      ]),
+    );
+
+    const taskSignals: CrmCommandCenterTaskSignal[] = overdueTasks.map(
+      (task) => ({
+        id: task.id,
+        titulo: task.titulo,
+        dueAt: task.dueAt,
+        leadId: task.leadId,
+        responsavelNome: task.responsavelNome,
+      }),
+    );
+    const leadSignals: CrmCommandCenterLeadSignal[] = staleLeadRows
+      .filter((lead) => !leadIdsWithPendingTask.has(lead.id))
+      .map((lead) => ({
+        id: lead.id,
+        nome: lead.nome,
+        stage: lead.stage,
+        updatedAt: lead.updatedAt,
+        responsavelNome: lead.responsavelNome,
+      }));
+    const patientSignals: CrmCommandCenterPatientSignal[] = patients.map(
+      (patient) => {
+        const lastLaudo = laudoByPatient.get(patient.id);
+        const hasActiveActivity = activeActivityPatientIds.has(patient.id);
+        const hasAltaDocumento =
+          (lastLaudo?.status === LaudoStatus.VALIDADO_PROFISSIONAL ||
+            lastLaudo?.status === LaudoStatus.PUBLICADO_PACIENTE) &&
+          !!lastLaudo.criteriosAlta;
+        return {
+          id: patient.id,
+          nomeCompleto: patient.nomeCompleto,
+          profissionalNome: patient.usuario?.nome || null,
+          createdAt: patient.createdAt,
+          hasAnamnese: anamneseByPatient.has(patient.id),
+          lastEvolucaoAt: evolucaoByPatient.get(patient.id)?.data || null,
+          hasActiveActivity,
+          lastCheckinAt: lastCheckinByPatient.get(patient.id) || null,
+          tratamentoConcluido: hasAltaDocumento && !hasActiveActivity,
+          conviteEnviado:
+            patient.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO &&
+            !patient.pacienteUsuarioId,
+          conviteEnviadoEm: patient.conviteEnviadoEm || null,
+        };
+      },
+    );
+    const professionalSignals: CrmCommandCenterProfessionalSignal[] =
+      professionals.map((professional) => {
+        const counts = professionalCounts.get(professional.id);
+        return {
+          id: professional.id,
+          nome: professional.nome,
+          pacientesTotal: counts?.total || 0,
+          pacientesAtivos: counts?.ativos || 0,
+          lastPacienteUpdate: counts?.lastPacienteUpdate || null,
+        };
+      });
+
+    return buildCrmCommandCenterSummary({
+      now,
+      windowDays,
+      semEvolucaoDias,
+      limit,
+      overdueTasks: taskSignals,
+      staleLeads: leadSignals,
+      patients: patientSignals,
+      professionals: professionalSignals,
+    });
   }
 
   async listAdminProfissionais(params?: {

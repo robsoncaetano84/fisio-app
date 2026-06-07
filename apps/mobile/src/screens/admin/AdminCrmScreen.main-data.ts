@@ -3,6 +3,7 @@ import {
   getCrmAdminAuditLogs,
   getCrmAdminPatientsPaged,
   getCrmAdminProfessionalsPaged,
+  getCrmCommandCenter,
   getCrmClinicalDashboardSummary,
   getCrmLeads,
   getCrmPhysicalExamTestsSummary,
@@ -11,6 +12,7 @@ import {
   type CrmAdminAuditLog,
   type CrmAdminPatient,
   type CrmAdminProfessional,
+  type CrmCommandCenterSummary,
   type CrmClinicalDashboardSummary,
   type CrmLead,
   type CrmPhysicalExamTestsSummary,
@@ -78,6 +80,8 @@ export function useAdminCrmMainData({
   t,
 }: MainDataParams) {
   const [pipeline, setPipeline] = useState<CrmPipelineSummary | null>(null);
+  const [commandCenter, setCommandCenter] =
+    useState<CrmCommandCenterSummary | null>(null);
   const [clinicalSummary, setClinicalSummary] =
     useState<CrmClinicalDashboardSummary | null>(null);
   const [physicalExamSummary, setPhysicalExamSummary] =
@@ -101,6 +105,7 @@ export function useAdminCrmMainData({
         pipelineSummary,
         clinical,
         physicalExam,
+        commandCenterSummary,
         auditPaged,
         professionalsPaged,
         patientsPaged,
@@ -127,6 +132,13 @@ export function useAdminCrmMainData({
               ? undefined
               : clinicalPipelineStatusFilter,
         }).catch(() => null),
+        getCrmCommandCenter({
+          windowDays,
+          semEvolucaoDias,
+          limit: 8,
+          professionalId: selectedProfId || undefined,
+          patientId: selectedPacId || undefined,
+        }),
         getCrmAdminAuditLogs({
           includeSensitive: includeSensitiveData ? true : undefined,
           page: 1,
@@ -170,6 +182,7 @@ export function useAdminCrmMainData({
         }),
       ]);
       setPipeline(pipelineSummary);
+      setCommandCenter(commandCenterSummary);
       setClinicalSummary(clinical);
       setPhysicalExamSummary(physicalExam);
       setCrmAuditLogs(auditPaged.items || []);
@@ -220,6 +233,7 @@ export function useAdminCrmMainData({
 
   return {
     pipeline,
+    commandCenter,
     clinicalSummary,
     physicalExamSummary,
     crmProfessionals,

@@ -3,6 +3,7 @@
 // ADMIN CRM SCREEN
 // ==========================================
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -18,7 +19,11 @@ import { COLORS } from "../../constants/theme";
 import { useToast } from "../../components/ui";
 import { useAuthStore } from "../../stores/authStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
-import type { CrmInteractionType, CrmLeadStage } from "../../services/crm";
+import type {
+  CrmCommandCenterItem,
+  CrmInteractionType,
+  CrmLeadStage,
+} from "../../services/crm";
 import { UserRole } from "../../types";
 import {
   buildTaskBuckets,
@@ -45,6 +50,7 @@ import { useAdminCrmAutomationItems } from "./AdminCrmScreen.automation-items";
 import { AdminCrmAutomationPanel } from "./AdminCrmScreen.automation-panel";
 import { ClinicalDashboardPanels } from "./AdminCrmScreen.clinical";
 import { ClinicalCrmChartsPanel } from "./AdminCrmScreen.charts";
+import { CommandCenterPanel } from "./AdminCrmScreen.command-center";
 import { AdminCrmDashboardControls } from "./AdminCrmScreen.dashboard-controls";
 import { useAdminCrmDashboardData } from "./AdminCrmScreen.dashboard-data";
 import { useAdminCrmEntityActions } from "./AdminCrmScreen.admin-entity-actions";
@@ -289,6 +295,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
 
   const {
     pipeline,
+    commandCenter,
     clinicalSummary,
     physicalExamSummary,
     crmProfessionals,
@@ -481,6 +488,44 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       setTaskForm,
       setAutomationHistory,
     });
+
+  const handleCommandCenterAction = useCallback(
+    (item: CrmCommandCenterItem) => {
+      if (item.type === "TASK_OVERDUE") {
+        setTaskBucketFilter("ATRASADAS");
+        setTab("TAREFAS");
+        return;
+      }
+      if (item.type === "LEAD_STALE") {
+        setSelectedLeadId(item.targetId);
+        setTab("LEADS");
+        return;
+      }
+      if (item.type === "PENDING_INVITE") {
+        setSelectedPacId(item.targetId);
+        setPacLinkFilter("SEM_USUARIO");
+        setPacDetailTab("VINCULO");
+        setTab("PACIENTES");
+        return;
+      }
+      if (
+        item.type === "PATIENT_NO_EVOLUTION" ||
+        item.type === "PATIENT_NO_CHECKIN" ||
+        item.type === "PENDING_ANAMNESIS"
+      ) {
+        setSelectedPacId(item.targetId);
+        setPacStatusFilter("RISCO");
+        setTab("PACIENTES");
+        return;
+      }
+      if (item.type === "LOW_ACTIVATION_ACCOUNT") {
+        setSelectedProfId(item.targetId);
+        setProfAccountStatusFilter("RISK");
+        setTab("PROFISSIONAIS");
+      }
+    },
+    [],
+  );
 
   useAdminCrmAnalytics({
     isWeb,
@@ -705,6 +750,11 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             setSemEvolucaoDias={setSemEvolucaoDias}
             setClinicalPipelineStatusFilter={setClinicalPipelineStatusFilter}
             t={t}
+          />
+
+          <CommandCenterPanel
+            summary={commandCenter}
+            onActionPress={handleCommandCenterAction}
           />
 
           <GovernancePanel

@@ -65,6 +65,46 @@ export type CrmPipelineSummary = {
   byStage: Record<CrmLeadStage, { count: number; value: number }>;
 };
 
+export type CrmCommandCenterActionType =
+  | "TASK_OVERDUE"
+  | "LEAD_STALE"
+  | "PATIENT_NO_EVOLUTION"
+  | "PATIENT_NO_CHECKIN"
+  | "PENDING_ANAMNESIS"
+  | "PENDING_INVITE"
+  | "LOW_ACTIVATION_ACCOUNT";
+
+export type CrmCommandCenterItem = {
+  id: string;
+  type: CrmCommandCenterActionType;
+  severity: "HIGH" | "MEDIUM";
+  title: string;
+  description: string;
+  ctaLabel: string;
+  targetType: "TASK" | "LEAD" | "PATIENT" | "PROFESSIONAL";
+  targetId: string;
+  occurredAt: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type CrmCommandCenterSummary = {
+  generatedAt: string;
+  windowDays: number;
+  semEvolucaoDias: number;
+  kpis: {
+    totalOpenActions: number;
+    highPriorityActions: number;
+    overdueTasks: number;
+    staleLeads: number;
+    patientsWithoutEvolution: number;
+    patientsWithoutCheckin: number;
+    pendingAnamnesis: number;
+    pendingInvites: number;
+    lowActivationAccounts: number;
+  };
+  nextActions: CrmCommandCenterItem[];
+};
+
 export type CrmClinicalDashboardSummary = {
   pipeline: {
     novoPaciente: number;
@@ -308,6 +348,20 @@ export type ClinicalAiSuggestionsSummaryResponse = {
 
 export async function getCrmPipelineSummary(): Promise<CrmPipelineSummary> {
   const response = await api.get<CrmPipelineSummary>("/crm/pipeline/summary");
+  return response.data;
+}
+
+export async function getCrmCommandCenter(params?: {
+  windowDays?: number;
+  semEvolucaoDias?: number;
+  limit?: number;
+  professionalId?: string;
+  patientId?: string;
+}): Promise<CrmCommandCenterSummary> {
+  const response = await api.get<CrmCommandCenterSummary>(
+    "/crm/command-center",
+    { params },
+  );
   return response.data;
 }
 
