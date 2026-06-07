@@ -51,6 +51,12 @@ import { parseApiError } from "../../utils/apiErrors";
 import { parseJsonObject } from "../../utils/safeJson";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import { trackEvent } from "../../services";
+import {
+  appendUniqueClinicalText,
+  inferQuickAnamneseVoiceInsight,
+  mergePresetText,
+  uniqueVoiceValues,
+} from "../../utils/anamneseVoice";
 
 type AnamneseFormScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "AnamneseForm">;
@@ -58,6 +64,7 @@ type AnamneseFormScreenProps = {
 };
 
 type IconName = keyof typeof Ionicons.glyphMap;
+const QUICK_ANAMNESE_DICTATION_FIELD = "__quick_anamnese_dictation__";
 
 const removeLocalPainIntensity = (areas: AreaAfetada[] = []): AreaAfetada[] =>
   areas.map((area) => ({
@@ -452,6 +459,9 @@ export function AnamneseFormScreen({
   const [observacoesEstiloVida, setObservacoesEstiloVida] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeField, setActiveField] = useState<string | null>(null);
+  const [lastQuickVoiceSummary, setLastQuickVoiceSummary] = useState<
+    string | null
+  >(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [hasPersistedAnamnese, setHasPersistedAnamnese] = useState(false);
   const [lastPersistedSavedAt, setLastPersistedSavedAt] = useState<string | null>(
@@ -554,10 +564,187 @@ export function AnamneseFormScreen({
     }
   };
 
+  const mergeVoiceArea = (current: AreaAfetada[], nextArea?: AreaAfetada) => {
+    if (!nextArea) return current;
+
+    const exists = current.some(
+      (area) =>
+        area.regiao === nextArea.regiao &&
+        (area.lado || "") === (nextArea.lado || ""),
+    );
+
+    if (exists) {
+      return current.map((area) => {
+        if (
+          area.regiao !== nextArea.regiao ||
+          (area.lado || "") !== (nextArea.lado || "")
+        ) {
+          return area;
+        }
+
+        return {
+          ...area,
+          observacao: appendUniqueClinicalText(
+            area.observacao || "",
+            nextArea.observacao || "",
+          ),
+        };
+      });
+    }
+
+    return [...current, nextArea];
+  };
+
+  const clearQuickVoiceErrors = (fields: string[]) => {
+    if (!fields.length) return;
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      fields.forEach((field) => {
+        next[field] = "";
+      });
+      return next;
+    });
+  };
+
+  const applyQuickAnamneseVoiceInsight = (text: string) => {
+    const insight = inferQuickAnamneseVoiceInsight(text);
+    const touchedErrorFields = new Set<string>(["descricaoSintomas"]);
+
+    if (insight.motivoBusca) {
+      setMotivoBusca(insight.motivoBusca);
+      touchedErrorFields.add("motivoBusca");
+    }
+
+    setDescricaoSintomas((current) =>
+      appendUniqueClinicalText(current, insight.descricaoSintomas || text),
+    );
+
+    if (insight.area) {
+      setAreasAfetadas((current) => mergeVoiceArea(current, insight.area));
+      touchedErrorFields.add("areasAfetadas");
+    }
+
+    if (typeof insight.intensidadeDor === "number") {
+      setIntensidadeDor(insight.intensidadeDor);
+      touchedErrorFields.add("intensidadeDor");
+    }
+
+    if (insight.tempoProblema) {
+      setTempoProblema((current) =>
+        appendUniqueClinicalText(current, insight.tempoProblema || ""),
+      );
+      touchedErrorFields.add("tempoProblema");
+    }
+
+    if (insight.horaIntensifica.length) {
+      setHoraIntensifica((current) =>
+        mergePresetText(current, insight.horaIntensifica),
+      );
+      touchedErrorFields.add("horaIntensifica");
+    }
+
+    if (insight.inicioProblema) {
+      setInicioProblema((current) => current || insight.inicioProblema || null);
+      touchedErrorFields.add("inicioProblema");
+    }
+
+    if (insight.eventoEspecifico) {
+      setEventoEspecifico((current) =>
+        appendUniqueClinicalText(current, insight.eventoEspecifico || ""),
+      );
+    }
+
+    if (insight.fatorAlivio.length) {
+      setFatorAlivio((current) => mergePresetText(current, insight.fatorAlivio));
+      touchedErrorFields.add("fatorAlivio");
+    }
+
+    if (insight.mecanismoLesao) {
+      setMecanismoLesao((current) => current || insight.mecanismoLesao || null);
+      touchedErrorFields.add("mecanismoLesao");
+    }
+
+    if (insight.fatoresPiora.length) {
+      setFatoresPiora((current) =>
+        mergePresetText(current, insight.fatoresPiora),
+      );
+      touchedErrorFields.add("fatoresPiora");
+    }
+
+    if (typeof insight.dorRepouso === "boolean") {
+      setDorRepouso((current) => current ?? insight.dorRepouso ?? null);
+    }
+
+    if (typeof insight.dorNoturna === "boolean") {
+      setDorNoturna((current) => current ?? insight.dorNoturna ?? null);
+    }
+
+    if (typeof insight.irradiacao === "boolean") {
+      setIrradiacao(insight.irradiacao);
+      if (insight.localIrradiacao) {
+        setLocalIrradiacao((current) =>
+          appendUniqueClinicalText(current, insight.localIrradiacao || ""),
+        );
+        touchedErrorFields.add("localIrradiacao");
+      }
+    }
+
+    if (insight.tipoDor) {
+      setTipoDor((current) => current || insight.tipoDor || null);
+    }
+
+    if (insight.limitacoesFuncionais.length) {
+      setLimitacoesFuncionais((current) =>
+        mergePresetText(current, insight.limitacoesFuncionais),
+      );
+    }
+
+    if (insight.atividadesQuePioram.length) {
+      setAtividadesQuePioram((current) =>
+        mergePresetText(current, insight.atividadesQuePioram),
+      );
+    }
+
+    if (insight.metaPrincipalPaciente) {
+      setMetaPrincipalPaciente((current) =>
+        appendUniqueClinicalText(current, insight.metaPrincipalPaciente || ""),
+      );
+    }
+
+    if (insight.redFlags.length) {
+      setRedFlags((current) =>
+        uniqueVoiceValues([...current, ...insight.redFlags]),
+      );
+    }
+
+    if (insight.yellowFlags.length) {
+      setYellowFlags((current) =>
+        uniqueVoiceValues([...current, ...insight.yellowFlags]),
+      );
+    }
+
+    clearQuickVoiceErrors([...touchedErrorFields]);
+    setLastQuickVoiceSummary(
+      `Preenchido por voz: ${insight.appliedFields.join(", ") || "descrição"}.`,
+    );
+    showToast({
+      message: "Anamnese preenchida com ditado rápido.",
+      type: "success",
+    });
+  };
+
   const { isRecording, partial, start, stop } = useSpeechToText({
     enabled: VOICE_ENABLED,
     onResult: (text) => {
       if (!activeField) return;
+
+      if (activeField === QUICK_ANAMNESE_DICTATION_FIELD) {
+        applyQuickAnamneseVoiceInsight(text);
+        setActiveField(null);
+        return;
+      }
+
       switch (activeField) {
         case "descricaoSintomas":
           appendText(setDescricaoSintomas, text);
@@ -1563,6 +1750,7 @@ export function AnamneseFormScreen({
             setObservacoesEstiloVida("");
             setCurrentStep(0);
             setErrors({});
+            setLastQuickVoiceSummary(null);
             setHasAttemptedSave(false);
           },
         },
@@ -1587,6 +1775,66 @@ export function AnamneseFormScreen({
       case 0:
         return (
           <>
+            {VOICE_ENABLED && (
+              <FormSection title="Ditado rápido">
+                <View style={styles.quickVoiceCard}>
+                  <View style={styles.quickVoiceHeader}>
+                    <View style={styles.quickVoiceIconBox}>
+                      <Ionicons
+                        name="sparkles-outline"
+                        size={20}
+                        color={COLORS.primary}
+                      />
+                    </View>
+                    <View style={styles.quickVoiceTextGroup}>
+                      <Text style={styles.quickVoiceTitle}>
+                        Queixa completa em uma fala
+                      </Text>
+                      <Text style={styles.quickVoiceHint}>
+                        Ex.: dor forte no joelho direito há 2 semanas, 8/10,
+                        piora em escadas e melhora com repouso.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.quickVoiceButton,
+                      activeField === QUICK_ANAMNESE_DICTATION_FIELD &&
+                        isRecording &&
+                        styles.quickVoiceButtonRecording,
+                    ]}
+                    onPress={() => toggleVoice(QUICK_ANAMNESE_DICTATION_FIELD)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={getMicIcon(QUICK_ANAMNESE_DICTATION_FIELD)}
+                      size={20}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.quickVoiceButtonText}>
+                      {activeField === QUICK_ANAMNESE_DICTATION_FIELD &&
+                      isRecording
+                        ? "Parar ditado"
+                        : "Ditar queixa"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {activeField === QUICK_ANAMNESE_DICTATION_FIELD &&
+                    isRecording &&
+                    partial && (
+                      <Text style={styles.quickVoicePartial}>{partial}</Text>
+                    )}
+
+                  {lastQuickVoiceSummary && (
+                    <Text style={styles.quickVoiceSummary}>
+                      {lastQuickVoiceSummary}
+                    </Text>
+                  )}
+                </View>
+              </FormSection>
+            )}
+
             <FormSection title="Qual o motivo da busca pelo atendimento?">
               <View style={styles.optionsRow}>
                 <SelectOption
@@ -3128,6 +3376,70 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
+  },
+  quickVoiceCard: {
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    backgroundColor: COLORS.background,
+    padding: SPACING.md,
+    gap: SPACING.md,
+  },
+  quickVoiceHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+  },
+  quickVoiceIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primaryLight,
+  },
+  quickVoiceTextGroup: {
+    flex: 1,
+    minWidth: 0,
+  },
+  quickVoiceTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  quickVoiceHint: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  quickVoiceButton: {
+    minHeight: 48,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+  },
+  quickVoiceButtonRecording: {
+    backgroundColor: COLORS.error,
+  },
+  quickVoiceButtonText: {
+    color: COLORS.white,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  quickVoicePartial: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textPrimary,
+    lineHeight: 20,
+  },
+  quickVoiceSummary: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: "600",
   },
   optionsRow: {
     flexDirection: "row",

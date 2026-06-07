@@ -28,6 +28,14 @@ import { useAuthStore } from "../stores/authStore";
 import { UserRole, Usuario } from "../types";
 import { useToast } from "../components/ui";
 import { api } from "../services";
+import {
+  clearBiometricLoginPreference,
+  enableBiometricLogin,
+  getBiometricAvailability,
+  loadBiometricLoginPreference,
+  type BiometricAvailability,
+  type BiometricLoginPreference,
+} from "../services/biometricAuth";
 import { isLikelyNetworkError, parseApiError } from "../utils/apiErrors";
 import { isMasterAdminUser } from "../utils/masterAdmin";
 import { FEATURE_FLAGS } from "../constants/featureFlags";
@@ -89,6 +97,11 @@ export function SettingsScreen() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
+  const [biometricAvailability, setBiometricAvailability] =
+    useState<BiometricAvailability | null>(null);
+  const [biometricPreference, setBiometricPreference] =
+    useState<BiometricLoginPreference | null>(null);
   const [form, setForm] = useState<ProfileForm>(() =>
     buildFormFromUsuario(usuario),
   );
@@ -119,6 +132,17 @@ export function SettingsScreen() {
   const isRegionalCouncilSelected = usesRegionalCouncil(
     selectedCouncilForRegion,
   );
+  const isBiometricEnabled =
+    !!usuario &&
+    biometricPreference?.enabled === true &&
+    biometricPreference.userId === usuario.id;
+  const biometricLabel =
+    biometricPreference?.label || biometricAvailability?.label || "biometria";
+  const biometricDescription = biometricAvailability?.available
+    ? isBiometricEnabled
+      ? `O app pedirá ${biometricLabel} ao restaurar sua sessão.`
+      : `Habilite ${biometricLabel} para desbloquear uma sessão salva.`
+    : biometricAvailability?.reason || "Verificando biometria do aparelho.";
   const councilRegionOptions = getCouncilRegionOptions(
     selectedCouncilForRegion,
   );
@@ -134,6 +158,26 @@ export function SettingsScreen() {
     setConsentResearchOptional(!!usuario?.consentResearchOptional);
     setConsentAiOptional(!!usuario?.consentAiOptional);
   }, [usuario, isEditingProfile]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadBiometrics = async () => {
+      const [availability, preference] = await Promise.all([
+        getBiometricAvailability(),
+        loadBiometricLoginPreference(),
+      ]);
+      if (!mounted) return;
+      setBiometricAvailability(availability);
+      setBiometricPreference(preference);
+    };
+
+    void loadBiometrics();
+
+    return () => {
+      mounted = false;
+    };
+  }, [usuario?.id]);
 
   useEffect(() => {
     if (
@@ -235,6 +279,65 @@ export function SettingsScreen() {
       { text: "Cancelar", style: "cancel" },
       { text: "Sair", style: "destructive", onPress: performLogout },
     ]);
+  };
+
+  const disableBiometrics = async () => {
+    try {
+      setBiometricBusy(true);
+      await clearBiometricLoginPreference();
+      setBiometricPreference(null);
+      showToast({ type: "success", message: "Biometria desabilitada" });
+    } catch {
+      showToast({
+        type: "error",
+        message: "Não foi possível desabilitar a biometria",
+      });
+    } finally {
+      setBiometricBusy(false);
+    }
+  };
+
+  const handleToggleBiometric = async () => {
+    if (!usuario || Platform.OS === "web") return;
+
+    if (isBiometricEnabled) {
+      Alert.alert(
+        "Desabilitar biometria",
+        "O próximo acesso exigirá e-mail/CPF e senha.",
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Desabilitar",
+            style: "destructive",
+            onPress: disableBiometrics,
+          },
+        ],
+      );
+      return;
+    }
+
+    try {
+      setBiometricBusy(true);
+      const result = await enableBiometricLogin(usuario);
+      if (!result.success || !result.preference) {
+        showToast({
+          type: "error",
+          message: result.message || "Não foi possível habilitar a biometria",
+        });
+        return;
+      }
+
+      setBiometricPreference(result.preference);
+      setBiometricAvailability(await getBiometricAvailability());
+      showToast({ type: "success", message: "Biometria habilitada" });
+    } catch {
+      showToast({
+        type: "error",
+        message: "Não foi possível habilitar a biometria",
+      });
+    } finally {
+      setBiometricBusy(false);
+    }
   };
 
   const openLegalLink = async (url: string) => {
@@ -634,6 +737,43 @@ export function SettingsScreen() {
           </View>
         </View>
 
+        {Platform.OS !== "web" ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Segurança</Text>
+            <Pressable
+              disabled={
+                biometricBusy || biometricAvailability?.available !== true
+              }
+              style={[
+                styles.toggleRow,
+                isBiometricEnabled && styles.toggleRowActive,
+                (biometricBusy ||
+                  biometricAvailability?.available !== true) &&
+                  styles.toggleRowDisabled,
+              ]}
+              onPress={handleToggleBiometric}
+            >
+              <Ionicons
+                name={
+                  isBiometricEnabled
+                    ? "checkbox"
+                    : "finger-print-outline"
+                }
+                size={18}
+                color={isBiometricEnabled ? COLORS.primary : COLORS.gray500}
+              />
+              <View style={styles.securityTextWrap}>
+                <Text style={styles.toggleText}>
+                  Entrada com {biometricLabel}
+                </Text>
+                <Text style={styles.securityDescription}>
+                  {biometricDescription}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        ) : null}
+
         {usuario?.role === UserRole.PACIENTE ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Consentimentos opcionais</Text>
@@ -979,6 +1119,19 @@ const styles = StyleSheet.create({
   toggleRowActive: {
     borderColor: COLORS.primary + "50",
     backgroundColor: COLORS.primary + "0D",
+  },
+  toggleRowDisabled: {
+    opacity: 0.65,
+  },
+  securityTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  securityDescription: {
+    marginTop: 2,
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 16,
   },
   toggleText: {
     flex: 1,

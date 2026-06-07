@@ -1,20 +1,34 @@
 import { create } from "zustand";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   AuthState,
   Usuario,
   LoginCredentials,
   LoginResponse,
-  UserRole,
 } from "../types";
-import { APP_CONFIG } from "../constants/theme";
-import { api, getRuntimeFeatureFlags, setOnSessionExpired, setIsLoggingOut } from "../services";
+import {
+  api,
+  getRuntimeFeatureFlags,
+  setOnSessionExpired,
+  setOnTokenRefreshed,
+  setIsLoggingOut,
+} from "../services";
 import { applyRuntimeFeatureFlags } from "../constants/featureFlags";
-import { isJsonRecord, parseJsonObject } from "../utils/safeJson";
+import {
+  clearStoredAuthSession,
+  persistAuthSession,
+  persistAuthSessionResponse,
+  readStoredAuthSession,
+} from "../services/authSessionStorage";
+import {
+  authenticateWithBiometrics,
+  clearBiometricLoginPreference,
+  loadBiometricLoginPreference,
+} from "../services/biometricAuth";
 
 interface AuthStore extends AuthState {
   pendingInviteToken: string | null;
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  loginWithBiometrics: () => Promise<LoginResponse>;
   applySession: (response: LoginResponse) => Promise<void>;
   logout: () => Promise<void>;
   loadStoredAuth: () => Promise<void>;
@@ -24,18 +38,20 @@ interface AuthStore extends AuthState {
   updateUsuario: (usuario: Usuario) => Promise<void>;
 }
 
-const isUserRole = (value: unknown): value is UserRole =>
-  typeof value === "string" &&
-  (Object.values(UserRole) as string[]).includes(value);
+const applyRuntimeFlagsWithFallback = async (featureFlags?: LoginResponse["featureFlags"]) => {
+  if (featureFlags) {
+    applyRuntimeFeatureFlags(featureFlags);
+  }
 
-const isStoredUsuario = (value: unknown): value is Usuario =>
-  isJsonRecord(value) &&
-  typeof value.id === "string" &&
-  typeof value.nome === "string" &&
-  typeof value.email === "string" &&
-  isUserRole(value.role);
+  try {
+    const runtimeFlags = await getRuntimeFeatureFlags();
+    applyRuntimeFeatureFlags(runtimeFlags);
+  } catch {
+    // non-blocking: fallback to local defaults or login response flags
+  }
+};
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const useAuthStore = create<AuthStore>((set, get) => ({
   usuario: null,
   token: null,
   refreshToken: null,
@@ -56,10 +72,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   updateUsuario: async (usuario: Usuario) => {
-    const token = useAuthStore.getState().token;
-    const refreshToken = useAuthStore.getState().refreshToken;
+    const token = get().token;
+    const refreshToken = get().refreshToken;
 
-    await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
+    if (token && refreshToken) {
+      await persistAuthSession({ token, refreshToken, usuario });
+    }
 
     set({
       usuario,
@@ -73,18 +91,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
     setIsLoggingOut(false);
     const { token, refreshToken, usuario, featureFlags } = response;
 
-    await AsyncStorage.setItem(APP_CONFIG.storage.tokenKey, token);
-    await AsyncStorage.setItem(APP_CONFIG.storage.refreshTokenKey, refreshToken);
-    await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
+    await persistAuthSessionResponse(response);
+    const preference = await loadBiometricLoginPreference();
+    if (preference?.enabled && preference.userId !== usuario.id) {
+      await clearBiometricLoginPreference();
+    }
 
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
-    applyRuntimeFeatureFlags(featureFlags);
-    try {
-      const runtimeFlags = await getRuntimeFeatureFlags();
-      applyRuntimeFeatureFlags(runtimeFlags);
-    } catch {
-      // non-blocking: fallback to local defaults
-    }
+    await applyRuntimeFlagsWithFallback(featureFlags);
 
     set({
       usuario,
@@ -101,28 +115,49 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ isLoading: true });
 
       const response = await api.post<LoginResponse>("/auth/login", credentials);
-      const { token, refreshToken, usuario, featureFlags } = response.data;
-      await AsyncStorage.setItem(APP_CONFIG.storage.tokenKey, token);
-      await AsyncStorage.setItem(APP_CONFIG.storage.refreshTokenKey, refreshToken);
-      await AsyncStorage.setItem(APP_CONFIG.storage.userKey, JSON.stringify(usuario));
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
-      applyRuntimeFeatureFlags(featureFlags);
-      try {
-        const runtimeFlags = await getRuntimeFeatureFlags();
-        applyRuntimeFeatureFlags(runtimeFlags);
-      } catch {
-        // non-blocking: fallback to local defaults
-      }
-      set({
-        usuario,
-        token,
-        refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      await get().applySession(response.data);
       return response.data;
     } catch (error) {
       set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  loginWithBiometrics: async () => {
+    setIsLoggingOut(false);
+    try {
+      set({ isLoading: true });
+
+      const session = await readStoredAuthSession();
+      if (!session) {
+        throw new Error("Sessão salva não encontrada. Entre com senha.");
+      }
+
+      const preference = await loadBiometricLoginPreference();
+      if (!preference?.enabled || preference.userId !== session.usuario.id) {
+        throw new Error("Entrada biométrica não está habilitada para esta conta.");
+      }
+
+      const result = await authenticateWithBiometrics("Entrar no Synap");
+      if (!result.success) {
+        throw new Error(result.message || "Autenticação não confirmada.");
+      }
+
+      api.defaults.headers.common.Authorization = `Bearer ${session.token}`;
+      await applyRuntimeFlagsWithFallback();
+
+      set({
+        usuario: session.usuario,
+        token: session.token,
+        refreshToken: session.refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+
+      return session;
+    } catch (error) {
+      delete api.defaults.headers.common.Authorization;
+      set({ isLoading: false, isAuthenticated: false });
       throw error;
     }
   },
@@ -133,9 +168,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
     try {
       await Promise.allSettled([
-        AsyncStorage.removeItem(APP_CONFIG.storage.tokenKey),
-        AsyncStorage.removeItem(APP_CONFIG.storage.refreshTokenKey),
-        AsyncStorage.removeItem(APP_CONFIG.storage.userKey),
+        clearStoredAuthSession(),
+        clearBiometricLoginPreference(),
       ]);
     } finally {
       delete api.defaults.headers.common.Authorization;
@@ -154,30 +188,36 @@ export const useAuthStore = create<AuthStore>((set) => ({
     try {
       set({ isLoading: true });
 
-      const token = await AsyncStorage.getItem(APP_CONFIG.storage.tokenKey);
-      const refreshToken = await AsyncStorage.getItem(
-        APP_CONFIG.storage.refreshTokenKey,
-      );
-      const userJson = await AsyncStorage.getItem(APP_CONFIG.storage.userKey);
+      const session = await readStoredAuthSession();
 
-      if (token && refreshToken && userJson) {
-        const usuario = parseJsonObject<Record<string, unknown>>(userJson);
-        if (!isStoredUsuario(usuario)) {
-          set({ isLoading: false });
-          return;
+      if (session) {
+        const preference = await loadBiometricLoginPreference();
+        if (preference?.enabled && preference.userId !== session.usuario.id) {
+          await clearBiometricLoginPreference();
         }
-        api.defaults.headers.common.Authorization = `Bearer ${token}`;
-        try {
-          const runtimeFlags = await getRuntimeFeatureFlags();
-          applyRuntimeFeatureFlags(runtimeFlags);
-        } catch {
-          // non-blocking: fallback to local defaults
+
+        if (preference?.enabled && preference.userId === session.usuario.id) {
+          const result = await authenticateWithBiometrics("Entrar no Synap");
+          if (!result.success) {
+            delete api.defaults.headers.common.Authorization;
+            set({
+              usuario: null,
+              token: null,
+              refreshToken: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            return;
+          }
         }
+
+        api.defaults.headers.common.Authorization = `Bearer ${session.token}`;
+        await applyRuntimeFlagsWithFallback();
 
         set({
-          usuario,
-          token,
-          refreshToken,
+          usuario: session.usuario,
+          token: session.token,
+          refreshToken: session.refreshToken,
           isAuthenticated: true,
           isLoading: false,
         });
@@ -189,6 +229,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }
   },
 }));
+
+setOnTokenRefreshed(async ({ token, refreshToken }) => {
+  const { usuario } = useAuthStore.getState();
+  if (usuario) {
+    await persistAuthSession({ token, refreshToken, usuario });
+  }
+  useAuthStore.setState({ token, refreshToken });
+});
 
 setOnSessionExpired(async () => {
   const { logout } = useAuthStore.getState();

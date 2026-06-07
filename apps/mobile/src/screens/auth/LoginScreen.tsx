@@ -26,6 +26,11 @@ import {
   loadRememberedLogin,
   saveRememberedLogin,
 } from "../../services/rememberedLogin";
+import { hasStoredAuthSession } from "../../services/authSessionStorage";
+import {
+  getBiometricAvailability,
+  loadBiometricLoginPreference,
+} from "../../services/biometricAuth";
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Login">;
@@ -37,6 +42,9 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
   const [senha, setSenha] = useState("");
   const [rememberLogin, setRememberLogin] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [canUseBiometricLogin, setCanUseBiometricLogin] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState("biometria");
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const [errors, setErrors] = useState<{
     identificador?: string;
     senha?: string;
@@ -46,8 +54,13 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
     () => (route.params?.convite || "").trim(),
     [route.params?.convite],
   );
-  const { login, isLoading, setPendingInviteToken, clearPendingInviteToken } =
-    useAuthStore();
+  const {
+    login,
+    loginWithBiometrics,
+    isLoading,
+    setPendingInviteToken,
+    clearPendingInviteToken,
+  } = useAuthStore();
   const { showToast } = useToast();
   const { t } = useLanguage();
 
@@ -63,6 +76,18 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
         if (savedLogin.remember && savedLogin.identifier) {
           setIdentificador(savedLogin.identifier);
         }
+
+        const [availability, preference, hasSession] = await Promise.all([
+          getBiometricAvailability(),
+          loadBiometricLoginPreference(),
+          hasStoredAuthSession(),
+        ]);
+        if (!mounted) return;
+
+        setBiometricLabel(preference?.label || availability.label);
+        setCanUseBiometricLogin(
+          availability.available && !!preference?.enabled && hasSession,
+        );
       } catch {
         // Non-blocking: login must keep working without local storage.
       }
@@ -112,6 +137,23 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleAuthenticated = async (response: {
+    usuario: { role: UserRole };
+  }) => {
+    if (!conviteToken) return;
+
+    if (response.usuario.role === UserRole.PACIENTE) {
+      setPendingInviteToken(conviteToken);
+      return;
+    }
+
+    clearPendingInviteToken();
+    showToast({
+      message: t("inviteSignup.loginMustBePatient"),
+      type: "error",
+    });
+  };
+
   const handleLogin = async () => {
     if (!validate()) return;
 
@@ -122,23 +164,29 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
         senha,
       });
       await persistRememberedLogin(normalizedIdentifier);
-      if (conviteToken) {
-        if (response.usuario.role === UserRole.PACIENTE) {
-          setPendingInviteToken(conviteToken);
-        } else {
-          clearPendingInviteToken();
-          showToast({
-            message: t("inviteSignup.loginMustBePatient"),
-            type: "error",
-          });
-        }
-      }
+      await handleAuthenticated(response);
     } catch (error) {
       const { message, fieldErrors } = parseApiError(error);
       if (Object.keys(fieldErrors).length) {
         setErrors((prev) => ({ ...prev, ...fieldErrors }));
       }
       showToast({ message, type: "error" });
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      setIsBiometricLoading(true);
+      const response = await loginWithBiometrics();
+      await handleAuthenticated(response);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível entrar com biometria";
+      showToast({ message, type: "error" });
+    } finally {
+      setIsBiometricLoading(false);
     }
   };
 
@@ -279,6 +327,26 @@ export function LoginScreen({ navigation, route }: LoginScreenProps) {
               fullWidth
               size="lg"
             />
+
+            {canUseBiometricLogin ? (
+              <Button
+                title={`Entrar com ${biometricLabel}`}
+                onPress={handleBiometricLogin}
+                loading={isBiometricLoading}
+                disabled={isLoading || isSendingReset}
+                fullWidth
+                size="lg"
+                variant="outline"
+                style={styles.biometricButton}
+                icon={
+                  <Ionicons
+                    name="finger-print-outline"
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                }
+              />
+            ) : null}
           </View>
 
           <View style={styles.footer}>
@@ -390,6 +458,9 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.primary,
     fontWeight: "500",
+  },
+  biometricButton: {
+    marginTop: SPACING.md,
   },
   footer: {
     flexDirection: "row",

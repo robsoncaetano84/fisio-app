@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "buildNumber": "10000",
       "infoPlist": {
+        "NSFaceIDUsageDescription": "Permita usar o Face ID para desbloquear sua sessao no Synap.",
         "NSMicrophoneUsageDescription": "Permita acesso ao microfone para transcrever sua fala.",
         "NSSpeechRecognitionUsageDescription": "Permita o reconhecimento de voz para transcricao."
       }
@@ -50,7 +51,14 @@
           ]
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permita usar o Face ID para desbloquear sua sessao no Synap."
+        }
+      ],
+      "expo-secure-store"
     ],
     "web": {
       "favicon": "./assets/synap-icon.png"

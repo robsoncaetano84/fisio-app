@@ -121,6 +121,7 @@ export const APP_CONFIG = {
     userKey: "@synap:user",
     rememberLoginKey: "@synap:rememberLogin",
     rememberedLoginIdentifierKey: "@synap:rememberedLoginIdentifier",
+    biometricLoginKey: "@synap:biometricLogin",
     crmRememberLoginKey: "@synap:crmRememberLogin",
     crmRememberedEmailKey: "@synap:crmRememberedEmail",
   },

@@ -4,10 +4,12 @@
 // ==========================================
 import axios, { AxiosHeaders, AxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { APP_CONFIG } from "../constants/theme";
 import { APP_VERSION_LABEL } from "../constants/version";
 import { recordApiMetric } from "./opsMetrics";
+import {
+  persistAuthTokens,
+  readStoredRefreshToken,
+} from "./authSessionStorage";
 
 const LOCAL_API_URL = "http://localhost:3000/api";
 
@@ -97,6 +99,19 @@ const triggerSessionExpired = async () => {
   await Promise.resolve(onSessionExpired());
 };
 
+let onTokenRefreshed:
+  | ((tokens: RefreshResponse) => void | Promise<void>)
+  | null = null;
+export const setOnTokenRefreshed = (
+  handler: ((tokens: RefreshResponse) => void | Promise<void>) | null,
+) => {
+  onTokenRefreshed = handler;
+};
+const notifyTokenRefreshed = async (tokens: RefreshResponse) => {
+  if (!onTokenRefreshed) return;
+  await Promise.resolve(onTokenRefreshed(tokens));
+};
+
 
 
 let isLoggingOut = false;
@@ -111,9 +126,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
   isRefreshing = true;
   refreshPromise = (async () => {
-    const storedRefreshToken = await AsyncStorage.getItem(
-      APP_CONFIG.storage.refreshTokenKey,
-    );
+    const storedRefreshToken = await readStoredRefreshToken();
 
     if (!storedRefreshToken) {
       return null;
@@ -125,11 +138,8 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
     const { token, refreshToken } = response.data;
 
-    await AsyncStorage.setItem(APP_CONFIG.storage.tokenKey, token);
-    await AsyncStorage.setItem(
-      APP_CONFIG.storage.refreshTokenKey,
-      refreshToken,
-    );
+    await persistAuthTokens(token, refreshToken);
+    await notifyTokenRefreshed({ token, refreshToken });
 
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
     return token;

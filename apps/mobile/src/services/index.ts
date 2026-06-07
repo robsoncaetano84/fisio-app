@@ -2,7 +2,14 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // I ND EX
 // ==========================================
-export { api, setOnSessionExpired, setIsLoggingOut, getCorrelationId, rotateCorrelationId } from "./api";
+export {
+  api,
+  setOnSessionExpired,
+  setOnTokenRefreshed,
+  setIsLoggingOut,
+  getCorrelationId,
+  rotateCorrelationId,
+} from "./api";
 export {
   trackEvent,
   getClinicalFlowSummary,
@@ -88,5 +95,4 @@ export {
   type ClinicalPhotoView,
 } from "./clinicalPhotos";
 export { cachedGet, invalidateCachedGet } from "./requestCache";
-
 
