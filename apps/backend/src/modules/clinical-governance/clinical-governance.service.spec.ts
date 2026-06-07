@@ -44,6 +44,11 @@ describe('ClinicalGovernanceService', () => {
         consentAiOptional: false,
         consentProfessionalLgpdRequired: false,
         consentAcceptedAt: null,
+        consentTermsVersion: null,
+        consentPrivacyVersion: null,
+        consentResearchVersion: null,
+        consentAiVersion: null,
+        consentProfessionalLgpdVersion: null,
       } as any);
 
     const userRepo = {
@@ -81,6 +86,18 @@ describe('ClinicalGovernanceService', () => {
       consentRepository,
       auditRepository,
       userRepo,
+      {
+        get: jest.fn((key: string) => {
+          const values: Record<string, string> = {
+            CONSENT_TERMS_VERSION: 'terms-test-v1',
+            CONSENT_PRIVACY_VERSION: 'privacy-test-v1',
+            CONSENT_RESEARCH_VERSION: 'research-test-v1',
+            CONSENT_AI_VERSION: 'ai-test-v1',
+            CONSENT_PROFESSIONAL_LGPD_VERSION: 'lgpd-test-v1',
+          };
+          return values[key];
+        }),
+      } as any,
     );
 
     return {
@@ -172,6 +189,8 @@ describe('ClinicalGovernanceService', () => {
     const savedUser = txUserRepo.save.mock.calls.at(-1)![0];
     expect(savedUser.consentTermsRequired).toBe(true);
     expect(savedUser.consentPrivacyRequired).toBe(true);
+    expect(savedUser.consentTermsVersion).toBe('terms-test-v1');
+    expect(savedUser.consentPrivacyVersion).toBe('privacy-test-v1');
     expect(savedUser.consentAcceptedAt).toBeInstanceOf(Date);
   });
 

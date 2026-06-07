@@ -64,7 +64,7 @@ function Wait-BackendHealth {
     }
 
     try {
-      $health = Invoke-RestMethod -Method Get -Uri "$BaseUrl/health" -TimeoutSec 3
+      $health = Invoke-RestMethod -Method Get -Uri "$BaseUrl/health/ready" -TimeoutSec 3
       if ($health -and $health.status -eq "ok") {
         return
       }

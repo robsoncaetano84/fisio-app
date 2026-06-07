@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OpenAiService } from '../ai/openai.service';
 import { PacienteExame } from '../pacientes/entities/paciente-exame.entity';
 import { readExameFile } from '../pacientes/exame-storage';
 import { CreateLaudoDto } from './dto/create-laudo.dto';
+import { logOperationalEvent } from '../../common/observability/operational-logging';
 import type {
   LaudoReferenceCategory,
   LaudoReferenceItem,
@@ -108,6 +109,10 @@ type LaudoSuggestionAiResponse = Record<string, unknown>;
 
 @Injectable()
 export class LaudoAiSuggestionService {
+  private readonly logger = new Logger(LaudoAiSuggestionService.name);
+  private readonly laudoPromptVersion = 'laudo-suggestion-v2026-06-07';
+  private readonly referencesPromptVersion = 'laudo-references-v2026-06-07';
+  private readonly examPromptVersion = 'exam-interpretation-v2026-06-07';
   private readonly clinicalReferenceDomains = [
     'pubmed.ncbi.nlm.nih.gov',
     'pmc.ncbi.nlm.nih.gov',
@@ -160,7 +165,17 @@ export class LaudoAiSuggestionService {
           ...base,
           ...(aiInterpretacao ? { aiInterpretacao } : {}),
         });
-      } catch {
+      } catch (error) {
+        logOperationalEvent(
+          this.logger,
+          'exam.ai_interpretation.failed',
+          {
+            mimeType: exame.mimeType,
+            promptVersion: this.examPromptVersion,
+            reason: error instanceof Error ? error.message : 'UNKNOWN',
+          },
+          { severity: 'warning' },
+        );
         result.push(base);
       }
     }
@@ -171,7 +186,13 @@ export class LaudoAiSuggestionService {
   async generateSuggestion(
     input: GenerateLaudoSuggestionInput,
   ): Promise<Partial<CreateLaudoDto>> {
+    const startedAt = Date.now();
     if (!this.openAiService.isConfigured()) {
+      logOperationalEvent(this.logger, 'laudo.ai_suggestion.fallback', {
+        reason: 'OPENAI_NOT_CONFIGURED',
+        promptVersion: this.laudoPromptVersion,
+        inputSummary: this.summarizeSuggestionInput(input),
+      });
       return {};
     }
 
@@ -227,6 +248,8 @@ Regras clinicas:
 - Se houver red flag, nao proponha progressao terapeutica como prioridade; destaque encaminhamento/reavaliacao e seguranca.
 - Use referenciasClinicas apenas como suporte bibliografico. Nao invente artigos, livros, autores, URLs ou recomendacoes fora da lista.
 - Quando o caso envolver uma regiao especifica, priorize as referencias do perfil correspondente (ex.: OMBRO para dor no ombro/manguito/escapula).
+- Exames medicos anexados sao fonte complementar. Nunca trate leitura de exame por IA como diagnostico final sem correlacao com avaliacao fisica, anamnese e validacao do profissional.
+- A resposta e uma sugestao tecnica para revisao profissional; nao escreva como decisao automatica ou diagnostico definitivo.
 
 Regras de especificidade obrigatorias:
 - Use ancorasEspecificidade como contrato de escrita. Cada campo textual deve citar achados concretos do caso, nao frases genericas.
@@ -289,10 +312,42 @@ ${JSON.stringify(input, null, 2)}
       });
 
       if (!response) {
+        logOperationalEvent(
+          this.logger,
+          'laudo.ai_suggestion.fallback',
+          {
+            reason: 'AI_EMPTY_RESPONSE',
+            model,
+            promptVersion: this.laudoPromptVersion,
+            durationMs: Date.now() - startedAt,
+            inputSummary: this.summarizeSuggestionInput(input),
+          },
+          { severity: 'warning' },
+        );
         return {};
       }
-      return this.normalizeLaudoSuggestionResponse(response.parsed);
-    } catch {
+      const normalized = this.normalizeLaudoSuggestionResponse(response.parsed);
+      logOperationalEvent(this.logger, 'laudo.ai_suggestion.succeeded', {
+        model: response.model,
+        promptVersion: this.laudoPromptVersion,
+        durationMs: Date.now() - startedAt,
+        inputSummary: this.summarizeSuggestionInput(input),
+        outputSummary: this.summarizeSuggestionOutput(normalized),
+      });
+      return normalized;
+    } catch (error) {
+      logOperationalEvent(
+        this.logger,
+        'laudo.ai_suggestion.fallback',
+        {
+          reason: error instanceof Error ? error.message : 'UNKNOWN',
+          model,
+          promptVersion: this.laudoPromptVersion,
+          durationMs: Date.now() - startedAt,
+          inputSummary: this.summarizeSuggestionInput(input),
+        },
+        { severity: 'warning', captureToSentry: true },
+      );
       return {};
     }
   }
@@ -348,6 +403,7 @@ ${JSON.stringify(input, null, 2)}
   async findUpdatedClinicalReferences(
     input: GenerateLaudoSuggestionInput,
   ): Promise<LaudoReferenceUpdate | null> {
+    const startedAt = Date.now();
     if (!this.openAiService.isConfigured()) {
       return null;
     }
@@ -428,8 +484,28 @@ ${JSON.stringify(input.referenciasClinicas || null, null, 2)}
       });
 
       if (!response) return null;
-      return this.normalizeReferenceUpdate(response.parsed);
-    } catch {
+      const normalized = this.normalizeReferenceUpdate(response.parsed);
+      logOperationalEvent(this.logger, 'laudo.references_ai.succeeded', {
+        model: response.model,
+        promptVersion: this.referencesPromptVersion,
+        durationMs: Date.now() - startedAt,
+        inputSummary: this.summarizeSuggestionInput(input),
+        laudoReferences: normalized?.laudoReferences?.length ?? 0,
+        planoReferences: normalized?.planoReferences?.length ?? 0,
+      });
+      return normalized;
+    } catch (error) {
+      logOperationalEvent(
+        this.logger,
+        'laudo.references_ai.failed',
+        {
+          reason: error instanceof Error ? error.message : 'UNKNOWN',
+          model,
+          promptVersion: this.referencesPromptVersion,
+          durationMs: Date.now() - startedAt,
+        },
+        { severity: 'warning', captureToSentry: true },
+      );
       return null;
     }
   }
@@ -582,6 +658,7 @@ ${JSON.stringify(input.referenciasClinicas || null, null, 2)}
     observacao: string;
     fileBuffer: Buffer;
   }): Promise<string | null> {
+    const startedAt = Date.now();
     if (!this.openAiService.isConfigured()) return null;
     if (!this.openAiService.isEnabled('OPENAI_EXAM_AI_ENABLED', true)) {
       return null;
@@ -664,7 +741,7 @@ ${input.observacao || 'Sem observacao adicional.'}
           ? parsed.observacoesLimitacao
           : '';
 
-      return [
+      const output = [
         `Exame: ${input.nomeOriginal}`,
         achados ? `Achados principais:\n${achados}` : '',
         impressao ? `Impressao clinica: ${impressao}` : '',
@@ -673,8 +750,70 @@ ${input.observacao || 'Sem observacao adicional.'}
       ]
         .filter(Boolean)
         .join('\n');
-    } catch {
+
+      logOperationalEvent(this.logger, 'exam.ai_interpretation.succeeded', {
+        model: response.model,
+        promptVersion: this.examPromptVersion,
+        mimeType: input.mimeType,
+        durationMs: Date.now() - startedAt,
+        outputSummary: {
+          achadosCount: achados ? achados.split('\n').length : 0,
+          hasImpressao: !!impressao,
+          sinaisAlarmeCount: sinaisAlarme ? sinaisAlarme.split('\n').length : 0,
+          hasLimitacao: !!limitacao,
+        },
+      });
+
+      return output;
+    } catch (error) {
+      logOperationalEvent(
+        this.logger,
+        'exam.ai_interpretation.failed',
+        {
+          promptVersion: this.examPromptVersion,
+          mimeType: input.mimeType,
+          durationMs: Date.now() - startedAt,
+          reason: error instanceof Error ? error.message : 'UNKNOWN',
+        },
+        { severity: 'warning', captureToSentry: true },
+      );
       return null;
     }
+  }
+
+  private summarizeSuggestionInput(input: GenerateLaudoSuggestionInput) {
+    return {
+      hasAnamnese: !!input.anamnese,
+      evolucoesCount: input.evolucoes.length,
+      examesCount: input.exames.length,
+      examesComLeituraIa: input.exames.filter((item) => !!item.aiInterpretacao)
+        .length,
+      hasExameFisico: !!input.exameFisicoResumo?.trim(),
+      areasSelecionadas:
+        input.clinicalReasoning.areasSelecionadasDetalhadas.length,
+      redFlagsCount: input.anamnese?.redFlags?.length ?? 0,
+      yellowFlagsCount: input.anamnese?.yellowFlags?.length ?? 0,
+      confidenceBase: input.clinicalReasoning.confidenceBase,
+      referencesCount:
+        (input.referenciasClinicas?.laudoReferences.length ?? 0) +
+        (input.referenciasClinicas?.planoReferences.length ?? 0),
+    };
+  }
+
+  private summarizeSuggestionOutput(output: Partial<CreateLaudoDto>) {
+    const filledFields = Object.entries(output)
+      .filter(([, value]) =>
+        typeof value === 'string'
+          ? value.trim().length > 0
+          : typeof value === 'number',
+      )
+      .map(([key]) => key);
+
+    return {
+      filledFields,
+      filledFieldsCount: filledFields.length,
+      hasPlanoTratamento: !!output.planoTratamentoIA?.trim(),
+      hasCriteriosAlta: !!output.criteriosAlta?.trim(),
+    };
   }
 }

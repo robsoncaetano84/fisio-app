@@ -3042,7 +3042,7 @@ export function ExameFisicoFormScreen({
         <Button
           title={
             recordedExamLocked
-              ? "Voltar"
+              ? "Voltar ao paciente"
               : exam.redFlags.criticalTriggered
                 ? t("clinical.actions.saveTriageAndRefer")
                 : t("clinical.actions.savePhysicalExam")

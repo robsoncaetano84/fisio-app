@@ -34,3 +34,20 @@ export function captureException(
     Sentry.captureException(error);
   });
 }
+
+export function captureMessage(
+  message: string,
+  level: Sentry.SeverityLevel = 'info',
+  context?: Record<string, unknown>,
+) {
+  if (!sentryInitialized) return;
+  Sentry.withScope((scope) => {
+    scope.setLevel(level);
+    if (context) {
+      Object.entries(context).forEach(([key, value]) => {
+        scope.setExtra(key, value);
+      });
+    }
+    Sentry.captureMessage(message);
+  });
+}

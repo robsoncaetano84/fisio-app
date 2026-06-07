@@ -1039,7 +1039,10 @@ export function EvolucaoFormScreen({
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text>Paciente não encontrado</Text>
-          <Button title="Voltar" onPress={() => navigation.goBack()} />
+          <Button
+            title="Voltar ao paciente"
+            onPress={() => navigation.goBack()}
+          />
         </View>
       </SafeAreaView>
     );

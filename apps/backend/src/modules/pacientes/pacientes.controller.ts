@@ -14,6 +14,7 @@
   UploadedFile,
   Res,
   UseInterceptors,
+  Logger,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -59,10 +60,13 @@ import {
   toClinicalPhotoResponse,
   toExameResponse,
 } from './paciente-response.mapper';
+import { logOperationalEvent } from '../../common/observability/operational-logging';
 
 @Controller('pacientes')
 @UseGuards(JwtAuthGuard)
 export class PacientesController {
+  private readonly logger = new Logger(PacientesController.name);
+
   constructor(private readonly pacientesService: PacientesService) {}
 
   @Post()
@@ -164,27 +168,32 @@ export class PacientesController {
     @CurrentUser() usuario: Usuario,
   ) {
     assertUploadedFile(file, 'Arquivo obrigatorio');
-
-    const ownerUsuarioId =
-      await this.pacientesService.resolveExameOwnerUsuarioId(id, usuario);
-
-    const detectedExtension = assertValidUploadedExameFile(file);
-    const safeMimeType = resolveSafeMimeType(detectedExtension, file.mimetype);
-
-    const objectKey = buildExameObjectKey(
-      ownerUsuarioId,
-      id,
-      file.originalname || 'arquivo',
-    );
-    const persisted = await persistExameFile({
-      usuarioId: ownerUsuarioId,
-      pacienteId: id,
-      objectKey,
-      mimeType: safeMimeType,
-      fileBuffer: file.buffer,
-    });
+    const startedAt = Date.now();
+    let persisted: Awaited<ReturnType<typeof persistExameFile>> | null = null;
 
     try {
+      const ownerUsuarioId =
+        await this.pacientesService.resolveExameOwnerUsuarioId(id, usuario);
+
+      const detectedExtension = assertValidUploadedExameFile(file);
+      const safeMimeType = resolveSafeMimeType(
+        detectedExtension,
+        file.mimetype,
+      );
+
+      const objectKey = buildExameObjectKey(
+        ownerUsuarioId,
+        id,
+        file.originalname || 'arquivo',
+      );
+      persisted = await persistExameFile({
+        usuarioId: ownerUsuarioId,
+        pacienteId: id,
+        objectKey,
+        mimeType: safeMimeType,
+        fileBuffer: file.buffer,
+      });
+
       const exame = await this.pacientesService.createExame(id, usuario, {
         nomeOriginal: file.originalname,
         nomeArquivo: persisted.nomeArquivo,
@@ -196,9 +205,34 @@ export class PacientesController {
         dataExame: body.dataExame ? new Date(body.dataExame) : null,
       });
 
+      logOperationalEvent(this.logger, 'exam.upload.succeeded', {
+        pacienteId: id,
+        actorId: usuario.id,
+        actorRole: usuario.role,
+        mimeType: safeMimeType,
+        tamanhoBytes: file.size,
+        durationMs: Date.now() - startedAt,
+      });
+
       return toExameResponse(id, exame);
     } catch (error) {
-      await deleteExameFile(persisted.caminhoArquivo).catch(() => undefined);
+      if (persisted) {
+        await deleteExameFile(persisted.caminhoArquivo).catch(() => undefined);
+      }
+      logOperationalEvent(
+        this.logger,
+        'exam.upload.failed',
+        {
+          pacienteId: id,
+          actorId: usuario.id,
+          actorRole: usuario.role,
+          mimeType: file.mimetype,
+          tamanhoBytes: file.size,
+          durationMs: Date.now() - startedAt,
+          reason: error instanceof Error ? error.message : 'UNKNOWN',
+        },
+        { severity: 'error', captureToSentry: true },
+      );
       throw error;
     }
   }

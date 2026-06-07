@@ -2975,7 +2975,7 @@ export function AnamneseFormScreen({
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text>Paciente não encontrado</Text>
-          <Button title="Voltar" onPress={handleBack} />
+          <Button title="Voltar ao paciente" onPress={handleBack} />
         </View>
       </SafeAreaView>
     );

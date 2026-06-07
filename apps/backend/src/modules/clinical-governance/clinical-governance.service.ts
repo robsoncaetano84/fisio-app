@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRole, Usuario } from '../usuarios/entities/usuario.entity';
@@ -30,6 +31,7 @@ export class ClinicalGovernanceService {
     private readonly auditRepository: Repository<ClinicalAuditLog>,
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    private readonly configService: ConfigService,
   ) {}
 
   async getActiveProtocol(usuario: Usuario) {
@@ -142,7 +144,18 @@ export class ClinicalGovernanceService {
           order: { activatedAt: 'DESC', createdAt: 'DESC' },
         });
 
-      this.applyConsentToUser(user, dto.purpose, dto.accepted, now);
+      const consentVersion = this.resolveConsentVersion(
+        dto.purpose,
+        activeProtocol?.version || null,
+      );
+
+      this.applyConsentToUser(
+        user,
+        dto.purpose,
+        dto.accepted,
+        now,
+        consentVersion,
+      );
       await userRepo.save(user);
 
       const log = consentRepo.create({
@@ -150,7 +163,7 @@ export class ClinicalGovernanceService {
         purpose: dto.purpose,
         accepted: dto.accepted,
         acceptedAt: dto.accepted ? now : null,
-        protocolVersion: activeProtocol?.version || null,
+        protocolVersion: consentVersion,
         source,
         changedBy: usuario.id,
       });
@@ -200,6 +213,11 @@ export class ClinicalGovernanceService {
         consentAiOptional: user.consentAiOptional,
         consentProfessionalLgpdRequired: user.consentProfessionalLgpdRequired,
         consentAcceptedAt: user.consentAcceptedAt,
+        consentTermsVersion: user.consentTermsVersion,
+        consentPrivacyVersion: user.consentPrivacyVersion,
+        consentResearchVersion: user.consentResearchVersion,
+        consentAiVersion: user.consentAiVersion,
+        consentProfessionalLgpdVersion: user.consentProfessionalLgpdVersion,
       },
       history: latestLogs,
     };
@@ -473,14 +491,27 @@ export class ClinicalGovernanceService {
     purpose: ConsentPurpose,
     accepted: boolean,
     when: Date,
+    version: string | null,
   ) {
-    if (purpose === 'TERMS_REQUIRED') user.consentTermsRequired = accepted;
-    if (purpose === 'PRIVACY_REQUIRED') user.consentPrivacyRequired = accepted;
-    if (purpose === 'RESEARCH_OPTIONAL')
+    if (purpose === 'TERMS_REQUIRED') {
+      user.consentTermsRequired = accepted;
+      user.consentTermsVersion = version;
+    }
+    if (purpose === 'PRIVACY_REQUIRED') {
+      user.consentPrivacyRequired = accepted;
+      user.consentPrivacyVersion = version;
+    }
+    if (purpose === 'RESEARCH_OPTIONAL') {
       user.consentResearchOptional = accepted;
-    if (purpose === 'AI_OPTIONAL') user.consentAiOptional = accepted;
+      user.consentResearchVersion = version;
+    }
+    if (purpose === 'AI_OPTIONAL') {
+      user.consentAiOptional = accepted;
+      user.consentAiVersion = version;
+    }
     if (purpose === 'PROFESSIONAL_LGPD_REQUIRED') {
       user.consentProfessionalLgpdRequired = accepted;
+      user.consentProfessionalLgpdVersion = version;
       if (user.role !== UserRole.ADMIN && user.role !== UserRole.USER) {
         throw new ForbiddenException(
           'Consentimento LGPD profissional so pode ser usado por profissional/admin',
@@ -495,6 +526,24 @@ export class ClinicalGovernanceService {
     ) {
       user.consentAcceptedAt = when;
     }
+  }
+
+  private resolveConsentVersion(
+    purpose: ConsentPurpose,
+    fallback: string | null,
+  ): string | null {
+    const envKeyByPurpose: Record<ConsentPurpose, string> = {
+      TERMS_REQUIRED: 'CONSENT_TERMS_VERSION',
+      PRIVACY_REQUIRED: 'CONSENT_PRIVACY_VERSION',
+      RESEARCH_OPTIONAL: 'CONSENT_RESEARCH_VERSION',
+      AI_OPTIONAL: 'CONSENT_AI_VERSION',
+      PROFESSIONAL_LGPD_REQUIRED: 'CONSENT_PROFESSIONAL_LGPD_VERSION',
+    };
+
+    return (
+      (this.configService.get<string>(envKeyByPurpose[purpose]) || '').trim() ||
+      fallback
+    );
   }
 
   private assertAdmin(usuario: Usuario): void {

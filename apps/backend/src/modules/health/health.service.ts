@@ -10,15 +10,21 @@ import { isRecord } from '../../common/safe-json';
 export class HealthService {
   constructor(private readonly dataSource: DataSource) {}
 
+  getLiveness() {
+    return {
+      status: 'ok',
+      service: 'fisio-backend',
+      version: this.getAppVersion(),
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.round(process.uptime()),
+    };
+  }
+
   async check() {
     const startedAt = Date.now();
     let db: 'up' | 'down' = 'up';
     let dbError: string | null = null;
-    const appVersion = (
-      process.env.APP_VERSION ||
-      process.env.npm_package_version ||
-      ''
-    ).trim();
 
     try {
       await this.dataSource.query('SELECT 1');
@@ -31,7 +37,7 @@ export class HealthService {
     return {
       status: db === 'up' ? 'ok' : 'degraded',
       service: 'fisio-backend',
-      version: appVersion || null,
+      version: this.getAppVersion(),
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.round(process.uptime()),
@@ -102,5 +108,15 @@ export class HealthService {
 
     const first = rows.find(isRecord);
     return Number(first?.total ?? 0) || 0;
+  }
+
+  private getAppVersion(): string | null {
+    const appVersion = (
+      process.env.APP_VERSION ||
+      process.env.npm_package_version ||
+      ''
+    ).trim();
+
+    return appVersion || null;
   }
 }

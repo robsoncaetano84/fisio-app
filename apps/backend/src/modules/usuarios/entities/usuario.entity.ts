@@ -81,9 +81,49 @@ export class Usuario extends BaseEntity {
   consentAcceptedAt: Date | null;
 
   @Column({
+    name: 'consent_terms_version',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
+  consentTermsVersion: string | null;
+
+  @Column({
+    name: 'consent_privacy_version',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
+  consentPrivacyVersion: string | null;
+
+  @Column({
+    name: 'consent_research_version',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
+  consentResearchVersion: string | null;
+
+  @Column({
+    name: 'consent_ai_version',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
+  consentAiVersion: string | null;
+
+  @Column({
     name: 'consent_professional_lgpd_required',
     type: 'boolean',
     default: false,
   })
   consentProfessionalLgpdRequired: boolean;
+
+  @Column({
+    name: 'consent_professional_lgpd_version',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
+  consentProfessionalLgpdVersion: string | null;
 }

@@ -249,6 +249,11 @@ export type ClinicalMyConsentsResponse = {
     consentAiOptional: boolean;
     consentProfessionalLgpdRequired: boolean;
     consentAcceptedAt: string | null;
+    consentTermsVersion: string | null;
+    consentPrivacyVersion: string | null;
+    consentResearchVersion: string | null;
+    consentAiVersion: string | null;
+    consentProfessionalLgpdVersion: string | null;
   };
   history: ClinicalConsentLog[];
 };

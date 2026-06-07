@@ -117,7 +117,7 @@ Invoke-Step -Name "Backend Charles service deterministic+assistive spec" -Workin
 }
 
 if (-not $SkipSmoke) {
-  Invoke-Step -Name "Backend smoke health ($BaseUrl/health)" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
+  Invoke-Step -Name "Backend smoke health ($BaseUrl/health/live + /health/ready)" -WorkingDirectory $backendDir -Mandatory $true -Results $results -Action {
     powershell -ExecutionPolicy Bypass -File scripts/smoke-health.ps1 -BaseUrl $BaseUrl
   }
 
@@ -139,7 +139,7 @@ if (-not $SkipSmoke) {
     Add-Result -Target $results -Name "Clinical 5xx monitor (authenticated)" -Mandatory $false -Passed $true -Details "SKIPPED (no credentials in env)"
   }
 } else {
-  Add-Result -Target $results -Name "Backend smoke health ($BaseUrl/health)" -Mandatory $true -Passed $true -Details "SKIPPED (explicit)"
+  Add-Result -Target $results -Name "Backend smoke health ($BaseUrl/health/live + /health/ready)" -Mandatory $true -Passed $true -Details "SKIPPED (explicit)"
   Add-Result -Target $results -Name "Clinical 5xx monitor (public)" -Mandatory $true -Passed $true -Details "SKIPPED (explicit)"
   Add-Result -Target $results -Name "Clinical 5xx monitor (authenticated)" -Mandatory $false -Passed $true -Details "SKIPPED (explicit)"
 }

@@ -317,6 +317,11 @@ export interface Usuario {
   consentAiOptional?: boolean;
   consentAcceptedAt?: string | null;
   consentProfessionalLgpdRequired?: boolean;
+  consentTermsVersion?: string | null;
+  consentPrivacyVersion?: string | null;
+  consentResearchVersion?: string | null;
+  consentAiVersion?: string | null;
+  consentProfessionalLgpdVersion?: string | null;
   role: UserRole;
 }
 

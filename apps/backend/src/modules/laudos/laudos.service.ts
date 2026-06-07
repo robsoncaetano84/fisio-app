@@ -6,6 +6,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -36,9 +37,12 @@ import {
 } from './laudo-suggestion-composer.util';
 import { LaudoAiGenerationQuotaService } from './laudo-ai-generation-quota.service';
 import { LaudoClinicalContextService } from './laudo-clinical-context.service';
+import { logOperationalEvent } from '../../common/observability/operational-logging';
 
 @Injectable()
 export class LaudosService {
+  private readonly logger = new Logger(LaudosService.name);
+
   constructor(
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
@@ -324,7 +328,18 @@ export class LaudosService {
     laudo.status = LaudoStatus.VALIDADO_PROFISSIONAL;
     laudo.validadoPorUsuarioId = usuarioId;
     laudo.validadoEm = new Date();
-    return this.laudoRepository.save(laudo);
+    const saved = await this.laudoRepository.save(laudo);
+    logOperationalEvent(
+      this.logger,
+      'laudo.professional_validation.succeeded',
+      {
+        laudoId: saved.id,
+        pacienteId: saved.pacienteId,
+        usuarioId,
+        status: saved.status,
+      },
+    );
+    return saved;
   }
 
   async buildPdfBuffer(
@@ -373,75 +388,139 @@ export class LaudosService {
     pacienteId: string,
     usuarioId: string,
   ): Promise<Laudo> {
-    const suggestionContext =
-      await this.laudoClinicalContextService.buildSuggestionContext(
+    const startedAt = Date.now();
+    try {
+      const suggestionContext =
+        await this.laudoClinicalContextService.buildSuggestionContext(
+          pacienteId,
+          usuarioId,
+        );
+      const existing = await this.laudoRepository.findOne({
+        where: { pacienteId },
+        order: { createdAt: 'DESC' },
+      });
+      if (existing) {
+        logOperationalEvent(this.logger, 'laudo.generation.skipped', {
+          pacienteId,
+          usuarioId,
+          reason: 'EXISTING_LAUDO',
+          laudoId: existing.id,
+          durationMs: Date.now() - startedAt,
+        });
+        return existing;
+      }
+      const canUseAiToday =
+        await this.laudoAiGenerationQuotaService.acquireDailySlot(pacienteId);
+      const referenciasClinicas = await this.buildClinicalReferences(
+        suggestionContext,
+        canUseAiToday,
+      );
+      const aiSuggestion = canUseAiToday
+        ? await this.laudoAiSuggestionService.generateSuggestion(
+            buildGenerateLaudoSuggestionInput(
+              suggestionContext,
+              referenciasClinicas,
+            ),
+          )
+        : {};
+
+      const draft = buildCreateLaudoDraft({
+        pacienteId,
+        context: suggestionContext,
+        aiSuggestion,
+        referenciasClinicas,
+      });
+
+      const created = this.laudoRepository.create({
+        ...draft.payload,
+        status: LaudoStatus.RASCUNHO_IA,
+        validadoPorUsuarioId: null,
+        validadoEm: null,
+        sugestaoSource: draft.source,
+        examesConsiderados: draft.examesConsiderados,
+        examesComLeituraIa: draft.examesComLeituraIa,
+        sugestaoGeradaEm: new Date(),
+      });
+      const saved = await this.laudoRepository.save(created);
+      logOperationalEvent(this.logger, 'laudo.generation.succeeded', {
         pacienteId,
         usuarioId,
+        laudoId: saved.id,
+        source: draft.source,
+        canUseAiToday,
+        examesConsiderados: draft.examesConsiderados,
+        examesComLeituraIa: draft.examesComLeituraIa,
+        referencesCount:
+          referenciasClinicas.laudoReferences.length +
+          referenciasClinicas.planoReferences.length,
+        durationMs: Date.now() - startedAt,
+      });
+      return saved;
+    } catch (error) {
+      logOperationalEvent(
+        this.logger,
+        'laudo.generation.failed',
+        {
+          pacienteId,
+          usuarioId,
+          durationMs: Date.now() - startedAt,
+          reason: error instanceof Error ? error.message : 'UNKNOWN',
+        },
+        { severity: 'error', captureToSentry: true },
       );
-    const existing = await this.laudoRepository.findOne({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-    });
-    if (existing) {
-      return existing;
+      throw error;
     }
-    const canUseAiToday =
-      await this.laudoAiGenerationQuotaService.acquireDailySlot(pacienteId);
-    const referenciasClinicas = await this.buildClinicalReferences(
-      suggestionContext,
-      canUseAiToday,
-    );
-    const aiSuggestion = canUseAiToday
-      ? await this.laudoAiSuggestionService.generateSuggestion(
-          buildGenerateLaudoSuggestionInput(
-            suggestionContext,
-            referenciasClinicas,
-          ),
-        )
-      : {};
-
-    const draft = buildCreateLaudoDraft({
-      pacienteId,
-      context: suggestionContext,
-      aiSuggestion,
-      referenciasClinicas,
-    });
-
-    const created = this.laudoRepository.create({
-      ...draft.payload,
-      status: LaudoStatus.RASCUNHO_IA,
-      validadoPorUsuarioId: null,
-      validadoEm: null,
-      sugestaoSource: draft.source,
-      examesConsiderados: draft.examesConsiderados,
-      examesComLeituraIa: draft.examesComLeituraIa,
-      sugestaoGeradaEm: new Date(),
-    });
-    return this.laudoRepository.save(created);
   }
 
   async generateSuggestionPreview(
     pacienteId: string,
     usuarioId: string,
   ): Promise<LaudoSuggestionPreview> {
-    const suggestionContext =
-      await this.laudoClinicalContextService.buildSuggestionContext(
+    const startedAt = Date.now();
+    try {
+      const suggestionContext =
+        await this.laudoClinicalContextService.buildSuggestionContext(
+          pacienteId,
+          usuarioId,
+        );
+      const referenciasClinicas = await this.buildClinicalReferences(
+        suggestionContext,
+        true,
+      );
+      const aiSuggestion =
+        await this.laudoAiSuggestionService.generateSuggestion(
+          buildGenerateLaudoSuggestionInput(
+            suggestionContext,
+            referenciasClinicas,
+          ),
+        );
+
+      const preview = buildSuggestionPreview(
+        suggestionContext,
+        aiSuggestion,
+        referenciasClinicas,
+      );
+      logOperationalEvent(this.logger, 'laudo.preview.succeeded', {
         pacienteId,
         usuarioId,
+        source: preview.source,
+        durationMs: Date.now() - startedAt,
+      });
+      return preview;
+    } catch (error) {
+      logOperationalEvent(
+        this.logger,
+        'laudo.preview.failed',
+        {
+          pacienteId,
+          usuarioId,
+          durationMs: Date.now() - startedAt,
+          reason: error instanceof Error ? error.message : 'UNKNOWN',
+        },
+        { severity: 'error', captureToSentry: true },
       );
-    const referenciasClinicas = await this.buildClinicalReferences(
-      suggestionContext,
-      true,
-    );
-    const aiSuggestion = await this.laudoAiSuggestionService.generateSuggestion(
-      buildGenerateLaudoSuggestionInput(suggestionContext, referenciasClinicas),
-    );
-
-    return buildSuggestionPreview(
-      suggestionContext,
-      aiSuggestion,
-      referenciasClinicas,
-    );
+      throw error;
+    }
   }
 
   private async buildClinicalReferences(

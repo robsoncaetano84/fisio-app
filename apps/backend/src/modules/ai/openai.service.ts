@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { parseJsonObject } from '../../common/safe-json';
+import { captureException } from '../../common/observability/sentry';
+import { logOperationalEvent } from '../../common/observability/operational-logging';
 
 type OpenAiUserContent = string | Array<Record<string, unknown>>;
 
@@ -53,6 +55,7 @@ export class OpenAiService {
   async createJsonResponse(
     input: OpenAiJsonResponseInput,
   ): Promise<OpenAiJsonResponse | null> {
+    const startedAt = Date.now();
     const apiKey = this.getApiKey();
     if (!apiKey) return null;
 
@@ -96,8 +99,17 @@ export class OpenAiService {
       }
 
       if (!response.ok) {
-        this.logger.warn(
-          `OpenAI ${input.operation} failed with status ${response.status}`,
+        logOperationalEvent(
+          this.logger,
+          'ai.request.failed',
+          {
+            operation: input.operation,
+            model,
+            status: response.status,
+            durationMs: Date.now() - startedAt,
+            reason: 'HTTP_STATUS',
+          },
+          { severity: 'warning', captureToSentry: response.status >= 500 },
         );
         return null;
       }
@@ -109,9 +121,26 @@ export class OpenAiService {
       const outputText = this.extractOutputText(data);
       const parsed = this.extractJsonObject(outputText);
       if (!parsed) {
-        this.logger.warn(`OpenAI ${input.operation} returned invalid JSON`);
+        logOperationalEvent(
+          this.logger,
+          'ai.request.failed',
+          {
+            operation: input.operation,
+            model,
+            durationMs: Date.now() - startedAt,
+            reason: 'INVALID_JSON',
+          },
+          { severity: 'warning', captureToSentry: true },
+        );
         return null;
       }
+
+      logOperationalEvent(this.logger, 'ai.request.completed', {
+        operation: input.operation,
+        model,
+        durationMs: Date.now() - startedAt,
+        outputChars: outputText.length,
+      });
 
       return {
         parsed,
@@ -121,7 +150,23 @@ export class OpenAiService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'unknown OpenAI request error';
-      this.logger.warn(`OpenAI ${input.operation} failed: ${message}`);
+      logOperationalEvent(
+        this.logger,
+        'ai.request.failed',
+        {
+          operation: input.operation,
+          model,
+          durationMs: Date.now() - startedAt,
+          reason: 'EXCEPTION',
+          message,
+        },
+        { severity: 'error', captureToSentry: true },
+      );
+      captureException(error, {
+        operation: input.operation,
+        model,
+        durationMs: Date.now() - startedAt,
+      });
       return null;
     } finally {
       clearTimeout(timeoutId);

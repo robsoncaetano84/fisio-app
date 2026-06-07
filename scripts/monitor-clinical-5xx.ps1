@@ -14,7 +14,7 @@ Set-StrictMode -Version Latest
 
 $JsonContentType = "application/json; charset=utf-8"
 
-function ConvertTo-Utf8JsonBody {
+function ConvertTo-JsonBody {
   param(
     [Parameter(Mandatory = $true)][object]$Body,
     [int]$Depth = 20,
@@ -26,7 +26,7 @@ function ConvertTo-Utf8JsonBody {
   } else {
     $Body | ConvertTo-Json -Depth $Depth
   }
-  return [System.Text.Encoding]::UTF8.GetBytes($json)
+  return $json
 }
 
 function Invoke-JsonPost {
@@ -40,7 +40,7 @@ function Invoke-JsonPost {
     -Method Post `
     -Uri $Uri `
     -ContentType $JsonContentType `
-    -Body (ConvertTo-Utf8JsonBody -Body $Body -Compress:$Compress)
+    -Body (ConvertTo-JsonBody -Body $Body -Compress:$Compress)
 }
 
 if ($WindowMinutes -lt 1) { $WindowMinutes = 1 }
@@ -89,7 +89,7 @@ if ($BearerToken) {
 }
 
 $endpoints = @(
-  @{ Name = "health"; Url = "$BaseUrl/health"; Auth = $false },
+  @{ Name = "health.ready"; Url = "$BaseUrl/health/ready"; Auth = $false },
   @{ Name = "auth.me"; Url = "$BaseUrl/auth/me"; Auth = $true },
   @{ Name = "pacientes.paged"; Url = "$BaseUrl/pacientes/paged?page=1&limit=5"; Auth = $true },
   @{ Name = "pacientes.attention"; Url = "$BaseUrl/pacientes/attention"; Auth = $true },

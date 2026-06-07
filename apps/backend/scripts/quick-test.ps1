@@ -14,14 +14,14 @@ $ErrorActionPreference = "Stop"
 
 $JsonContentType = "application/json; charset=utf-8"
 
-function ConvertTo-Utf8JsonBody {
+function ConvertTo-JsonBody {
   param(
     [Parameter(Mandatory = $true)][object]$Body,
     [int]$Depth = 20
   )
 
-  $json = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Depth $Depth }
-  return [System.Text.Encoding]::UTF8.GetBytes($json)
+  if ($Body -is [string]) { return $Body }
+  return ($Body | ConvertTo-Json -Depth $Depth -Compress)
 }
 
 function Invoke-JsonPost {
@@ -36,7 +36,7 @@ function Invoke-JsonPost {
     Method = "Post"
     Uri = $Uri
     ContentType = $JsonContentType
-    Body = (ConvertTo-Utf8JsonBody -Body $Body -Depth $Depth)
+    Body = (ConvertTo-JsonBody -Body $Body -Depth $Depth)
   }
   if ($null -ne $Headers -and $Headers.Count -gt 0) {
     $request.Headers = $Headers
@@ -55,7 +55,7 @@ function New-RandomEmail {
 
 function Try-Login {
   param([string]$Email, [string]$Senha, [string]$BaseUrl)
-  $loginBody = @{ email = $Email; senha = $Senha }
+  $loginBody = @{ identificador = $Email; senha = $Senha }
   try {
     $login = Invoke-JsonPost -Uri "$BaseUrl/auth/login" -Body $loginBody
     return $login.token

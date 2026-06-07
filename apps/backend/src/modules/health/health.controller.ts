@@ -19,8 +19,26 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Public()
+  @Get('live')
+  getLiveness() {
+    return this.healthService.getLiveness();
+  }
+
+  @Public()
   @Get()
   async getHealth() {
+    const payload = await this.healthService.check();
+
+    if (payload.status !== 'ok') {
+      throw new ServiceUnavailableException(payload);
+    }
+
+    return payload;
+  }
+
+  @Public()
+  @Get('ready')
+  async getReadiness() {
     const payload = await this.healthService.check();
 
     if (payload.status !== 'ok') {

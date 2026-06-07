@@ -40,6 +40,7 @@ import {
   shouldReplaceQuickInviteName,
 } from '../pacientes/paciente-quick-invite.util';
 import { PacienteVinculoService } from '../pacientes/paciente-vinculo.service';
+import { logOperationalEvent } from '../../common/observability/operational-logging';
 
 export interface JwtPayload {
   sub: string;
@@ -72,6 +73,11 @@ export interface LoginResponse {
     consentAiOptional: boolean;
     consentAcceptedAt: Date | null;
     consentProfessionalLgpdRequired: boolean;
+    consentTermsVersion: string | null;
+    consentPrivacyVersion: string | null;
+    consentResearchVersion: string | null;
+    consentAiVersion: string | null;
+    consentProfessionalLgpdVersion: string | null;
     role: UserRole;
   };
 }
@@ -216,6 +222,11 @@ export class AuthService {
         consentAcceptedAt: usuario.consentAcceptedAt,
         consentProfessionalLgpdRequired:
           usuario.consentProfessionalLgpdRequired,
+        consentTermsVersion: usuario.consentTermsVersion,
+        consentPrivacyVersion: usuario.consentPrivacyVersion,
+        consentResearchVersion: usuario.consentResearchVersion,
+        consentAiVersion: usuario.consentAiVersion,
+        consentProfessionalLgpdVersion: usuario.consentProfessionalLgpdVersion,
         role: usuario.role,
       },
     };
@@ -232,14 +243,16 @@ export class AuthService {
       this.logger.warn(
         `Login bloqueado para ${normalizedIdentifier} (ip=${meta?.ip ?? 'unknown'})`,
       );
-      this.logger.log(
-        JSON.stringify({
-          event: 'login',
-          email: normalizedIdentifier,
+      logOperationalEvent(
+        this.logger,
+        'auth.login.failed',
+        {
+          identifierType: normalizedIdentifier.includes('@') ? 'email' : 'cpf',
           ip: meta?.ip ?? null,
           success: false,
           reason: 'LOCKED',
-        }),
+        },
+        { severity: 'warning', captureToSentry: true },
       );
       await this.authLogsService.record({
         email: normalizedIdentifier,
@@ -259,15 +272,12 @@ export class AuthService {
       this.logger.warn(
         `Login falhou para ${normalizedIdentifier} (ip=${meta?.ip ?? 'unknown'})`,
       );
-      this.logger.log(
-        JSON.stringify({
-          event: 'login',
-          email: normalizedIdentifier,
-          ip: meta?.ip ?? null,
-          success: false,
-          reason: 'INVALID_CREDENTIALS',
-        }),
-      );
+      logOperationalEvent(this.logger, 'auth.login.failed', {
+        identifierType: normalizedIdentifier.includes('@') ? 'email' : 'cpf',
+        ip: meta?.ip ?? null,
+        success: false,
+        reason: 'INVALID_CREDENTIALS',
+      });
       await this.authLogsService.record({
         email: normalizedIdentifier,
         eventType: AuthEventType.LOGIN,
@@ -282,14 +292,12 @@ export class AuthService {
     this.logger.log(
       `Login ok para ${usuario.email} (ip=${meta?.ip ?? 'unknown'})`,
     );
-    this.logger.log(
-      JSON.stringify({
-        event: 'login',
-        email: usuario.email,
-        ip: meta?.ip ?? null,
-        success: true,
-      }),
-    );
+    logOperationalEvent(this.logger, 'auth.login.succeeded', {
+      userId: usuario.id,
+      role: usuario.role,
+      ip: meta?.ip ?? null,
+      success: true,
+    });
     await this.authLogsService.record({
       email: usuario.email,
       usuarioId: usuario.id,
@@ -314,13 +322,11 @@ export class AuthService {
       }
 
       this.logger.log(`Refresh token ok para ${usuario.email}`);
-      this.logger.log(
-        JSON.stringify({
-          event: 'refresh',
-          email: usuario.email,
-          success: true,
-        }),
-      );
+      logOperationalEvent(this.logger, 'auth.refresh.succeeded', {
+        userId: usuario.id,
+        role: usuario.role,
+        success: true,
+      });
       await this.authLogsService.record({
         email: usuario.email,
         usuarioId: usuario.id,
@@ -330,13 +336,14 @@ export class AuthService {
       return this.buildLoginResponse(usuario);
     } catch {
       this.logger.warn('Refresh token invalido');
-      this.logger.log(
-        JSON.stringify({
-          event: 'refresh',
-          email: 'unknown',
+      logOperationalEvent(
+        this.logger,
+        'auth.refresh.failed',
+        {
           success: false,
           reason: 'INVALID_REFRESH',
-        }),
+        },
+        { severity: 'warning' },
       );
       await this.authLogsService.record({
         email: 'unknown',

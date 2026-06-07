@@ -164,6 +164,11 @@ export class AuthController {
       consentAiOptional: usuario.consentAiOptional,
       consentAcceptedAt: usuario.consentAcceptedAt,
       consentProfessionalLgpdRequired: usuario.consentProfessionalLgpdRequired,
+      consentTermsVersion: usuario.consentTermsVersion,
+      consentPrivacyVersion: usuario.consentPrivacyVersion,
+      consentResearchVersion: usuario.consentResearchVersion,
+      consentAiVersion: usuario.consentAiVersion,
+      consentProfessionalLgpdVersion: usuario.consentProfessionalLgpdVersion,
       role: usuario.role,
       featureFlags: this.authService.getFeatureFlagsForUser(usuario),
     };
@@ -194,6 +199,11 @@ export class AuthController {
       consentAiOptional: updated.consentAiOptional,
       consentAcceptedAt: updated.consentAcceptedAt,
       consentProfessionalLgpdRequired: updated.consentProfessionalLgpdRequired,
+      consentTermsVersion: updated.consentTermsVersion,
+      consentPrivacyVersion: updated.consentPrivacyVersion,
+      consentResearchVersion: updated.consentResearchVersion,
+      consentAiVersion: updated.consentAiVersion,
+      consentProfessionalLgpdVersion: updated.consentProfessionalLgpdVersion,
       role: updated.role,
       featureFlags: this.authService.getFeatureFlagsForUser(updated),
     };

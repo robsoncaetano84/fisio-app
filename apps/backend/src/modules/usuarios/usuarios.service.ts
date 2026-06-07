@@ -24,6 +24,10 @@ export class UsuariosService {
     private readonly configService: ConfigService,
   ) {}
 
+  private getConsentVersion(envKey: string): string | null {
+    return (this.configService.get<string>(envKey) || '').trim() || null;
+  }
+
   async create(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
     const existingUser = await this.usuarioRepository.findOne({
       where: { email: createUsuarioDto.email },
@@ -88,10 +92,33 @@ export class UsuariosService {
           createUsuarioDto.consentProfessionalLgpdRequired)
           ? new Date()
           : null,
+      consentTermsVersion:
+        role === UserRole.PACIENTE && createUsuarioDto.consentTermsRequired
+          ? this.getConsentVersion('CONSENT_TERMS_VERSION')
+          : null,
+      consentPrivacyVersion:
+        role === UserRole.PACIENTE && createUsuarioDto.consentPrivacyRequired
+          ? this.getConsentVersion('CONSENT_PRIVACY_VERSION')
+          : null,
+      consentResearchVersion:
+        role === UserRole.PACIENTE &&
+        typeof createUsuarioDto.consentResearchOptional === 'boolean'
+          ? this.getConsentVersion('CONSENT_RESEARCH_VERSION')
+          : null,
+      consentAiVersion:
+        role === UserRole.PACIENTE &&
+        typeof createUsuarioDto.consentAiOptional === 'boolean'
+          ? this.getConsentVersion('CONSENT_AI_VERSION')
+          : null,
       consentProfessionalLgpdRequired:
         role !== UserRole.PACIENTE
           ? !!createUsuarioDto.consentProfessionalLgpdRequired
           : false,
+      consentProfessionalLgpdVersion:
+        role !== UserRole.PACIENTE &&
+        createUsuarioDto.consentProfessionalLgpdRequired
+          ? this.getConsentVersion('CONSENT_PROFESSIONAL_LGPD_VERSION')
+          : null,
     });
 
     return this.usuarioRepository.save(usuario);
@@ -243,9 +270,13 @@ export class UsuariosService {
     if (usuario.role === UserRole.PACIENTE && hasPatientConsentField) {
       if (dto.consentResearchOptional !== undefined) {
         usuario.consentResearchOptional = dto.consentResearchOptional;
+        usuario.consentResearchVersion = this.getConsentVersion(
+          'CONSENT_RESEARCH_VERSION',
+        );
       }
       if (dto.consentAiOptional !== undefined) {
         usuario.consentAiOptional = dto.consentAiOptional;
+        usuario.consentAiVersion = this.getConsentVersion('CONSENT_AI_VERSION');
       }
     }
 
