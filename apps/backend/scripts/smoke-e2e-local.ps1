@@ -12,6 +12,10 @@ param(
   [string]$RegistroProf = "CREFITO-000000",
   [string]$Especialidade = "Fisioterapia",
   [string]$Role = "USER",
+  [string]$AdminEmail = "master@teste.com",
+  [string]$AdminSenha = "",
+  [string]$AdminNome = "Admin Master Smoke",
+  [string]$AdminRegistroProf = "CREFITO-ADMIN-000000",
   [string]$Cpf = ""
 )
 
@@ -95,6 +99,9 @@ $stderrLog = Join-Path $logsDir "smoke-e2e-backend-$timestamp.err.log"
 $backendProcess = $null
 $previousPort = $env:PORT
 $previousNodeEnv = $env:NODE_ENV
+$previousAllowAdminRegistration = $env:ALLOW_ADMIN_REGISTRATION
+$previousMasterAdminEmails = $env:MASTER_ADMIN_EMAILS
+$previousMasterAdminPermissions = $env:MASTER_ADMIN_PERMISSIONS
 
 try {
   if (Test-TcpPortOpen -HostName $HostName -Port $Port) {
@@ -113,6 +120,9 @@ try {
 
     $env:PORT = [string]$Port
     $env:NODE_ENV = $NodeEnv
+    $env:ALLOW_ADMIN_REGISTRATION = "true"
+    $env:MASTER_ADMIN_EMAILS = $AdminEmail
+    $env:MASTER_ADMIN_PERMISSIONS = ""
 
     Write-Host "Subindo backend em $baseUrl ..."
     $backendProcess = Start-Process `
@@ -138,6 +148,11 @@ try {
     }
 
     if (-not $SkipQuickTest) {
+      $effectiveAdminSenha = $AdminSenha
+      if ([string]::IsNullOrWhiteSpace($effectiveAdminSenha)) {
+        $effectiveAdminSenha = $Senha
+      }
+
       $quickTestArgs = @(
         "-ExecutionPolicy", "Bypass",
         "-File", "scripts/quick-test.ps1",
@@ -148,7 +163,11 @@ try {
         "-NomeUsuario", $NomeUsuario,
         "-RegistroProf", $RegistroProf,
         "-Especialidade", $Especialidade,
-        "-Role", $Role
+        "-Role", $Role,
+        "-AdminEmail", $AdminEmail,
+        "-AdminSenha", $effectiveAdminSenha,
+        "-AdminNome", $AdminNome,
+        "-AdminRegistroProf", $AdminRegistroProf
       )
       if (-not [string]::IsNullOrWhiteSpace($Cpf)) {
         $quickTestArgs += @("-Cpf", $Cpf)
@@ -173,6 +192,9 @@ try {
 
   $env:PORT = $previousPort
   $env:NODE_ENV = $previousNodeEnv
+  $env:ALLOW_ADMIN_REGISTRATION = $previousAllowAdminRegistration
+  $env:MASTER_ADMIN_EMAILS = $previousMasterAdminEmails
+  $env:MASTER_ADMIN_PERMISSIONS = $previousMasterAdminPermissions
 
   Write-Host "Logs:"
   Write-Host "  $stdoutLog"
