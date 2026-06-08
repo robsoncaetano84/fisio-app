@@ -7,6 +7,7 @@ import { ClinicalAuditLog } from '../modules/clinical-governance/entities/clinic
 import { ClinicalProtocolVersion } from '../modules/clinical-governance/entities/clinical-protocol-version.entity';
 import { ConsentPurposeLog } from '../modules/clinical-governance/entities/consent-purpose-log.entity';
 import { CrmAdminAuditLog } from '../modules/crm/entities/crm-admin-audit-log.entity';
+import { CrmAutomationAction } from '../modules/crm/entities/crm-automation-action.entity';
 import { CrmInteraction } from '../modules/crm/entities/crm-interaction.entity';
 import { CrmLead } from '../modules/crm/entities/crm-lead.entity';
 import { CrmTask } from '../modules/crm/entities/crm-task.entity';
@@ -43,6 +44,7 @@ export const DATABASE_ENTITIES = [
   CrmTask,
   CrmInteraction,
   CrmAdminAuditLog,
+  CrmAutomationAction,
   PacienteExame,
   ClinicalPhoto,
   ClinicalPhotoComparison,

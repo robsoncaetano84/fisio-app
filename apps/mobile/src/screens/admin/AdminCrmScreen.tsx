@@ -79,6 +79,13 @@ import { buildPatientRows, buildProfessionalRows } from "./AdminCrmScreen.rows";
 import { useAdminCrmSelectionEffects } from "./AdminCrmScreen.selection-effects";
 import { useSensitiveDataToggle } from "./AdminCrmScreen.sensitive-toggle";
 import {
+  CRM_SECTION_TAB,
+  CRM_TAB_SECTION,
+  CrmSectionHeader,
+  CrmSidebar,
+  type CrmSectionKey,
+} from "./AdminCrmScreen.sidebar";
+import {
   useAutomationStorage,
   useCrmPrefsStorage,
 } from "./AdminCrmScreen.storage";
@@ -107,11 +114,28 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   const isMaster = usuario?.role === UserRole.ADMIN;
 
   const [tab, setTab] = useState<TabKey>("PROFISSIONAIS");
+  const [activeSection, setActiveSection] =
+    useState<CrmSectionKey>("OVERVIEW");
+  const setCrmTab = useCallback<React.Dispatch<React.SetStateAction<TabKey>>>(
+    (value) => {
+      setTab((prev) => {
+        const next = typeof value === "function" ? value(prev) : value;
+        setActiveSection(CRM_TAB_SECTION[next]);
+        return next;
+      });
+    },
+    [],
+  );
+  const handleSectionChange = useCallback((section: CrmSectionKey) => {
+    setActiveSection(section);
+    const sectionTab = CRM_SECTION_TAB[section];
+    if (sectionTab) setTab(sectionTab);
+  }, []);
   useEffect(() => {
     const initialTab = route?.params?.initialTab;
     if (!initialTab) return;
-    setTab(initialTab);
-  }, [route?.params?.initialTab]);
+    setCrmTab(initialTab);
+  }, [route?.params?.initialTab, setCrmTab]);
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<CrmLeadStageFilter>("TODOS");
   const [includeSensitiveData, setIncludeSensitiveData] = useState(false);
@@ -253,7 +277,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     examMinSample,
     examConfidenceFilter,
     taskBucketFilter,
-    setTab,
+    setTab: setCrmTab,
     setQuery,
     setStageFilter,
     setProfSort,
@@ -436,7 +460,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     chartMode: examChartMode,
     coverage: physicalExamCoverage,
     topInsights: physicalExamTopInsights,
-    setTab,
+    setTab: setCrmTab,
     setPacStatusFilter,
     setPacEmotionalFilter,
   });
@@ -449,7 +473,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
   } = useAdminCrmAccountHealth({ profs, pacs, selectedProf });
   const { openAccountStatus, openSensitiveCaseloads } =
     useAdminCrmAccountHealthActions({
-      setTab,
+      setTab: setCrmTab,
       setProfAccountStatusFilter,
       setProfEmotionalConcentrationFilter,
     });
@@ -458,7 +482,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     selectedProfAccountScore,
     setTaskForm,
     setSelectedLeadId,
-    setTab,
+    setTab: setCrmTab,
     t,
   });
   const { crmAutomationItems, pushAutomationHistory } =
@@ -470,7 +494,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       dismissedAutomationIds,
       clinicalSummary,
       stageLabel,
-      setTab,
+      setTab: setCrmTab,
       setPacStatusFilter,
       setPacLinkFilter,
       setSelectedLeadId,
@@ -484,13 +508,13 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
       if (item.type === "TASK_OVERDUE") {
         setAutomationTypeFilter("TASK_OVERDUE");
         setTaskBucketFilter("ATRASADAS");
-        setTab("TAREFAS");
+        setCrmTab("TAREFAS");
         return;
       }
       if (item.type === "LEAD_STALE") {
         setAutomationTypeFilter("LEAD_STALE");
         setSelectedLeadId(item.targetId);
-        setTab("LEADS");
+        setCrmTab("LEADS");
         return;
       }
       if (item.type === "PENDING_INVITE") {
@@ -498,7 +522,7 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         setSelectedPacId(item.targetId);
         setPacLinkFilter("SEM_USUARIO");
         setPacDetailTab("VINCULO");
-        setTab("PACIENTES");
+        setCrmTab("PACIENTES");
         return;
       }
       if (
@@ -509,13 +533,13 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
         setAutomationTypeFilter(item.type);
         setSelectedPacId(item.targetId);
         setPacStatusFilter("RISCO");
-        setTab("PACIENTES");
+        setCrmTab("PACIENTES");
         return;
       }
       if (item.type === "LOW_ACTIVATION_ACCOUNT") {
         setSelectedProfId(item.targetId);
         setProfAccountStatusFilter("RISK");
-        setTab("PROFISSIONAIS");
+        setCrmTab("PROFISSIONAIS");
       }
     },
     [],
@@ -765,6 +789,40 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
     t,
   });
 
+  const sidebarBadges = useMemo<Partial<Record<CrmSectionKey, number | string>>>(
+    () => ({
+      OPERACAO: clinicalSummary?.metricas.pacientesEmAtencao || 0,
+      AUTOMACOES:
+        automationActions.length || crmAutomationItems.length || undefined,
+      PROFISSIONAIS: profs.length,
+      PACIENTES: pacs.length,
+      LEADS: pipeline?.totalLeads || leads.length,
+      TAREFAS: taskBuckets.atrasadas.length || tasks.length,
+      IA_GOVERNANCA: govAiSummary?.totals.applied || undefined,
+      AUDITORIA: crmAuditLogs.length || undefined,
+    }),
+    [
+      automationActions.length,
+      clinicalSummary?.metricas.pacientesEmAtencao,
+      crmAuditLogs.length,
+      crmAutomationItems.length,
+      govAiSummary?.totals.applied,
+      leads.length,
+      pacs.length,
+      pipeline?.totalLeads,
+      profs.length,
+      taskBuckets.atrasadas.length,
+      tasks.length,
+    ],
+  );
+
+  const refreshCrm = useCallback(() => {
+    loadMain().catch(() => undefined);
+    loadGovernance().catch(() => undefined);
+  }, [loadGovernance, loadMain]);
+
+  const showRecordFilters = Boolean(CRM_SECTION_TAB[activeSection]);
+
   if (!isWeb)
     return (
       <Blocked
@@ -784,178 +842,229 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <AdminCrmDashboardControls
-            query={query}
-            includeSensitiveData={includeSensitiveData}
-            profs={profs}
-            pacs={pacs}
-            pipeline={pipeline}
-            clinicalSummary={clinicalSummary}
-            windowDays={windowDays}
-            semEvolucaoDias={semEvolucaoDias}
-            clinicalPipelineStatusFilter={clinicalPipelineStatusFilter}
-            onQueryChange={setQuery}
-            onToggleSensitiveData={handleToggleSensitiveData}
-            loadMain={loadMain}
-            loadGovernance={loadGovernance}
-            setTab={setTab}
-            setProfActiveFilter={setProfActiveFilter}
-            setProfAccountStatusFilter={setProfAccountStatusFilter}
-            setProfEmotionalConcentrationFilter={
-              setProfEmotionalConcentrationFilter
-            }
-            setPacLinkFilter={setPacLinkFilter}
-            setPacStatusFilter={setPacStatusFilter}
-            setPacEmotionalFilter={setPacEmotionalFilter}
-            setWindowDays={setWindowDays}
-            setSemEvolucaoDias={setSemEvolucaoDias}
-            setClinicalPipelineStatusFilter={setClinicalPipelineStatusFilter}
-            t={t}
-          />
-
-          <CommandCenterPanel
-            summary={commandCenter}
-            onActionPress={handleCommandCenterAction}
-            automationActions={automationActions}
-            automationMetrics={automationMetrics}
-            automationTypeFilter={automationTypeFilter}
-            onAutomationTypeFilterChange={setAutomationTypeFilter}
-            onAutomationPress={handleCommandCenterAction}
-            onAutomationStatusChange={handleAutomationStatusChange}
-            onAutomationSnooze={handleAutomationSnooze}
-            onAutomationAssignToMe={handleAutomationAssignToMe}
-            currentUserId={usuario?.id || null}
-            professionals={profs.map((prof) => ({
-              id: prof.id,
-              nome: prof.nome,
-            }))}
-          />
-
-          <GovernancePanel
-            activeProtocol={govActiveProtocol}
-            loading={govLoading}
-            aiSummary={govAiSummary}
-            protocolHistory={govProtocolHistory}
-            auditLogs={govAuditLogs}
-            myConsents={govMyConsents}
-            lifecycleChartData={governanceAiLifecycleChartData}
-            appliedByStageChartData={governanceAiAppliedByStageChartData}
-            appliedTimelineChartData={governanceAiAppliedTimelineChartData}
-            protocolName={govProtocolName}
-            protocolVersion={govProtocolVersion}
-            activating={govActivating}
-            onProtocolNameChange={setGovProtocolName}
-            onProtocolVersionChange={setGovProtocolVersion}
-            onActivateProtocol={handleActivateProtocol}
-          />
-
-          <ClinicalDashboardPanels
-            summary={clinicalSummary}
-            topBlockedReasons={clinicalTopBlockedReasons}
-            onStatusSelect={(status) => setClinicalPipelineStatusFilter(status)}
-            onPendingAnamnesisPress={() => {
-              setClinicalPipelineStatusFilter("ANAMNESE_PENDENTE");
-              setTab("PACIENTES");
-              setPacStatusFilter("RISCO");
-            }}
-          />
-
-          <PhysicalExamSummaryPanel
-            summary={physicalExamSummary}
-            coverage={physicalExamCoverage}
-            hasData={hasPhysicalExamData}
-            chartMode={examChartMode}
-            windowDays={examWindowDays}
-            topInsights={physicalExamTopInsights}
-            onWindowDaysChange={setExamWindowDays}
-            onExportCsv={exportPhysicalExamSummaryCsv}
-            onCopySummary={() => {
-              copyPhysicalExamExecutiveSummary().catch(() => undefined);
-            }}
-            onOpenPatientsInAttention={openPatientsInAttention}
-            onOpenPatientQueue={openPatientQueue}
-            onTopRegionPress={openTopRegion}
-            onTopTestPress={openTopTest}
-          />
-          <ClinicalCrmChartsPanel
-            chartMode={examChartMode}
-            minSample={examMinSample}
-            confidenceFilter={examConfidenceFilter}
-            filterStats={physicalExamFilterStats}
-            clinicalPipelineChartData={clinicalPipelineChartData}
-            clinicalAlertsChartData={clinicalAlertsChartData}
-            clinicalDurationChartData={clinicalDurationChartData}
-            clinicalOperationalEventsChartData={
-              clinicalOperationalEventsChartData
-            }
-            funnelStageChartData={funnelStageChartData}
-            physicalExamRegionChartData={physicalExamRegionChartData}
-            physicalExamTopTestsChartData={physicalExamTopTestsChartData}
-            physicalExamProfilesChartData={physicalExamProfilesChartData}
-            physicalExamTopRegionsList={physicalExamTopRegionsList}
-            physicalExamTopTestsList={physicalExamTopTestsList}
-            onChartModeChange={setExamChartMode}
-            onMinSampleChange={setExamMinSample}
-            onConfidenceFilterChange={setExamConfidenceFilter}
-          />
-
-          <AdminAuditPanel logs={crmAuditLogs} />
-
-          <AccountHealthOverviewPanel
-            overview={accountHealthOverview}
-            onAccountStatusPress={openAccountStatus}
-            onSensitiveCaseloadsPress={openSensitiveCaseloads}
-          />
-        </View>
-
-        <CrmFiltersCard
-          tabs={tabs}
-          tab={tab}
-          stageLabel={stageLabel}
-          stageFilter={stageFilter}
-          profActiveFilter={profActiveFilter}
-          profAccountStatusFilter={profAccountStatusFilter}
-          profEmotionalConcentrationFilter={profEmotionalConcentrationFilter}
-          profEspecialidadeFilter={profEspecialidadeFilter}
-          pacStatusFilter={pacStatusFilter}
-          pacEmotionalFilter={pacEmotionalFilter}
-          pacLinkFilter={pacLinkFilter}
-          pacCidadeFilter={pacCidadeFilter}
-          pacUfFilter={pacUfFilter}
-          onTabChange={setTab}
-          onStageFilterChange={setStageFilter}
-          onProfActiveFilterChange={setProfActiveFilter}
-          onProfAccountStatusFilterChange={setProfAccountStatusFilter}
-          onProfEmotionalConcentrationFilterChange={
-            setProfEmotionalConcentrationFilter
-          }
-          onProfEspecialidadeFilterChange={setProfEspecialidadeFilter}
-          onPacStatusFilterChange={setPacStatusFilter}
-          onPacEmotionalFilterChange={setPacEmotionalFilter}
-          onPacLinkFilterChange={setPacLinkFilter}
-          onPacCidadeFilterChange={setPacCidadeFilter}
-          onPacUfFilterChange={setPacUfFilter}
+      <View style={styles.crmShell}>
+        <CrmSidebar
+          activeSection={activeSection}
+          badges={sidebarBadges}
+          onSectionChange={handleSectionChange}
         />
 
-        <AdminCrmAutomationPanel
-          loading={loading}
-          items={crmAutomationItems}
-          dismissedAutomationIds={dismissedAutomationIds}
-          history={automationHistory}
-          setDismissedAutomationIds={setDismissedAutomationIds}
-          pushAutomationHistory={pushAutomationHistory}
-          t={t}
-        />
+        <ScrollView style={styles.crmMain} contentContainerStyle={styles.content}>
+          {activeSection !== "OVERVIEW" ? (
+            <CrmSectionHeader
+              section={activeSection}
+              query={query}
+              includeSensitiveData={includeSensitiveData}
+              loading={loading || govLoading}
+              onQueryChange={setQuery}
+              onSearchSubmit={() => loadMain().catch(() => undefined)}
+              onToggleSensitiveData={handleToggleSensitiveData}
+              onRefresh={refreshCrm}
+            />
+          ) : null}
 
-        {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={COLORS.primary} />
-          </View>
-        ) : null}
+          {activeSection === "OVERVIEW" ? (
+            <View style={styles.card}>
+              <AdminCrmDashboardControls
+                query={query}
+                includeSensitiveData={includeSensitiveData}
+                profs={profs}
+                pacs={pacs}
+                pipeline={pipeline}
+                clinicalSummary={clinicalSummary}
+                windowDays={windowDays}
+                semEvolucaoDias={semEvolucaoDias}
+                clinicalPipelineStatusFilter={clinicalPipelineStatusFilter}
+                onQueryChange={setQuery}
+                onToggleSensitiveData={handleToggleSensitiveData}
+                loadMain={loadMain}
+                loadGovernance={loadGovernance}
+                setTab={setCrmTab}
+                setProfActiveFilter={setProfActiveFilter}
+                setProfAccountStatusFilter={setProfAccountStatusFilter}
+                setProfEmotionalConcentrationFilter={
+                  setProfEmotionalConcentrationFilter
+                }
+                setPacLinkFilter={setPacLinkFilter}
+                setPacStatusFilter={setPacStatusFilter}
+                setPacEmotionalFilter={setPacEmotionalFilter}
+                setWindowDays={setWindowDays}
+                setSemEvolucaoDias={setSemEvolucaoDias}
+                setClinicalPipelineStatusFilter={
+                  setClinicalPipelineStatusFilter
+                }
+                t={t}
+              />
+              <AccountHealthOverviewPanel
+                overview={accountHealthOverview}
+                onAccountStatusPress={openAccountStatus}
+                onSensitiveCaseloadsPress={openSensitiveCaseloads}
+              />
+            </View>
+          ) : null}
 
-        {!loading && tab === "PROFISSIONAIS" ? (
+          {activeSection === "OPERACAO" ? (
+            <View style={styles.card}>
+              <ClinicalDashboardPanels
+                summary={clinicalSummary}
+                topBlockedReasons={clinicalTopBlockedReasons}
+                onStatusSelect={(status) =>
+                  setClinicalPipelineStatusFilter(status)
+                }
+                onPendingAnamnesisPress={() => {
+                  setClinicalPipelineStatusFilter("ANAMNESE_PENDENTE");
+                  setCrmTab("PACIENTES");
+                  setPacStatusFilter("RISCO");
+                }}
+              />
+            </View>
+          ) : null}
+
+          {activeSection === "AUTOMACOES" ? (
+            <>
+              <View style={styles.card}>
+                <CommandCenterPanel
+                  summary={commandCenter}
+                  onActionPress={handleCommandCenterAction}
+                  automationActions={automationActions}
+                  automationMetrics={automationMetrics}
+                  automationTypeFilter={automationTypeFilter}
+                  onAutomationTypeFilterChange={setAutomationTypeFilter}
+                  onAutomationPress={handleCommandCenterAction}
+                  onAutomationStatusChange={handleAutomationStatusChange}
+                  onAutomationSnooze={handleAutomationSnooze}
+                  onAutomationAssignToMe={handleAutomationAssignToMe}
+                  currentUserId={usuario?.id || null}
+                  professionals={profs.map((prof) => ({
+                    id: prof.id,
+                    nome: prof.nome,
+                  }))}
+                />
+              </View>
+              <AdminCrmAutomationPanel
+                loading={loading}
+                items={crmAutomationItems}
+                dismissedAutomationIds={dismissedAutomationIds}
+                history={automationHistory}
+                setDismissedAutomationIds={setDismissedAutomationIds}
+                pushAutomationHistory={pushAutomationHistory}
+                t={t}
+              />
+            </>
+          ) : null}
+
+          {activeSection === "EXAMES" ? (
+            <View style={styles.card}>
+              <PhysicalExamSummaryPanel
+                summary={physicalExamSummary}
+                coverage={physicalExamCoverage}
+                hasData={hasPhysicalExamData}
+                chartMode={examChartMode}
+                windowDays={examWindowDays}
+                topInsights={physicalExamTopInsights}
+                onWindowDaysChange={setExamWindowDays}
+                onExportCsv={exportPhysicalExamSummaryCsv}
+                onCopySummary={() => {
+                  copyPhysicalExamExecutiveSummary().catch(() => undefined);
+                }}
+                onOpenPatientsInAttention={openPatientsInAttention}
+                onOpenPatientQueue={openPatientQueue}
+                onTopRegionPress={openTopRegion}
+                onTopTestPress={openTopTest}
+              />
+              <ClinicalCrmChartsPanel
+                chartMode={examChartMode}
+                minSample={examMinSample}
+                confidenceFilter={examConfidenceFilter}
+                filterStats={physicalExamFilterStats}
+                clinicalPipelineChartData={clinicalPipelineChartData}
+                clinicalAlertsChartData={clinicalAlertsChartData}
+                clinicalDurationChartData={clinicalDurationChartData}
+                clinicalOperationalEventsChartData={
+                  clinicalOperationalEventsChartData
+                }
+                funnelStageChartData={funnelStageChartData}
+                physicalExamRegionChartData={physicalExamRegionChartData}
+                physicalExamTopTestsChartData={physicalExamTopTestsChartData}
+                physicalExamProfilesChartData={physicalExamProfilesChartData}
+                physicalExamTopRegionsList={physicalExamTopRegionsList}
+                physicalExamTopTestsList={physicalExamTopTestsList}
+                onChartModeChange={setExamChartMode}
+                onMinSampleChange={setExamMinSample}
+                onConfidenceFilterChange={setExamConfidenceFilter}
+              />
+            </View>
+          ) : null}
+
+          {activeSection === "IA_GOVERNANCA" ? (
+            <View style={styles.card}>
+              <GovernancePanel
+                activeProtocol={govActiveProtocol}
+                loading={govLoading}
+                aiSummary={govAiSummary}
+                protocolHistory={govProtocolHistory}
+                auditLogs={govAuditLogs}
+                myConsents={govMyConsents}
+                lifecycleChartData={governanceAiLifecycleChartData}
+                appliedByStageChartData={governanceAiAppliedByStageChartData}
+                appliedTimelineChartData={governanceAiAppliedTimelineChartData}
+                protocolName={govProtocolName}
+                protocolVersion={govProtocolVersion}
+                activating={govActivating}
+                onProtocolNameChange={setGovProtocolName}
+                onProtocolVersionChange={setGovProtocolVersion}
+                onActivateProtocol={handleActivateProtocol}
+              />
+            </View>
+          ) : null}
+
+          {activeSection === "AUDITORIA" ? (
+            <View style={styles.card}>
+              <AdminAuditPanel logs={crmAuditLogs} />
+            </View>
+          ) : null}
+
+          {showRecordFilters ? (
+            <CrmFiltersCard
+              tabs={tabs}
+              tab={tab}
+              showTabs={false}
+              stageLabel={stageLabel}
+              stageFilter={stageFilter}
+              profActiveFilter={profActiveFilter}
+              profAccountStatusFilter={profAccountStatusFilter}
+              profEmotionalConcentrationFilter={
+                profEmotionalConcentrationFilter
+              }
+              profEspecialidadeFilter={profEspecialidadeFilter}
+              pacStatusFilter={pacStatusFilter}
+              pacEmotionalFilter={pacEmotionalFilter}
+              pacLinkFilter={pacLinkFilter}
+              pacCidadeFilter={pacCidadeFilter}
+              pacUfFilter={pacUfFilter}
+              onTabChange={setCrmTab}
+              onStageFilterChange={setStageFilter}
+              onProfActiveFilterChange={setProfActiveFilter}
+              onProfAccountStatusFilterChange={setProfAccountStatusFilter}
+              onProfEmotionalConcentrationFilterChange={
+                setProfEmotionalConcentrationFilter
+              }
+              onProfEspecialidadeFilterChange={setProfEspecialidadeFilter}
+              onPacStatusFilterChange={setPacStatusFilter}
+              onPacEmotionalFilterChange={setPacEmotionalFilter}
+              onPacLinkFilterChange={setPacLinkFilter}
+              onPacCidadeFilterChange={setPacCidadeFilter}
+              onPacUfFilterChange={setPacUfFilter}
+            />
+          ) : null}
+
+          {loading ? (
+            <View style={styles.loading}>
+              <ActivityIndicator color={COLORS.primary} />
+            </View>
+          ) : null}
+
+          {!loading && activeSection === "PROFISSIONAIS" ? (
           <View style={styles.split}>
             <ProfessionalsListPane
               rows={pagedProfs}
@@ -1008,13 +1117,13 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               onSelectPatient={(patient) => {
                 setSelectedPacId(patient.id);
                 setSelectedLeadId(patient.lead.id);
-                setTab("PACIENTES");
+                setCrmTab("PACIENTES");
               }}
             />
           </View>
-        ) : null}
+          ) : null}
 
-        {!loading && tab === "PACIENTES" ? (
+          {!loading && activeSection === "PACIENTES" ? (
           <View style={styles.split}>
             <PatientsListPane
               rows={pagedPacs}
@@ -1059,18 +1168,18 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
               onOpenInFunnel={() => {
                 if (!selectedPac) return;
                 setSelectedLeadId(selectedPac.lead.id);
-                setTab("LEADS");
+                setCrmTab("LEADS");
               }}
               onRegisterInteraction={() => {
                 if (!selectedPac) return;
                 setSelectedLeadId(selectedPac.lead.id);
-                setTab("INTERACOES");
+                setCrmTab("INTERACOES");
               }}
             />
           </View>
-        ) : null}
+          ) : null}
 
-        {!loading && tab === "LEADS" ? (
+          {!loading && activeSection === "LEADS" ? (
           <LeadsTab
             leads={leads}
             selectedLeadId={selectedLeadId}
@@ -1092,9 +1201,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             onSave={saveLead}
             onReset={resetLeadForm}
           />
-        ) : null}
+          ) : null}
 
-        {!loading && tab === "TAREFAS" ? (
+          {!loading && activeSection === "TAREFAS" ? (
           <TasksTab
             form={taskForm}
             tasks={tasks}
@@ -1120,9 +1229,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             onToggleStatus={toggleTaskStatus}
             onDelete={deleteTask}
           />
-        ) : null}
+          ) : null}
 
-        {!loading && tab === "INTERACOES" ? (
+          {!loading && activeSection === "INTERACOES" ? (
           <InteractionsTab
             selectedLead={selectedLead}
             interactionLabel={interactionLabel}
@@ -1147,8 +1256,9 @@ export function AdminCrmScreen({ route }: AdminCrmScreenProps = {}) {
             }
             onDelete={deleteInteraction}
           />
-        ) : null}
-      </ScrollView>
+          ) : null}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

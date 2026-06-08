@@ -19,6 +19,7 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 type CrmFiltersCardProps = {
   tabs: Array<{ key: TabKey; label: string }>;
   tab: TabKey;
+  showTabs?: boolean;
   stageLabel: Record<CrmLeadStage, string>;
   stageFilter: CrmLeadStageFilter;
   profActiveFilter: ProfActiveFilter;
@@ -48,6 +49,7 @@ type CrmFiltersCardProps = {
 export function CrmFiltersCard({
   tabs,
   tab,
+  showTabs = true,
   stageLabel,
   stageFilter,
   profActiveFilter,
@@ -77,14 +79,16 @@ export function CrmFiltersCard({
     <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.wrapRow}>
-          {tabs.map((tabItem) => (
-            <Tab
-              key={tabItem.key}
-              label={tabItem.label}
-              active={tab === tabItem.key}
-              onPress={() => onTabChange(tabItem.key)}
-            />
-          ))}
+          {showTabs
+            ? tabs.map((tabItem) => (
+                <Tab
+                  key={tabItem.key}
+                  label={tabItem.label}
+                  active={tab === tabItem.key}
+                  onPress={() => onTabChange(tabItem.key)}
+                />
+              ))
+            : null}
         </View>
         <View style={styles.wrapRow}>
           {tab === "PROFISSIONAIS" ? (
