@@ -1,6 +1,8 @@
 services:
-  - type: static_site
+  - type: web
     name: fisio-frontend
+    runtime: static
+    rootDir: apps/mobile
     buildCommand: npm ci && npm run build:web
     staticPublishPath: dist
     envVars:
