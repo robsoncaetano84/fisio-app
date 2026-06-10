@@ -13,6 +13,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "secrets:render": "node scripts/generate-render-secrets.mjs",
     "quick-test": "powershell -ExecutionPolicy Bypass -File scripts/quick-test.ps1",
     "load:clinical-cases": "node scripts/load-test-clinical-cases.mjs",
     "load:clinical-cases:local": "powershell -ExecutionPolicy Bypass -File scripts/load-clinical-cases-local.ps1",

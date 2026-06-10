@@ -5,6 +5,7 @@ services:
     branch: etapa-32-pre-prod
     rootDir: apps/backend
     buildCommand: npm ci --include=dev && npm run build
+    preDeployCommand: npm run migration:run
     startCommand: npm run start:prod
     healthCheckPath: /api/health/live
     autoDeployTrigger: commit
@@ -118,7 +119,7 @@ services:
       - key: EXPO_ACCESS_TOKEN
         sync: false
       - key: SENTRY_REQUIRED
-        value: "true"
+        value: "false"
       - key: SENTRY_DSN
         sync: false
       - key: SUPABASE_URL
