@@ -66,6 +66,13 @@ type PacientesQuickFilter =
   | "LAST_SESSION_LATE"
   | "PENDING";
 
+const normalizePatientSearchText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 // Componente de Card do Paciente
 interface PacienteCardProps {
   paciente: Paciente;
@@ -280,7 +287,7 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
   }, [filtersStorageKey, quickAction, attentionOnly, quickFilter, attentionFocus]);
 
   useEffect(() => {
-    fetchPacientes(true).catch(async (error) => {
+    fetchPacientes(true, debouncedQuery).catch(async (error) => {
       // Se já há dados renderizados, trata como falha de refresh em background
       // para evitar toast genérico e ruidoso.
       if (pacientes.length > 0) {
@@ -303,25 +310,25 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
     });
-  }, [fetchPacientes, logout, pacientes.length, showToast, t]);
+  }, [debouncedQuery, fetchPacientes, logout, pacientes.length, showToast, t]);
 
   useFocusEffect(
     useCallback(() => {
       // Recalcula o estado de atencao ao voltar para esta tela.
       setAttentionRefreshTick((prev) => prev + 1);
-      fetchPacientes(true).catch(() => undefined);
-    }, [fetchPacientes]),
+      fetchPacientes(true, debouncedQuery).catch(() => undefined);
+    }, [debouncedQuery, fetchPacientes]),
   );
 
   useFocusEffect(
     useCallback(() => {
       const interval = setInterval(() => {
-        fetchPacientes(true).catch(() => undefined);
+        fetchPacientes(true, debouncedQuery).catch(() => undefined);
         setAttentionRefreshTick((prev) => prev + 1);
       }, AUTO_REFRESH_INTERVAL_MS);
 
       return () => clearInterval(interval);
-    }, [fetchPacientes]),
+    }, [debouncedQuery, fetchPacientes]),
   );
 
   useEffect(() => {
@@ -371,15 +378,16 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
   ]);
 
   const filteredPacientes = useMemo(() => {
-    const query = debouncedQuery.toLowerCase();
+    const query = normalizePatientSearchText(debouncedQuery);
     const cpfQuery = debouncedQuery.replace(/\D/g, "");
     const emotionalByPaciente = new Map(
       anamneses.map((a) => [a.pacienteId, a] as const),
     );
     return pacientes.filter((p) => {
       const cpfPaciente = (p.cpf || "").replace(/\D/g, "");
+      const nomePaciente = normalizePatientSearchText(p.nomeCompleto);
       const matchesSearch =
-        p.nomeCompleto.toLowerCase().includes(query) ||
+        nomePaciente.includes(query) ||
         (cpfQuery.length > 0 && cpfPaciente.includes(cpfQuery));
       if (!matchesSearch) return false;
 
@@ -710,7 +718,7 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchPacientes(true);
+      await fetchPacientes(true, debouncedQuery);
       setAttentionRefreshTick((prev) => prev + 1);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -732,12 +740,12 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
     } finally {
       setRefreshing(false);
     }
-  }, [fetchPacientes, showToast, logout]);
+  }, [debouncedQuery, fetchPacientes, showToast, logout]);
 
   const handleLoadMore = useCallback(async () => {
-    if (debouncedQuery || attentionOnly) return;
+    if (attentionOnly) return;
     try {
-      await fetchNextPacientes();
+      await fetchNextPacientes(debouncedQuery);
     } catch {
       // silêncio para não poluir UX durante scroll
     }
@@ -840,7 +848,7 @@ export function PacientesListScreen({ navigation, route }: PacientesListScreenPr
       <View style={styles.counterContainer}>
         <Text style={styles.counterText}>
           {filteredPacientes.length}
-          {debouncedQuery || attentionOnly ? "" : ` ${t("patients.of")} ${totalPacientes}`}{" "}
+          {attentionOnly ? "" : ` ${t("patients.of")} ${totalPacientes}`}{" "}
           {t("patients.foundCount")}
         </Text>
         {!quickAction ? (
@@ -1380,7 +1388,6 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
 });
-
 
 
 

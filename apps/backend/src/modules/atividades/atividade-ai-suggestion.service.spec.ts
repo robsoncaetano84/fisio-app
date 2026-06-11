@@ -1,5 +1,6 @@
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { OpenAiService } from '../ai/openai.service';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { Paciente, Sexo } from '../pacientes/entities/paciente.entity';
 import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
 
@@ -23,6 +24,14 @@ const anamnese = {
   nivelEstresse: 'Moderado',
   observacoesEstiloVida: 'Treina 4x por semana',
 } as unknown as Anamnese;
+
+const laudo = {
+  diagnosticoFuncional: 'Disfuncao funcional lombar com baixa tolerancia a flexao.',
+  achadosClinicos: 'Mobilidade lombar reduzida.',
+  exameFisico: 'Teste regional lombar positivo com deficit de controle lombo-pelvico.',
+  condutas: 'Exercicios progressivos de controle motor.',
+  planoTratamentoIA: 'Fase 1 controle de sintomas; fase 2 retorno funcional.',
+} as unknown as Laudo;
 
 const makeOpenAiService = (
   overrides?: Partial<OpenAiService>,
@@ -98,6 +107,25 @@ describe('AtividadeAiSuggestionService', () => {
         operation: 'activity suggestion',
       }),
     );
+  });
+
+  it('uses latest report and physical exam in the rule-based suggestion', async () => {
+    const openAiService = makeOpenAiService({
+      isConfigured: jest.fn(() => false),
+    });
+    const service = new AtividadeAiSuggestionService(openAiService);
+
+    const result = await service.generate(
+      { pacienteId: 'pac-1' },
+      paciente,
+      anamnese,
+      laudo,
+    );
+
+    expect(result.source).toBe('rules');
+    expect(result.descricao).toContain('Diagnostico funcional:');
+    expect(result.descricao).toContain('Exame fisico relevante:');
+    expect(result.descricao).toContain('mobilidade lombo-pelvica');
   });
 
   it('falls back to default references when AI returns no allowed references', async () => {

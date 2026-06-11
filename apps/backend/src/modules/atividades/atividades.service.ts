@@ -18,6 +18,7 @@ import {
 } from './entities/atividade-checkin.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { CreateAtividadeDto } from './dto/create-atividade.dto';
 import { CreateAtividadeCheckinDto } from './dto/create-atividade-checkin.dto';
@@ -39,6 +40,8 @@ export class AtividadesService {
     private readonly pacienteRepository: Repository<Paciente>,
     @InjectRepository(Anamnese)
     private readonly anamneseRepository: Repository<Anamnese>,
+    @InjectRepository(Laudo)
+    private readonly laudoRepository: Repository<Laudo>,
     private readonly notificacoesService: NotificacoesService,
     private readonly atividadeAiSuggestionService: AtividadeAiSuggestionService,
   ) {}
@@ -610,6 +613,16 @@ export class AtividadesService {
       order: { createdAt: 'DESC' },
     });
 
-    return this.atividadeAiSuggestionService.generate(dto, paciente, anamnese);
+    const laudo = await this.laudoRepository.findOne({
+      where: { pacienteId: dto.pacienteId },
+      order: { updatedAt: 'DESC' },
+    });
+
+    return this.atividadeAiSuggestionService.generate(
+      dto,
+      paciente,
+      anamnese,
+      laudo,
+    );
   }
 }

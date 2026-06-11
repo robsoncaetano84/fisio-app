@@ -191,7 +191,7 @@ export const ptPatientDetails: TranslationMap = {
   "patientAppAccess.revokeConfirm": "Revogar",
   "patientAppAccess.revokeSuccess": "Convite revogado com sucesso.",
   "patientAppAccess.inviteReady": "Convite pronto para envio.",
-  "patientAppAccess.linkCopied": "Link copiado.",
+  "patientAppAccess.linkCopied": "Convite copiado.",
   "patientAppAccess.inviteGreeting": "Olá, {{name}}.",
   "patientAppAccess.inviteIntro":
     "Você recebeu um convite para acessar sua área no Synap.",
@@ -547,7 +547,7 @@ export const enPatientDetails: TranslationMap = {
   "patientAppAccess.revokeConfirm": "Revoke",
   "patientAppAccess.revokeSuccess": "Invite revoked successfully.",
   "patientAppAccess.inviteReady": "Invite ready to send.",
-  "patientAppAccess.linkCopied": "Link copied.",
+  "patientAppAccess.linkCopied": "Invite copied.",
   "patientAppAccess.inviteGreeting": "Hello, {{name}}.",
   "patientAppAccess.inviteIntro":
     "You received an invite to access your area in Synap.",
@@ -909,7 +909,7 @@ export const esPatientDetails: TranslationMap = {
   "patientAppAccess.revokeConfirm": "Revocar",
   "patientAppAccess.revokeSuccess": "Invitación revocada con éxito.",
   "patientAppAccess.inviteReady": "Invitación lista para enviar.",
-  "patientAppAccess.linkCopied": "Enlace copiado.",
+  "patientAppAccess.linkCopied": "Invitación copiada.",
   "patientAppAccess.inviteGreeting": "Hola, {{name}}.",
   "patientAppAccess.inviteIntro":
     "Recibiste una invitación para acceder a tu área en Synap.",

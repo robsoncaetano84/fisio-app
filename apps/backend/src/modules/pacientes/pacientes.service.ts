@@ -135,6 +135,7 @@ export class PacientesService {
     usuarioId: string,
     page: number,
     limit: number,
+    q?: string,
   ): Promise<PacientePagedResponseDto> {
     const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
     const safePage = Number.isFinite(page) ? Math.max(1, page) : 1;
@@ -142,11 +143,28 @@ export class PacientesService {
       ? Math.min(100, Math.max(10, limit))
       : 30;
     const skip = (safePage - 1) * safeLimit;
+    const query = (q || '').trim().toLowerCase();
+    const cpfQuery = (q || '').replace(/\D/g, '');
 
     const baseQuery = this.pacienteScopeService.buildScopedPacientesQuery(
       usuarioId,
       isMasterAdmin,
     );
+    if (query || cpfQuery) {
+      baseQuery.andWhere(
+        `(
+          LOWER(COALESCE(p.nomeCompleto, '')) LIKE :pacienteSearch
+          OR LOWER(COALESCE(p.contatoEmail, '')) LIKE :pacienteSearch
+          OR COALESCE(p.cpf, '') LIKE :pacienteCpfSearch
+          OR COALESCE(p.contatoWhatsapp, '') LIKE :pacienteCpfSearch
+          OR COALESCE(p.contatoTelefone, '') LIKE :pacienteCpfSearch
+        )`,
+        {
+          pacienteSearch: `%${query}%`,
+          pacienteCpfSearch: `%${cpfQuery || query}%`,
+        },
+      );
+    }
     const total = await baseQuery.clone().getCount();
     const data = await this.pacienteListService
       .addPacienteListSelects(baseQuery)

@@ -237,11 +237,12 @@ interface PacienteStore {
   pageSize: number;
   hasNextPage: boolean;
   totalPacientes: number;
+  currentQuery: string;
 
   // Actions
-  fetchPacientes: (force?: boolean) => Promise<void>;
+  fetchPacientes: (force?: boolean, search?: string) => Promise<void>;
   fetchPacienteById: (id: string) => Promise<Paciente>;
-  fetchNextPacientes: () => Promise<void>;
+  fetchNextPacientes: (search?: string) => Promise<void>;
   createPaciente: (paciente: PacientePayload) => Promise<Paciente>;
   updatePaciente: (id: string, paciente: PacientePayload) => Promise<Paciente>;
   deletePaciente: (id: string) => Promise<void>;
@@ -251,7 +252,9 @@ interface PacienteStore {
 }
 
 const PACIENTES_FETCH_TTL_MS = 30 * 1000;
-let fetchPacientesInFlight: Promise<void> | null = null;
+let fetchPacientesInFlight:
+  | { key: string; promise: Promise<void> }
+  | null = null;
 
 export const usePacienteStore = create<PacienteStore>((set, get) => ({
   pacientes: [],
@@ -263,12 +266,15 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
   pageSize: 30,
   hasNextPage: true,
   totalPacientes: 0,
+  currentQuery: "",
 
   setLoading: (loading) => set({ isLoading: loading }),
 
-  fetchPacientes: async (force = false) => {
+  fetchPacientes: async (force = false, search = "") => {
     const current = get();
+    const normalizedSearch = search.trim();
     const isFresh =
+      !normalizedSearch &&
       !!current.lastFetchedAt &&
       Date.now() - current.lastFetchedAt < PACIENTES_FETCH_TTL_MS;
 
@@ -276,15 +282,20 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
       return;
     }
 
-    if (fetchPacientesInFlight) {
-      return fetchPacientesInFlight;
+    const requestKey = normalizedSearch.toLowerCase();
+    if (fetchPacientesInFlight?.key === requestKey) {
+      return fetchPacientesInFlight.promise;
     }
 
-    fetchPacientesInFlight = (async () => {
+    const promise = (async () => {
       try {
         set({ isLoading: true });
         const response = await api.get<ApiPacientesPaged>("/pacientes/paged", {
-          params: { page: 1, limit: get().pageSize },
+          params: {
+            page: 1,
+            limit: get().pageSize,
+            q: normalizedSearch || undefined,
+          },
         });
         const pacientes = response.data.data.map(mapApiToPaciente);
         set({
@@ -294,8 +305,11 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
           currentPage: response.data.page,
           hasNextPage: response.data.hasNext,
           totalPacientes: response.data.total,
+          currentQuery: normalizedSearch,
         });
-        await persistPacientes(pacientes);
+        if (!normalizedSearch) {
+          await persistPacientes(pacientes);
+        }
       } catch (error) {
         const originalError = error;
         set({ isLoading: false });
@@ -309,8 +323,12 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
             hasNextPage: true,
             totalPacientes: 0,
             lastFetchedAt: null,
+            currentQuery: "",
           });
           throw error;
+        }
+        if (normalizedSearch) {
+          throw originalError;
         }
         try {
           const cacheKey = await getPacientesCacheKey();
@@ -324,6 +342,7 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
               hasNextPage: false,
               totalPacientes: cached.length,
               lastFetchedAt: Date.now(),
+              currentQuery: "",
             });
             return;
           }
@@ -336,7 +355,8 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
       }
     })();
 
-    return fetchPacientesInFlight;
+    fetchPacientesInFlight = { key: requestKey, promise };
+    return promise;
   },
 
   fetchPacienteById: async (id) => {
@@ -356,9 +376,14 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
     return pacienteAtualizado;
   },
 
-  fetchNextPacientes: async () => {
+  fetchNextPacientes: async (search) => {
     const state = get();
     if (state.isLoading || state.isLoadingMore || !state.hasNextPage) {
+      return;
+    }
+    const normalizedSearch = (search ?? state.currentQuery).trim();
+    if (normalizedSearch !== state.currentQuery) {
+      await get().fetchPacientes(true, normalizedSearch);
       return;
     }
 
@@ -366,7 +391,11 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
     try {
       const nextPage = state.currentPage + 1;
       const response = await api.get<ApiPacientesPaged>("/pacientes/paged", {
-        params: { page: nextPage, limit: state.pageSize },
+        params: {
+          page: nextPage,
+          limit: state.pageSize,
+          q: normalizedSearch || undefined,
+        },
       });
       const nextBatch = response.data.data.map(mapApiToPaciente);
       const mergedMap = new Map(
@@ -383,8 +412,11 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
         currentPage: response.data.page,
         hasNextPage: response.data.hasNext,
         totalPacientes: response.data.total,
+        currentQuery: normalizedSearch,
       });
-      await persistPacientes(merged);
+      if (!normalizedSearch) {
+        await persistPacientes(merged);
+      }
     } catch (error) {
       set({ isLoadingMore: false });
       throw error;
@@ -461,7 +493,6 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
 
   getPacienteById: (id) => get().pacientes.find((p) => p.id === id),
 }));
-
 
 
 

@@ -93,8 +93,9 @@ export class PacientesController {
     @CurrentUser() usuario: Usuario,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(30), ParseIntPipe) limit: number,
+    @Query('q') q?: string,
   ): Promise<PacientePagedResponseDto> {
-    return this.pacientesService.findPaged(usuario.id, page, limit);
+    return this.pacientesService.findPaged(usuario.id, page, limit, q);
   }
 
   @Get('attention')

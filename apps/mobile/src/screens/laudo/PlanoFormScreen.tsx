@@ -1055,13 +1055,6 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
     }
   };
 
-  const handleOpenActivityPrescription = () => {
-    navigation.navigate("AtividadeForm", {
-      pacienteId,
-      pacienteNome: paciente?.nomeCompleto,
-    });
-  };
-
   const handleValidatePlan = async () => {
     if (!validate()) {
       showToast({
@@ -1454,15 +1447,6 @@ export function PlanoFormScreen({ route, navigation }: PlanoFormScreenProps) {
           disabled={isBusy || !canGeneratePlanPdf}
           icon={
             <Ionicons name="medkit-outline" size={18} color={COLORS.white} />
-          }
-        />
-        <Button
-          title="Prescrever atividade com IA"
-          onPress={handleOpenActivityPrescription}
-          fullWidth
-          variant="outline"
-          icon={
-            <Ionicons name="fitness-outline" size={18} color={COLORS.primary} />
           }
         />
       </View>

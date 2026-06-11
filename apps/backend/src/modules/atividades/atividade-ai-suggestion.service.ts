@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { OpenAiService } from '../ai/openai.service';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 
@@ -27,8 +28,9 @@ export class AtividadeAiSuggestionService {
     dto: GenerateAtividadeAiDto,
     paciente: Paciente,
     anamnese: Anamnese | null,
+    laudo: Laudo | null = null,
   ): Promise<AtividadeAiSuggestion> {
-    const fallback = this.buildRuleSuggestion(dto, anamnese);
+    const fallback = this.buildRuleSuggestion(dto, anamnese, laudo);
     const ai = await this.generateWithOpenAI({
       paciente: {
         nomeCompleto: paciente.nomeCompleto,
@@ -51,6 +53,7 @@ export class AtividadeAiSuggestionService {
             observacoesEstiloVida: anamnese.observacoesEstiloVida,
           }
         : null,
+      laudo: this.buildLaudoContext(laudo),
       rascunhoAtual: {
         titulo: dto.titulo || '',
         descricao: dto.descricao || '',
@@ -95,14 +98,87 @@ export class AtividadeAiSuggestionService {
     return trimmed.slice(0, maxLen);
   }
 
+  private buildLaudoContext(laudo: Laudo | null): Record<string, unknown> | null {
+    if (!laudo) return null;
+    return {
+      diagnosticoFuncional: this.sanitizeText(laudo.diagnosticoFuncional, 900),
+      achadosClinicos: this.sanitizeText(laudo.achadosClinicos, 900),
+      exameFisico: this.sanitizeText(laudo.exameFisico, 1200),
+      condutas: this.sanitizeText(laudo.condutas, 900),
+      planoTratamentoIA: this.sanitizeText(laudo.planoTratamentoIA, 900),
+      criteriosAlta: this.sanitizeText(laudo.criteriosAlta, 700),
+    };
+  }
+
+  private normalizeForMatch(value: unknown): string {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  private buildTherapeuticExerciseFocus(
+    anamnese: Anamnese | null,
+    laudo: Laudo | null,
+  ): string {
+    const context = this.normalizeForMatch(
+      [
+        anamnese?.descricaoSintomas,
+        anamnese?.limitacoesFuncionais,
+        anamnese?.atividadesQuePioram,
+        anamnese?.metaPrincipalPaciente,
+        laudo?.diagnosticoFuncional,
+        laudo?.achadosClinicos,
+        laudo?.exameFisico,
+        laudo?.condutas,
+        laudo?.planoTratamentoIA,
+      ].join(' '),
+    );
+
+    const hasAny = (terms: string[]) => terms.some((term) => context.includes(term));
+    if (hasAny(['ombro', 'manguito', 'escapul'])) {
+      return 'Exercicios terapeuticos: mobilidade ativa-assistida de ombro em amplitude toleravel, controle escapular e fortalecimento inicial de manguito sem reproduzir dor sustentada.';
+    }
+    if (hasAny(['cervical', 'pescoco', 'cefaleia'])) {
+      return 'Exercicios terapeuticos: controle cervical profundo, mobilidade cervical/toracica leve e estabilizacao escapular com pausas para higiene postural.';
+    }
+    if (hasAny(['lombar', 'lombo', 'ciatic', 'lombalgia'])) {
+      return 'Exercicios terapeuticos: mobilidade lombo-pelvica, ativacao de controle motor do tronco e ponte curta, com exposicao gradual a flexao/carga conforme tolerancia.';
+    }
+    if (hasAny(['joelho', 'patelar', 'quadriceps', 'agachamento'])) {
+      return 'Exercicios terapeuticos: ativacao de quadriceps e gluteos, controle de valgo dinamico e agachamento parcial assistido dentro de faixa sem piora sustentada.';
+    }
+    if (hasAny(['quadril', 'coxofemoral', 'gluteo'])) {
+      return 'Exercicios terapeuticos: mobilidade de quadril, fortalecimento de gluteos e treino de controle pelvico em apoio, progredindo para tarefas funcionais.';
+    }
+    if (hasAny(['tornozelo', 'pe ', 'retrope', 'apoio'])) {
+      return 'Exercicios terapeuticos: mobilidade de tornozelo/pe, controle de apoio, propriocepcao bipodal e progressao para apoio unipodal conforme estabilidade.';
+    }
+    if (hasAny(['cotovelo', 'epicondil', 'antebraco'])) {
+      return 'Exercicios terapeuticos: carga isometrica toleravel de flexores/extensores do antebraco, mobilidade de cotovelo/punho e progressao para resistencia leve.';
+    }
+    if (hasAny(['punho', 'mao', 'carpal', 'preensao'])) {
+      return 'Exercicios terapeuticos: mobilidade de punho/mao, controle motor fino e fortalecimento gradual de preensao sem aumento persistente dos sintomas.';
+    }
+    return 'Exercicios terapeuticos: mobilidade ativa da regiao sintomatica, controle motor de baixa carga e progressao funcional guiada por dor, qualidade de movimento e tolerancia em 24h.';
+  }
+
   private buildRuleSuggestion(
     dto: GenerateAtividadeAiDto,
     anamnese: Anamnese | null,
+    laudo: Laudo | null,
   ): AtividadeAiSuggestion & { source: 'rules'; referencias: string[] } {
     const objetivo = anamnese?.metaPrincipalPaciente?.trim();
     const limitacoes = anamnese?.limitacoesFuncionais?.trim();
     const piora = anamnese?.atividadesQuePioram?.trim();
     const alivio = anamnese?.fatorAlivio?.trim();
+    const diagnostico = this.sanitizeText(laudo?.diagnosticoFuncional, 260);
+    const exameFisico = this.sanitizeText(laudo?.exameFisico, 280);
+    const condutas = this.sanitizeText(
+      laudo?.condutas || laudo?.planoTratamentoIA,
+      280,
+    );
+    const exerciseFocus = this.buildTherapeuticExerciseFocus(anamnese, laudo);
 
     const titulo =
       dto.titulo?.trim() ||
@@ -122,8 +198,21 @@ export class AtividadeAiSuggestionService {
         .filter(Boolean)
         .join(' ')
         .slice(0, 1000);
+    const descricaoBaseContextual = dto.descricao?.trim()
+      ? descricaoBase
+      : [
+          descricaoBase,
+          diagnostico ? `Diagnostico funcional: ${diagnostico}.` : undefined,
+          exameFisico ? `Exame fisico relevante: ${exameFisico}.` : undefined,
+          condutas ? `Condutas/plano registrados: ${condutas}.` : undefined,
+          exerciseFocus,
+          'Dose inicial: 1 a 2 series, 6 a 10 repeticoes ou 30 a 45 segundos, em intensidade toleravel. Progredir quando nao houver piora sustentada por 24h.',
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .slice(0, 760);
     const descricao = this.appendReferencesToDescricao(
-      descricaoBase,
+      descricaoBaseContextual,
       referencias,
     );
 
@@ -143,6 +232,7 @@ export class AtividadeAiSuggestionService {
       profissao: string;
     };
     anamnese: Record<string, unknown> | null;
+    laudo: Record<string, unknown> | null;
     rascunhoAtual: {
       titulo: string;
       descricao: string;
@@ -157,7 +247,15 @@ export class AtividadeAiSuggestionService {
     const referenciasCanonicas = this.getDefaultBibliographicReferences();
     const systemPrompt =
       'Você é um assistente clínico de fisioterapia tradicional. Gere prescrição de atividade segura, objetiva e executável. Baseie-se em literatura técnica e não invente dados ausentes.';
+    const activityRulesPrompt = `
+Regras:
+- Use anamnese e laudo/exameFisico quando existirem; nao gere prescricao generica se houver diagnostico funcional, condutas ou plano registrado.
+- A descricao deve trazer exercicios terapeuticos com regiao-alvo, objetivo clinico, dose inicial, criterio de progressao e alerta de piora sustentada por 24h.
+- Se houver red flag, dor progressiva sem explicacao ou piora neurologica, priorize orientacao de seguranca e reavaliacao antes de exercicios de carga.
+- Mantenha linguagem executavel para o paciente e revisavel pelo fisioterapeuta.
+`;
     const userPrompt = `
+${activityRulesPrompt}
 Retorne SOMENTE JSON válido com as chaves:
 titulo (string até 140 chars),
 descricao (string até 1000 chars),

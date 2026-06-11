@@ -223,6 +223,7 @@ export const inferQuickAnamneseVoiceInsight = (
   const fatorAlivio = inferVoicePresetMatches(normalized, [
     { value: "Repouso", terms: ["repouso", "descanso", "parar"] },
     { value: "Calor", terms: ["calor", "bolsa quente"] },
+    { value: "Frio", terms: ["frio", "gelo", "compressa fria"] },
     { value: "Alongamento", terms: ["alongamento", "alongar"] },
     {
       value: "Medicamento",
@@ -264,6 +265,7 @@ export const inferQuickAnamneseVoiceInsight = (
     { value: "Subir escadas", terms: ["subir escada", "escada"] },
     { value: "Dirigir", terms: ["dirigir"] },
     { value: "Agachar", terms: ["agachar", "agachamento"] },
+    { value: "Esporte", terms: ["esporte", "jogar", "competir"] },
   ]);
   const atividadesQuePioram = inferVoicePresetMatches(normalized, [
     {
@@ -276,8 +278,10 @@ export const inferQuickAnamneseVoiceInsight = (
     { value: "Subir escadas", terms: ["subir escada", "escada"] },
     { value: "Exercício", terms: ["exercicio", "treino", "atividade fisica"] },
     { value: "Dirigir", terms: ["dirigir"] },
+    { value: "Esporte", terms: ["esporte", "jogo", "competicao"] },
   ]);
   const horaIntensifica = inferVoicePresetMatches(normalized, [
+    { value: "Intermitente", terms: ["intermitente", "vai e volta", "oscila"] },
     { value: "Ao acordar", terms: ["ao acordar", "quando acorda"] },
     { value: "Manhã", terms: ["manha"] },
     { value: "Tarde", terms: ["tarde"] },

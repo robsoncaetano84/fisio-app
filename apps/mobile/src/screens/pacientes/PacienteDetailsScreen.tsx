@@ -185,10 +185,68 @@ export function PacienteDetailsScreen({
     };
   }, [paciente?.statusCiclo, t]);
 
+  const applyLaudoSnapshot = React.useCallback(
+    (
+      laudo: {
+        id: string;
+        exameFisico?: string;
+        condutas?: string;
+        status?: LaudoStatus;
+        updatedAt?: string;
+        publicadoPacienteEm?: string | null;
+      } | null,
+    ) => {
+      if (!laudo?.id) {
+        setLaudoSnapshot(null);
+        return;
+      }
+      setLaudoSnapshot({
+        id: laudo.id,
+        exameFisico: laudo.exameFisico,
+        condutas: laudo.condutas,
+        status: laudo.status,
+        updatedAt: laudo.updatedAt,
+        publicadoPacienteEm: laudo.publicadoPacienteEm,
+      });
+    },
+    [],
+  );
+
   useFocusEffect(
     React.useCallback(() => {
+      let active = true;
       fetchPacienteById(pacienteId).catch(() => undefined);
-    }, [fetchPacienteById, pacienteId]),
+      fetchAnamnesesByPaciente(pacienteId).catch(() => undefined);
+      fetchEvolucoesByPaciente(pacienteId).catch(() => undefined);
+      fetchLaudoByPaciente(pacienteId, false)
+        .then((laudo) => {
+          if (!active) return;
+          applyLaudoSnapshot(laudo);
+        })
+        .catch(() => {
+          if (!active) return;
+          setLaudoSnapshot(null);
+        });
+      getClinicalOrchestratorNextAction(pacienteId)
+        .then((response) => {
+          if (!active) return;
+          setOrchestratorNextAction(response);
+        })
+        .catch(() => {
+          if (!active) return;
+          setOrchestratorNextAction(null);
+        });
+      return () => {
+        active = false;
+      };
+    }, [
+      applyLaudoSnapshot,
+      fetchAnamnesesByPaciente,
+      fetchEvolucoesByPaciente,
+      fetchLaudoByPaciente,
+      fetchPacienteById,
+      pacienteId,
+    ]),
   );
 
   if (!paciente) {
@@ -256,61 +314,6 @@ export function PacienteDetailsScreen({
         type: "error",
       });
     });
-  }, [pacienteId]);
-
-  useEffect(() => {
-    let active = true;
-    fetchLaudoByPaciente(pacienteId, false)
-      .then(
-        (
-          laudo: {
-            id: string;
-            exameFisico?: string;
-            condutas?: string;
-            status?: LaudoStatus;
-            updatedAt?: string;
-            publicadoPacienteEm?: string | null;
-          } | null,
-        ) => {
-          if (!active) return;
-          if (!laudo?.id) {
-            setLaudoSnapshot(null);
-            return;
-          }
-          setLaudoSnapshot({
-            id: laudo.id,
-            exameFisico: laudo.exameFisico,
-            condutas: laudo.condutas,
-            status: laudo.status,
-            updatedAt: laudo.updatedAt,
-            publicadoPacienteEm: laudo.publicadoPacienteEm,
-          });
-        },
-      )
-      .catch(() => {
-        if (!active) return;
-        setLaudoSnapshot(null);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [fetchLaudoByPaciente, pacienteId]);
-
-  useEffect(() => {
-    let active = true;
-    getClinicalOrchestratorNextAction(pacienteId)
-      .then((response) => {
-        if (!active) return;
-        setOrchestratorNextAction(response);
-      })
-      .catch(() => {
-        if (!active) return;
-        setOrchestratorNextAction(null);
-      });
-    return () => {
-      active = false;
-    };
   }, [pacienteId]);
 
   useEffect(() => {

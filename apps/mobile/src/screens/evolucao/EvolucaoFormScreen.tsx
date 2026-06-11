@@ -311,7 +311,7 @@ export function EvolucaoFormScreen({
     setter: React.Dispatch<React.SetStateAction<string>>,
     value: string,
   ) => {
-    setter((prev) => (prev ? `${prev} ${value}` : value));
+    setter(value.trim());
   };
 
   const appendLineIfMissing = (
@@ -2137,7 +2137,6 @@ const styles = StyleSheet.create({
     flex: 2,
   },
 });
-
 
 
 

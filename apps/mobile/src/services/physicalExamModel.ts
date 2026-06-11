@@ -1123,6 +1123,8 @@ const inferRegionFromAnamnese = (
   ]
     .filter(Boolean)
     .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
   if (!text) return null;
@@ -1130,6 +1132,37 @@ const inferRegionFromAnamnese = (
   if (text.includes("torac")) return "TORACICA";
   if (text.includes("lomb")) return "LOMBAR";
   if (text.includes("sacro") || text.includes("iliac")) return "SACROILIACA";
+  const hasNeuralOrDiscalHint =
+    text.includes("neural") ||
+    text.includes("nervo") ||
+    text.includes("radicul") ||
+    text.includes("irrad") ||
+    text.includes("formig") ||
+    text.includes("dorm") ||
+    text.includes("choque") ||
+    text.includes("ciatic") ||
+    text.includes("discal") ||
+    text.includes("disco") ||
+    text.includes("hernia");
+  const hasUpperLimbHint =
+    text.includes("ombro") ||
+    text.includes("braco") ||
+    text.includes("cotovelo") ||
+    text.includes("antebraco") ||
+    text.includes("punho") ||
+    text.includes("mao");
+  const hasLowerLimbHint =
+    text.includes("quadril") ||
+    text.includes("coxo") ||
+    text.includes("glute") ||
+    text.includes("coxa") ||
+    text.includes("joelho") ||
+    text.includes("perna") ||
+    text.includes("panturrilha") ||
+    text.includes("tornoz") ||
+    text.includes("pe ");
+  if (hasNeuralOrDiscalHint && hasUpperLimbHint) return "CERVICAL";
+  if (hasNeuralOrDiscalHint && hasLowerLimbHint) return "LOMBAR";
   if (text.includes("quadril") || text.includes("coxo") || text.includes("glute") || text.includes("coxa")) return "QUADRIL";
   if (text.includes("joelho") || text.includes("patel") || text.includes("poplit")) return "JOELHO";
   if (text.includes("tornoz") || text.includes("pe ")) return "TORNOZELO_PE";
@@ -1346,6 +1379,12 @@ const LESION_TYPE_CONDUTA_HINTS: Record<
       "Progressao por reducao de sintomas irradiados e recuperacao neuromuscular.",
   },
 };
+
+const PAIN_EDUCATION_CONDUTA_HINT =
+  "Educacao em dor: explicar relacao entre sintomas, carga, sono/estresse e sinais de alerta, orientando autocuidado e exposicao gradual.";
+
+const RED_FLAG_PAIN_EDUCATION_CONDUTA_HINT =
+  "Educacao em dor: explicar sinais de alerta, motivo do encaminhamento e limites de seguranca ate liberacao clinica.";
 
 const TEST_STRUCTURE_HINTS: Array<{
   token: string;
@@ -1697,14 +1736,14 @@ export function enrichStructuredExameWithClinicalLogic(
         ajuste:
           "Nao realizar ajuste articular ate exclusao de red flag critica.",
         exercicio:
-          "Suspender exercicios terapeuticos ate conduta medica definitiva.",
+          `Suspender exercicios terapeuticos ate conduta medica definitiva. ${RED_FLAG_PAIN_EDUCATION_CONDUTA_HINT}`,
         progressao:
           "Encaminhamento imediato e reavaliacao apos liberacao clinica.",
       }
     : {
         tecnicaManual: `${condutaHintByRegion.tecnicaManual} ${condutaHintByLesion.tecnicaManual}`,
         ajuste: `${condutaHintByRegion.ajuste} ${condutaHintByLesion.ajuste}`,
-        exercicio: `${condutaHintByRegion.exercicio} ${condutaHintByLesion.exercicio}`,
+        exercicio: `${condutaHintByRegion.exercicio} ${condutaHintByLesion.exercicio} ${PAIN_EDUCATION_CONDUTA_HINT}`,
         progressao: `${condutaHintByRegion.progressao} ${condutaHintByLesion.progressao}`,
       };
   const shouldRecalculateText = overwrite || recalculateDecision;

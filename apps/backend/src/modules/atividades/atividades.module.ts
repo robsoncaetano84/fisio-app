@@ -9,6 +9,7 @@ import { AtividadeCheckin } from './entities/atividade-checkin.entity';
 import { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
+import { Laudo } from '../laudos/entities/laudo.entity';
 import { AtividadesController } from './atividades.controller';
 import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
 import { AtividadesService } from './atividades.service';
@@ -23,6 +24,7 @@ import { OpenAiModule } from '../ai/openai.module';
       AtividadeAiGeneration,
       Paciente,
       Anamnese,
+      Laudo,
     ]),
     NotificacoesModule,
     OpenAiModule,

@@ -69,12 +69,12 @@ export const EXAM_PRESETS: ExamPreset[] = [
   {
     id: "MMII",
     label: "Membro inferior",
-    regions: ["QUADRIL", "JOELHO", "TORNOZELO_PE"],
+    regions: ["LOMBAR", "QUADRIL", "JOELHO", "TORNOZELO_PE"],
   },
   {
     id: "MMSS",
     label: "Membro superior",
-    regions: ["OMBRO", "COTOVELO", "PUNHO_MAO"],
+    regions: ["CERVICAL", "OMBRO", "COTOVELO", "PUNHO_MAO"],
   },
   {
     id: "ESPORTIVO",

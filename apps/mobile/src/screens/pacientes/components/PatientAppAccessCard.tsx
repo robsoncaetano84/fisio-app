@@ -170,11 +170,24 @@ export function PatientAppAccessCard({
     return response.data.link;
   };
 
+  const openInviteInWhatsApp = async (link: string) => {
+    const target = normalizeWhatsappTarget(whatsapp);
+    const text = encodeURIComponent(buildInviteMessage(link));
+    const url = target
+      ? `https://wa.me/${target}?text=${text}`
+      : `https://wa.me/?text=${text}`;
+    await Linking.openURL(url);
+  };
+
   const shareInvite = async () => {
     try {
       setLoadingAction("invite");
       const link = await createInvite();
-      await Share.share({ message: buildInviteMessage(link) });
+      if (normalizeWhatsappTarget(whatsapp)) {
+        await openInviteInWhatsApp(link);
+      } else {
+        await Share.share({ message: buildInviteMessage(link) });
+      }
       showToast({
         type: "success",
         message: t("patientAppAccess.inviteReady"),
@@ -191,19 +204,20 @@ export function PatientAppAccessCard({
     try {
       setLoadingAction("copy");
       const link = lastInviteLink || (await createInvite());
+      const message = buildInviteMessage(link);
       if (
         Platform.OS === "web" &&
         typeof navigator !== "undefined" &&
         navigator.clipboard?.writeText
       ) {
-        await navigator.clipboard.writeText(link);
+        await navigator.clipboard.writeText(message);
         showToast({
           type: "success",
           message: t("patientAppAccess.linkCopied"),
         });
         return;
       }
-      await Share.share({ message: buildInviteMessage(link) });
+      await Share.share({ message });
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ type: "error", message });
@@ -215,13 +229,12 @@ export function PatientAppAccessCard({
   const openWhatsApp = async () => {
     try {
       setLoadingAction("invite");
-      const link = await createInvite();
-      const target = normalizeWhatsappTarget(whatsapp);
-      const text = encodeURIComponent(buildInviteMessage(link));
-      const url = target
-        ? `https://wa.me/${target}?text=${text}`
-        : `https://wa.me/?text=${text}`;
-      await Linking.openURL(url);
+      const link = lastInviteLink || (await createInvite());
+      await openInviteInWhatsApp(link);
+      showToast({
+        type: "success",
+        message: t("patientAppAccess.inviteReady"),
+      });
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ type: "error", message });
@@ -370,7 +383,7 @@ export function PatientAppAccessCard({
                 color={index === 0 ? COLORS.primary : COLORS.gray400}
               />
               <Text style={styles.historyText}>
-                {getEventLabel(event.type)} · {formatDateTime(event.at)}
+                {getEventLabel(event.type)} {"\u2022"} {formatDateTime(event.at)}
               </Text>
             </View>
           ))}

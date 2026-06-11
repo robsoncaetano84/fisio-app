@@ -64,7 +64,6 @@ import {
 import { CONFIDENCE_RULES } from "../../services/physicalExamScoring";
 import {
   buildHipomobilidadeSummary,
-  getNestedStringValue,
   prettyEnum,
   prettyEvidenceField,
   resolveInputSuggestionPresentation,
@@ -147,11 +146,18 @@ const POSTURAL_FRONTAL_OPTIONS = [
   "Esquerda mais alta/desviada",
 ];
 
+const POSTURAL_FRONTAL_HEAD_OPTIONS = [
+  ...POSTURAL_FRONTAL_OPTIONS,
+  "Inclinado à direita",
+  "Inclinado à esquerda",
+];
+
 const POSTURAL_FRONTAL_ITEMS: Array<{
   field: PosturalFrontalField;
   label: string;
+  options?: string[];
 }> = [
-  { field: "cabeca", label: "Cabeça" },
+  { field: "cabeca", label: "Cabeça", options: POSTURAL_FRONTAL_HEAD_OPTIONS },
   { field: "ombros", label: "Ombros" },
   { field: "escapulas", label: "Escápulas" },
   { field: "pelve", label: "Pelve" },
@@ -468,13 +474,8 @@ export function ExameFisicoFormScreen({
     return "inicial";
   }, [effectiveDorSuggestion.confidence]);
 
-  const appendFieldValue = (currentValue: string, incomingText: string) => {
-    const left = String(currentValue || "").trim();
-    const right = String(incomingText || "").trim();
-    if (!left) return right;
-    if (!right) return left;
-    return `${left} ${right}`.trim();
-  };
+  const normalizeVoiceFieldValue = (incomingText: string) =>
+    String(incomingText || "").trim();
 
   useEffect(() => {
     if (!exam) return;
@@ -932,8 +933,7 @@ export function ExameFisicoFormScreen({
     enabled: VOICE_ENABLED,
     onResult: (text) => {
       if (!exam || !activeField) return;
-      const currentValue = getNestedStringValue(exam, activeField);
-      setField(activeField, appendFieldValue(String(currentValue || ""), text));
+      setField(activeField, normalizeVoiceFieldValue(text));
     },
     onError: (message) => {
       showToast({ type: "error", message });
@@ -1427,10 +1427,6 @@ export function ExameFisicoFormScreen({
     }
   };
 
-  const handleConfirmClassification = () => {
-    confirmClassificationReview(true);
-  };
-
   const handleToggleProfessionalValidationChecklist = () => {
     if (!canToggleValidationChecklist) return;
     const nextChecked = !validationChecklistChecked;
@@ -1718,12 +1714,7 @@ export function ExameFisicoFormScreen({
           </View>
         ) : null}
 
-        <View
-          style={[
-            styles.section,
-            errors.classificationConfirmation && styles.sectionWithError,
-          ]}
-        >
+        <View style={styles.section}>
           <Text style={styles.blockTitle}>Classificacao de dor</Text>
           <View style={styles.classificationStatusRow}>
             <View
@@ -1747,16 +1738,6 @@ export function ExameFisicoFormScreen({
                   : "Confirmado pelo profissional"}
               </Text>
             </View>
-            {AI_REVIEW_REQUIRED && exam.source === "rule-based" ? (
-              <TouchableOpacity
-                style={styles.classificationConfirmButton}
-                onPress={handleConfirmClassification}
-              >
-                <Text style={styles.classificationConfirmButtonText}>
-                  Confirmar
-                </Text>
-              </TouchableOpacity>
-            ) : null}
           </View>
           <View style={styles.classificationSuggestionCard}>
             <View style={styles.classificationSuggestionHeader}>
@@ -1980,7 +1961,7 @@ export function ExameFisicoFormScreen({
                       {item.label}
                     </Text>
                     {renderPosturalOptions(
-                      POSTURAL_FRONTAL_OPTIONS,
+                      item.options || POSTURAL_FRONTAL_OPTIONS,
                       planoFrontalItens[item.field],
                       `observacao.avaliacaoPostural.planoFrontalItens.${item.field}`,
                     )}
@@ -2364,7 +2345,7 @@ export function ExameFisicoFormScreen({
                 {relevantRegions
                   .map((r) => CLINICAL_REGION_LABELS[r])
                   .join(", ")}
-                {cadeiaProvavel ? ` â€¢ ${cadeiaProvavel}` : ""}
+                {cadeiaProvavel ? ` \u2022 ${cadeiaProvavel}` : ""}
               </Text>
               <TouchableOpacity
                 style={styles.contextToggleChip}
@@ -2378,7 +2359,7 @@ export function ExameFisicoFormScreen({
           ) : null}
           <Text style={styles.regionProgressText}>
             Progresso: {regionalProgress.tested}/{regionalProgress.total}{" "}
-            testados â€¢ {regionalProgress.pending} pendente(s)
+            testados {"\u2022"} {regionalProgress.pending} pendente(s)
           </Text>
           <Text style={styles.sectionHint}>
             A tela sugere a região principal pela anamnese. Use "Mostrar todas"
@@ -3598,19 +3579,6 @@ const styles = StyleSheet.create({
   },
   classificationStatusChipTextConfirmed: {
     color: COLORS.primary,
-  },
-  classificationConfirmButton: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    backgroundColor: COLORS.white,
-  },
-  classificationConfirmButtonText: {
-    color: COLORS.primary,
-    fontSize: FONTS.sizes.xs,
-    fontWeight: "700",
   },
   classificationLowConfidenceText: {
     marginTop: 2,

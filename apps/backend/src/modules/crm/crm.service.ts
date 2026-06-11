@@ -1192,6 +1192,7 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     includeSensitive?: boolean;
   }) {
     const q = (params?.q || '').trim().toLowerCase();
+    const cpfQuery = (params?.q || '').replace(/\D/g, '');
     const cidade = (params?.cidade || '').trim().toLowerCase();
     const uf = (params?.uf || '').trim().toUpperCase();
 
@@ -1217,8 +1218,14 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
 
     if (q) {
       qb.andWhere(
-        `(LOWER(paciente.nomeCompleto) LIKE :q OR LOWER(COALESCE(paciente.contatoEmail, '')) LIKE :q OR LOWER(COALESCE(profissional.nome, '')) LIKE :q OR LOWER(COALESCE(profissional.email, '')) LIKE :q)`,
-        { q: `%${q}%` },
+        `(
+          LOWER(paciente.nomeCompleto) LIKE :q
+          OR LOWER(COALESCE(paciente.contatoEmail, '')) LIKE :q
+          OR COALESCE(paciente.cpf, '') LIKE :cpfQ
+          OR LOWER(COALESCE(profissional.nome, '')) LIKE :q
+          OR LOWER(COALESCE(profissional.email, '')) LIKE :q
+        )`,
+        { q: `%${q}%`, cpfQ: `%${cpfQuery || q}%` },
       );
     }
 

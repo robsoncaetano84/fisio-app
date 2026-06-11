@@ -59,8 +59,7 @@ Variaveis obrigatorias:
 Secrets:
 
 ```powershell
-cd apps/backend
-npm run secrets:render
+npm --prefix apps/backend run secrets:render
 ```
 
 Copie a saida para o Environment do Render. Cada secret precisa ter pelo menos 32 caracteres e nao pode ser placeholder.
@@ -127,7 +126,7 @@ Erro de secret:
 - `REFRESH_SECRET deve ter pelo menos 32 caracteres...`
 - `INVITE_SECRET deve ter pelo menos 32 caracteres...`
 
-Correcao: gere novos valores com `npm run secrets:render` e substitua os tres no Render.
+Correcao: gere novos valores com `npm --prefix apps/backend run secrets:render` e substitua os tres no Render.
 
 Erro de Supabase:
 - `SUPABASE_URL obrigatorio em producao`

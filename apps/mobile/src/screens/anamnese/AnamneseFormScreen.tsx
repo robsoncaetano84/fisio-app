@@ -140,6 +140,7 @@ const FREQ_ATIVIDADE_PRESETS = [
   "Diária",
 ];
 const HORA_INTENSIFICA_PRESETS = [
+  "Intermitente",
   "Ao acordar",
   "Manhã",
   "Tarde",
@@ -151,6 +152,7 @@ const HORA_INTENSIFICA_PRESETS = [
 const FATOR_ALIVIO_PRESETS = [
   "Repouso",
   "Calor",
+  "Frio",
   "Alongamento",
   "Medicamento",
   "Massagem",
@@ -186,6 +188,7 @@ const ATIVIDADES_PIORAM_PRESETS = [
 ];
 const META_PACIENTE_PRESETS = [
   "Reduzir dor",
+  "Voltar ao esporte",
   "Voltar a caminhar sem dor",
   "Dormir melhor",
   "Voltar ao trabalho com conforto",
@@ -537,7 +540,7 @@ export function AnamneseFormScreen({
     setter: React.Dispatch<React.SetStateAction<string>>,
     value: string,
   ) => {
-    setter((prev) => (prev ? `${prev} ${value}` : value));
+    setter(value.trim());
   };
 
   const parsePresetValues = (value: string) =>

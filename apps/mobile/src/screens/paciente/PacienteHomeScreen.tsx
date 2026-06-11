@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
   Linking,
   ScrollView,
   Platform,
@@ -345,6 +346,20 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       window.open(blobUrl, "_blank");
     }
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  };
+
+  const isImageExam = (item: PacienteExameItem) =>
+    String(item.mimeType || "").startsWith("image/");
+
+  const getExamImageSource = (item: PacienteExameItem) => {
+    const authHeader = token
+      ? `Bearer ${token}`
+      : String(api.defaults.headers.common.Authorization || "");
+    const source = {
+      uri: resolveAbsoluteDownloadUrl(item.downloadUrl),
+      ...(authHeader ? { headers: { Authorization: authHeader } } : {}),
+    };
+    return source;
   };
 
   const loadExames = useCallback(
@@ -1557,8 +1572,28 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
             ) : (
               exames.map((item) => (
                 <View key={item.id} style={styles.exameCard}>
+                  {isImageExam(item) ? (
+                    <TouchableOpacity
+                      style={styles.exameThumbnailButton}
+                      activeOpacity={0.9}
+                      onPress={() => handleOpenExame(item).catch(() => undefined)}
+                    >
+                      <Image
+                        source={getExamImageSource(item)}
+                        style={styles.exameThumbnail}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.exameImageBadge}>
+                        <Ionicons name="image-outline" size={14} color={COLORS.white} />
+                      </View>
+                    </TouchableOpacity>
+                  ) : null}
                   <View style={styles.exameHeader}>
-                    <Ionicons name="document-text-outline" size={18} color={COLORS.primary} />
+                    <Ionicons
+                      name={isImageExam(item) ? "image-outline" : "document-text-outline"}
+                      size={18}
+                      color={COLORS.primary}
+                    />
                     <View style={styles.exameHeaderTextWrap}>
                       <Text numberOfLines={1} style={styles.exameTitle}>
                         {item.nomeOriginal}
@@ -2022,6 +2057,29 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
     gap: SPACING.xs,
   },
+  exameThumbnailButton: {
+    position: "relative",
+    width: "100%",
+    height: 144,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: "hidden",
+    backgroundColor: COLORS.gray100,
+  },
+  exameThumbnail: {
+    width: "100%",
+    height: "100%",
+  },
+  exameImageBadge: {
+    position: "absolute",
+    right: SPACING.xs,
+    bottom: SPACING.xs,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary,
+  },
   exameHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -2474,8 +2532,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
-
 
 
 

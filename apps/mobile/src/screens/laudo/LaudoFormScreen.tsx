@@ -349,12 +349,25 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autosaveInFlightRef = useRef(false);
   const isMountedRef = useRef(true);
+  const suggestedReferenceIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...(referenceSuggestions?.laudoReferences || []).map((ref) => ref.id),
+          ...(referenceSuggestions?.planoReferences || []).map((ref) => ref.id),
+        ]),
+      ),
+    [referenceSuggestions],
+  );
   const totalSuggestedReferences =
     (referenceSuggestions?.laudoReferences.length || 0) +
     (referenceSuggestions?.planoReferences.length || 0);
   const hasSuggestedReferences = totalSuggestedReferences > 0;
   const consultedReferencesCount = consultedReferenceIds.length;
   const hasConsultedAnyReference = consultedReferencesCount > 0;
+  const allSuggestedReferencesConsulted =
+    suggestedReferenceIds.length > 0 &&
+    suggestedReferenceIds.every((id) => consultedReferenceIds.includes(id));
   const getTemplateLabel = (templateKey: TemplateKey) =>
     t(TEMPLATE_LABEL_KEY[templateKey]);
   const downloadBaseUrl = (api.defaults.baseURL || "").replace(/\/api$/, "");
@@ -389,7 +402,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     setter: React.Dispatch<React.SetStateAction<string>>,
     value: string,
   ) => {
-    setter((prev) => (prev ? `${prev} ${value}` : value));
+    setter(value.trim());
   };
 
   const { isRecording, partial, start, stop } = useSpeechToText({
@@ -516,10 +529,43 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     return payload;
   };
 
-  const generateAutomaticSuggestion = async () => {
+  type LaudoSuggestionDraft = Partial<{
+    motivoAvaliacao: string;
+    historicoClinico: string;
+    achadosClinicos: string;
+    diagnosticoFuncional: string;
+    objetivosCurtoPrazo: string;
+    objetivosMedioPrazo: string;
+    frequenciaSemanal: string | number;
+    duracaoSemanas: string | number;
+    conclusao: string;
+    condutas: string;
+    planoTratamentoIA: string;
+    criteriosAlta: string;
+  }>;
+
+  const generateAutomaticSuggestion = async (
+    currentDraft: LaudoSuggestionDraft = {},
+  ) => {
     if (generatingAi) return;
     setGeneratingAi(true);
     autoSuggestionAttemptedRef.current = true;
+    const isEmptySuggestionTarget = (currentValue: unknown) =>
+      !String(currentValue || "").trim();
+    const shouldApplyTextSuggestion = (
+      currentValue: unknown,
+      nextValue: unknown,
+    ): nextValue is string =>
+      isEmptySuggestionTarget(currentValue) &&
+      typeof nextValue === "string" &&
+      !!nextValue.trim();
+    const shouldApplyNumberSuggestion = (
+      currentValue: unknown,
+      nextValue: unknown,
+    ): nextValue is number =>
+      isEmptySuggestionTarget(currentValue) &&
+      typeof nextValue === "number" &&
+      Number.isFinite(nextValue);
     try {
       const data = await getLaudoAiSuggestion(pacienteId);
       if (data) {
@@ -574,40 +620,100 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         } else {
           setAiExamContextMessage("");
         }
-        if (!motivoAvaliacao.trim() && data.motivoAvaliacao) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.motivoAvaliacao ?? motivoAvaliacao,
+            data.motivoAvaliacao,
+          )
+        ) {
           setMotivoAvaliacao(data.motivoAvaliacao);
         }
-        if (!historicoClinico.trim() && data.historicoClinico) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.historicoClinico ?? historicoClinico,
+            data.historicoClinico,
+          )
+        ) {
           setHistoricoClinico(data.historicoClinico);
         }
-        if (!achadosClinicos.trim() && data.achadosClinicos) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.achadosClinicos ?? achadosClinicos,
+            data.achadosClinicos,
+          )
+        ) {
           setAchadosClinicos(data.achadosClinicos);
         }
-        if (!diagnosticoFuncional.trim() && data.diagnosticoFuncional) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.diagnosticoFuncional ?? diagnosticoFuncional,
+            data.diagnosticoFuncional,
+          )
+        ) {
           setDiagnosticoFuncional(data.diagnosticoFuncional);
         }
-        if (!objetivosCurtoPrazo.trim() && data.objetivosCurtoPrazo) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.objetivosCurtoPrazo ?? objetivosCurtoPrazo,
+            data.objetivosCurtoPrazo,
+          )
+        ) {
           setObjetivosCurtoPrazo(data.objetivosCurtoPrazo);
         }
-        if (!objetivosMedioPrazo.trim() && data.objetivosMedioPrazo) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.objetivosMedioPrazo ?? objetivosMedioPrazo,
+            data.objetivosMedioPrazo,
+          )
+        ) {
           setObjetivosMedioPrazo(data.objetivosMedioPrazo);
         }
-        if (!frequenciaSemanal.trim() && data.frequenciaSemanal) {
+        if (
+          shouldApplyNumberSuggestion(
+            currentDraft.frequenciaSemanal ?? frequenciaSemanal,
+            data.frequenciaSemanal,
+          )
+        ) {
           setFrequenciaSemanal(String(data.frequenciaSemanal));
         }
-        if (!duracaoSemanas.trim() && data.duracaoSemanas) {
+        if (
+          shouldApplyNumberSuggestion(
+            currentDraft.duracaoSemanas ?? duracaoSemanas,
+            data.duracaoSemanas,
+          )
+        ) {
           setDuracaoSemanas(String(data.duracaoSemanas));
         }
-        if (!conclusao.trim() && data.conclusao) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.conclusao ?? conclusao,
+            data.conclusao,
+          )
+        ) {
           setConclusao(data.conclusao);
         }
-        if (!condutas.trim() && data.condutas) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.condutas ?? condutas,
+            data.condutas,
+          )
+        ) {
           setCondutas(data.condutas);
         }
-        if (!planoTratamentoIA.trim() && data.planoTratamentoIA) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.planoTratamentoIA ?? planoTratamentoIA,
+            data.planoTratamentoIA,
+          )
+        ) {
           setPlanoTratamentoIA(data.planoTratamentoIA);
         }
-        if (!criteriosAlta.trim() && data.criteriosAlta) {
+        if (
+          shouldApplyTextSuggestion(
+            currentDraft.criteriosAlta ?? criteriosAlta,
+            data.criteriosAlta,
+          )
+        ) {
           setCriteriosAlta(data.criteriosAlta);
         }
       }
@@ -963,14 +1069,25 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
           return;
         }
         applyLaudoState(laudo);
-        const hasAnyAiField =
-          !!String(laudo.diagnosticoFuncional || "").trim() ||
-          !!String(laudo.objetivosCurtoPrazo || "").trim() ||
-          !!String(laudo.objetivosMedioPrazo || "").trim() ||
-          !!String(laudo.condutas || "").trim() ||
-          !!String(laudo.planoTratamentoIA || "").trim();
-        if (!hasAnyAiField && !autoSuggestionAttemptedRef.current) {
-          await generateAutomaticSuggestion();
+        const loadedSuggestionDraft: LaudoSuggestionDraft = {
+          motivoAvaliacao: laudo.motivoAvaliacao || "",
+          historicoClinico: laudo.historicoClinico || "",
+          achadosClinicos: laudo.achadosClinicos || "",
+          diagnosticoFuncional: laudo.diagnosticoFuncional || "",
+          objetivosCurtoPrazo: laudo.objetivosCurtoPrazo || "",
+          objetivosMedioPrazo: laudo.objetivosMedioPrazo || "",
+          frequenciaSemanal: laudo.frequenciaSemanal || "",
+          duracaoSemanas: laudo.duracaoSemanas || "",
+          conclusao: laudo.conclusao || "",
+          condutas: laudo.condutas || "",
+          planoTratamentoIA: laudo.planoTratamentoIA || "",
+          criteriosAlta: laudo.criteriosAlta || "",
+        };
+        const hasMissingSuggestionField = Object.values(
+          loadedSuggestionDraft,
+        ).some((value) => !String(value || "").trim());
+        if (hasMissingSuggestionField && !autoSuggestionAttemptedRef.current) {
+          await generateAutomaticSuggestion(loadedSuggestionDraft);
         }
       } catch (error: unknown) {
         if (!isMounted) return;
@@ -1590,12 +1707,7 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     }
   };
 
-  const toggleReferenceConsulted = async (referenceId: string) => {
-    const alreadyConsulted = consultedReferenceIds.includes(referenceId);
-    const next = alreadyConsulted
-      ? consultedReferenceIds.filter((id) => id !== referenceId)
-      : [...consultedReferenceIds, referenceId];
-    setConsultedReferenceIds(next);
+  const persistConsultedReferenceIds = async (next: string[]) => {
     try {
       await AsyncStorage.setItem(
         getConsultedReferencesKey(pacienteId),
@@ -1604,6 +1716,15 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
     } catch {
       // local persistence is best-effort
     }
+  };
+
+  const toggleReferenceConsulted = async (referenceId: string) => {
+    const alreadyConsulted = consultedReferenceIds.includes(referenceId);
+    const next = alreadyConsulted
+      ? consultedReferenceIds.filter((id) => id !== referenceId)
+      : [...consultedReferenceIds, referenceId];
+    setConsultedReferenceIds(next);
+    await persistConsultedReferenceIds(next);
     trackEvent("laudo_reference_consulted_toggled", {
       pacienteId,
       laudoId,
@@ -1620,6 +1741,31 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
         laudoId,
         referenceId,
         checked: !alreadyConsulted,
+      },
+      usuario?.id,
+    ).catch(() => undefined);
+  };
+
+  const toggleAllSuggestedReferencesConsulted = async () => {
+    const next = allSuggestedReferencesConsulted ? [] : suggestedReferenceIds;
+    setConsultedReferenceIds(next);
+    await persistConsultedReferenceIds(next);
+    trackEvent("laudo_reference_consulted_toggled", {
+      pacienteId,
+      laudoId,
+      referenceId: "__all__",
+      checked: !allSuggestedReferencesConsulted,
+      totalConsulted: next.length,
+      totalSuggested: totalSuggestedReferences,
+      profile: referenceSuggestions?.profile,
+    }).catch(() => undefined);
+    recordAuditAction(
+      "LAUDO_REFERENCE_CONSULTED_TOGGLED",
+      {
+        pacienteId,
+        laudoId,
+        referenceId: "__all__",
+        checked: !allSuggestedReferencesConsulted,
       },
       usuario?.id,
     ).catch(() => undefined);
@@ -2258,6 +2404,41 @@ export function LaudoFormScreen({ route, navigation }: LaudoFormScreenProps) {
                 {t("clinical.messages.consultedSourcesCount")}:{" "}
                 {consultedReferenceIds.length}/{totalSuggestedReferences || 0}
               </Text>
+              <TouchableOpacity
+                style={[
+                  styles.referenceBulkButton,
+                  allSuggestedReferencesConsulted &&
+                    styles.referenceBulkButtonActive,
+                ]}
+                activeOpacity={0.85}
+                disabled={!hasSuggestedReferences}
+                onPress={toggleAllSuggestedReferencesConsulted}
+              >
+                <Ionicons
+                  name={
+                    allSuggestedReferencesConsulted
+                      ? "checkmark-done-circle"
+                      : "checkmark-done-outline"
+                  }
+                  size={16}
+                  color={
+                    allSuggestedReferencesConsulted
+                      ? COLORS.white
+                      : COLORS.primary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.referenceBulkButtonText,
+                    allSuggestedReferencesConsulted &&
+                      styles.referenceBulkButtonTextActive,
+                  ]}
+                >
+                  {allSuggestedReferencesConsulted
+                    ? t("clinical.actions.unmarkAllReferences")
+                    : t("clinical.actions.markAllReferences")}
+                </Text>
+              </TouchableOpacity>
             </View>
             <Text style={styles.referencePdfHint}>
               {t("clinical.messages.scientificPdfTraceabilityHint")}
@@ -3065,6 +3246,30 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
     fontWeight: "600",
+  },
+  referenceBulkButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 7,
+    marginTop: SPACING.sm,
+    backgroundColor: COLORS.white,
+  },
+  referenceBulkButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  referenceBulkButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  referenceBulkButtonTextActive: {
+    color: COLORS.white,
   },
   referencePdfHint: {
     color: COLORS.textSecondary,

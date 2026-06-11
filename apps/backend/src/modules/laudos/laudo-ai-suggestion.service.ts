@@ -240,6 +240,7 @@ Regras clinicas:
 - Em caso de conflito entre exames e achados clinicos, priorize seguranca e recomende correlacao clinica/reavaliacao.
 - Em condutas e planoTratamentoIA, descreva progressao por fases (ex.: controle de dor -> ganho funcional -> retorno progressivo) e inclua criterio objetivo de progressao.
 - Em condutas, para cada intervencao proposta, descreva em texto curto a evidencia clinica correspondente (achado, teste positivo/negativo relevante, deficit funcional ou fator de risco).
+- Em condutas e recomendacoes, inclua "educacao em dor" com objetivo clinico, relacao com achados do caso, orientacao de autocuidado e criterio de progressao; nao use como termo isolado.
 - Em planoTratamentoIA, estruture por fases com: objetivo da fase, condutas, criterio de progressao e evidencia que sustenta a fase.
 - Em planoTratamentoIA, quando houver achado postural/Adams, inclua uma linha de reavaliacao objetiva dizendo o que sera monitorado e qual achado precisa estabilizar/melhorar antes de aumentar carga, complexidade ou retorno funcional.
 - Em planoTratamentoIA, cite como cada area selecionada sera monitorada ou reavaliada quando houver mais de uma regiao marcada.
