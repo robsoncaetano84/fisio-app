@@ -91,6 +91,7 @@ describe('PacienteListService', () => {
       cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
       vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
       conviteEnviadoEm: null,
+      conviteExpiraEm: null,
       conviteAceitoEm: null,
       createdAt: now,
       updatedAt: now,

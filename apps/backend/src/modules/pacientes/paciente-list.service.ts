@@ -64,6 +64,7 @@ export class PacienteListService {
         'p.cadastroOrigem',
         'p.vinculoStatus',
         'p.conviteEnviadoEm',
+        'p.conviteExpiraEm',
         'p.conviteAceitoEm',
         'p.appAccessEvents',
         'p.createdAt',
@@ -107,6 +108,7 @@ export class PacienteListService {
       vinculoStatus: paciente.vinculoStatus,
       statusCiclo,
       conviteEnviadoEm: paciente.conviteEnviadoEm || null,
+      conviteExpiraEm: paciente.conviteExpiraEm || null,
       conviteAceitoEm: paciente.conviteAceitoEm || null,
       appAccessEvents: Array.isArray(paciente.appAccessEvents)
         ? paciente.appAccessEvents

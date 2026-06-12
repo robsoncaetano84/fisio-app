@@ -135,6 +135,14 @@ export interface PacienteAppAccessEvent {
   actorUsuarioId?: string | null;
 }
 
+export enum PacienteAppAccessState {
+  SEM_CONVITE = "SEM_CONVITE",
+  CONVITE_PENDENTE = "CONVITE_PENDENTE",
+  CONVITE_EXPIRADO = "CONVITE_EXPIRADO",
+  ACESSO_ATIVO = "ACESSO_ATIVO",
+  BLOQUEADO_CONFLITO = "BLOQUEADO_CONFLITO",
+}
+
 export enum PacienteCicloStatus {
   AGUARDANDO_ANAMNESE = "AGUARDANDO_ANAMNESE",
   EM_TRATAMENTO = "EM_TRATAMENTO",
@@ -186,6 +194,7 @@ export interface Paciente {
   vinculoStatus?: PacienteVinculoStatus;
   statusCiclo?: PacienteCicloStatus;
   conviteEnviadoEm?: string;
+  conviteExpiraEm?: string;
   conviteAceitoEm?: string;
   appAccessEvents?: PacienteAppAccessEvent[];
   ativo: boolean;
@@ -466,6 +475,22 @@ export interface PacienteInviteCreateResponse {
   token: string;
   link: string;
   expiraEmDias: number;
+  expiraEm: string;
+}
+
+export interface PacienteAppAccessStatusResponse {
+  pacienteId: string;
+  pacienteUsuarioId: string | null;
+  vinculoStatus: PacienteVinculoStatus;
+  status: PacienteAppAccessState;
+  conviteEnviadoEm: string | null;
+  conviteExpiraEm: string | null;
+  conviteAceitoEm: string | null;
+  podeGerarConvite: boolean;
+  podeReenviarConvite: boolean;
+  podeRevogarConvite: boolean;
+  podeDesvincularAcesso: boolean;
+  appAccessEvents: PacienteAppAccessEvent[];
 }
 
 export interface PacienteInviteRegisterResponse extends LoginResponse {
@@ -534,6 +559,7 @@ export type RootStackParamList = {
     | undefined;
   PacienteForm: { pacienteId?: string; mode?: "view" | "edit" };
   PacienteDetails: { pacienteId: string };
+  PacienteInviteAccess: { pacienteId: string };
   PacienteAdesao: { pacienteId: string };
   AtividadeForm: { pacienteId: string; pacienteNome?: string };
 

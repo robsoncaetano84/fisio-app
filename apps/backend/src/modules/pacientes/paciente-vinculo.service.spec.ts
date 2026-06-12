@@ -173,6 +173,7 @@ describe('PacienteVinculoService', () => {
       usuarioId: 'profissional-1',
       pacienteUsuarioId: null,
       cadastroOrigem: PacienteCadastroOrigem.CONVITE_RAPIDO,
+      conviteExpiraEm: new Date('2026-01-08T00:00:00.000Z'),
       conviteAceitoEm: null,
     } as Paciente;
     lockedPacienteBuilder.getOne.mockResolvedValue(pacienteLocked);
@@ -187,6 +188,7 @@ describe('PacienteVinculoService', () => {
     expect(result).toMatchObject({
       pacienteUsuarioId: 'usuario-paciente',
       vinculoStatus: PacienteVinculoStatus.VINCULADO_PENDENTE_COMPLEMENTO,
+      conviteExpiraEm: null,
       conviteAceitoEm: expect.any(Date),
     });
     expect(transactionRepo.update).toHaveBeenCalledWith(

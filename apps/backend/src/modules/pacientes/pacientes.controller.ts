@@ -443,6 +443,16 @@ export class PacientesController {
     return this.pacientesService.findOneListItem(id, usuario.id);
   }
 
+  @Get(':id/acesso-app')
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  findAppAccessStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.pacientesService.getPacienteAppAccessStatus(id, usuario.id);
+  }
+
   @Patch(':id')
   @Throttle({ default: { ttl: 60, limit: 30 } })
   @Roles(UserRole.ADMIN, UserRole.USER)

@@ -26,9 +26,11 @@ const anamnese = {
 } as unknown as Anamnese;
 
 const laudo = {
-  diagnosticoFuncional: 'Disfuncao funcional lombar com baixa tolerancia a flexao.',
+  diagnosticoFuncional:
+    'Disfuncao funcional lombar com baixa tolerancia a flexao.',
   achadosClinicos: 'Mobilidade lombar reduzida.',
-  exameFisico: 'Teste regional lombar positivo com deficit de controle lombo-pelvico.',
+  exameFisico:
+    'Teste regional lombar positivo com deficit de controle lombo-pelvico.',
   condutas: 'Exercicios progressivos de controle motor.',
   planoTratamentoIA: 'Fase 1 controle de sintomas; fase 2 retorno funcional.',
 } as unknown as Laudo;

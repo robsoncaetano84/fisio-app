@@ -35,6 +35,7 @@ import {
   PacienteFormScreen,
   PacientesListScreen,
   PacienteDetailsScreen,
+  PacienteInviteAccessScreen,
   PacienteAdesaoScreen,
   AtividadeFormScreen,
 } from "../screens/pacientes";
@@ -70,6 +71,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       PacientesList: "pacientes",
       PacienteForm: "pacientes/form",
       PacienteDetails: "pacientes/:pacienteId",
+      PacienteInviteAccess: "pacientes/:pacienteId/convite",
       PacienteAdesao: "pacientes/:pacienteId/adesao",
       AnamneseForm: "anamnese/:pacienteId/form",
       AnamneseList: "anamnese/:pacienteId/lista",
@@ -204,6 +206,11 @@ const MainStack = ({ t }: { t: (key: string) => string }) => (
       name="PacienteAdesao"
       component={PacienteAdesaoScreen}
       options={{ title: t("nav.patientAdherence") }}
+    />
+    <Stack.Screen
+      name="PacienteInviteAccess"
+      component={PacienteInviteAccessScreen}
+      options={{ title: t("nav.patientInviteAccess") }}
     />
     <Stack.Screen
       name="AtividadeForm"

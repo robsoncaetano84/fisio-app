@@ -70,6 +70,7 @@ describe('PacienteProfessionalService', () => {
     ativo: true,
     cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
     vinculoStatus: PacienteVinculoStatus.VINCULADO,
+    conviteExpiraEm: null,
     conviteAceitoEm: new Date('2026-01-01T00:00:00.000Z'),
   } as Paciente;
 
@@ -103,6 +104,7 @@ describe('PacienteProfessionalService', () => {
         usuarioId: 'profissional-1',
         pacienteUsuarioId: 'usuario-paciente',
         cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
+        conviteExpiraEm: null,
         conviteAceitoEm: expect.any(Date),
       }),
     );
@@ -133,6 +135,7 @@ describe('PacienteProfessionalService', () => {
 
     expect(result).toMatchObject({
       vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+      conviteExpiraEm: null,
       conviteAceitoEm: null,
     });
     expect(pacienteRepository.save).toHaveBeenCalled();
@@ -161,7 +164,34 @@ describe('PacienteProfessionalService', () => {
     expect(result).toMatchObject({
       pacienteUsuarioId: null,
       vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+      conviteExpiraEm: null,
       conviteAceitoEm: null,
+    });
+  });
+
+  it('classifies pending invite as expired when expiration passed', async () => {
+    const { service, pacienteScopeService } = makeService();
+    pacienteScopeService.findScopedPacienteById.mockResolvedValue({
+      ...paciente,
+      pacienteUsuarioId: null,
+      vinculoStatus: PacienteVinculoStatus.CONVITE_ENVIADO,
+      conviteEnviadoEm: new Date('2026-01-01T00:00:00.000Z'),
+      conviteExpiraEm: new Date('2026-01-02T00:00:00.000Z'),
+      conviteAceitoEm: null,
+      appAccessEvents: [],
+    });
+
+    const result = await service.getPacienteAppAccessStatus(
+      'paciente-1',
+      'profissional-1',
+    );
+
+    expect(result).toMatchObject({
+      status: 'CONVITE_EXPIRADO',
+      podeGerarConvite: true,
+      podeReenviarConvite: true,
+      podeRevogarConvite: true,
+      podeDesvincularAcesso: false,
     });
   });
 
@@ -187,6 +217,7 @@ describe('PacienteProfessionalService', () => {
       pacienteUsuarioId: null,
       vinculoStatus: PacienteVinculoStatus.CONVITE_ENVIADO,
       conviteEnviadoEm: new Date('2026-06-07T10:00:00.000Z'),
+      conviteExpiraEm: new Date('2026-06-14T10:00:00.000Z'),
       appAccessEvents: [],
     });
 
@@ -198,6 +229,7 @@ describe('PacienteProfessionalService', () => {
     expect(result).toMatchObject({
       vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
       conviteEnviadoEm: null,
+      conviteExpiraEm: null,
       conviteAceitoEm: null,
       appAccessEvents: [
         expect.objectContaining({

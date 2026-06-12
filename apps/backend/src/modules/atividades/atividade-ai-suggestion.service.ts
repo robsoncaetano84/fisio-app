@@ -98,7 +98,9 @@ export class AtividadeAiSuggestionService {
     return trimmed.slice(0, maxLen);
   }
 
-  private buildLaudoContext(laudo: Laudo | null): Record<string, unknown> | null {
+  private buildLaudoContext(
+    laudo: Laudo | null,
+  ): Record<string, unknown> | null {
     if (!laudo) return null;
     return {
       diagnosticoFuncional: this.sanitizeText(laudo.diagnosticoFuncional, 900),
@@ -111,7 +113,8 @@ export class AtividadeAiSuggestionService {
   }
 
   private normalizeForMatch(value: unknown): string {
-    return String(value || '')
+    if (typeof value !== 'string') return '';
+    return value
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
@@ -135,7 +138,8 @@ export class AtividadeAiSuggestionService {
       ].join(' '),
     );
 
-    const hasAny = (terms: string[]) => terms.some((term) => context.includes(term));
+    const hasAny = (terms: string[]) =>
+      terms.some((term) => context.includes(term));
     if (hasAny(['ombro', 'manguito', 'escapul'])) {
       return 'Exercicios terapeuticos: mobilidade ativa-assistida de ombro em amplitude toleravel, controle escapular e fortalecimento inicial de manguito sem reproduzir dor sustentada.';
     }

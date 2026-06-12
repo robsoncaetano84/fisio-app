@@ -506,6 +506,7 @@ export class AuthService {
     token: string;
     link: string;
     expiraEmDias: number;
+    expiraEm: Date;
   }> {
     if (
       profissional.role !== UserRole.ADMIN &&
@@ -549,6 +550,7 @@ export class AuthService {
       anamneseLiberadaPaciente: false,
       pacienteUsuarioId: null,
       conviteEnviadoEm: null,
+      conviteExpiraEm: null,
       conviteAceitoEm: null,
       ativo: true,
     };
@@ -567,6 +569,7 @@ export class AuthService {
       token: invite.token,
       link: invite.link,
       expiraEmDias: invite.expiraEmDias,
+      expiraEm: invite.expiraEm,
     };
   }
 
@@ -574,7 +577,12 @@ export class AuthService {
     profissional: Usuario,
     pacienteId: string,
     diasExpiracao?: number,
-  ): Promise<{ token: string; link: string; expiraEmDias: number }> {
+  ): Promise<{
+    token: string;
+    link: string;
+    expiraEmDias: number;
+    expiraEm: Date;
+  }> {
     if (
       profissional.role !== UserRole.ADMIN &&
       profissional.role !== UserRole.USER
@@ -595,6 +603,9 @@ export class AuthService {
     }
 
     const expiraEmDias = Math.min(Math.max(diasExpiracao ?? 7, 1), 30);
+    const conviteEnviadoEm = new Date();
+    const conviteExpiraEm = new Date(conviteEnviadoEm);
+    conviteExpiraEm.setDate(conviteExpiraEm.getDate() + expiraEmDias);
     const inviteBaseUrl =
       this.configService.get<string>('PATIENT_INVITE_BASE_URL') ||
       'synap://cadastro-paciente';
@@ -618,7 +629,8 @@ export class AuthService {
       paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO &&
       !!paciente.conviteEnviadoEm;
     paciente.vinculoStatus = PacienteVinculoStatus.CONVITE_ENVIADO;
-    paciente.conviteEnviadoEm = new Date();
+    paciente.conviteEnviadoEm = conviteEnviadoEm;
+    paciente.conviteExpiraEm = conviteExpiraEm;
     appendPacienteAppAccessEvent(
       paciente,
       wasPendingInvite
@@ -628,7 +640,7 @@ export class AuthService {
     );
     await this.pacienteRepository.save(paciente);
 
-    return { token, link, expiraEmDias };
+    return { token, link, expiraEmDias, expiraEm: conviteExpiraEm };
   }
 
   async aceitarConvitePaciente(
@@ -653,6 +665,7 @@ export class AuthService {
         pacienteParaVinculo,
         pacienteUsuario,
       );
+    pacienteVinculado.conviteExpiraEm = null;
     appendPacienteAppAccessEvent(
       pacienteVinculado,
       PacienteAppAccessEventType.INVITE_ACCEPTED,
@@ -713,6 +726,7 @@ export class AuthService {
         pacienteParaVinculo,
         pacienteUsuario,
       );
+    pacienteVinculado.conviteExpiraEm = null;
     appendPacienteAppAccessEvent(
       pacienteVinculado,
       PacienteAppAccessEventType.INVITE_ACCEPTED,

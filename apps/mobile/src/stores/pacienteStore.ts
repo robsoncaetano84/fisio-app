@@ -68,6 +68,7 @@ type ApiPaciente = {
   vinculoStatus?: PacienteVinculoStatus | null;
   statusCiclo?: PacienteCicloStatus | null;
   conviteEnviadoEm?: string | null;
+  conviteExpiraEm?: string | null;
   conviteAceitoEm?: string | null;
   appAccessEvents?: PacienteAppAccessEvent[] | null;
   ativo: boolean;
@@ -198,6 +199,7 @@ const mapApiToPaciente = (p: ApiPaciente): Paciente => ({
   vinculoStatus: p.vinculoStatus || PacienteVinculoStatus.SEM_VINCULO,
   statusCiclo: p.statusCiclo || PacienteCicloStatus.AGUARDANDO_ANAMNESE,
   conviteEnviadoEm: p.conviteEnviadoEm || undefined,
+  conviteExpiraEm: p.conviteExpiraEm || undefined,
   conviteAceitoEm: p.conviteAceitoEm || undefined,
   appAccessEvents: Array.isArray(p.appAccessEvents) ? p.appAccessEvents : [],
   createdAt: p.createdAt,
@@ -493,6 +495,5 @@ export const usePacienteStore = create<PacienteStore>((set, get) => ({
 
   getPacienteById: (id) => get().pacientes.find((p) => p.id === id),
 }));
-
 
 

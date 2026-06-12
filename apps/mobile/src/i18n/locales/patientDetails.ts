@@ -99,7 +99,8 @@ export const ptPatientDetails: TranslationMap = {
   "patientDetails.quickMessageScheduleLabel": "Agendar retorno",
   "patientDetails.quickMessageScheduleText":
     "Oi {{name}}, vamos agendar seu retorno para revisar sua evolução e ajustar o plano.",
-  "patientDetails.quickMessageFirstAppointmentLabel": "Agendar primeira consulta",
+  "patientDetails.quickMessageFirstAppointmentLabel":
+    "Agendar primeira consulta",
   "patientDetails.quickMessageFirstAppointmentText":
     "Oi {{name}}, vamos agendar sua primeira consulta para iniciar o acompanhamento e definir o plano com segurança.",
   "patientDetails.quickMessageEmotionalSupportLabel": "Contato acolhedor",
@@ -166,19 +167,59 @@ export const ptPatientDetails: TranslationMap = {
   "patientAppAccess.title": "Acesso do paciente ao app",
   "patientAppAccess.statusActive": "Acesso app ativo",
   "patientAppAccess.statusInvited": "Convite enviado",
+  "patientAppAccess.statusExpired": "Convite expirado",
+  "patientAppAccess.statusConflict": "Conflito de vínculo",
   "patientAppAccess.statusMissing": "Sem acesso ao app",
   "patientAppAccess.acceptedAt": "Aceito em {{date}}",
   "patientAppAccess.sentAt": "Enviado em {{date}}",
+  "patientAppAccess.expiresAt": "Válido até {{date}}",
+  "patientAppAccess.expiredAt": "Expirou em {{date}}",
   "patientAppAccess.activeDescription":
     "O paciente já pode acessar acompanhamento, checks, exames e documentos publicados.",
   "patientAppAccess.pendingDescription":
     "Aguardando o paciente aceitar o convite.",
+  "patientAppAccess.expiredDescription":
+    "O convite expirou. Gere um novo link antes de enviar novamente.",
+  "patientAppAccess.conflictDescription":
+    "Este cadastro tem conflito de vínculo. Revise o paciente antes de enviar novo acesso.",
   "patientAppAccess.missingDescription":
     "Envie o convite para o paciente acompanhar atividades, exames e documentos pelo app.",
+  "patientAppAccess.manageInvite": "Gerenciar convite",
+  "patientAppAccess.accessCenterDescription":
+    "Centralize o envio, QR code, cópia do link e controle de vínculo do paciente.",
+  "patientAppAccess.statusPanelTitle": "Status do vínculo",
+  "patientAppAccess.qrTitle": "QR code do convite",
+  "patientAppAccess.qrHint":
+    "Mostre este QR code ao paciente ou envie o mesmo link pelos atalhos abaixo.",
+  "patientAppAccess.qrEmptyTitle": "Nenhum link gerado nesta tela",
+  "patientAppAccess.qrEmptyDescription":
+    "Gere um link novo para exibir QR code, copiar ou enviar ao paciente.",
+  "patientAppAccess.generateLink": "Gerar link",
+  "patientAppAccess.deliveryTitle": "Envio ao paciente",
+  "patientAppAccess.whatsappDirectDescription":
+    "Abre a conversa do paciente com a mensagem pronta.",
+  "patientAppAccess.whatsappGenericDescription":
+    "Abre o WhatsApp para escolher o contato.",
+  "patientAppAccess.shareDescription":
+    "Envia por qualquer aplicativo disponível no dispositivo.",
+  "patientAppAccess.copyMessageDescription":
+    "Copia a mensagem completa com saudação, e-mail e link.",
+  "patientAppAccess.copyLinkDescription":
+    "Copia somente o link para colar onde preferir.",
+  "patientAppAccess.securityTitle": "Controle do acesso",
+  "patientAppAccess.revokeDescription":
+    "Cancela o convite pendente sem remover dados do paciente.",
+  "patientAppAccess.unlinkDescription":
+    "Remove o acesso app ativo e permite um novo convite depois.",
+  "patientAppAccess.noHistory": "Nenhum evento de acesso registrado.",
   "patientAppAccess.sendInvite": "Enviar convite",
   "patientAppAccess.resendInvite": "Reenviar convite",
   "patientAppAccess.copyInvite": "Copiar convite",
+  "patientAppAccess.copyMessage": "Copiar mensagem",
+  "patientAppAccess.copyLink": "Copiar link",
+  "patientAppAccess.shareInvite": "Compartilhar",
   "patientAppAccess.sendWhatsapp": "Enviar pelo WhatsApp",
+  "patientAppAccess.refreshStatus": "Atualizar status",
   "patientAppAccess.unlinkAction": "Desvincular acesso",
   "patientAppAccess.unlinkTitle": "Desvincular acesso ao app",
   "patientAppAccess.unlinkMessage":
@@ -191,7 +232,12 @@ export const ptPatientDetails: TranslationMap = {
   "patientAppAccess.revokeConfirm": "Revogar",
   "patientAppAccess.revokeSuccess": "Convite revogado com sucesso.",
   "patientAppAccess.inviteReady": "Convite pronto para envio.",
+  "patientAppAccess.linkGenerated": "Link gerado com sucesso.",
   "patientAppAccess.linkCopied": "Convite copiado.",
+  "patientAppAccess.messageCopied": "Mensagem copiada.",
+  "patientAppAccess.rawLinkCopied": "Link copiado.",
+  "patientAppAccess.messageReady": "Mensagem pronta para envio.",
+  "patientAppAccess.statusUpdated": "Status atualizado.",
   "patientAppAccess.inviteGreeting": "Olá, {{name}}.",
   "patientAppAccess.inviteIntro":
     "Você recebeu um convite para acessar sua área no Synap.",
@@ -455,7 +501,8 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.quickMessageScheduleLabel": "Schedule follow-up",
   "patientDetails.quickMessageScheduleText":
     "Hi {{name}}, let's schedule your follow-up to review progress and adjust the plan.",
-  "patientDetails.quickMessageFirstAppointmentLabel": "Schedule first appointment",
+  "patientDetails.quickMessageFirstAppointmentLabel":
+    "Schedule first appointment",
   "patientDetails.quickMessageFirstAppointmentText":
     "Hi {{name}}, let's schedule your first appointment so we can start follow-up and define the plan safely.",
   "patientDetails.quickMessageEmotionalSupportLabel": "Supportive check-in",
@@ -522,19 +569,59 @@ export const enPatientDetails: TranslationMap = {
   "patientAppAccess.title": "Patient app access",
   "patientAppAccess.statusActive": "App access active",
   "patientAppAccess.statusInvited": "Invite sent",
+  "patientAppAccess.statusExpired": "Invite expired",
+  "patientAppAccess.statusConflict": "Link conflict",
   "patientAppAccess.statusMissing": "No app access",
   "patientAppAccess.acceptedAt": "Accepted on {{date}}",
   "patientAppAccess.sentAt": "Sent on {{date}}",
+  "patientAppAccess.expiresAt": "Valid until {{date}}",
+  "patientAppAccess.expiredAt": "Expired on {{date}}",
   "patientAppAccess.activeDescription":
     "The patient can access follow-up, checks, exams, and published documents.",
   "patientAppAccess.pendingDescription":
     "Waiting for the patient to accept the invite.",
+  "patientAppAccess.expiredDescription":
+    "The invite has expired. Generate a new link before sending it again.",
+  "patientAppAccess.conflictDescription":
+    "This record has a link conflict. Review the patient before sending new access.",
   "patientAppAccess.missingDescription":
     "Send the invite so the patient can follow activities, exams, and documents in the app.",
+  "patientAppAccess.manageInvite": "Manage invite",
+  "patientAppAccess.accessCenterDescription":
+    "Centralize delivery, QR code, link copy and patient access control.",
+  "patientAppAccess.statusPanelTitle": "Access status",
+  "patientAppAccess.qrTitle": "Invite QR code",
+  "patientAppAccess.qrHint":
+    "Show this QR code to the patient or send the same link using the actions below.",
+  "patientAppAccess.qrEmptyTitle": "No link generated in this screen",
+  "patientAppAccess.qrEmptyDescription":
+    "Generate a new link to show a QR code, copy or send it to the patient.",
+  "patientAppAccess.generateLink": "Generate link",
+  "patientAppAccess.deliveryTitle": "Delivery to patient",
+  "patientAppAccess.whatsappDirectDescription":
+    "Opens the patient chat with the message ready.",
+  "patientAppAccess.whatsappGenericDescription":
+    "Opens WhatsApp so you can choose the contact.",
+  "patientAppAccess.shareDescription":
+    "Sends through any available app on the device.",
+  "patientAppAccess.copyMessageDescription":
+    "Copies the full message with greeting, email and link.",
+  "patientAppAccess.copyLinkDescription":
+    "Copies only the link to paste wherever needed.",
+  "patientAppAccess.securityTitle": "Access control",
+  "patientAppAccess.revokeDescription":
+    "Cancels the pending invite without removing patient data.",
+  "patientAppAccess.unlinkDescription":
+    "Removes active app access and allows a new invite later.",
+  "patientAppAccess.noHistory": "No access event recorded.",
   "patientAppAccess.sendInvite": "Send invite",
   "patientAppAccess.resendInvite": "Resend invite",
   "patientAppAccess.copyInvite": "Copy invite",
+  "patientAppAccess.copyMessage": "Copy message",
+  "patientAppAccess.copyLink": "Copy link",
+  "patientAppAccess.shareInvite": "Share",
   "patientAppAccess.sendWhatsapp": "Send via WhatsApp",
+  "patientAppAccess.refreshStatus": "Refresh status",
   "patientAppAccess.unlinkAction": "Unlink access",
   "patientAppAccess.unlinkTitle": "Unlink app access",
   "patientAppAccess.unlinkMessage":
@@ -547,7 +634,12 @@ export const enPatientDetails: TranslationMap = {
   "patientAppAccess.revokeConfirm": "Revoke",
   "patientAppAccess.revokeSuccess": "Invite revoked successfully.",
   "patientAppAccess.inviteReady": "Invite ready to send.",
+  "patientAppAccess.linkGenerated": "Link generated successfully.",
   "patientAppAccess.linkCopied": "Invite copied.",
+  "patientAppAccess.messageCopied": "Message copied.",
+  "patientAppAccess.rawLinkCopied": "Link copied.",
+  "patientAppAccess.messageReady": "Message ready to send.",
+  "patientAppAccess.statusUpdated": "Status updated.",
   "patientAppAccess.inviteGreeting": "Hello, {{name}}.",
   "patientAppAccess.inviteIntro":
     "You received an invite to access your area in Synap.",
@@ -612,14 +704,12 @@ export const enPatientDetails: TranslationMap = {
   "patientDetails.validateAnamnesisReview": "Validate review",
   "patientDetails.anamnesisReviewDefaultNote":
     "Patient-filled anamnesis reviewed by the professional.",
-  "patientDetails.anamnesisReviewedSuccess":
-    "Anamnesis reviewed successfully.",
+  "patientDetails.anamnesisReviewedSuccess": "Anamnesis reviewed successfully.",
   "patientDetails.anamnesisReviewedError":
     "Could not validate the anamnesis review.",
   "patientDetails.auditLaudoValidated": "Report validated",
   "patientDetails.auditLaudoPublished": "Report/plan published to patient",
-  "patientDetails.auditAnamnesisReviewed":
-    "Anamnesis reviewed by professional",
+  "patientDetails.auditAnamnesisReviewed": "Anamnesis reviewed by professional",
   "patientDetails.auditPdfViewed": "PDF viewed by patient",
   "patientDetails.auditProfessionalPdf": "PDF opened by professional",
   "patientDetails.auditQuickMessage": "Quick message sent",
@@ -692,7 +782,8 @@ export const enPatientDetails: TranslationMap = {
     "Consider aligning care to the main goal: {{value}}.",
   "patientDetails.contextLimitationsHint":
     "Prioritize interventions aimed at the reported functional limitations.",
-  "patientDetails.nextActionFirstAppointmentTitle": "Schedule first appointment",
+  "patientDetails.nextActionFirstAppointmentTitle":
+    "Schedule first appointment",
   "patientDetails.nextActionFirstAppointmentRecentDescription":
     "Patient was recently registered and has no first appointment recorded yet. Start follow-up before measuring dropout risk.",
   "patientDetails.nextActionFirstAppointmentPendingDescription":
@@ -814,7 +905,8 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.quickMessageScheduleLabel": "Agendar retorno",
   "patientDetails.quickMessageScheduleText":
     "Hola {{name}}, vamos a agendar tu retorno para revisar tu evolución y ajustar el plan.",
-  "patientDetails.quickMessageFirstAppointmentLabel": "Agendar primera consulta",
+  "patientDetails.quickMessageFirstAppointmentLabel":
+    "Agendar primera consulta",
   "patientDetails.quickMessageFirstAppointmentText":
     "Hola {{name}}, vamos a agendar tu primera consulta para iniciar el seguimiento y definir el plan con seguridad.",
   "patientDetails.quickMessageEmotionalSupportLabel": "Contacto de apoyo",
@@ -884,19 +976,59 @@ export const esPatientDetails: TranslationMap = {
   "patientAppAccess.title": "Acceso del paciente a la app",
   "patientAppAccess.statusActive": "Acceso app activo",
   "patientAppAccess.statusInvited": "Invitación enviada",
+  "patientAppAccess.statusExpired": "Invitación expirada",
+  "patientAppAccess.statusConflict": "Conflicto de vínculo",
   "patientAppAccess.statusMissing": "Sin acceso a la app",
   "patientAppAccess.acceptedAt": "Aceptado el {{date}}",
   "patientAppAccess.sentAt": "Enviado el {{date}}",
+  "patientAppAccess.expiresAt": "Válido hasta {{date}}",
+  "patientAppAccess.expiredAt": "Expiró el {{date}}",
   "patientAppAccess.activeDescription":
     "El paciente puede acceder a seguimiento, checks, exámenes y documentos publicados.",
   "patientAppAccess.pendingDescription":
     "Esperando que el paciente acepte la invitación.",
+  "patientAppAccess.expiredDescription":
+    "La invitación expiró. Genera un nuevo enlace antes de enviarla nuevamente.",
+  "patientAppAccess.conflictDescription":
+    "Este registro tiene conflicto de vínculo. Revisa el paciente antes de enviar nuevo acceso.",
   "patientAppAccess.missingDescription":
     "Envía la invitación para que el paciente acompañe actividades, exámenes y documentos en la app.",
+  "patientAppAccess.manageInvite": "Gestionar invitación",
+  "patientAppAccess.accessCenterDescription":
+    "Centraliza el envío, QR code, copia del enlace y control de acceso del paciente.",
+  "patientAppAccess.statusPanelTitle": "Estado del vínculo",
+  "patientAppAccess.qrTitle": "QR code de la invitación",
+  "patientAppAccess.qrHint":
+    "Muestra este QR code al paciente o envía el mismo enlace con las acciones abajo.",
+  "patientAppAccess.qrEmptyTitle": "Ningún enlace generado en esta pantalla",
+  "patientAppAccess.qrEmptyDescription":
+    "Genera un nuevo enlace para mostrar QR code, copiar o enviarlo al paciente.",
+  "patientAppAccess.generateLink": "Generar enlace",
+  "patientAppAccess.deliveryTitle": "Envío al paciente",
+  "patientAppAccess.whatsappDirectDescription":
+    "Abre la conversación del paciente con el mensaje listo.",
+  "patientAppAccess.whatsappGenericDescription":
+    "Abre WhatsApp para elegir el contacto.",
+  "patientAppAccess.shareDescription":
+    "Envía por cualquier app disponible en el dispositivo.",
+  "patientAppAccess.copyMessageDescription":
+    "Copia el mensaje completo con saludo, e-mail y enlace.",
+  "patientAppAccess.copyLinkDescription":
+    "Copia solo el enlace para pegarlo donde prefieras.",
+  "patientAppAccess.securityTitle": "Control del acceso",
+  "patientAppAccess.revokeDescription":
+    "Cancela la invitación pendiente sin eliminar datos del paciente.",
+  "patientAppAccess.unlinkDescription":
+    "Elimina el acceso app activo y permite una nueva invitación después.",
+  "patientAppAccess.noHistory": "Ningún evento de acceso registrado.",
   "patientAppAccess.sendInvite": "Enviar invitación",
   "patientAppAccess.resendInvite": "Reenviar invitación",
   "patientAppAccess.copyInvite": "Copiar invitación",
+  "patientAppAccess.copyMessage": "Copiar mensaje",
+  "patientAppAccess.copyLink": "Copiar enlace",
+  "patientAppAccess.shareInvite": "Compartir",
   "patientAppAccess.sendWhatsapp": "Enviar por WhatsApp",
+  "patientAppAccess.refreshStatus": "Actualizar estado",
   "patientAppAccess.unlinkAction": "Desvincular acceso",
   "patientAppAccess.unlinkTitle": "Desvincular acceso a la app",
   "patientAppAccess.unlinkMessage":
@@ -909,7 +1041,12 @@ export const esPatientDetails: TranslationMap = {
   "patientAppAccess.revokeConfirm": "Revocar",
   "patientAppAccess.revokeSuccess": "Invitación revocada con éxito.",
   "patientAppAccess.inviteReady": "Invitación lista para enviar.",
+  "patientAppAccess.linkGenerated": "Enlace generado con éxito.",
   "patientAppAccess.linkCopied": "Invitación copiada.",
+  "patientAppAccess.messageCopied": "Mensaje copiado.",
+  "patientAppAccess.rawLinkCopied": "Enlace copiado.",
+  "patientAppAccess.messageReady": "Mensaje listo para enviar.",
+  "patientAppAccess.statusUpdated": "Estado actualizado.",
   "patientAppAccess.inviteGreeting": "Hola, {{name}}.",
   "patientAppAccess.inviteIntro":
     "Recibiste una invitación para acceder a tu área en Synap.",
@@ -934,8 +1071,7 @@ export const esPatientDetails: TranslationMap = {
   "careTimeline.stage.plano_laudo": "Plan e informe",
   "careTimeline.stage.checkin": "Check-ins",
   "careTimeline.patient.status.DONE": "Etapa completada en el seguimiento.",
-  "careTimeline.patient.status.CURRENT":
-    "Próxima acción recomendada para ti.",
+  "careTimeline.patient.status.CURRENT": "Próxima acción recomendada para ti.",
   "careTimeline.patient.status.WAITING":
     "Esperando liberación o revisión del profesional.",
   "careTimeline.patient.status.PENDING":
@@ -957,8 +1093,7 @@ export const esPatientDetails: TranslationMap = {
   "careTimeline.patient.action.VIEW_DOCUMENTS": "Ver documentos",
   "careTimeline.professional.action.SEND_INVITE": "Enviar invitación",
   "careTimeline.professional.action.FILL_ANAMNESE": "Abrir anamnesis",
-  "careTimeline.professional.action.WAIT_PROFESSIONAL":
-    "Acompañar liberación",
+  "careTimeline.professional.action.WAIT_PROFESSIONAL": "Acompañar liberación",
   "careTimeline.professional.action.UPLOAD_EXAM": "Adjuntar examen",
   "careTimeline.professional.action.RECORD_EVOLUTION": "Registrar evolución",
   "careTimeline.professional.action.PUBLISH_REPORT": "Abrir informe",
@@ -977,8 +1112,7 @@ export const esPatientDetails: TranslationMap = {
   "patientDetails.validateAnamnesisReview": "Validar revisión",
   "patientDetails.anamnesisReviewDefaultNote":
     "Anamnesis completada por el paciente revisada por el profesional.",
-  "patientDetails.anamnesisReviewedSuccess":
-    "Anamnesis revisada con éxito.",
+  "patientDetails.anamnesisReviewedSuccess": "Anamnesis revisada con éxito.",
   "patientDetails.anamnesisReviewedError":
     "No fue posible validar la revisión de anamnesis.",
   "patientDetails.auditLaudoValidated": "Informe validado",

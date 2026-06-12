@@ -17,6 +17,7 @@ export const ptNavigation: TranslationMap = {
   "nav.editPatient": "Editar paciente",
   "nav.newPatient": "Novo paciente",
   "nav.patientDetails": "Detalhes do paciente",
+  "nav.patientInviteAccess": "Convite do paciente",
   "nav.patientAdherence": "Aderência do paciente",
   "nav.prescribeActivity": "Prescrever atividade",
   "nav.newAnamnesis": "Nova Anamnese",
@@ -45,6 +46,7 @@ export const enNavigation: TranslationMap = {
   "nav.editPatient": "Edit Patient",
   "nav.newPatient": "New Patient",
   "nav.patientDetails": "Patient Details",
+  "nav.patientInviteAccess": "Patient Invite",
   "nav.patientAdherence": "Patient Adherence",
   "nav.prescribeActivity": "Prescribe Activity",
   "nav.newAnamnesis": "New Anamnesis",
@@ -73,6 +75,7 @@ export const esNavigation: TranslationMap = {
   "nav.editPatient": "Editar Paciente",
   "nav.newPatient": "Nuevo Paciente",
   "nav.patientDetails": "Detalles del Paciente",
+  "nav.patientInviteAccess": "Invitación del Paciente",
   "nav.patientAdherence": "Adherencia del Paciente",
   "nav.prescribeActivity": "Prescribir Actividad",
   "nav.newAnamnesis": "Nueva Anamnesis",
@@ -87,7 +90,3 @@ export const esNavigation: TranslationMap = {
   "nav.settings": "Configuración",
   "nav.physicalExam": "Examen físico",
 };
-
-
-
-

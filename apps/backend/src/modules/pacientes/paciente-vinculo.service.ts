@@ -81,6 +81,7 @@ export class PacienteVinculoService {
           if (!pacienteLocked.conviteAceitoEm) {
             pacienteLocked.conviteAceitoEm = new Date();
           }
+          pacienteLocked.conviteExpiraEm = null;
           pacienteDestino = await pacienteRepo.save(pacienteLocked);
         } else {
           throw new BadRequestException('Paciente ja possui usuario vinculado');
@@ -107,6 +108,7 @@ export class PacienteVinculoService {
             pacienteUsuario.id,
             pacienteLocked.cadastroOrigem,
           );
+          vinculoExistente.conviteExpiraEm = null;
           vinculoExistente.conviteAceitoEm = new Date();
 
           if (
@@ -130,6 +132,7 @@ export class PacienteVinculoService {
           pacienteLocked.ativo = false;
           pacienteLocked.pacienteUsuarioId = null;
           pacienteLocked.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+          pacienteLocked.conviteExpiraEm = null;
           pacienteLocked.conviteAceitoEm = null;
           await pacienteRepo.save(pacienteLocked);
         } else {
@@ -154,6 +157,7 @@ export class PacienteVinculoService {
             pacienteUsuario.id,
             pacienteLocked.cadastroOrigem,
           );
+          pacienteLocked.conviteExpiraEm = null;
           pacienteLocked.conviteAceitoEm = new Date();
           pacienteDestino = await pacienteRepo.save(pacienteLocked);
         }

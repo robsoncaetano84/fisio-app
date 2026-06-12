@@ -96,6 +96,7 @@ describe('PacienteSelfProfileService', () => {
         anamneseLiberadaPaciente: true,
         cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
         vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+        conviteExpiraEm: null,
       }),
     );
     expect(result).toMatchObject({
@@ -189,6 +190,7 @@ describe('PacienteSelfProfileService', () => {
       expect.objectContaining({
         pacienteUsuarioId: null,
         vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
+        conviteExpiraEm: null,
         conviteAceitoEm: null,
       }),
     );

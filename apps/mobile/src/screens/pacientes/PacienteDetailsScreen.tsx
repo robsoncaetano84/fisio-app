@@ -1537,6 +1537,7 @@ export function PacienteDetailsScreen({
               pacienteUsuarioId={paciente.pacienteUsuarioId}
               vinculoStatus={paciente.vinculoStatus}
               conviteEnviadoEm={paciente.conviteEnviadoEm}
+              conviteExpiraEm={paciente.conviteExpiraEm}
               conviteAceitoEm={paciente.conviteAceitoEm}
               appAccessEvents={paciente.appAccessEvents}
               onRefresh={async () => {

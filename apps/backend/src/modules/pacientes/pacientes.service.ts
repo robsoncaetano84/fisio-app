@@ -18,6 +18,7 @@ import {
   PacienteListItemDto,
   PacientePagedResponseDto,
 } from './dto/paciente-list-item.dto';
+import { PacienteAppAccessStatusDto } from './dto/paciente-app-access-status.dto';
 import { PacienteMediaService } from './paciente-media.service';
 import { PacienteListService } from './paciente-list.service';
 import { PacienteDashboardService } from './paciente-dashboard.service';
@@ -93,6 +94,18 @@ export class PacientesService {
         isMasterAdmin,
       );
     return this.toPacienteListItemWithCiclo(paciente);
+  }
+
+  async getPacienteAppAccessStatus(
+    id: string,
+    usuarioId: string,
+  ): Promise<PacienteAppAccessStatusDto> {
+    const isMasterAdmin = await this.isMasterAdminByUsuarioId(usuarioId);
+    return this.pacienteProfessionalService.getPacienteAppAccessStatus(
+      id,
+      usuarioId,
+      isMasterAdmin,
+    );
   }
 
   async create(

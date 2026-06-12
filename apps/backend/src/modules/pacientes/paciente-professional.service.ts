@@ -7,6 +7,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
+import {
+  PacienteAppAccessState,
+  PacienteAppAccessStatusDto,
+} from './dto/paciente-app-access-status.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import {
   appendPacienteAppAccessEvent,
@@ -47,6 +51,63 @@ export class PacienteProfessionalService {
     return this.pacienteListService.applyDisplayNameFallback(paciente);
   }
 
+  async getPacienteAppAccessStatus(
+    id: string,
+    usuarioId: string,
+    isMasterAdmin = false,
+  ): Promise<PacienteAppAccessStatusDto> {
+    const paciente = await this.findScopedPacienteOrFail(
+      id,
+      usuarioId,
+      isMasterAdmin,
+    );
+    const now = Date.now();
+    const inviteExpiresAt = paciente.conviteExpiraEm
+      ? new Date(paciente.conviteExpiraEm).getTime()
+      : null;
+    const isPendingInvite =
+      paciente.vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO;
+    const isExpiredInvite =
+      isPendingInvite &&
+      inviteExpiresAt !== null &&
+      Number.isFinite(inviteExpiresAt) &&
+      inviteExpiresAt <= now;
+
+    let status = PacienteAppAccessState.SEM_CONVITE;
+    if (paciente.pacienteUsuarioId) {
+      status = PacienteAppAccessState.ACESSO_ATIVO;
+    } else if (
+      paciente.vinculoStatus === PacienteVinculoStatus.BLOQUEADO_CONFLITO
+    ) {
+      status = PacienteAppAccessState.BLOQUEADO_CONFLITO;
+    } else if (isExpiredInvite) {
+      status = PacienteAppAccessState.CONVITE_EXPIRADO;
+    } else if (isPendingInvite) {
+      status = PacienteAppAccessState.CONVITE_PENDENTE;
+    }
+
+    return {
+      pacienteId: paciente.id,
+      pacienteUsuarioId: paciente.pacienteUsuarioId || null,
+      vinculoStatus: paciente.vinculoStatus,
+      status,
+      conviteEnviadoEm: paciente.conviteEnviadoEm || null,
+      conviteExpiraEm: paciente.conviteExpiraEm || null,
+      conviteAceitoEm: paciente.conviteAceitoEm || null,
+      podeGerarConvite:
+        !paciente.pacienteUsuarioId &&
+        paciente.vinculoStatus !== PacienteVinculoStatus.BLOQUEADO_CONFLITO,
+      podeReenviarConvite:
+        !paciente.pacienteUsuarioId &&
+        (isPendingInvite || status === PacienteAppAccessState.SEM_CONVITE),
+      podeRevogarConvite: !paciente.pacienteUsuarioId && isPendingInvite,
+      podeDesvincularAcesso: !!paciente.pacienteUsuarioId,
+      appAccessEvents: Array.isArray(paciente.appAccessEvents)
+        ? paciente.appAccessEvents
+        : [],
+    };
+  }
+
   async create(
     createPacienteDto: CreatePacienteDto,
     usuarioId: string,
@@ -85,6 +146,7 @@ export class PacienteProfessionalService {
               cadastroOrigem,
             ),
           conviteEnviadoEm: null,
+          conviteExpiraEm: null,
           conviteAceitoEm: new Date(),
           usuarioId,
           pacienteUsuarioId,
@@ -107,6 +169,7 @@ export class PacienteProfessionalService {
         cadastroOrigem,
       ),
       conviteEnviadoEm: null,
+      conviteExpiraEm: null,
       conviteAceitoEm: pacienteUsuarioId ? new Date() : null,
       usuarioId,
       pacienteUsuarioId,
@@ -181,6 +244,7 @@ export class PacienteProfessionalService {
         : PacienteVinculoStatus.SEM_VINCULO;
 
       if (!pacienteUsuarioId) {
+        paciente.conviteExpiraEm = null;
         paciente.conviteAceitoEm = null;
         appendPacienteAppAccessEvent(
           paciente,
@@ -188,6 +252,7 @@ export class PacienteProfessionalService {
           usuarioId,
         );
       } else if (!paciente.conviteAceitoEm) {
+        paciente.conviteExpiraEm = null;
         paciente.conviteAceitoEm = new Date();
         appendPacienteAppAccessEvent(
           paciente,
@@ -241,6 +306,7 @@ export class PacienteProfessionalService {
     paciente.pacienteUsuarioId = null;
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
     paciente.conviteAceitoEm = null;
+    paciente.conviteExpiraEm = null;
     appendPacienteAppAccessEvent(
       paciente,
       PacienteAppAccessEventType.ACCESS_UNLINKED,
@@ -274,6 +340,7 @@ export class PacienteProfessionalService {
 
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
     paciente.conviteEnviadoEm = null;
+    paciente.conviteExpiraEm = null;
     paciente.conviteAceitoEm = null;
     appendPacienteAppAccessEvent(
       paciente,

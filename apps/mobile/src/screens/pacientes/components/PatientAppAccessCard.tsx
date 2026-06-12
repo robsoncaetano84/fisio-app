@@ -1,25 +1,41 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
-  Platform,
   Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, useToast } from "../../../components/ui";
-import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../../constants/theme";
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONTS,
+  SPACING,
+} from "../../../constants/theme";
 import { useLanguage } from "../../../i18n/LanguageProvider";
 import { api } from "../../../services";
 import {
   PacienteAppAccessEvent,
+  PacienteAppAccessState,
+  PacienteAppAccessStatusResponse,
   PacienteInviteCreateResponse,
   PacienteVinculoStatus,
+  RootStackParamList,
 } from "../../../types";
 import { parseApiError } from "../../../utils/apiErrors";
+import {
+  buildPatientInviteMessage,
+  createPacienteAppAccessFallback,
+  INVITE_EXPIRATION_DAYS,
+  normalizeWhatsappTarget,
+} from "../patientAppAccessUtils";
 
 type Props = {
   pacienteId: string;
@@ -29,20 +45,64 @@ type Props = {
   pacienteUsuarioId?: string | null;
   vinculoStatus?: PacienteVinculoStatus | null;
   conviteEnviadoEm?: string | null;
+  conviteExpiraEm?: string | null;
   conviteAceitoEm?: string | null;
   appAccessEvents?: PacienteAppAccessEvent[];
   onRefresh?: () => Promise<void> | void;
 };
 
-type LoadingAction = "invite" | "copy" | "unlink" | "revoke" | null;
+type LoadingAction =
+  | "invite"
+  | "whatsapp"
+  | "share"
+  | "copy-message"
+  | "copy-link"
+  | "unlink"
+  | "revoke"
+  | "refresh"
+  | null;
 
-const INVITE_EXPIRATION_DAYS = 7;
+type ActionPillProps = {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+};
 
-function normalizeWhatsappTarget(whatsapp?: string) {
-  const digits = String(whatsapp || "").replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length > 11 && digits.startsWith("55")) return digits;
-  return `55${digits}`;
+function ActionPill({
+  icon,
+  label,
+  onPress,
+  disabled,
+  danger,
+}: ActionPillProps) {
+  const color = danger ? COLORS.error : COLORS.primary;
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.secondaryAction,
+        danger ? styles.dangerAction : null,
+        disabled ? styles.disabledAction : null,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.85}
+      accessibilityLabel={label}
+    >
+      <Ionicons name={icon} size={16} color={color} />
+      <Text
+        style={[
+          styles.secondaryActionText,
+          danger ? styles.dangerActionText : null,
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 }
 
 export function PatientAppAccessCard({
@@ -53,27 +113,26 @@ export function PatientAppAccessCard({
   pacienteUsuarioId,
   vinculoStatus,
   conviteEnviadoEm,
+  conviteExpiraEm,
   conviteAceitoEm,
   appAccessEvents,
   onRefresh,
 }: Props) {
   const { language, t } = useLanguage();
   const { showToast } = useToast();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
   const [lastInviteLink, setLastInviteLink] = useState<string | null>(null);
-  const hasAppAccess = !!pacienteUsuarioId;
-  const hasPendingInvite =
-    !hasAppAccess && vinculoStatus === PacienteVinculoStatus.CONVITE_ENVIADO;
-  const visibleEvents = useMemo(
-    () => (Array.isArray(appAccessEvents) ? appAccessEvents.slice(0, 4) : []),
-    [appAccessEvents],
-  );
+  const [accessStatus, setAccessStatus] =
+    useState<PacienteAppAccessStatusResponse | null>(null);
 
   const dateLocale =
     language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
 
   const formatDate = useCallback(
-    (value: string) => {
+    (value?: string | null) => {
+      if (!value) return t("patientDetails.dateUnavailable");
       const parsed = new Date(value);
       if (Number.isNaN(parsed.getTime())) {
         return t("patientDetails.dateUnavailable");
@@ -99,6 +158,93 @@ export function PatientAppAccessCard({
     [dateLocale, t],
   );
 
+  const fallbackAccessStatus = useMemo<PacienteAppAccessStatusResponse>(() => {
+    return createPacienteAppAccessFallback({
+      pacienteId,
+      pacienteUsuarioId,
+      vinculoStatus,
+      conviteEnviadoEm,
+      conviteExpiraEm,
+      conviteAceitoEm,
+      appAccessEvents,
+    });
+  }, [
+    appAccessEvents,
+    conviteAceitoEm,
+    conviteEnviadoEm,
+    conviteExpiraEm,
+    pacienteId,
+    pacienteUsuarioId,
+    vinculoStatus,
+  ]);
+
+  const appAccess = accessStatus || fallbackAccessStatus;
+  const hasAppAccess = appAccess.status === PacienteAppAccessState.ACESSO_ATIVO;
+  const hasWhatsappTarget = !!normalizeWhatsappTarget(whatsapp);
+  const canCreateInvite =
+    !hasAppAccess &&
+    appAccess.status !== PacienteAppAccessState.BLOQUEADO_CONFLITO &&
+    (appAccess.podeGerarConvite || appAccess.podeReenviarConvite);
+  const isBusy = loadingAction !== null;
+
+  const visibleEvents = useMemo(
+    () =>
+      Array.isArray(appAccess.appAccessEvents)
+        ? appAccess.appAccessEvents.slice(0, 4)
+        : [],
+    [appAccess.appAccessEvents],
+  );
+
+  const loadAccessStatus = useCallback(async () => {
+    const response = await api.get<PacienteAppAccessStatusResponse>(
+      `/pacientes/${pacienteId}/acesso-app`,
+    );
+    setAccessStatus(response.data);
+    return response.data;
+  }, [pacienteId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void (async () => {
+      try {
+        const response = await api.get<PacienteAppAccessStatusResponse>(
+          `/pacientes/${pacienteId}/acesso-app`,
+        );
+        if (mounted) {
+          setAccessStatus(response.data);
+        }
+      } catch {
+        // A tela continua funcional com os dados ja carregados do paciente.
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [pacienteId]);
+
+  const refreshAfterMutation = useCallback(async () => {
+    await loadAccessStatus();
+    await onRefresh?.();
+  }, [loadAccessStatus, onRefresh]);
+
+  const refreshManually = async () => {
+    try {
+      setLoadingAction("refresh");
+      await refreshAfterMutation();
+      showToast({
+        type: "success",
+        message: t("patientAppAccess.statusUpdated"),
+      });
+    } catch (error) {
+      const { message } = parseApiError(error);
+      showToast({ type: "error", message });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const getEventLabel = useCallback(
     (type: PacienteAppAccessEvent["type"]) =>
       t(`patientAppAccess.event.${type}`),
@@ -106,29 +252,51 @@ export function PatientAppAccessCard({
   );
 
   const status = useMemo(() => {
-    if (hasAppAccess) {
+    if (appAccess.status === PacienteAppAccessState.ACESSO_ATIVO) {
       return {
         icon: "checkmark-circle-outline" as const,
         color: COLORS.success,
         label: t("patientAppAccess.statusActive"),
-        description: conviteAceitoEm
+        description: appAccess.conviteAceitoEm
           ? t("patientAppAccess.acceptedAt", {
-              date: formatDate(conviteAceitoEm),
+              date: formatDate(appAccess.conviteAceitoEm),
             })
           : t("patientAppAccess.activeDescription"),
       };
     }
 
-    if (hasPendingInvite) {
+    if (appAccess.status === PacienteAppAccessState.CONVITE_EXPIRADO) {
+      return {
+        icon: "alert-circle-outline" as const,
+        color: COLORS.error,
+        label: t("patientAppAccess.statusExpired"),
+        description: appAccess.conviteExpiraEm
+          ? t("patientAppAccess.expiredAt", {
+              date: formatDate(appAccess.conviteExpiraEm),
+            })
+          : t("patientAppAccess.expiredDescription"),
+      };
+    }
+
+    if (appAccess.status === PacienteAppAccessState.CONVITE_PENDENTE) {
       return {
         icon: "time-outline" as const,
         color: COLORS.warning,
         label: t("patientAppAccess.statusInvited"),
-        description: conviteEnviadoEm
-          ? t("patientAppAccess.sentAt", {
-              date: formatDate(conviteEnviadoEm),
+        description: appAccess.conviteExpiraEm
+          ? t("patientAppAccess.expiresAt", {
+              date: formatDate(appAccess.conviteExpiraEm),
             })
           : t("patientAppAccess.pendingDescription"),
+      };
+    }
+
+    if (appAccess.status === PacienteAppAccessState.BLOQUEADO_CONFLITO) {
+      return {
+        icon: "ban-outline" as const,
+        color: COLORS.error,
+        label: t("patientAppAccess.statusConflict"),
+        description: t("patientAppAccess.conflictDescription"),
       };
     }
 
@@ -138,24 +306,59 @@ export function PatientAppAccessCard({
       label: t("patientAppAccess.statusMissing"),
       description: t("patientAppAccess.missingDescription"),
     };
-  }, [
-    conviteAceitoEm,
-    conviteEnviadoEm,
-    formatDate,
-    hasAppAccess,
-    hasPendingInvite,
-    t,
-  ]);
+  }, [appAccess, formatDate, t]);
+
+  const metaItems = useMemo(() => {
+    const items: {
+      key: string;
+      icon: ActionPillProps["icon"];
+      text: string;
+    }[] = [];
+
+    if (appAccess.conviteEnviadoEm) {
+      items.push({
+        key: "sent",
+        icon: "paper-plane-outline",
+        text: t("patientAppAccess.sentAt", {
+          date: formatDate(appAccess.conviteEnviadoEm),
+        }),
+      });
+    }
+
+    if (
+      appAccess.conviteExpiraEm &&
+      appAccess.status !== PacienteAppAccessState.ACESSO_ATIVO
+    ) {
+      items.push({
+        key: "expires",
+        icon: "calendar-outline",
+        text:
+          appAccess.status === PacienteAppAccessState.CONVITE_EXPIRADO
+            ? t("patientAppAccess.expiredAt", {
+                date: formatDate(appAccess.conviteExpiraEm),
+              })
+            : t("patientAppAccess.expiresAt", {
+                date: formatDate(appAccess.conviteExpiraEm),
+              }),
+      });
+    }
+
+    if (appAccess.conviteAceitoEm) {
+      items.push({
+        key: "accepted",
+        icon: "checkmark-done-outline",
+        text: t("patientAppAccess.acceptedAt", {
+          date: formatDate(appAccess.conviteAceitoEm),
+        }),
+      });
+    }
+
+    return items;
+  }, [appAccess, formatDate, t]);
 
   const buildInviteMessage = useCallback(
     (link: string) => {
-      const lines = [
-        t("patientAppAccess.inviteGreeting", { name: nome }),
-        t("patientAppAccess.inviteIntro"),
-        email ? t("patientAppAccess.inviteEmailHint", { email }) : null,
-        t("patientAppAccess.inviteLink", { link }),
-      ].filter(Boolean);
-      return lines.join("\n\n");
+      return buildPatientInviteMessage({ t, nome, email, link });
     },
     [email, nome, t],
   );
@@ -166,8 +369,19 @@ export function PatientAppAccessCard({
       { pacienteId, diasExpiracao: INVITE_EXPIRATION_DAYS },
     );
     setLastInviteLink(response.data.link);
-    await onRefresh?.();
-    return response.data.link;
+    await refreshAfterMutation();
+    return response.data;
+  };
+
+  const ensureInviteLink = async () => {
+    if (
+      lastInviteLink &&
+      appAccess.status === PacienteAppAccessState.CONVITE_PENDENTE
+    ) {
+      return lastInviteLink;
+    }
+    const invite = await createInvite();
+    return invite.link;
   };
 
   const openInviteInWhatsApp = async (link: string) => {
@@ -179,15 +393,11 @@ export function PatientAppAccessCard({
     await Linking.openURL(url);
   };
 
-  const shareInvite = async () => {
+  const sendViaWhatsApp = async () => {
     try {
-      setLoadingAction("invite");
-      const link = await createInvite();
-      if (normalizeWhatsappTarget(whatsapp)) {
-        await openInviteInWhatsApp(link);
-      } else {
-        await Share.share({ message: buildInviteMessage(link) });
-      }
+      setLoadingAction("whatsapp");
+      const invite = await createInvite();
+      await openInviteInWhatsApp(invite.link);
       showToast({
         type: "success",
         message: t("patientAppAccess.inviteReady"),
@@ -200,24 +410,15 @@ export function PatientAppAccessCard({
     }
   };
 
-  const copyInvite = async () => {
+  const shareInvite = async () => {
     try {
-      setLoadingAction("copy");
-      const link = lastInviteLink || (await createInvite());
-      const message = buildInviteMessage(link);
-      if (
-        Platform.OS === "web" &&
-        typeof navigator !== "undefined" &&
-        navigator.clipboard?.writeText
-      ) {
-        await navigator.clipboard.writeText(message);
-        showToast({
-          type: "success",
-          message: t("patientAppAccess.linkCopied"),
-        });
-        return;
-      }
-      await Share.share({ message });
+      setLoadingAction("share");
+      const invite = await createInvite();
+      await Share.share({ message: buildInviteMessage(invite.link) });
+      showToast({
+        type: "success",
+        message: t("patientAppAccess.inviteReady"),
+      });
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ type: "error", message });
@@ -226,14 +427,32 @@ export function PatientAppAccessCard({
     }
   };
 
-  const openWhatsApp = async () => {
+  const copyInviteMessage = async () => {
     try {
-      setLoadingAction("invite");
-      const link = lastInviteLink || (await createInvite());
-      await openInviteInWhatsApp(link);
+      setLoadingAction("copy-message");
+      const link = await ensureInviteLink();
+      const message = buildInviteMessage(link);
+      await Clipboard.setStringAsync(message);
       showToast({
         type: "success",
-        message: t("patientAppAccess.inviteReady"),
+        message: t("patientAppAccess.messageCopied"),
+      });
+    } catch (error) {
+      const { message } = parseApiError(error);
+      showToast({ type: "error", message });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const copyInviteLink = async () => {
+    try {
+      setLoadingAction("copy-link");
+      const link = await ensureInviteLink();
+      await Clipboard.setStringAsync(link);
+      showToast({
+        type: "success",
+        message: t("patientAppAccess.rawLinkCopied"),
       });
     } catch (error) {
       const { message } = parseApiError(error);
@@ -244,61 +463,78 @@ export function PatientAppAccessCard({
   };
 
   const unlinkAccess = () => {
-    Alert.alert(t("patientAppAccess.unlinkTitle"), t("patientAppAccess.unlinkMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("patientAppAccess.unlinkConfirm"),
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            try {
-              setLoadingAction("unlink");
-              await api.post(`/pacientes/${pacienteId}/desvincular-acesso`);
-              showToast({
-                type: "success",
-                message: t("patientAppAccess.unlinkSuccess"),
-              });
-              await onRefresh?.();
-            } catch (error) {
-              const { message } = parseApiError(error);
-              showToast({ type: "error", message });
-            } finally {
-              setLoadingAction(null);
-            }
-          })();
+    Alert.alert(
+      t("patientAppAccess.unlinkTitle"),
+      t("patientAppAccess.unlinkMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("patientAppAccess.unlinkConfirm"),
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                setLoadingAction("unlink");
+                await api.post(`/pacientes/${pacienteId}/desvincular-acesso`);
+                setLastInviteLink(null);
+                showToast({
+                  type: "success",
+                  message: t("patientAppAccess.unlinkSuccess"),
+                });
+                await refreshAfterMutation();
+              } catch (error) {
+                const { message } = parseApiError(error);
+                showToast({ type: "error", message });
+              } finally {
+                setLoadingAction(null);
+              }
+            })();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const revokeInvite = () => {
-    Alert.alert(t("patientAppAccess.revokeTitle"), t("patientAppAccess.revokeMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("patientAppAccess.revokeConfirm"),
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            try {
-              setLoadingAction("revoke");
-              await api.post(`/pacientes/${pacienteId}/revogar-convite`);
-              setLastInviteLink(null);
-              showToast({
-                type: "success",
-                message: t("patientAppAccess.revokeSuccess"),
-              });
-              await onRefresh?.();
-            } catch (error) {
-              const { message } = parseApiError(error);
-              showToast({ type: "error", message });
-            } finally {
-              setLoadingAction(null);
-            }
-          })();
+    Alert.alert(
+      t("patientAppAccess.revokeTitle"),
+      t("patientAppAccess.revokeMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("patientAppAccess.revokeConfirm"),
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                setLoadingAction("revoke");
+                await api.post(`/pacientes/${pacienteId}/revogar-convite`);
+                setLastInviteLink(null);
+                showToast({
+                  type: "success",
+                  message: t("patientAppAccess.revokeSuccess"),
+                });
+                await refreshAfterMutation();
+              } catch (error) {
+                const { message } = parseApiError(error);
+                showToast({ type: "error", message });
+              } finally {
+                setLoadingAction(null);
+              }
+            })();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
+
+  const primaryInviteAction = hasWhatsappTarget ? sendViaWhatsApp : shareInvite;
+  const primaryInviteTitle = hasWhatsappTarget
+    ? t("patientAppAccess.sendWhatsapp")
+    : appAccess.status === PacienteAppAccessState.CONVITE_PENDENTE ||
+        appAccess.status === PacienteAppAccessState.CONVITE_EXPIRADO
+      ? t("patientAppAccess.resendInvite")
+      : t("patientAppAccess.sendInvite");
 
   return (
     <View style={styles.card}>
@@ -307,83 +543,136 @@ export function PatientAppAccessCard({
           <Ionicons name={status.icon} size={20} color={status.color} />
           <Text style={styles.title}>{t("patientAppAccess.title")}</Text>
         </View>
-        <View style={[styles.badge, { borderColor: status.color }]}>
-          <Text style={[styles.badgeText, { color: status.color }]}>
-            {status.label}
-          </Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={refreshManually}
+            disabled={isBusy}
+            activeOpacity={0.85}
+            accessibilityLabel={t("patientAppAccess.refreshStatus")}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={16}
+              color={COLORS.textSecondary}
+            />
+          </TouchableOpacity>
+          <View style={[styles.badge, { borderColor: status.color }]}>
+            <Text style={[styles.badgeText, { color: status.color }]}>
+              {status.label}
+            </Text>
+          </View>
         </View>
       </View>
       <Text style={styles.description}>{status.description}</Text>
+
+      {metaItems.length > 0 ? (
+        <View style={styles.metaList}>
+          {metaItems.map((item) => (
+            <View key={item.key} style={styles.metaRow}>
+              <Ionicons name={item.icon} size={14} color={COLORS.gray500} />
+              <Text style={styles.metaText}>{item.text}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
         {!hasAppAccess ? (
           <>
             <Button
-              title={
-                hasPendingInvite
-                  ? t("patientAppAccess.resendInvite")
-                  : t("patientAppAccess.sendInvite")
+              title={primaryInviteTitle}
+              onPress={primaryInviteAction}
+              loading={
+                loadingAction === "invite" ||
+                loadingAction === "whatsapp" ||
+                loadingAction === "share"
               }
-              onPress={shareInvite}
-              loading={loadingAction === "invite"}
+              disabled={!canCreateInvite || isBusy}
               size="sm"
               style={styles.actionButton}
             />
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={copyInvite}
-              disabled={loadingAction !== null}
-              activeOpacity={0.85}
-              accessibilityLabel={t("patientAppAccess.copyInvite")}
-            >
-              <Ionicons name="copy-outline" size={18} color={COLORS.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={openWhatsApp}
-              disabled={loadingAction !== null}
-              activeOpacity={0.85}
-              accessibilityLabel={t("patientAppAccess.sendWhatsapp")}
-            >
-              <Ionicons name="logo-whatsapp" size={18} color={COLORS.success} />
-            </TouchableOpacity>
-            {hasPendingInvite ? (
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={revokeInvite}
-                disabled={loadingAction !== null}
-                activeOpacity={0.85}
-                accessibilityLabel={t("patientAppAccess.revokeConfirm")}
-              >
-                <Ionicons name="close-outline" size={18} color={COLORS.error} />
-              </TouchableOpacity>
-            ) : null}
+            <View style={styles.secondaryActions}>
+              <ActionPill
+                icon="chatbubble-ellipses-outline"
+                label={t("patientAppAccess.copyMessage")}
+                onPress={copyInviteMessage}
+                disabled={!canCreateInvite || isBusy}
+              />
+              <ActionPill
+                icon="link-outline"
+                label={t("patientAppAccess.copyLink")}
+                onPress={copyInviteLink}
+                disabled={!canCreateInvite || isBusy}
+              />
+              <ActionPill
+                icon="share-social-outline"
+                label={t("patientAppAccess.shareInvite")}
+                onPress={shareInvite}
+                disabled={!canCreateInvite || isBusy}
+              />
+              <ActionPill
+                icon="qr-code-outline"
+                label={t("patientAppAccess.manageInvite")}
+                onPress={() =>
+                  navigation.navigate("PacienteInviteAccess", { pacienteId })
+                }
+                disabled={isBusy}
+              />
+              {appAccess.podeRevogarConvite ? (
+                <ActionPill
+                  icon="close-circle-outline"
+                  label={t("patientAppAccess.revokeConfirm")}
+                  onPress={revokeInvite}
+                  disabled={isBusy}
+                  danger
+                />
+              ) : null}
+            </View>
           </>
         ) : (
-          <Button
-            title={t("patientAppAccess.unlinkAction")}
-            onPress={unlinkAccess}
-            loading={loadingAction === "unlink"}
-            variant="outline"
-            size="sm"
-            fullWidth
-          />
+          <>
+            <Button
+              title={t("patientAppAccess.unlinkAction")}
+              onPress={unlinkAccess}
+              loading={loadingAction === "unlink"}
+              disabled={isBusy}
+              variant="outline"
+              size="sm"
+              fullWidth
+            />
+            <View style={styles.secondaryActions}>
+              <ActionPill
+                icon="qr-code-outline"
+                label={t("patientAppAccess.manageInvite")}
+                onPress={() =>
+                  navigation.navigate("PacienteInviteAccess", { pacienteId })
+                }
+                disabled={isBusy}
+              />
+            </View>
+          </>
         )}
       </View>
+
       {visibleEvents.length > 0 ? (
         <View style={styles.history}>
           <Text style={styles.historyTitle}>
             {t("patientAppAccess.historyTitle")}
           </Text>
           {visibleEvents.map((event, index) => (
-            <View key={`${event.type}-${event.at}-${index}`} style={styles.historyRow}>
+            <View
+              key={`${event.type}-${event.at}-${index}`}
+              style={styles.historyRow}
+            >
               <Ionicons
                 name="ellipse"
                 size={7}
                 color={index === 0 ? COLORS.primary : COLORS.gray400}
               />
               <Text style={styles.historyText}>
-                {getEventLabel(event.type)} {"\u2022"} {formatDateTime(event.at)}
+                {getEventLabel(event.type)} {"\u2022"}{" "}
+                {formatDateTime(event.at)}
               </Text>
             </View>
           ))}
@@ -420,6 +709,22 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.base,
     fontWeight: "700",
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    flexShrink: 0,
+  },
+  refreshButton: {
+    width: 34,
+    height: 34,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.white,
+  },
   badge: {
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.full,
@@ -436,24 +741,60 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     lineHeight: 20,
   },
-  actions: {
+  metaList: {
+    gap: 6,
+    marginTop: SPACING.sm,
+  },
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.xs,
+  },
+  metaText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    flex: 1,
+  },
+  actions: {
+    gap: SPACING.sm,
     marginTop: SPACING.md,
   },
   actionButton: {
-    flex: 1,
+    width: "100%",
   },
-  iconButton: {
-    width: 40,
-    height: 40,
+  secondaryActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  secondaryAction: {
+    minHeight: 36,
+    maxWidth: "100%",
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 7,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
     backgroundColor: COLORS.white,
+  },
+  secondaryActionText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+  dangerAction: {
+    borderColor: COLORS.error,
+  },
+  dangerActionText: {
+    color: COLORS.error,
+  },
+  disabledAction: {
+    opacity: 0.55,
   },
   history: {
     borderTopWidth: 1,

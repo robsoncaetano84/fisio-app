@@ -231,6 +231,9 @@ export class Paciente extends BaseEntity {
   @Column({ name: 'convite_enviado_em', type: 'timestamp', nullable: true })
   conviteEnviadoEm: Date | null;
 
+  @Column({ name: 'convite_expira_em', type: 'timestamp', nullable: true })
+  conviteExpiraEm: Date | null;
+
   @Column({ name: 'convite_aceito_em', type: 'timestamp', nullable: true })
   conviteAceitoEm: Date | null;
 

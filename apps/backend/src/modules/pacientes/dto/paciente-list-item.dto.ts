@@ -42,6 +42,7 @@ export class PacienteListItemDto {
   vinculoStatus: PacienteVinculoStatus;
   statusCiclo: PacienteCicloStatus;
   conviteEnviadoEm: Date | null;
+  conviteExpiraEm: Date | null;
   conviteAceitoEm: Date | null;
   appAccessEvents: PacienteAppAccessEvent[];
   createdAt: Date;

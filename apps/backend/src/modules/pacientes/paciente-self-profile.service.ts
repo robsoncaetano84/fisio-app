@@ -90,6 +90,7 @@ export class PacienteSelfProfileService {
       cadastroOrigem: PacienteCadastroOrigem.CADASTRO_ASSISTIDO,
       vinculoStatus: PacienteVinculoStatus.SEM_VINCULO,
       conviteEnviadoEm: null,
+      conviteExpiraEm: null,
       conviteAceitoEm: null,
     });
 
@@ -251,6 +252,7 @@ export class PacienteSelfProfileService {
 
     paciente.pacienteUsuarioId = null;
     paciente.vinculoStatus = PacienteVinculoStatus.SEM_VINCULO;
+    paciente.conviteExpiraEm = null;
     paciente.conviteAceitoEm = null;
     await this.pacienteRepository.save(paciente);
     await this.pacienteVinculoService.closeVinculoAtivoByPaciente(paciente.id);
