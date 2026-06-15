@@ -287,14 +287,14 @@ export class CreateExerciseCatalog1780700000000 implements MigrationInterface {
           "exercicio_id", "asset_key", "tipo", "source_type", "author",
           "license", "attribution_text", "versao", "revisado_em", "ativo"
         )
-        SELECT "id", $2, 'ILUSTRACAO', 'PROPRIA', 'Synap',
+        SELECT "id", $2::varchar, 'ILUSTRACAO', 'PROPRIA', 'Synap',
           'PROPRIETARIA_SYNAP', 'Ilustracao propria Synap.', 1, now(), true
         FROM "exercicios"
         WHERE "slug" = $1
           AND NOT EXISTS (
             SELECT 1 FROM "exercicio_midias"
             WHERE "exercicio_id" = "exercicios"."id"
-              AND "asset_key" = $2
+              AND "asset_key" = $2::varchar
           )
       `,
       [slug, imagemKey],
