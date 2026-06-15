@@ -95,4 +95,24 @@ describe('exercise image DTO validation', () => {
       ),
     ).toBe(true);
   });
+
+  it('keeps the expanded proprietary catalog exercises in the initial seed', () => {
+    const slugs = INITIAL_EXERCISE_CATALOG.map((item) => item.slug);
+
+    expect(slugs).toEqual(
+      expect.arrayContaining([
+        'mobilidade-toracica-rotacao-sentada',
+        'retracao-escapular-sentada',
+        'isometria-rotacao-externa-ombro',
+        'extensao-joelho-sentado',
+        'sentar-levantar-controlado',
+        'alongamento-flexores-quadril-meio-ajoelhado',
+        'marcha-estacionaria-com-apoio',
+        'mobilidade-punho-flexao-extensao',
+        'alongamento-cervical-lateral-assistido',
+        'deslizamento-neural-mediano',
+      ]),
+    );
+    expect(slugs).toHaveLength(18);
+  });
 });

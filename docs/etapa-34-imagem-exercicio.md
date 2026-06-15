@@ -26,6 +26,7 @@ Migrations relevantes:
 - `1780700000000-CreateExerciseCatalog`
 - `1780800000000-NormalizeExerciseImageFields`
 - `1780900000000-AddUniqueExerciseMediaAsset`
+- `1781000000000-SeedExpandedExerciseCatalog`
 
 Regras atuais:
 - `imagemTipo` em atividade e `imagemKey` em exercicio aceitam somente chaves proprias conhecidas.
@@ -33,6 +34,7 @@ Regras atuais:
 - o banco tem constraints para impedir chaves de imagem desconhecidas.
 - a IA nao pode retornar URL de imagem; ela retorna apenas `imagemTipo`.
 - a sugestao de IA tenta casar o rascunho com um exercicio aprovado do catalogo.
+- o catalogo inicial contem 18 exercicios aprovados, incluindo variacoes para cervical, toracica, lombar, ombro, joelho, quadril, tornozelo e punho/mao.
 
 Chaves permitidas:
 - `MOBILIDADE_GERAL`
@@ -110,3 +112,17 @@ Midias:
 - migration show sem pendencias no banco de desenvolvimento;
 - health check do backend local;
 - push da branch `etapa-34-imagem-exercicio`.
+
+## Expansao do catalogo inicial
+
+A migration `1781000000000-SeedExpandedExerciseCatalog` adiciona 10 exercicios aprovados ao catalogo proprio:
+- mobilidade toracica em rotacao sentada;
+- retracao escapular sentada;
+- isometria de rotacao externa de ombro;
+- extensao de joelho sentado;
+- sentar e levantar controlado;
+- alongamento de flexores de quadril em meio ajoelhado;
+- marcha estacionaria com apoio;
+- mobilidade de punho em flexao e extensao;
+- alongamento cervical lateral assistido;
+- deslizamento neural mediano.
