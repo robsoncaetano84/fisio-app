@@ -66,7 +66,7 @@ describe('AtividadeAiSuggestionService', () => {
     );
     expect(result.descricao).toContain('Referencias:');
     expect(result.instrucoesExecucao).toContain('Prepare um ambiente seguro');
-    expect(result.imagemTipo).toBe('JOELHO_AGACHAMENTO');
+    expect(result.imagemTipo).toBe('AGACHAMENTO_PARCIAL_ASSISTIDO');
     expect(openAiService.createJsonResponse).not.toHaveBeenCalled();
   });
 
@@ -136,7 +136,7 @@ describe('AtividadeAiSuggestionService', () => {
     expect(result.descricao).toContain('Diagnostico funcional:');
     expect(result.descricao).toContain('Exame fisico relevante:');
     expect(result.descricao).toContain('mobilidade lombo-pelvica');
-    expect(result.imagemTipo).toBe('MOBILIDADE_LOMBAR');
+    expect(result.imagemTipo).toBe('PONTE_CURTA');
   });
 
   it('falls back to default references when AI returns no allowed references', async () => {

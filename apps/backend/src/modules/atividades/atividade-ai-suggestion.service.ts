@@ -190,7 +190,11 @@ export class AtividadeAiSuggestionService {
   private inferExerciseImageType(
     anamnese: Anamnese | null,
     laudo: Laudo | null,
+    exerciseFocus?: string,
   ): string {
+    const focusedType = this.resolveExerciseImageTypeFromText(exerciseFocus);
+    if (focusedType !== 'MOBILIDADE_GERAL') return focusedType;
+
     const context = this.normalizeForMatch(
       [
         anamnese?.descricaoSintomas,
@@ -205,19 +209,75 @@ export class AtividadeAiSuggestionService {
       ].join(' '),
     );
 
+    return this.resolveExerciseImageTypeFromText(context);
+  }
+
+  private resolveExerciseImageTypeFromText(value: unknown): string {
+    const context = this.normalizeForMatch(value);
     const hasAny = (terms: string[]) =>
       terms.some((term) => context.includes(term));
-    if (hasAny(['ombro', 'manguito', 'escapul'])) return 'OMBRO_MANGUITO';
-    if (hasAny(['cervical', 'pescoco', 'cefaleia'])) return 'CONTROLE_CERVICAL';
+
+    if (hasAny(['gato', 'camelo'])) return 'MOBILIDADE_LOMBAR_GATO_CAMELO';
+    if (hasAny(['ponte curta', 'ponte'])) return 'PONTE_CURTA';
+    if (hasAny(['cervical profundo', 'recolher o queixo', 'queixo'])) {
+      return 'CONTROLE_CERVICAL_PROFUNDO';
+    }
+    if (hasAny(['alongamento cervical lateral', 'cervical lateral'])) {
+      return 'ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO';
+    }
+    if (hasAny(['retracao escapular', 'escapular sentada'])) {
+      return 'RETRACAO_ESCAPULAR_SENTADA';
+    }
+    if (hasAny(['rotacao externa', 'isometria de rotacao', 'manguito'])) {
+      return 'ISOMETRIA_ROTACAO_EXTERNA_OMBRO';
+    }
+    if (hasAny(['elevacao assistida', 'elevacao de ombro'])) {
+      return 'ELEVACAO_ASSISTIDA_OMBRO';
+    }
+    if (hasAny(['sentar e levantar', 'levantar controlado'])) {
+      return 'SENTAR_LEVANTAR_CONTROLADO';
+    }
+    if (hasAny(['agachamento parcial', 'agachamento'])) {
+      return 'AGACHAMENTO_PARCIAL_ASSISTIDO';
+    }
+    if (hasAny(['extensao de joelho', 'joelho sentado', 'quadriceps'])) {
+      return 'EXTENSAO_JOELHO_SENTADO';
+    }
+    if (hasAny(['flexores de quadril', 'meio ajoelhado'])) {
+      return 'ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO';
+    }
+    if (hasAny(['abducao de quadril', 'gluteo medio', 'decubito lateral'])) {
+      return 'ABDUCAO_QUADRIL_DECUBITO_LATERAL';
+    }
+    if (hasAny(['marcha estacionaria'])) return 'MARCHA_ESTACIONARIA_APOIO';
+    if (hasAny(['transferencia de peso', 'equilibrio bipodal'])) {
+      return 'EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO';
+    }
+    if (hasAny(['preensao', 'bola macia'])) return 'PREENSAO_MANUAL_BOLA_MACIA';
+    if (hasAny(['flexao e extensao', 'mobilidade de punho'])) {
+      return 'MOBILIDADE_PUNHO_FLEXAO_EXTENSAO';
+    }
+    if (hasAny(['deslizamento neural', 'neural mediano'])) {
+      return 'DESLIZAMENTO_NEURAL_MEDIANO';
+    }
+    if (hasAny(['toracica', 'rotacao sentada'])) {
+      return 'MOBILIDADE_TORACICA_ROTACAO_SENTADA';
+    }
+
+    if (hasAny(['ombro', 'escapul'])) return 'ELEVACAO_ASSISTIDA_OMBRO';
+    if (hasAny(['cervical', 'pescoco', 'cefaleia'])) {
+      return 'CONTROLE_CERVICAL_PROFUNDO';
+    }
     if (hasAny(['lombar', 'lombo', 'ciatic', 'lombalgia']))
-      return 'MOBILIDADE_LOMBAR';
+      return 'MOBILIDADE_LOMBAR_GATO_CAMELO';
     if (hasAny(['joelho', 'patelar', 'quadriceps', 'agachamento']))
-      return 'JOELHO_AGACHAMENTO';
-    if (hasAny(['quadril', 'coxofemoral', 'gluteo'])) return 'QUADRIL_GLUTEOS';
+      return 'AGACHAMENTO_PARCIAL_ASSISTIDO';
+    if (hasAny(['quadril', 'coxofemoral', 'gluteo']))
+      return 'ABDUCAO_QUADRIL_DECUBITO_LATERAL';
     if (hasAny(['tornozelo', 'pe ', 'retrope', 'apoio']))
-      return 'TORNOZELO_EQUILIBRIO';
+      return 'EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO';
     if (hasAny(['punho', 'mao', 'carpal', 'preensao', 'cotovelo']))
-      return 'PUNHO_PREENSAO';
+      return 'PREENSAO_MANUAL_BOLA_MACIA';
     return 'MOBILIDADE_GERAL';
   }
 
@@ -249,7 +309,11 @@ export class AtividadeAiSuggestionService {
       280,
     );
     const exerciseFocus = this.buildTherapeuticExerciseFocus(anamnese, laudo);
-    const imagemTipo = this.inferExerciseImageType(anamnese, laudo);
+    const imagemTipo = this.inferExerciseImageType(
+      anamnese,
+      laudo,
+      exerciseFocus,
+    );
 
     const titulo =
       dto.titulo?.trim() ||

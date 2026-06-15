@@ -37,6 +37,7 @@ Regras atuais:
 - a sugestao de IA tenta casar o rascunho com um exercicio aprovado do catalogo.
 - o catalogo inicial contem 18 exercicios aprovados, incluindo variacoes para cervical, toracica, lombar, ombro, joelho, quadril, tornozelo e punho/mao.
 - cada exercicio inicial possui uma chave de imagem especifica, mantendo as chaves genericas apenas para compatibilidade e fallback.
+- a sugestao local por regras prioriza chaves especificas de movimento antes das chaves genericas.
 
 Chaves permitidas:
 - `MOBILIDADE_GERAL`
@@ -137,7 +138,7 @@ Assets mobile:
 
 - backend lint, build, `tsc --noEmit`, testes focados e suite completa;
 - mobile `validate:critical`;
-- mobile `check:exercise-assets` cobrindo 18 assets especificos;
+- mobile `check:exercise-assets` cobrindo contrato com o enum do backend e 18 assets especificos;
 - migration run no banco de desenvolvimento;
 - migration show sem pendencias no banco de desenvolvimento;
 - health check do backend local;
