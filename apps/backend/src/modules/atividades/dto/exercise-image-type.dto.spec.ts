@@ -3,8 +3,13 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateAtividadeDto } from './create-atividade.dto';
 import { CreateExercicioCatalogDto } from './create-exercicio-catalog.dto';
-import { ExerciseImageType } from '../exercise-image-type.enum';
+import {
+  EXERCISE_IMAGE_TYPES,
+  ExerciseImageType,
+} from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
+import { INITIAL_EXERCISE_CATALOG } from '../exercicio-catalog.seed';
+import { NormalizeExerciseImageFields1780800000000 } from '../../../migrations/1780800000000-NormalizeExerciseImageFields';
 
 describe('exercise image DTO validation', () => {
   it('accepts only known local exercise image types for prescriptions', async () => {
@@ -71,5 +76,23 @@ describe('exercise image DTO validation', () => {
     const errors = await validate(dto);
 
     expect(errors.some((error) => error.property === 'nome')).toBe(true);
+  });
+
+  it('keeps database image constraints aligned with the backend enum', () => {
+    const migration = new NormalizeExerciseImageFields1780800000000();
+
+    expect([...(migration as any).allowedImageTypes].sort()).toEqual(
+      [...EXERCISE_IMAGE_TYPES].sort(),
+    );
+  });
+
+  it('uses only known image keys in the initial proprietary catalog', () => {
+    const allowedTypes = new Set(EXERCISE_IMAGE_TYPES);
+
+    expect(
+      INITIAL_EXERCISE_CATALOG.every((item) =>
+        allowedTypes.has(item.imagemKey),
+      ),
+    ).toBe(true);
   });
 });
