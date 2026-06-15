@@ -104,7 +104,7 @@ Midias:
 
 ## Validacoes ja executadas nesta etapa
 
-- backend lint, `tsc --noEmit`, testes focados e suite completa;
+- backend lint, build, `tsc --noEmit`, testes focados e suite completa;
 - mobile `validate:critical`;
 - migration run no banco de desenvolvimento;
 - migration show sem pendencias no banco de desenvolvimento;
