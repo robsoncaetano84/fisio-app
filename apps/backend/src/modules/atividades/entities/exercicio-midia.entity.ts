@@ -4,6 +4,9 @@ import { Exercicio } from './exercicio.entity';
 
 @Entity('exercicio_midias')
 @Index('IDX_EXERCICIO_MIDIA_EXERCICIO', ['exercicioId', 'ativo'])
+@Index('UQ_EXERCICIO_MIDIA_ASSET', ['exercicioId', 'assetKey'], {
+  unique: true,
+})
 export class ExercicioMidia extends BaseEntity {
   @ManyToOne(() => Exercicio, (exercicio) => exercicio.midias, {
     onDelete: 'CASCADE',
