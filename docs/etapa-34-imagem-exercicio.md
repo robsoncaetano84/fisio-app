@@ -71,7 +71,9 @@ Chaves permitidas:
 Componente visual:
 - `ExerciseVisual` renderiza ilustracoes locais por `imagemTipo`.
 - nao renderiza URL remota;
-- mostra marca d'agua discreta `Synap`;
+- usa JPG proprio otimizado para movimentos especificos gerados a partir da matriz anatomica do projeto;
+- mantem SVG local como fallback para tipos genericos ou sem asset raster;
+- mostra marca d'agua discreta `Synap` no componente, nao embutida no arquivo;
 - e usado no fluxo do profissional e do paciente.
 
 Telas contempladas:
@@ -103,6 +105,13 @@ Midias:
 - `license`: `PROPRIETARIA_SYNAP`
 - `attributionText`: `Ilustracao propria Synap.`
 
+Assets mobile:
+- caminho: `apps/mobile/assets/exercises`;
+- nome do arquivo em kebab-case, alinhado ao slug do exercicio;
+- formato JPG otimizado para reduzir o bundle mobile;
+- sem texto, logo ou marca d'agua no arquivo de imagem;
+- referencia visual: matriz anatomica masculina do projeto, com escala de cinza, fundo claro e destaque verde Synap.
+
 ## O que nao fazer
 
 - Nao colar URL de imagem externa na prescricao.
@@ -128,6 +137,7 @@ Midias:
 
 - backend lint, build, `tsc --noEmit`, testes focados e suite completa;
 - mobile `validate:critical`;
+- mobile `check:exercise-assets` cobrindo 18 assets especificos;
 - migration run no banco de desenvolvimento;
 - migration show sem pendencias no banco de desenvolvimento;
 - health check do backend local;

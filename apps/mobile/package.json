@@ -11,8 +11,9 @@
     "build:web": "expo export --platform web",
     "check:encoding": "node ../../scripts/check-encoding.mjs src",
     "check:i18n": "node scripts/check-i18n-consistency.mjs src/i18n/locales",
+    "check:exercise-assets": "node scripts/check-exercise-assets.mjs",
     "check:critical-flows": "node scripts/check-critical-mobile-flows.mjs",
-    "validate:critical": "npm run check:encoding && npm run check:i18n && npm run check:critical-flows && npx tsc --noEmit"
+    "validate:critical": "npm run check:encoding && npm run check:i18n && npm run check:exercise-assets && npm run check:critical-flows && npx tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -1,5 +1,11 @@
 import React, { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  type ImageSourcePropType,
+  View,
+} from "react-native";
 import Svg, {
   Circle,
   Line,
@@ -175,6 +181,29 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
 ];
 
 const DEFAULT_TYPE: ExerciseImageType = "MOBILIDADE_GERAL";
+
+const EXERCISE_IMAGE_ASSETS: Partial<
+  Record<ExerciseImageType, ImageSourcePropType>
+> = {
+  MOBILIDADE_LOMBAR_GATO_CAMELO: require("../../../assets/exercises/mobilidade-lombar-gato-camelo.jpg"),
+  PONTE_CURTA: require("../../../assets/exercises/ponte-curta.jpg"),
+  CONTROLE_CERVICAL_PROFUNDO: require("../../../assets/exercises/controle-cervical-profundo.jpg"),
+  ELEVACAO_ASSISTIDA_OMBRO: require("../../../assets/exercises/elevacao-assistida-ombro.jpg"),
+  AGACHAMENTO_PARCIAL_ASSISTIDO: require("../../../assets/exercises/agachamento-parcial-assistido.jpg"),
+  ABDUCAO_QUADRIL_DECUBITO_LATERAL: require("../../../assets/exercises/abducao-quadril-decubito-lateral.jpg"),
+  EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO: require("../../../assets/exercises/equilibrio-bipodal-transferencia-peso.jpg"),
+  PREENSAO_MANUAL_BOLA_MACIA: require("../../../assets/exercises/preensao-manual-bola-macia.jpg"),
+  MOBILIDADE_TORACICA_ROTACAO_SENTADA: require("../../../assets/exercises/mobilidade-toracica-rotacao-sentada.jpg"),
+  RETRACAO_ESCAPULAR_SENTADA: require("../../../assets/exercises/retracao-escapular-sentada.jpg"),
+  ISOMETRIA_ROTACAO_EXTERNA_OMBRO: require("../../../assets/exercises/isometria-rotacao-externa-ombro.jpg"),
+  EXTENSAO_JOELHO_SENTADO: require("../../../assets/exercises/extensao-joelho-sentado.jpg"),
+  SENTAR_LEVANTAR_CONTROLADO: require("../../../assets/exercises/sentar-levantar-controlado.jpg"),
+  ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO: require("../../../assets/exercises/alongamento-flexores-quadril-meio-ajoelhado.jpg"),
+  MARCHA_ESTACIONARIA_APOIO: require("../../../assets/exercises/marcha-estacionaria-apoio.jpg"),
+  MOBILIDADE_PUNHO_FLEXAO_EXTENSAO: require("../../../assets/exercises/mobilidade-punho-flexao-extensao.jpg"),
+  ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO: require("../../../assets/exercises/alongamento-cervical-lateral-assistido.jpg"),
+  DESLIZAMENTO_NEURAL_MEDIANO: require("../../../assets/exercises/deslizamento-neural-mediano.jpg"),
+};
 
 function normalizeText(value: unknown) {
   if (typeof value !== "string") return "";
@@ -1421,6 +1450,32 @@ export function ExerciseVisual({ imageType, title, compact }: Props) {
   const option =
     EXERCISE_IMAGE_OPTIONS.find((item) => item.value === resolvedType) ||
     EXERCISE_IMAGE_OPTIONS[0];
+  const asset = EXERCISE_IMAGE_ASSETS[resolvedType];
+
+  if (asset) {
+    return (
+      <View
+        style={[
+          styles.frame,
+          styles.generatedFrame,
+          styles.rasterFrame,
+          compact && styles.frameCompact,
+        ]}
+      >
+        <Image source={asset} style={styles.exerciseImage} resizeMode="contain" />
+        <Text style={[styles.watermark, compact && styles.watermarkCompact]}>
+          Synap
+        </Text>
+        {!compact ? (
+          <View style={styles.caption}>
+            <Text style={styles.captionTitle}>{option.label}</Text>
+            <Text style={styles.captionHint}>{option.hint}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.frame, styles.generatedFrame, compact && styles.frameCompact]}>
       <Svg width="100%" height="100%" viewBox="0 0 168 168">
@@ -1464,6 +1519,28 @@ const styles = StyleSheet.create({
   generatedFrame: {
     borderWidth: 1,
     borderColor: COLORS.gray200,
+  },
+  rasterFrame: {
+    height: 220,
+    backgroundColor: "#F7FBFA",
+  },
+  exerciseImage: {
+    width: "100%",
+    height: "100%",
+  },
+  watermark: {
+    position: "absolute",
+    right: SPACING.sm,
+    bottom: 66,
+    color: COLORS.gray400,
+    fontSize: 11,
+    fontWeight: "700",
+    opacity: 0.5,
+  },
+  watermarkCompact: {
+    right: 6,
+    bottom: 4,
+    fontSize: 9,
   },
   caption: {
     position: "absolute",
