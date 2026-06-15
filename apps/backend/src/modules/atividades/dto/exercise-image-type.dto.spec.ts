@@ -56,4 +56,20 @@ describe('exercise image DTO validation', () => {
     const errors = await validate(invalidDto);
     expect(errors.some((error) => error.property === 'imagemKey')).toBe(true);
   });
+
+  it('requires non-empty catalog fields before admin creation', async () => {
+    const dto = plainToInstance(CreateExercicioCatalogDto, {
+      nome: '',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'MOBILIDADE',
+      nivel: 'INICIANTE',
+      objetivo: 'Melhorar mobilidade.',
+      instrucoesPadrao: '1. Execute com controle.',
+      imagemKey: ExerciseImageType.MOBILIDADE_GERAL,
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.some((error) => error.property === 'nome')).toBe(true);
+  });
 });

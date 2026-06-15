@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+import { ExerciseImageType } from './exercise-image-type.enum';
 import { ExercicioStatus } from './entities/exercicio.entity';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
@@ -76,7 +78,7 @@ describe('ExerciciosCatalogService', () => {
     expect(exercicioRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         slug: 'mobilidade-lombar-gato-camelo',
-        imagemKey: 'MOBILIDADE_LOMBAR',
+        imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
         status: ExercicioStatus.APROVADO,
         ativo: true,
         versao: 1,
@@ -223,7 +225,7 @@ describe('ExerciciosCatalogService', () => {
         nivel: ' iniciante ',
         objetivo: 'Melhorar mobilidade lombar.',
         instrucoesPadrao: '1. Execute com controle.',
-        imagemKey: 'MOBILIDADE_LOMBAR',
+        imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
         tags: ['Lombar', 'Mobilidade lombar'],
         status: ExercicioStatus.APROVADO,
       },
@@ -250,6 +252,51 @@ describe('ExerciciosCatalogService', () => {
         license: 'PROPRIETARIA_SYNAP',
       }),
     );
+  });
+
+  it('rejects creation when required catalog fields are blank after trim', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+
+    await expect(
+      service.create(
+        {
+          nome: '   ',
+          regiaoCorporal: 'LOMBAR',
+          categoria: 'MOBILIDADE',
+          nivel: 'INICIANTE',
+          objetivo: 'Melhorar mobilidade lombar.',
+          instrucoesPadrao: '1. Execute com controle.',
+          imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
+        },
+        'admin-1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(exercicioRepository.save).not.toHaveBeenCalled();
+    expect(midiaRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects updates that would blank required catalog fields', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    exercicioRepository.findOne.mockResolvedValue({
+      id: 'exercicio-1',
+      nome: 'Ponte curta',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'FORTALECIMENTO',
+      nivel: 'INICIANTE',
+      objetivo: 'Ativar gluteos.',
+      instrucoesPadrao: '1. Execute com controle.',
+      status: ExercicioStatus.APROVADO,
+      ativo: true,
+      versao: 1,
+    });
+
+    await expect(
+      service.update('exercicio-1', { objetivo: '   ' }, 'admin-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(exercicioRepository.save).not.toHaveBeenCalled();
+    expect(midiaRepository.save).not.toHaveBeenCalled();
   });
 
   it('archives exercise and disables its media', async () => {

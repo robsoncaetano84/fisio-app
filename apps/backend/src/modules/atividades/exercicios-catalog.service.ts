@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -146,19 +147,31 @@ export class ExerciciosCatalogService implements OnModuleInit {
     dto: CreateExercicioCatalogDto,
     usuarioId: string,
   ): Promise<Exercicio> {
-    const slug = await this.resolveUniqueSlug(dto.slug || dto.nome);
+    const nome = this.normalizeRequiredString(dto.nome, 'nome');
+    const regiaoCorporal = this.normalizeRequiredString(
+      dto.regiaoCorporal,
+      'regiaoCorporal',
+    );
+    const categoria = this.normalizeRequiredString(dto.categoria, 'categoria');
+    const nivel = this.normalizeRequiredString(dto.nivel, 'nivel');
+    const objetivo = this.normalizeRequiredString(dto.objetivo, 'objetivo');
+    const instrucoesPadrao = this.normalizeRequiredString(
+      dto.instrucoesPadrao,
+      'instrucoesPadrao',
+    );
+    const slug = await this.resolveUniqueSlug(dto.slug || nome);
     const imagemKey = this.normalizeOptionalString(dto.imagemKey);
     const status = dto.status ?? ExercicioStatus.RASCUNHO;
     const exercicio = await this.exercicioRepository.save(
       this.exercicioRepository.create({
-        nome: dto.nome.trim(),
+        nome,
         slug,
-        regiaoCorporal: dto.regiaoCorporal.trim().toUpperCase(),
-        categoria: dto.categoria.trim().toUpperCase(),
-        nivel: dto.nivel.trim().toUpperCase(),
-        objetivo: dto.objetivo.trim(),
+        regiaoCorporal: regiaoCorporal.toUpperCase(),
+        categoria: categoria.toUpperCase(),
+        nivel: nivel.toUpperCase(),
+        objetivo,
         descricao: this.normalizeOptionalString(dto.descricao),
-        instrucoesPadrao: dto.instrucoesPadrao.trim(),
+        instrucoesPadrao,
         cuidados: this.normalizeOptionalString(dto.cuidados),
         contraindicacoes: this.normalizeOptionalString(dto.contraindicacoes),
         imagemKey,
@@ -188,28 +201,43 @@ export class ExerciciosCatalogService implements OnModuleInit {
     }
 
     if (typeof dto.nome === 'string') {
-      exercicio.nome = dto.nome.trim();
+      exercicio.nome = this.normalizeRequiredString(dto.nome, 'nome');
     }
     if (typeof dto.slug === 'string') {
       exercicio.slug = await this.resolveUniqueSlug(dto.slug, exercicio.id);
     }
     if (typeof dto.regiaoCorporal === 'string') {
-      exercicio.regiaoCorporal = dto.regiaoCorporal.trim().toUpperCase();
+      exercicio.regiaoCorporal = this.normalizeRequiredString(
+        dto.regiaoCorporal,
+        'regiaoCorporal',
+      ).toUpperCase();
     }
     if (typeof dto.categoria === 'string') {
-      exercicio.categoria = dto.categoria.trim().toUpperCase();
+      exercicio.categoria = this.normalizeRequiredString(
+        dto.categoria,
+        'categoria',
+      ).toUpperCase();
     }
     if (typeof dto.nivel === 'string') {
-      exercicio.nivel = dto.nivel.trim().toUpperCase();
+      exercicio.nivel = this.normalizeRequiredString(
+        dto.nivel,
+        'nivel',
+      ).toUpperCase();
     }
     if (typeof dto.objetivo === 'string') {
-      exercicio.objetivo = dto.objetivo.trim();
+      exercicio.objetivo = this.normalizeRequiredString(
+        dto.objetivo,
+        'objetivo',
+      );
     }
     if (typeof dto.descricao === 'string') {
       exercicio.descricao = this.normalizeOptionalString(dto.descricao);
     }
     if (typeof dto.instrucoesPadrao === 'string') {
-      exercicio.instrucoesPadrao = dto.instrucoesPadrao.trim();
+      exercicio.instrucoesPadrao = this.normalizeRequiredString(
+        dto.instrucoesPadrao,
+        'instrucoesPadrao',
+      );
     }
     if (typeof dto.cuidados === 'string') {
       exercicio.cuidados = this.normalizeOptionalString(dto.cuidados);
@@ -424,6 +452,14 @@ export class ExerciciosCatalogService implements OnModuleInit {
   private normalizeOptionalString(value?: string | null): string | null {
     const trimmed = String(value || '').trim();
     return trimmed || null;
+  }
+
+  private normalizeRequiredString(value: string, field: string): string {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) {
+      throw new BadRequestException(`${field} e obrigatorio`);
+    }
+    return trimmed;
   }
 
   private normalizeTags(tags?: string[]): string[] {

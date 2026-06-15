@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -10,6 +11,7 @@ import { ExercicioStatus } from '../entities/exercicio.entity';
 
 export class CreateExercicioCatalogDto {
   @IsString()
+  @IsNotEmpty()
   @MaxLength(140)
   nome: string;
 
@@ -19,18 +21,22 @@ export class CreateExercicioCatalogDto {
   slug?: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(80)
   regiaoCorporal: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(80)
   categoria: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(40)
   nivel: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(1000)
   objetivo: string;
 
@@ -40,6 +46,7 @@ export class CreateExercicioCatalogDto {
   descricao?: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(2000)
   instrucoesPadrao: string;
 
