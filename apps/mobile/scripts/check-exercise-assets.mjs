@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 
 const root = process.cwd();
@@ -12,6 +12,8 @@ const backendEnumPath = join(
   "../backend/src/modules/atividades/exercise-image-type.enum.ts",
 );
 const assetsDir = join(root, "assets/exercises");
+const maxAssetBytes = 250 * 1024;
+const maxTotalAssetBytes = 4 * 1024 * 1024;
 
 const genericImageTypes = new Set([
   "MOBILIDADE_GERAL",
@@ -168,6 +170,24 @@ for (const fileName of localJpgAssets) {
   }
 }
 
+let totalAssetBytes = 0;
+for (const fileName of localJpgAssets) {
+  const size = statSync(join(assetsDir, fileName)).size;
+  totalAssetBytes += size;
+
+  if (size > maxAssetBytes) {
+    failures.push(
+      `${fileName}: ${size} bytes excede limite de ${maxAssetBytes} bytes`,
+    );
+  }
+}
+
+if (totalAssetBytes > maxTotalAssetBytes) {
+  failures.push(
+    `assets/exercises: ${totalAssetBytes} bytes excede limite total de ${maxTotalAssetBytes} bytes`,
+  );
+}
+
 if (failures.length) {
   console.error("Exercise asset check failed:");
   for (const failure of failures) {
@@ -177,5 +197,5 @@ if (failures.length) {
 }
 
 console.log(
-  `Exercise asset check passed for ${requiredKeys.length} specific asset(s).`,
+  `Exercise asset check passed for ${requiredKeys.length} specific asset(s), ${totalAssetBytes} bytes total.`,
 );

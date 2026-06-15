@@ -138,7 +138,7 @@ Assets mobile:
 
 - backend lint, build, `tsc --noEmit`, testes focados e suite completa;
 - mobile `validate:critical`;
-- mobile `check:exercise-assets` cobrindo contrato com o enum do backend e 18 assets especificos;
+- mobile `check:exercise-assets` cobrindo contrato com o enum do backend, 18 assets especificos e limite de peso do bundle;
 - migration run no banco de desenvolvimento;
 - migration show sem pendencias no banco de desenvolvimento;
 - health check do backend local;
