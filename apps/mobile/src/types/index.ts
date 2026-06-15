@@ -422,8 +422,12 @@ export interface Atividade {
   id: string;
   pacienteId: string;
   usuarioId: string;
+  exercicioId?: string | null;
   titulo: string;
   descricao?: string | null;
+  instrucoesExecucao?: string | null;
+  imagemUrl?: string | null;
+  imagemTipo?: string | null;
   dataLimite?: string | null;
   diaPrescricao?: number | null;
   ordemNoDia?: number | null;
@@ -434,6 +438,49 @@ export interface Atividade {
   ultimoCheckinEm?: string | null;
   ultimoCheckinConcluiu?: boolean | null;
   ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExercicioMidia {
+  id: string;
+  exercicioId: string;
+  assetKey: string;
+  tipo: string;
+  sourceType: string;
+  sourceUrl?: string | null;
+  author?: string | null;
+  license: string;
+  licenseUrl?: string | null;
+  attributionText?: string | null;
+  versao: number;
+  revisadoPorUsuarioId?: string | null;
+  revisadoEm?: string | null;
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Exercicio {
+  id: string;
+  nome: string;
+  slug: string;
+  regiaoCorporal: string;
+  categoria: string;
+  nivel: string;
+  objetivo: string;
+  descricao?: string | null;
+  instrucoesPadrao: string;
+  cuidados?: string | null;
+  contraindicacoes?: string | null;
+  imagemKey?: string | null;
+  tags: string[];
+  status: "RASCUNHO" | "APROVADO" | "ARQUIVADO";
+  versao: number;
+  revisadoPorUsuarioId?: string | null;
+  revisadoEm?: string | null;
+  ativo: boolean;
+  midias?: ExercicioMidia[];
   createdAt: string;
   updatedAt: string;
 }

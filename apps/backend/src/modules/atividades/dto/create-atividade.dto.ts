@@ -10,15 +10,21 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   MaxLength,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateAtividadeDto {
   @IsUUID()
   pacienteId: string;
+
+  @IsOptional()
+  @IsUUID()
+  exercicioId?: string | null;
 
   @IsString()
   @IsNotEmpty()
@@ -28,6 +34,27 @@ export class CreateAtividadeDto {
   @IsOptional()
   @IsString()
   descricao?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  instrucoesExecucao?: string;
+
+  @ValidateIf(
+    (_, value) => value !== undefined && value !== null && value !== '',
+  )
+  @IsString()
+  @IsUrl(
+    { protocols: ['http', 'https'], require_tld: false },
+    { message: 'URL da imagem invalida' },
+  )
+  @MaxLength(2048)
+  imagemUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  imagemTipo?: string;
 
   @IsOptional()
   @IsDateString()

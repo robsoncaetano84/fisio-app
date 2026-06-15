@@ -28,9 +28,17 @@ import {
 import { RootStackParamList } from "../../types";
 import { api } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
-import { Atividade } from "../../types";
+import { Atividade, Exercicio } from "../../types";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import {
+  EXERCISE_IMAGE_OPTIONS,
+  ExerciseImageType,
+  ExerciseVisual,
+  inferExerciseImageType,
+  isValidExerciseImageUrl,
+  normalizeExerciseImageType,
+} from "../../components/clinical/ExerciseVisual";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "AtividadeForm">;
@@ -88,7 +96,12 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   const { t } = useLanguage();
 
   const [titulo, setTitulo] = useState("");
+  const [exercicioId, setExercicioId] = useState<string | null>(null);
   const [descricao, setDescricao] = useState("");
+  const [instrucoesExecucao, setInstrucoesExecucao] = useState("");
+  const [imagemUrl, setImagemUrl] = useState("");
+  const [imagemTipo, setImagemTipo] =
+    useState<ExerciseImageType>("MOBILIDADE_GERAL");
   const [referenciasBibliograficas, setReferenciasBibliograficas] =
     useState("");
   const [aceiteProfissional, setAceiteProfissional] = useState(false);
@@ -99,6 +112,12 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   const [saving, setSaving] = useState(false);
   const [loadingAtividades, setLoadingAtividades] = useState(true);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
+  const [loadingExercicios, setLoadingExercicios] = useState(true);
+  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
+  const [exerciseSearch, setExerciseSearch] = useState("");
+  const [exerciseRegionFilter, setExerciseRegionFilter] = useState<
+    string | "ALL"
+  >("ALL");
   const [inactivatingId, setInactivatingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [editingAtividadeId, setEditingAtividadeId] = useState<string | null>(
@@ -114,10 +133,20 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   const [filterDia, setFilterDia] = useState<number | "ALL" | "NONE">("ALL");
   const [generatingAi, setGeneratingAi] = useState(false);
   const autoSuggestionAttemptedRef = useRef(false);
+  const draftChangeVersionRef = useRef(0);
+
+  const markDraftChanged = () => {
+    draftChangeVersionRef.current += 1;
+  };
 
   const canSave = useMemo(() => {
-    return !!titulo.trim() && !!aceiteProfissional && !saving;
-  }, [titulo, aceiteProfissional, saving]);
+    return (
+      !!titulo.trim() &&
+      !!instrucoesExecucao.trim() &&
+      !!aceiteProfissional &&
+      !saving
+    );
+  }, [titulo, instrucoesExecucao, aceiteProfissional, saving]);
 
   const atividadesFiltradas = useMemo(() => {
     if (filterDia === "ALL") return atividades;
@@ -126,6 +155,39 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     }
     return atividades.filter((item) => item.diaPrescricao === filterDia);
   }, [atividades, filterDia]);
+
+  const exerciseRegions = useMemo(() => {
+    return Array.from(
+      new Set(exercicios.map((item) => item.regiaoCorporal).filter(Boolean)),
+    ).sort();
+  }, [exercicios]);
+
+  const exerciciosFiltrados = useMemo(() => {
+    const search = exerciseSearch.trim().toLowerCase();
+    return exercicios
+      .filter((item) =>
+        exerciseRegionFilter === "ALL"
+          ? true
+          : item.regiaoCorporal === exerciseRegionFilter,
+      )
+      .filter((item) => {
+        if (!search) return true;
+        return [
+          item.nome,
+          item.objetivo,
+          item.descricao,
+          item.regiaoCorporal,
+          item.categoria,
+          item.nivel,
+          ...(item.tags || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+      })
+      .slice(0, 12);
+  }, [exerciseRegionFilter, exerciseSearch, exercicios]);
 
   const loadAtividades = async () => {
     try {
@@ -157,15 +219,59 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     }
   };
 
+  const loadExercicios = async () => {
+    try {
+      setLoadingExercicios(true);
+      const response = await api.get<Exercicio[]>("/exercicios");
+      setExercicios(response.data || []);
+    } catch {
+      showToast({
+        message: "Não foi possível carregar o catálogo de exercícios",
+        type: "info",
+      });
+    } finally {
+      setLoadingExercicios(false);
+    }
+  };
+
+  const aplicarExercicio = (exercicio: Exercicio) => {
+    markDraftChanged();
+    setExercicioId(exercicio.id);
+    setTitulo(exercicio.nome);
+    setDescricao(
+      [exercicio.objetivo, exercicio.descricao].filter(Boolean).join("\n\n"),
+    );
+    setInstrucoesExecucao(exercicio.instrucoesPadrao || "");
+    setImagemUrl("");
+    setImagemTipo(
+      exercicio.imagemKey
+        ? normalizeExerciseImageType(exercicio.imagemKey)
+        : inferExerciseImageType(
+            exercicio.nome,
+            exercicio.objetivo,
+            exercicio.descricao,
+            exercicio.tags?.join(" "),
+          ),
+    );
+    showToast({
+      message: "Exercício do catálogo aplicado à prescrição",
+      type: "success",
+    });
+  };
+
   const applyAutomaticSuggestion = (
     data: Partial<{
       titulo: string;
       descricao: string;
+      instrucoesExecucao: string;
+      imagemTipo: string;
       referencias: string[];
     }>,
   ) => {
     const tituloSugerido = String(data.titulo || "").trim();
     const descricaoOriginal = String(data.descricao || "").trim();
+    const instrucoesSugeridas = String(data.instrucoesExecucao || "").trim();
+    const imagemTipoSugerida = String(data.imagemTipo || "").trim();
     const referenciasArray = Array.isArray(data.referencias)
       ? data.referencias.map((item) => String(item).trim()).filter(Boolean)
       : [];
@@ -187,19 +293,30 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       }
     }
 
+    setExercicioId(null);
+    setImagemUrl("");
     if (tituloSugerido) setTitulo(tituloSugerido);
     if (descricaoFinal) setDescricao(descricaoFinal);
+    if (instrucoesSugeridas) setInstrucoesExecucao(instrucoesSugeridas);
+    if (imagemTipoSugerida) {
+      setImagemTipo(normalizeExerciseImageType(imagemTipoSugerida));
+    } else if (tituloSugerido || descricaoFinal) {
+      setImagemTipo(inferExerciseImageType(tituloSugerido, descricaoFinal));
+    }
     if (referenciasFinal) setReferenciasBibliograficas(referenciasFinal);
   };
 
   const generateAutomaticSuggestion = async (silent = false) => {
     setGeneratingAi(true);
     autoSuggestionAttemptedRef.current = true;
+    const draftVersionAtStart = draftChangeVersionRef.current;
     try {
       const response = await api.post<
         Partial<{
           titulo: string;
           descricao: string;
+          instrucoesExecucao: string;
+          imagemTipo: string;
           referencias: string[];
           source: "ai" | "rules";
         }>
@@ -207,6 +324,9 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
         pacienteId,
       });
       if (response.data) {
+        if (silent && draftChangeVersionRef.current !== draftVersionAtStart) {
+          return;
+        }
         applyAutomaticSuggestion(response.data);
         if (!silent) {
           showToast({
@@ -229,13 +349,20 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
 
   React.useEffect(() => {
     autoSuggestionAttemptedRef.current = false;
+    draftChangeVersionRef.current = 0;
     loadAtividades().catch(() => undefined);
+    loadExercicios().catch(() => undefined);
   }, [pacienteId]);
 
   React.useEffect(() => {
     if (loadingAtividades) return;
     if (editingAtividadeId) return;
-    if (titulo.trim() || descricao.trim() || referenciasBibliograficas.trim())
+    if (
+      titulo.trim() ||
+      descricao.trim() ||
+      instrucoesExecucao.trim() ||
+      referenciasBibliograficas.trim()
+    )
       return;
     if (autoSuggestionAttemptedRef.current) return;
     generateAutomaticSuggestion(true).catch(() => undefined);
@@ -245,6 +372,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     editingAtividadeId,
     titulo,
     descricao,
+    instrucoesExecucao,
     referenciasBibliograficas,
   ]);
 
@@ -257,6 +385,23 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     if (!aceiteProfissional) {
       showToast({
         message: "Marque o aceite profissional para salvar a prescrição",
+        type: "error",
+      });
+      return;
+    }
+
+    if (!instrucoesExecucao.trim()) {
+      showToast({
+        message: "Informe como o paciente deve realizar o exercício",
+        type: "error",
+      });
+      return;
+    }
+
+    if (imagemUrl.trim() && !isValidExerciseImageUrl(imagemUrl)) {
+      showToast({
+        message:
+          "Informe uma URL propria/interna iniciando com http:// ou https://",
         type: "error",
       });
       return;
@@ -284,6 +429,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       setSaving(true);
       const payload = {
         pacienteId,
+        exercicioId,
         titulo: titulo.trim(),
         descricao:
           [
@@ -299,6 +445,9 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
           ]
             .filter(Boolean)
             .join("\n\n") || undefined,
+        instrucoesExecucao: instrucoesExecucao.trim(),
+        imagemUrl: imagemUrl.trim() || "",
+        imagemTipo,
         diaPrescricao,
         ordemNoDia: parsedOrder,
         repetirSemanal,
@@ -331,9 +480,17 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     const marker = "\n\nReferencias: ";
     const markerIndex = descricaoAtual.lastIndexOf(marker);
     setEditingAtividadeId(atividade.id);
+    setExercicioId(atividade.exercicioId || null);
     setTitulo(atividade.titulo || "");
     setDescricao(
       markerIndex >= 0 ? descricaoAtual.slice(0, markerIndex) : descricaoAtual,
+    );
+    setInstrucoesExecucao(atividade.instrucoesExecucao || "");
+    setImagemUrl(atividade.imagemUrl || "");
+    setImagemTipo(
+      atividade.imagemTipo
+        ? normalizeExerciseImageType(atividade.imagemTipo)
+        : inferExerciseImageType(atividade.titulo, atividade.descricao),
     );
     setReferenciasBibliograficas(
       markerIndex >= 0
@@ -355,9 +512,14 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   };
 
   const cancelarEdicao = () => {
+    markDraftChanged();
     setEditingAtividadeId(null);
+    setExercicioId(null);
     setTitulo("");
     setDescricao("");
+    setInstrucoesExecucao("");
+    setImagemUrl("");
+    setImagemTipo("MOBILIDADE_GERAL");
     setReferenciasBibliograficas("");
     setDiaPrescricao(1);
     setOrdemNoDia("1");
@@ -503,10 +665,143 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
             style={styles.aiButton}
           />
 
+          <View style={styles.catalogPanel}>
+            <View style={styles.catalogHeader}>
+              <View style={styles.catalogTitleWrap}>
+                <Text style={styles.catalogTitle}>Catálogo Synap</Text>
+                <Text style={styles.catalogSubtitle}>
+                  Selecione uma imagem e instrução própria revisada
+                </Text>
+              </View>
+              {exercicioId ? (
+                <TouchableOpacity
+                  style={styles.clearExerciseButton}
+                  onPress={() => {
+                    markDraftChanged();
+                    setExercicioId(null);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={16}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.clearExerciseText}>Desvincular</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <Input
+              label="Buscar exercício"
+              value={exerciseSearch}
+              onChangeText={setExerciseSearch}
+              placeholder="Ex.: lombar, joelho, mobilidade"
+              autoCapitalize="none"
+            />
+            <View style={styles.filterRow}>
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  exerciseRegionFilter === "ALL" && styles.filterChipActive,
+                ]}
+                onPress={() => setExerciseRegionFilter("ALL")}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    exerciseRegionFilter === "ALL" &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  Todas
+                </Text>
+              </TouchableOpacity>
+              {exerciseRegions.map((region) => (
+                <TouchableOpacity
+                  key={region}
+                  style={[
+                    styles.filterChip,
+                    exerciseRegionFilter === region && styles.filterChipActive,
+                  ]}
+                  onPress={() => setExerciseRegionFilter(region)}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      exerciseRegionFilter === region &&
+                        styles.filterChipTextActive,
+                    ]}
+                  >
+                    {region.replace(/_/g, " ")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {loadingExercicios ? (
+              <Text style={styles.emptyText}>Carregando catálogo...</Text>
+            ) : exerciciosFiltrados.length === 0 ? (
+              <Text style={styles.emptyText}>
+                Nenhum exercício encontrado no catálogo.
+              </Text>
+            ) : (
+              <View style={styles.exerciseCatalogList}>
+                {exerciciosFiltrados.map((exercicio) => (
+                  <TouchableOpacity
+                    key={exercicio.id}
+                    style={[
+                      styles.exerciseCatalogItem,
+                      exercicioId === exercicio.id &&
+                        styles.exerciseCatalogItemActive,
+                    ]}
+                    onPress={() => aplicarExercicio(exercicio)}
+                    activeOpacity={0.88}
+                  >
+                    <ExerciseVisual
+                      imageType={exercicio.imagemKey}
+                      title={exercicio.nome}
+                      compact
+                    />
+                    <View style={styles.exerciseCatalogMeta}>
+                      <Text style={styles.exerciseCatalogName}>
+                        {exercicio.nome}
+                      </Text>
+                      <Text style={styles.exerciseCatalogInfo}>
+                        {exercicio.regiaoCorporal.replace(/_/g, " ")} •{" "}
+                        {exercicio.categoria.replace(/_/g, " ")} •{" "}
+                        {exercicio.nivel}
+                      </Text>
+                      <Text style={styles.exerciseCatalogObjective} numberOfLines={2}>
+                        {exercicio.objetivo}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={
+                        exercicioId === exercicio.id
+                          ? "checkmark-circle"
+                          : "add-circle-outline"
+                      }
+                      size={22}
+                      color={
+                        exercicioId === exercicio.id
+                          ? COLORS.success
+                          : COLORS.primary
+                      }
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
           <Input
             label="Título da atividade"
             value={titulo}
-            onChangeText={setTitulo}
+            onChangeText={(value) => {
+              markDraftChanged();
+              setTitulo(value);
+            }}
             placeholder="Ex.: Mobilidade lombar + alongamento"
             maxLength={140}
             showCount
@@ -515,10 +810,74 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
           <Input
             label="Descrição"
             value={descricao}
-            onChangeText={setDescricao}
+            onChangeText={(value) => {
+              markDraftChanged();
+              setDescricao(value);
+            }}
             placeholder="Orientações detalhadas para o paciente"
             multiline
             maxLength={1000}
+            showCount
+          />
+
+          <View style={styles.exerciseImagePanel}>
+            <Text style={styles.exerciseImageTitle}>Imagem do exercício</Text>
+            <ExerciseVisual
+              imageUrl={imagemUrl}
+              imageType={imagemTipo}
+              title={titulo}
+            />
+            <Text style={styles.sectionLabel}>Ilustração orientativa</Text>
+            <View style={styles.imageTypeGrid}>
+              {EXERCISE_IMAGE_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.imageTypeChip,
+                    imagemTipo === option.value && styles.imageTypeChipActive,
+                  ]}
+                  onPress={() => {
+                    markDraftChanged();
+                    setImagemTipo(option.value);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={[
+                      styles.imageTypeChipText,
+                      imagemTipo === option.value &&
+                        styles.imageTypeChipTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Input
+              label="URL de imagem propria/interna (opcional)"
+              value={imagemUrl}
+              onChangeText={(value) => {
+                markDraftChanged();
+                setImagemUrl(value);
+              }}
+              placeholder="https://sua-base-de-imagens/..."
+              autoCapitalize="none"
+              keyboardType="url"
+              maxLength={2048}
+            />
+          </View>
+
+          <Input
+            label="Como o paciente deve realizar"
+            value={instrucoesExecucao}
+            onChangeText={(value) => {
+              markDraftChanged();
+              setInstrucoesExecucao(value);
+            }}
+            placeholder="Passo a passo, dose, ritmo e sinais de alerta"
+            multiline
+            maxLength={1500}
             showCount
           />
 
@@ -529,7 +888,10 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
             <Input
               label="Livros e artigos"
               value={referenciasBibliograficas}
-              onChangeText={setReferenciasBibliograficas}
+              onChangeText={(value) => {
+                markDraftChanged();
+                setReferenciasBibliograficas(value);
+              }}
               placeholder="Uma referencia por linha"
               multiline
               maxLength={1200}
@@ -740,6 +1102,12 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                     />
                   </TouchableOpacity>
                 ) : null}
+                <ExerciseVisual
+                  imageUrl={atividade.imagemUrl}
+                  imageType={atividade.imagemTipo}
+                  title={atividade.titulo}
+                  compact
+                />
                 <View style={styles.itemMeta}>
                   <Text style={styles.itemTitle}>
                     {atividade.ordemNoDia ? `${atividade.ordemNoDia}. ` : ""}
@@ -770,6 +1138,11 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                       : "Sem dia semanal"}
                     {atividade.repetirSemanal ? " • semanal" : ""}
                   </Text>
+                  {atividade.instrucoesExecucao ? (
+                    <Text style={styles.itemInfo} numberOfLines={2}>
+                      {atividade.instrucoesExecucao}
+                    </Text>
+                  ) : null}
                 </View>
                 <TouchableOpacity
                   style={styles.editarButton}
@@ -948,6 +1321,45 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: FONTS.sizes.sm,
     fontWeight: "700",
+  },
+  exerciseImagePanel: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    backgroundColor: COLORS.gray50,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  exerciseImageTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  imageTypeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  imageTypeChip: {
+    borderWidth: 1,
+    borderColor: COLORS.primary + "66",
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: COLORS.white,
+  },
+  imageTypeChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  imageTypeChipText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  imageTypeChipTextActive: {
+    color: COLORS.white,
   },
   acceptanceChecklist: {
     marginTop: SPACING.xs,
@@ -1151,6 +1563,87 @@ const styles = StyleSheet.create({
   aiButton: {
     alignSelf: "flex-start",
     marginBottom: SPACING.sm,
+  },
+  catalogPanel: {
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.md,
+    backgroundColor: "#F7FBFA",
+  },
+  catalogHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  catalogTitleWrap: {
+    flex: 1,
+  },
+  catalogTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.base,
+    fontWeight: "700",
+  },
+  catalogSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    marginTop: 2,
+  },
+  clearExerciseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "66",
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
+    backgroundColor: COLORS.white,
+  },
+  clearExerciseText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  exerciseCatalogList: {
+    gap: SPACING.xs,
+  },
+  exerciseCatalogItem: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.white,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+  },
+  exerciseCatalogItemActive: {
+    borderColor: COLORS.success,
+    backgroundColor: COLORS.success + "10",
+  },
+  exerciseCatalogMeta: {
+    flex: 1,
+  },
+  exerciseCatalogName: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+  },
+  exerciseCatalogInfo: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  exerciseCatalogObjective: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 15,
+    marginTop: 3,
   },
   batchHeader: {
     marginBottom: SPACING.sm,

@@ -2,8 +2,15 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // PACIENTE ATIVIDADE CHECKIN SCREEN
 // ==========================================
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
@@ -17,6 +24,7 @@ import {
   SPACING,
 } from "../../constants/theme";
 import {
+  Atividade,
   DificuldadeExecucao,
   MelhoriaSessao,
   RootStackParamList,
@@ -30,6 +38,7 @@ import {
 import { isLikelyNetworkError, parseApiError } from "../../utils/apiErrors";
 import { useAuthStore } from "../../stores/authStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import { ExerciseVisual } from "../../components/clinical/ExerciseVisual";
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -79,6 +88,36 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
   const [feedbackLivre, setFeedbackLivre] = useState("");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [atividadeDetalhe, setAtividadeDetalhe] = useState<Atividade | null>(
+    null,
+  );
+  const [loadingAtividadeDetalhe, setLoadingAtividadeDetalhe] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoadingAtividadeDetalhe(true);
+    api
+      .get<Atividade>(`/atividades/${atividadeId}`)
+      .then((response) => {
+        if (mounted) {
+          setAtividadeDetalhe(response.data);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (mounted) {
+          setLoadingAtividadeDetalhe(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [atividadeId]);
+
+  const tituloAtual = atividadeDetalhe?.titulo || titulo;
+  const instrucoesExecucao = atividadeDetalhe?.instrucoesExecucao?.trim() || "";
+  const descricaoAtividade = atividadeDetalhe?.descricao?.trim() || "";
 
   const toIntOrNull = (value: string) => {
     const parsed = Number.parseInt(value, 10);
@@ -269,7 +308,36 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.title}>Check-in da sessão</Text>
-          <Text style={styles.subtitle}>{titulo}</Text>
+          <Text style={styles.subtitle}>{tituloAtual}</Text>
+
+          <View style={styles.exerciseGuide}>
+            <ExerciseVisual
+              imageUrl={atividadeDetalhe?.imagemUrl}
+              imageType={atividadeDetalhe?.imagemTipo}
+              title={tituloAtual}
+            />
+            {loadingAtividadeDetalhe ? (
+              <View style={styles.loadingGuideRow}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingGuideText}>
+                  Carregando orientações...
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.instructionBlock}>
+              <Text style={styles.instructionTitle}>Como realizar</Text>
+              <Text style={styles.instructionText}>
+                {instrucoesExecucao ||
+                  "Siga a orientação passada pelo fisioterapeuta e registre o check-in apenas após executar com segurança."}
+              </Text>
+            </View>
+            {descricaoAtividade ? (
+              <View style={styles.instructionBlock}>
+                <Text style={styles.instructionTitle}>Objetivo da prescrição</Text>
+                <Text style={styles.instructionText}>{descricaoAtividade}</Text>
+              </View>
+            ) : null}
+          </View>
 
           <Button
             title="Check-in rápido (1 toque)"
@@ -502,6 +570,40 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: FONTS.sizes.base,
     marginBottom: SPACING.md,
+  },
+  exerciseGuide: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.gray50,
+    gap: SPACING.sm,
+  },
+  loadingGuideRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  loadingGuideText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+  },
+  instructionBlock: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray200,
+    paddingTop: SPACING.sm,
+  },
+  instructionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  instructionText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    lineHeight: 19,
   },
   quickCheckinButton: {
     marginBottom: SPACING.md,

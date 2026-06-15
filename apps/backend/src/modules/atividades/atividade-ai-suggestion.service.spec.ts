@@ -65,6 +65,8 @@ describe('AtividadeAiSuggestionService', () => {
       'Meta principal: Voltar a correr sem dor.',
     );
     expect(result.descricao).toContain('Referencias:');
+    expect(result.instrucoesExecucao).toContain('Prepare um ambiente seguro');
+    expect(result.imagemTipo).toBe('JOELHO_AGACHAMENTO');
     expect(openAiService.createJsonResponse).not.toHaveBeenCalled();
   });
 
@@ -76,6 +78,9 @@ describe('AtividadeAiSuggestionService', () => {
       parsed: {
         titulo: '  Fortalecimento progressivo  ',
         descricao: '  Plano com controle de carga.  ',
+        instrucoesExecucao: '  1. Execute com controle.  ',
+        imagemTipo: 'JOELHO_AGACHAMENTO',
+        imagemUrl: 'https://example.com/exercicio.png',
         referencias: [
           'Magee DJ. Avaliacao musculoesqueletica.',
           'Referencia inventada',
@@ -95,11 +100,14 @@ describe('AtividadeAiSuggestionService', () => {
       source: 'ai',
       model: 'gpt-test',
       titulo: 'Fortalecimento progressivo',
+      instrucoesExecucao: '1. Execute com controle.',
+      imagemTipo: 'JOELHO_AGACHAMENTO',
       referencias: [
         'Magee DJ. Avaliacao musculoesqueletica.',
         'Hall CM, Brody LT. Exercicio terapeutico: recuperacao funcional.',
       ],
     });
+    expect(result.imagemUrl).toBeUndefined();
     expect(result.descricao).toContain('Plano com controle de carga.');
     expect(result.descricao).not.toContain('Referencia inventada');
     expect(openAiService.createJsonResponse).toHaveBeenCalledWith(
@@ -128,6 +136,7 @@ describe('AtividadeAiSuggestionService', () => {
     expect(result.descricao).toContain('Diagnostico funcional:');
     expect(result.descricao).toContain('Exame fisico relevante:');
     expect(result.descricao).toContain('mobilidade lombo-pelvica');
+    expect(result.imagemTipo).toBe('MOBILIDADE_LOMBAR');
   });
 
   it('falls back to default references when AI returns no allowed references', async () => {

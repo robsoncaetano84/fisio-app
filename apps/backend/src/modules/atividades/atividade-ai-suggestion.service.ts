@@ -8,6 +8,9 @@ import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 type AtividadeAiSuggestion = {
   titulo: string;
   descricao: string;
+  instrucoesExecucao?: string;
+  imagemUrl?: string;
+  imagemTipo?: string;
   referencias?: string[];
   source: 'ai' | 'rules';
   model?: string;
@@ -16,6 +19,8 @@ type AtividadeAiSuggestion = {
 type OpenAiActivityResponse = {
   titulo?: string;
   descricao?: string;
+  instrucoesExecucao?: string;
+  imagemTipo?: string;
   referencias?: string[];
   model?: string;
 };
@@ -71,6 +76,9 @@ export class AtividadeAiSuggestionService {
     return {
       titulo: ai.titulo || fallback.titulo,
       descricao: descricaoComReferencias,
+      instrucoesExecucao: ai.instrucoesExecucao || fallback.instrucoesExecucao,
+      imagemTipo:
+        this.normalizeExerciseImageType(ai.imagemTipo) || fallback.imagemTipo,
       referencias,
       source: 'ai',
       model: ai.model,
@@ -167,6 +175,73 @@ export class AtividadeAiSuggestionService {
     return 'Exercicios terapeuticos: mobilidade ativa da regiao sintomatica, controle motor de baixa carga e progressao funcional guiada por dor, qualidade de movimento e tolerancia em 24h.';
   }
 
+  private getExerciseImageTypes(): string[] {
+    return [
+      'MOBILIDADE_GERAL',
+      'MOBILIDADE_LOMBAR',
+      'CONTROLE_CERVICAL',
+      'OMBRO_MANGUITO',
+      'JOELHO_AGACHAMENTO',
+      'QUADRIL_GLUTEOS',
+      'TORNOZELO_EQUILIBRIO',
+      'PUNHO_PREENSAO',
+    ];
+  }
+
+  private normalizeExerciseImageType(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim().toUpperCase();
+    return this.getExerciseImageTypes().includes(normalized)
+      ? normalized
+      : undefined;
+  }
+
+  private inferExerciseImageType(
+    anamnese: Anamnese | null,
+    laudo: Laudo | null,
+  ): string {
+    const context = this.normalizeForMatch(
+      [
+        anamnese?.descricaoSintomas,
+        anamnese?.limitacoesFuncionais,
+        anamnese?.atividadesQuePioram,
+        anamnese?.metaPrincipalPaciente,
+        laudo?.diagnosticoFuncional,
+        laudo?.achadosClinicos,
+        laudo?.exameFisico,
+        laudo?.condutas,
+        laudo?.planoTratamentoIA,
+      ].join(' '),
+    );
+
+    const hasAny = (terms: string[]) =>
+      terms.some((term) => context.includes(term));
+    if (hasAny(['ombro', 'manguito', 'escapul'])) return 'OMBRO_MANGUITO';
+    if (hasAny(['cervical', 'pescoco', 'cefaleia'])) return 'CONTROLE_CERVICAL';
+    if (hasAny(['lombar', 'lombo', 'ciatic', 'lombalgia']))
+      return 'MOBILIDADE_LOMBAR';
+    if (hasAny(['joelho', 'patelar', 'quadriceps', 'agachamento']))
+      return 'JOELHO_AGACHAMENTO';
+    if (hasAny(['quadril', 'coxofemoral', 'gluteo'])) return 'QUADRIL_GLUTEOS';
+    if (hasAny(['tornozelo', 'pe ', 'retrope', 'apoio']))
+      return 'TORNOZELO_EQUILIBRIO';
+    if (hasAny(['punho', 'mao', 'carpal', 'preensao', 'cotovelo']))
+      return 'PUNHO_PREENSAO';
+    return 'MOBILIDADE_GERAL';
+  }
+
+  private buildExecutionInstructions(exerciseFocus: string): string {
+    const cleanFocus = exerciseFocus
+      .replace(/^Exercicios terapeuticos:\s*/i, '')
+      .replace(/\.$/, '');
+    return [
+      '1. Prepare um ambiente seguro, com apoio estavel por perto quando necessario.',
+      `2. Execute ${cleanFocus}, sempre em amplitude confortavel e sem compensacoes bruscas.`,
+      '3. Mantenha respiracao calma, velocidade controlada e pausas curtas entre as series.',
+      '4. Interrompa e avise o fisioterapeuta se houver tontura, formigamento novo, perda de forca ou piora de dor que persista por 24h.',
+    ].join('\n');
+  }
+
   private buildRuleSuggestion(
     dto: GenerateAtividadeAiDto,
     anamnese: Anamnese | null,
@@ -183,6 +258,7 @@ export class AtividadeAiSuggestionService {
       280,
     );
     const exerciseFocus = this.buildTherapeuticExerciseFocus(anamnese, laudo);
+    const imagemTipo = this.inferExerciseImageType(anamnese, laudo);
 
     const titulo =
       dto.titulo?.trim() ||
@@ -223,6 +299,8 @@ export class AtividadeAiSuggestionService {
     return {
       titulo: titulo.slice(0, 140),
       descricao,
+      instrucoesExecucao: this.buildExecutionInstructions(exerciseFocus),
+      imagemTipo,
       referencias,
       source: 'rules',
     };
@@ -266,6 +344,11 @@ descricao (string até 1000 chars),
 referencias (array de 2 a 4 strings, escolhidas SOMENTE da lista de referências abaixo, sem inventar novas).
 
 Lista de referências permitidas:
+Inclua tambem no JSON:
+instrucoesExecucao (string com 3 a 5 passos claros para o paciente executar em casa, ate 1500 chars),
+imagemTipo (uma das opcoes permitidas: ${this.getExerciseImageTypes().join(', ')}),
+nao retorne URL de imagem; use somente imagemTipo para selecionar ilustracao propria do catalogo Synap.
+
 ${referenciasCanonicas.map((r, index) => `${index + 1}. ${r}`).join('\n')}
 
 Contexto clínico:
@@ -292,6 +375,8 @@ ${JSON.stringify(input, null, 2)}
       return {
         titulo: this.sanitizeText(parsed.titulo, 140),
         descricao: this.sanitizeText(parsed.descricao, 1000),
+        instrucoesExecucao: this.sanitizeText(parsed.instrucoesExecucao, 1500),
+        imagemTipo: this.normalizeExerciseImageType(parsed.imagemTipo),
         referencias: Array.isArray(parsed.referencias)
           ? parsed.referencias
               .filter((item): item is string => typeof item === 'string')

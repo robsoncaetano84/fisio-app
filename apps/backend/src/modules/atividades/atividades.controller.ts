@@ -134,6 +134,16 @@ export class AtividadesController {
     });
   }
 
+  @Get(':id')
+  @Throttle({ default: { ttl: 60, limit: 120 } })
+  @Roles(UserRole.ADMIN, UserRole.USER, UserRole.PACIENTE)
+  findOne(
+    @Param('id', ParseUUIDPipe) atividadeId: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.atividadesService.findOneVisibleToUser(atividadeId, usuario);
+  }
+
   @Post(':id/checkins')
   @Throttle({ default: { ttl: 60, limit: 40 } })
   @Roles(UserRole.PACIENTE)

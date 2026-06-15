@@ -11,6 +11,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Atividade } from './entities/atividade.entity';
+import { Exercicio } from './entities/exercicio.entity';
 import {
   AtividadeCheckin,
   DificuldadeExecucao,
@@ -28,6 +29,7 @@ import { UpdateAtividadeDto } from './dto/update-atividade.dto';
 import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
+import { ExerciciosCatalogService } from './exercicios-catalog.service';
 
 @Injectable()
 export class AtividadesService {
@@ -44,6 +46,7 @@ export class AtividadesService {
     private readonly laudoRepository: Repository<Laudo>,
     private readonly notificacoesService: NotificacoesService,
     private readonly atividadeAiSuggestionService: AtividadeAiSuggestionService,
+    private readonly exerciciosCatalogService: ExerciciosCatalogService,
   ) {}
 
   async create(dto: CreateAtividadeDto, usuarioId: string): Promise<Atividade> {
@@ -54,11 +57,23 @@ export class AtividadesService {
       throw new NotFoundException('Paciente nao encontrado');
     }
 
+    const exercicio = dto.exercicioId
+      ? await this.exerciciosCatalogService.findApprovedById(dto.exercicioId)
+      : null;
+    if (dto.exercicioId && !exercicio) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+
     const atividade = this.atividadeRepository.create({
       pacienteId: dto.pacienteId,
       usuarioId,
-      titulo: dto.titulo.trim(),
-      descricao: dto.descricao?.trim() || null,
+      exercicioId: exercicio?.id ?? null,
+      titulo: dto.titulo.trim() || exercicio?.nome || '',
+      descricao: dto.descricao?.trim() || exercicio?.descricao || null,
+      instrucoesExecucao:
+        dto.instrucoesExecucao?.trim() || exercicio?.instrucoesPadrao || null,
+      imagemUrl: dto.imagemUrl?.trim() || null,
+      imagemTipo: dto.imagemTipo?.trim() || exercicio?.imagemKey || null,
       dataLimite: dto.dataLimite ? new Date(dto.dataLimite) : null,
       diaPrescricao:
         typeof dto.diaPrescricao === 'number' ? dto.diaPrescricao : null,
@@ -141,8 +156,12 @@ export class AtividadesService {
     const clone = this.atividadeRepository.create({
       pacienteId: origem.pacienteId,
       usuarioId: origem.usuarioId,
+      exercicioId: origem.exercicioId,
       titulo: `${origem.titulo} (copia)`,
       descricao: origem.descricao,
+      instrucoesExecucao: origem.instrucoesExecucao,
+      imagemUrl: origem.imagemUrl,
+      imagemTipo: origem.imagemTipo,
       dataLimite: origem.dataLimite,
       diaPrescricao: diaDestino,
       ordemNoDia: ordemNoDia ?? null,
@@ -187,6 +206,13 @@ export class AtividadesService {
         dto.titulo.trim() !== atividade.titulo) ||
       (typeof dto.descricao === 'string' &&
         (dto.descricao.trim() || null) !== atividade.descricao) ||
+      (typeof dto.instrucoesExecucao === 'string' &&
+        (dto.instrucoesExecucao.trim() || null) !==
+          atividade.instrucoesExecucao) ||
+      (typeof dto.imagemUrl === 'string' &&
+        (dto.imagemUrl.trim() || null) !== atividade.imagemUrl) ||
+      (typeof dto.imagemTipo === 'string' &&
+        (dto.imagemTipo.trim() || null) !== atividade.imagemTipo) ||
       (typeof dto.dataLimite === 'string' &&
         (dto.dataLimite
           ? new Date(dto.dataLimite).toISOString().slice(0, 10)
@@ -199,7 +225,9 @@ export class AtividadesService {
       (typeof dto.ordemNoDia === 'number' &&
         dto.ordemNoDia !== atividade.ordemNoDia) ||
       (typeof dto.repetirSemanal === 'boolean' &&
-        dto.repetirSemanal !== atividade.repetirSemanal);
+        dto.repetirSemanal !== atividade.repetirSemanal) ||
+      (dto.exercicioId !== undefined &&
+        (dto.exercicioId || null) !== atividade.exercicioId);
 
     if (dto.pacienteId && dto.pacienteId !== atividade.pacienteId) {
       const paciente = await this.pacienteRepository.findOne({
@@ -211,11 +239,51 @@ export class AtividadesService {
       atividade.pacienteId = dto.pacienteId;
     }
 
+    let exercicio: Exercicio | null = null;
+    if (dto.exercicioId === null) {
+      atividade.exercicioId = null;
+    } else if (typeof dto.exercicioId === 'string') {
+      exercicio = await this.exerciciosCatalogService.findApprovedById(
+        dto.exercicioId,
+      );
+      if (!exercicio) {
+        throw new NotFoundException('Exercicio nao encontrado');
+      }
+      atividade.exercicioId = exercicio.id;
+    }
+
     if (typeof dto.titulo === 'string') {
-      atividade.titulo = dto.titulo.trim();
+      atividade.titulo =
+        dto.titulo.trim() || exercicio?.nome || atividade.titulo;
     }
     if (typeof dto.descricao === 'string') {
-      atividade.descricao = dto.descricao.trim() || null;
+      atividade.descricao =
+        dto.descricao.trim() || exercicio?.descricao || null;
+    }
+    if (typeof dto.instrucoesExecucao === 'string') {
+      atividade.instrucoesExecucao =
+        dto.instrucoesExecucao.trim() || exercicio?.instrucoesPadrao || null;
+    }
+    if (typeof dto.imagemUrl === 'string') {
+      atividade.imagemUrl = dto.imagemUrl.trim() || null;
+    }
+    if (typeof dto.imagemTipo === 'string') {
+      atividade.imagemTipo =
+        dto.imagemTipo.trim() || exercicio?.imagemKey || null;
+    }
+    if (exercicio) {
+      if (typeof dto.titulo !== 'string') {
+        atividade.titulo = exercicio.nome;
+      }
+      if (typeof dto.descricao !== 'string') {
+        atividade.descricao = exercicio.descricao;
+      }
+      if (typeof dto.instrucoesExecucao !== 'string') {
+        atividade.instrucoesExecucao = exercicio.instrucoesPadrao;
+      }
+      if (typeof dto.imagemTipo !== 'string') {
+        atividade.imagemTipo = exercicio.imagemKey;
+      }
     }
     if (typeof dto.dataLimite === 'string') {
       atividade.dataLimite = dto.dataLimite ? new Date(dto.dataLimite) : null;
@@ -245,6 +313,37 @@ export class AtividadesService {
     }
 
     return this.atividadeRepository.save(atividade);
+  }
+
+  async findOneVisibleToUser(
+    atividadeId: string,
+    usuario: Usuario,
+  ): Promise<Atividade> {
+    if (usuario.role === UserRole.PACIENTE) {
+      const paciente = await this.pacienteRepository.findOne({
+        where: { pacienteUsuarioId: usuario.id, ativo: true },
+        order: { updatedAt: 'DESC' },
+      });
+      if (!paciente) {
+        throw new NotFoundException('Nenhum cadastro de paciente vinculado');
+      }
+
+      const atividade = await this.atividadeRepository.findOne({
+        where: { id: atividadeId, pacienteId: paciente.id, ativo: true },
+      });
+      if (!atividade) {
+        throw new NotFoundException('Atividade nao encontrada');
+      }
+      return atividade;
+    }
+
+    const atividade = await this.atividadeRepository.findOne({
+      where: { id: atividadeId, usuarioId: usuario.id, ativo: true },
+    });
+    if (!atividade) {
+      throw new NotFoundException('Atividade nao encontrada');
+    }
+    return atividade;
   }
 
   async findMinhasAtividades(usuario: Usuario): Promise<
@@ -597,6 +696,9 @@ export class AtividadesService {
   ): Promise<{
     titulo: string;
     descricao: string;
+    instrucoesExecucao?: string;
+    imagemUrl?: string;
+    imagemTipo?: string;
     referencias?: string[];
     source: 'ai' | 'rules';
     model?: string;

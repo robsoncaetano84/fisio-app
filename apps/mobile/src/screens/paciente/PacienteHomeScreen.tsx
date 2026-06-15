@@ -44,6 +44,7 @@ import {
 } from "../../services";
 import { useToast } from "../../components/ui";
 import { CareTimeline, type CareTimelineViewItem } from "../../components/clinical/CareTimeline";
+import { ExerciseVisual } from "../../components/clinical/ExerciseVisual";
 import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLanguage } from "../../i18n/LanguageProvider";
@@ -1811,6 +1812,12 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                 ) : (
                   diaSelecionadoItens.map((atividade: Atividade) => (
                     <View key={atividade.id} style={styles.activityItem}>
+                      <ExerciseVisual
+                        imageUrl={atividade.imagemUrl}
+                        imageType={atividade.imagemTipo}
+                        title={atividade.titulo}
+                        compact
+                      />
                       <View style={styles.activityMeta}>
                         <Text style={styles.activityTitle}>
                           {atividade.ordemNoDia ? `${atividade.ordemNoDia}. ` : ""}
@@ -1826,6 +1833,11 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                         {atividade.descricao ? (
                           <Text style={styles.activityInfo} numberOfLines={2}>
                             {atividade.descricao}
+                          </Text>
+                        ) : null}
+                        {atividade.instrucoesExecucao ? (
+                          <Text style={styles.activityInfo} numberOfLines={2}>
+                            {atividade.instrucoesExecucao}
                           </Text>
                         ) : null}
                       </View>
@@ -1861,6 +1873,12 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                       .find((grupo) => grupo.day === 8)
                       ?.itens.map((atividade) => (
                         <View key={atividade.id} style={styles.activityItem}>
+                          <ExerciseVisual
+                            imageUrl={atividade.imagemUrl}
+                            imageType={atividade.imagemTipo}
+                            title={atividade.titulo}
+                            compact
+                          />
                           <View style={styles.activityMeta}>
                             <Text style={styles.activityTitle}>{atividade.titulo}</Text>
                             <Text style={styles.activityInfo}>
@@ -1872,6 +1890,11 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                                   })
                                 : t("patient.noDeadline")}
                             </Text>
+                            {atividade.instrucoesExecucao ? (
+                              <Text style={styles.activityInfo} numberOfLines={2}>
+                                {atividade.instrucoesExecucao}
+                              </Text>
+                            ) : null}
                           </View>
                           <TouchableOpacity
                             style={styles.activityAction}
@@ -2261,13 +2284,13 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.sm,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: SPACING.xs,
+    gap: SPACING.sm,
   },
   activityMeta: {
     flex: 1,
-    marginRight: SPACING.sm,
   },
   activityTitle: {
     fontSize: FONTS.sizes.sm,
@@ -2532,9 +2555,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
-
-
 
 
 
