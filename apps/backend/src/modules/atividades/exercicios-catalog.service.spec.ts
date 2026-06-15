@@ -28,6 +28,8 @@ describe('ExerciciosCatalogService', () => {
     count: jest.fn(),
     create: jest.fn((input) => input),
     save: jest.fn(async (input) => input),
+    update: jest.fn(),
+    find: jest.fn(),
     findOne: jest.fn(),
     createQueryBuilder: jest.fn(),
   });
@@ -135,6 +137,27 @@ describe('ExerciciosCatalogService', () => {
     });
   });
 
+  it('lists drafts and archived exercises for admin catalog maintenance', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getMany.mockResolvedValue([
+      { id: 'exercicio-rascunho', status: ExercicioStatus.RASCUNHO },
+      { id: 'exercicio-arquivado', status: ExercicioStatus.ARQUIVADO },
+    ]);
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.findAll({ includeDrafts: true });
+
+    expect(result).toEqual([
+      { id: 'exercicio-rascunho', status: ExercicioStatus.RASCUNHO },
+      { id: 'exercicio-arquivado', status: ExercicioStatus.ARQUIVADO },
+    ]);
+    expect(qb.where).toHaveBeenCalledWith('1 = 1');
+    expect(qb.andWhere).not.toHaveBeenCalledWith('exercicio.status = :status', {
+      status: ExercicioStatus.APROVADO,
+    });
+  });
+
   it('finds approved exercise by id for prescriptions', async () => {
     const { service, exercicioRepository } = makeService();
     exercicioRepository.findOne.mockResolvedValue({ id: 'exercicio-1' });
@@ -149,5 +172,162 @@ describe('ExerciciosCatalogService', () => {
         status: ExercicioStatus.APROVADO,
       },
     });
+  });
+
+  it('matches an AI suggestion to the best proprietary catalog exercise', async () => {
+    const { service, exercicioRepository } = makeService();
+    exercicioRepository.find.mockResolvedValue(
+      INITIAL_EXERCISE_CATALOG.map((item, index) => ({
+        id: `exercicio-${index + 1}`,
+        ativo: true,
+        ...item,
+      })),
+    );
+
+    const result = await service.findBestMatchForSuggestion({
+      titulo: 'Ponte curta para controle lombar',
+      descricao:
+        'Ativar gluteos e cadeia posterior com baixa carga em decubito dorsal.',
+      instrucoesExecucao:
+        'Eleve o quadril devagar e mantenha joelhos alinhados.',
+      imagemTipo: 'MOBILIDADE_LOMBAR',
+    });
+
+    expect(result).toMatchObject({
+      slug: 'ponte-curta',
+      imagemKey: 'MOBILIDADE_LOMBAR',
+    });
+    expect(exercicioRepository.find).toHaveBeenCalledWith({
+      where: { ativo: true, status: ExercicioStatus.APROVADO },
+      order: { regiaoCorporal: 'ASC', nome: 'ASC' },
+    });
+  });
+
+  it('creates an admin exercise with proprietary media metadata', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const qb = makeQueryBuilder();
+    exercicioRepository.findOne.mockResolvedValue(null);
+    exercicioRepository.save.mockImplementation(async (input) => ({
+      id: 'exercicio-1',
+      ...input,
+    }));
+    midiaRepository.findOne.mockResolvedValue(null);
+    qb.getOne.mockResolvedValue({ id: 'exercicio-1', nome: 'Exercicio novo' });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.create(
+      {
+        nome: 'Exercicio novo',
+        regiaoCorporal: ' lombar ',
+        categoria: ' mobilidade ',
+        nivel: ' iniciante ',
+        objetivo: 'Melhorar mobilidade lombar.',
+        instrucoesPadrao: '1. Execute com controle.',
+        imagemKey: 'MOBILIDADE_LOMBAR',
+        tags: ['Lombar', 'Mobilidade lombar'],
+        status: ExercicioStatus.APROVADO,
+      },
+      'admin-1',
+    );
+
+    expect(result).toEqual({ id: 'exercicio-1', nome: 'Exercicio novo' });
+    expect(exercicioRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: 'exercicio-novo',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'MOBILIDADE',
+        nivel: 'INICIANTE',
+        imagemKey: 'MOBILIDADE_LOMBAR',
+        tags: ['lombar', 'mobilidade_lombar'],
+        revisadoPorUsuarioId: 'admin-1',
+      }),
+    );
+    expect(midiaRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exercicioId: 'exercicio-1',
+        assetKey: 'MOBILIDADE_LOMBAR',
+        sourceType: 'PROPRIA',
+        license: 'PROPRIETARIA_SYNAP',
+      }),
+    );
+  });
+
+  it('archives exercise and disables its media', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const exercicio = {
+      id: 'exercicio-1',
+      ativo: true,
+      status: ExercicioStatus.APROVADO,
+      versao: 1,
+    };
+    exercicioRepository.findOne.mockResolvedValue(exercicio);
+
+    await expect(service.archive('exercicio-1', 'admin-1')).resolves.toEqual({
+      success: true,
+    });
+
+    expect(exercicioRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ativo: false,
+        status: ExercicioStatus.ARQUIVADO,
+        versao: 2,
+        revisadoPorUsuarioId: 'admin-1',
+      }),
+    );
+    expect(midiaRepository.update).toHaveBeenCalledWith(
+      { exercicioId: 'exercicio-1' },
+      { ativo: false },
+    );
+  });
+
+  it('restores archived exercise when admin changes status', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const qb = makeQueryBuilder();
+    const exercicio = {
+      id: 'exercicio-1',
+      ativo: false,
+      status: ExercicioStatus.ARQUIVADO,
+      versao: 2,
+      imagemKey: 'MOBILIDADE_LOMBAR',
+    };
+    exercicioRepository.findOne.mockResolvedValueOnce(exercicio);
+    midiaRepository.findOne.mockResolvedValue(null);
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-1',
+      ativo: true,
+      status: ExercicioStatus.APROVADO,
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await expect(
+      service.update(
+        'exercicio-1',
+        { status: ExercicioStatus.APROVADO },
+        'admin-1',
+      ),
+    ).resolves.toEqual({
+      id: 'exercicio-1',
+      ativo: true,
+      status: ExercicioStatus.APROVADO,
+    });
+
+    expect(exercicioRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'exercicio-1' },
+    });
+    expect(exercicioRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ativo: true,
+        status: ExercicioStatus.APROVADO,
+        versao: 3,
+        revisadoPorUsuarioId: 'admin-1',
+      }),
+    );
+    expect(midiaRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exercicioId: 'exercicio-1',
+        assetKey: 'MOBILIDADE_LOMBAR',
+        ativo: true,
+      }),
+    );
   });
 });

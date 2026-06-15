@@ -54,6 +54,13 @@ export function AdminMasterHomeScreen({ navigation }: Props) {
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
+            onPress={() => navigation.navigate("AdminExercises")}
+          >
+            <Ionicons name="barbell-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.smallCardTitle}>Exercícios</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.smallCard, pressed && styles.cardPressed]}
             onPress={() => navigation.navigate("AdminCrm", { initialTab: "TAREFAS" })}
           >
             <Ionicons name="checkmark-done-outline" size={18} color={COLORS.primary} />

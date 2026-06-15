@@ -694,6 +694,8 @@ export class AtividadesService {
     dto: GenerateAtividadeAiDto,
     usuarioId: string,
   ): Promise<{
+    exercicioId?: string;
+    exercicioNome?: string;
     titulo: string;
     descricao: string;
     instrucoesExecucao?: string;
@@ -720,11 +722,25 @@ export class AtividadesService {
       order: { updatedAt: 'DESC' },
     });
 
-    return this.atividadeAiSuggestionService.generate(
+    const suggestion = await this.atividadeAiSuggestionService.generate(
       dto,
       paciente,
       anamnese,
       laudo,
     );
+    const exercicio =
+      await this.exerciciosCatalogService.findBestMatchForSuggestion({
+        titulo: suggestion.titulo,
+        descricao: suggestion.descricao,
+        instrucoesExecucao: suggestion.instrucoesExecucao,
+        imagemTipo: suggestion.imagemTipo,
+      });
+
+    return {
+      ...suggestion,
+      exercicioId: exercicio?.id,
+      exercicioNome: exercicio?.nome,
+      imagemTipo: suggestion.imagemTipo || exercicio?.imagemKey || undefined,
+    };
   }
 }

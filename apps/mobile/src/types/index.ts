@@ -592,6 +592,7 @@ export type RootStackParamList = {
     | undefined;
   AdminProfessionals: undefined;
   AdminPatients: undefined;
+  AdminExercises: undefined;
   PacienteHome: undefined;
   PacienteAtividadeCheckin: { atividadeId: string; titulo: string };
 

@@ -261,6 +261,8 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
 
   const applyAutomaticSuggestion = (
     data: Partial<{
+      exercicioId: string;
+      exercicioNome: string;
       titulo: string;
       descricao: string;
       instrucoesExecucao: string;
@@ -272,6 +274,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     const descricaoOriginal = String(data.descricao || "").trim();
     const instrucoesSugeridas = String(data.instrucoesExecucao || "").trim();
     const imagemTipoSugerida = String(data.imagemTipo || "").trim();
+    const exercicioIdSugerido = String(data.exercicioId || "").trim();
     const referenciasArray = Array.isArray(data.referencias)
       ? data.referencias.map((item) => String(item).trim()).filter(Boolean)
       : [];
@@ -293,7 +296,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       }
     }
 
-    setExercicioId(null);
+    setExercicioId(exercicioIdSugerido || null);
     setImagemUrl("");
     if (tituloSugerido) setTitulo(tituloSugerido);
     if (descricaoFinal) setDescricao(descricaoFinal);
@@ -313,6 +316,8 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     try {
       const response = await api.post<
         Partial<{
+          exercicioId: string;
+          exercicioNome: string;
           titulo: string;
           descricao: string;
           instrucoesExecucao: string;
