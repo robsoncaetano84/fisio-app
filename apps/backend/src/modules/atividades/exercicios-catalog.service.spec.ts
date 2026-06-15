@@ -78,7 +78,7 @@ describe('ExerciciosCatalogService', () => {
     expect(exercicioRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         slug: 'mobilidade-lombar-gato-camelo',
-        imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
+        imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR_GATO_CAMELO,
         status: ExercicioStatus.APROVADO,
         ativo: true,
         versao: 1,
@@ -86,7 +86,7 @@ describe('ExerciciosCatalogService', () => {
     );
     expect(midiaRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        assetKey: 'MOBILIDADE_LOMBAR',
+        assetKey: 'MOBILIDADE_LOMBAR_GATO_CAMELO',
         sourceType: 'PROPRIA',
         license: 'PROPRIETARIA_SYNAP',
         attributionText: 'Ilustracao propria Synap.',
@@ -197,7 +197,7 @@ describe('ExerciciosCatalogService', () => {
 
     expect(result).toMatchObject({
       slug: 'ponte-curta',
-      imagemKey: 'MOBILIDADE_LOMBAR',
+      imagemKey: 'PONTE_CURTA',
     });
     expect(exercicioRepository.find).toHaveBeenCalledWith({
       where: { ativo: true, status: ExercicioStatus.APROVADO },

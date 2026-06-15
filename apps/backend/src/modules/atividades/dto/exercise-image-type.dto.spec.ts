@@ -9,7 +9,7 @@ import {
 } from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
 import { INITIAL_EXERCISE_CATALOG } from '../exercicio-catalog.seed';
-import { NormalizeExerciseImageFields1780800000000 } from '../../../migrations/1780800000000-NormalizeExerciseImageFields';
+import { ExpandExerciseSpecificImageTypes1781100000000 } from '../../../migrations/1781100000000-ExpandExerciseSpecificImageTypes';
 
 describe('exercise image DTO validation', () => {
   it('accepts only known local exercise image types for prescriptions', async () => {
@@ -79,11 +79,14 @@ describe('exercise image DTO validation', () => {
   });
 
   it('keeps database image constraints aligned with the backend enum', () => {
-    const migration = new NormalizeExerciseImageFields1780800000000();
+    const migration = new ExpandExerciseSpecificImageTypes1781100000000();
 
-    expect([...(migration as any).allowedImageTypes].sort()).toEqual(
-      [...EXERCISE_IMAGE_TYPES].sort(),
-    );
+    expect(
+      [
+        ...(migration as any).legacyImageTypes,
+        ...(migration as any).specificImageTypes,
+      ].sort(),
+    ).toEqual([...EXERCISE_IMAGE_TYPES].sort());
   });
 
   it('uses only known image keys in the initial proprietary catalog', () => {
@@ -114,5 +117,33 @@ describe('exercise image DTO validation', () => {
       ]),
     );
     expect(slugs).toHaveLength(18);
+  });
+
+  it('uses specific image keys for each seeded proprietary exercise', () => {
+    const imageKeys = INITIAL_EXERCISE_CATALOG.map((item) => item.imagemKey);
+
+    expect(imageKeys).toEqual(
+      expect.arrayContaining([
+        ExerciseImageType.MOBILIDADE_LOMBAR_GATO_CAMELO,
+        ExerciseImageType.PONTE_CURTA,
+        ExerciseImageType.CONTROLE_CERVICAL_PROFUNDO,
+        ExerciseImageType.ELEVACAO_ASSISTIDA_OMBRO,
+        ExerciseImageType.AGACHAMENTO_PARCIAL_ASSISTIDO,
+        ExerciseImageType.ABDUCAO_QUADRIL_DECUBITO_LATERAL,
+        ExerciseImageType.EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO,
+        ExerciseImageType.PREENSAO_MANUAL_BOLA_MACIA,
+        ExerciseImageType.MOBILIDADE_TORACICA_ROTACAO_SENTADA,
+        ExerciseImageType.RETRACAO_ESCAPULAR_SENTADA,
+        ExerciseImageType.ISOMETRIA_ROTACAO_EXTERNA_OMBRO,
+        ExerciseImageType.EXTENSAO_JOELHO_SENTADO,
+        ExerciseImageType.SENTAR_LEVANTAR_CONTROLADO,
+        ExerciseImageType.ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO,
+        ExerciseImageType.MARCHA_ESTACIONARIA_APOIO,
+        ExerciseImageType.MOBILIDADE_PUNHO_FLEXAO_EXTENSAO,
+        ExerciseImageType.ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO,
+        ExerciseImageType.DESLIZAMENTO_NEURAL_MEDIANO,
+      ]),
+    );
+    expect(new Set(imageKeys).size).toBe(INITIAL_EXERCISE_CATALOG.length);
   });
 });

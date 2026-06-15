@@ -735,7 +735,7 @@ export class AtividadesService {
       ...suggestion,
       exercicioId: exercicio?.id,
       exercicioNome: exercicio?.nome,
-      imagemTipo: suggestion.imagemTipo || exercicio?.imagemKey || undefined,
+      imagemTipo: exercicio?.imagemKey || suggestion.imagemTipo || undefined,
     };
   }
 }

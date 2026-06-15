@@ -33,7 +33,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Evitar amplitudes forcadas. Priorizar conforto, respiracao e controle.',
     contraindicacoes:
       'Suspender em caso de dor neurologica progressiva, perda de forca ou tontura.',
-    imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
+    imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR_GATO_CAMELO,
     tags: ['lombar', 'mobilidade', 'controle_motor', 'dor_lombar'],
     status: ExercicioStatus.APROVADO,
   },
@@ -52,7 +52,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Evitar hiperextensao lombar e empurrar com excesso pelo pescoco.',
     contraindicacoes:
       'Nao executar se houver dor intensa, piora neurologica ou orientacao profissional contraria.',
-    imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
+    imagemKey: ExerciseImageType.PONTE_CURTA,
     tags: ['lombar', 'quadril', 'gluteos', 'fortalecimento'],
     status: ExercicioStatus.APROVADO,
   },
@@ -70,7 +70,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Movimento deve ser pequeno e sem compensar com ombros.',
     contraindicacoes:
       'Evitar em crise vestibular, tontura importante ou sintomas neurologicos novos.',
-    imagemKey: ExerciseImageType.CONTROLE_CERVICAL,
+    imagemKey: ExerciseImageType.CONTROLE_CERVICAL_PROFUNDO,
     tags: ['cervical', 'postura', 'controle_motor', 'pescoco'],
     status: ExercicioStatus.APROVADO,
   },
@@ -88,7 +88,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Evitar compensar elevando o ombro em direcao a orelha.',
     contraindicacoes:
       'Evitar em luxacao recente, fratura nao liberada ou dor aguda intensa.',
-    imagemKey: ExerciseImageType.OMBRO_MANGUITO,
+    imagemKey: ExerciseImageType.ELEVACAO_ASSISTIDA_OMBRO,
     tags: ['ombro', 'mobilidade', 'manguito', 'escapula'],
     status: ExercicioStatus.APROVADO,
   },
@@ -107,7 +107,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Nao deixar joelho cair para dentro. Evitar velocidade alta.',
     contraindicacoes:
       'Evitar em dor aguda alta, bloqueio articular ou instabilidade importante.',
-    imagemKey: ExerciseImageType.JOELHO_AGACHAMENTO,
+    imagemKey: ExerciseImageType.AGACHAMENTO_PARCIAL_ASSISTIDO,
     tags: ['joelho', 'agachamento', 'quadriceps', 'controle_valgo'],
     status: ExercicioStatus.APROVADO,
   },
@@ -124,7 +124,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Manter pe apontado para frente e pelve estavel.',
     contraindicacoes:
       'Evitar em dor aguda no quadril ou irritacao importante na regiao lateral.',
-    imagemKey: ExerciseImageType.QUADRIL_GLUTEOS,
+    imagemKey: ExerciseImageType.ABDUCAO_QUADRIL_DECUBITO_LATERAL,
     tags: ['quadril', 'gluteo_medio', 'pelve', 'fortalecimento'],
     status: ExercicioStatus.APROVADO,
   },
@@ -142,7 +142,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Executar com apoio por perto e sem fechar os olhos no inicio.',
     contraindicacoes:
       'Evitar sem supervisao em alto risco de queda ou tontura importante.',
-    imagemKey: ExerciseImageType.TORNOZELO_EQUILIBRIO,
+    imagemKey: ExerciseImageType.EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO,
     tags: ['tornozelo', 'equilibrio', 'propriocepcao', 'apoio'],
     status: ExercicioStatus.APROVADO,
   },
@@ -160,7 +160,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Usar baixa intensidade no inicio e evitar prender a respiracao.',
     contraindicacoes:
       'Evitar em inflamacao aguda intensa ou compressao neural sem liberacao.',
-    imagemKey: ExerciseImageType.PUNHO_PREENSAO,
+    imagemKey: ExerciseImageType.PREENSAO_MANUAL_BOLA_MACIA,
     tags: ['punho', 'mao', 'preensao', 'fortalecimento'],
     status: ExercicioStatus.APROVADO,
   },
@@ -179,7 +179,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Evitar compensar com a pelve ou forcar amplitude no final do movimento.',
     contraindicacoes:
       'Evitar em trauma recente, tontura importante ou dor toracica nao avaliada.',
-    imagemKey: ExerciseImageType.MOBILIDADE_GERAL,
+    imagemKey: ExerciseImageType.MOBILIDADE_TORACICA_ROTACAO_SENTADA,
     tags: ['toracica', 'mobilidade', 'postura', 'rotacao'],
     status: ExercicioStatus.APROVADO,
   },
@@ -197,7 +197,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Nao elevar os ombros em direcao as orelhas durante a retracao.',
     contraindicacoes:
       'Evitar em dor aguda intensa no ombro ou sintomas neurologicos progressivos.',
-    imagemKey: ExerciseImageType.OMBRO_MANGUITO,
+    imagemKey: ExerciseImageType.RETRACAO_ESCAPULAR_SENTADA,
     tags: ['ombro', 'escapula', 'postura', 'controle_motor'],
     status: ExercicioStatus.APROVADO,
   },
@@ -217,7 +217,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Usar baixa intensidade e manter punho neutro, sem rodar o tronco.',
     contraindicacoes:
       'Evitar em luxacao recente, fratura nao liberada ou dor aguda importante.',
-    imagemKey: ExerciseImageType.OMBRO_MANGUITO,
+    imagemKey: ExerciseImageType.ISOMETRIA_ROTACAO_EXTERNA_OMBRO,
     tags: ['ombro', 'manguito', 'isometria', 'rotacao_externa'],
     status: ExercicioStatus.APROVADO,
   },
@@ -235,7 +235,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Evitar balanco rapido da perna ou prender a respiracao.',
     contraindicacoes:
       'Evitar em bloqueio articular, derrame importante ou dor aguda alta.',
-    imagemKey: ExerciseImageType.JOELHO_AGACHAMENTO,
+    imagemKey: ExerciseImageType.EXTENSAO_JOELHO_SENTADO,
     tags: ['joelho', 'quadriceps', 'fortalecimento', 'controle_motor'],
     status: ExercicioStatus.APROVADO,
   },
@@ -255,7 +255,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Escolher cadeira firme e manter os pes alinhados com joelhos e quadris.',
     contraindicacoes:
       'Evitar sem supervisao em alto risco de queda ou dor incapacitante.',
-    imagemKey: ExerciseImageType.JOELHO_AGACHAMENTO,
+    imagemKey: ExerciseImageType.SENTAR_LEVANTAR_CONTROLADO,
     tags: ['joelho', 'quadril', 'funcional', 'sentar_levantar'],
     status: ExercicioStatus.APROVADO,
   },
@@ -274,7 +274,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Usar apoio se necessario e evitar hiperextensao lombar durante o movimento.',
     contraindicacoes:
       'Evitar em dor aguda no quadril, joelho sensivel ao apoio ou irritacao importante.',
-    imagemKey: ExerciseImageType.QUADRIL_GLUTEOS,
+    imagemKey: ExerciseImageType.ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO,
     tags: ['quadril', 'flexores_quadril', 'mobilidade', 'pelve'],
     status: ExercicioStatus.APROVADO,
   },
@@ -293,7 +293,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Executar com apoio seguro e amplitude pequena nas primeiras repeticoes.',
     contraindicacoes:
       'Evitar sem supervisao em alto risco de queda, tontura ou instabilidade importante.',
-    imagemKey: ExerciseImageType.TORNOZELO_EQUILIBRIO,
+    imagemKey: ExerciseImageType.MARCHA_ESTACIONARIA_APOIO,
     tags: ['tornozelo', 'equilibrio', 'marcha', 'apoio'],
     status: ExercicioStatus.APROVADO,
   },
@@ -311,7 +311,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Evitar movimentos rapidos e amplitude forcada.',
     contraindicacoes:
       'Evitar em fratura nao liberada, inflamacao aguda intensa ou compressao neural importante.',
-    imagemKey: ExerciseImageType.PUNHO_PREENSAO,
+    imagemKey: ExerciseImageType.MOBILIDADE_PUNHO_FLEXAO_EXTENSAO,
     tags: ['punho', 'mao', 'mobilidade', 'flexao_extensao'],
     status: ExercicioStatus.APROVADO,
   },
@@ -330,7 +330,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Manter o movimento leve e evitar rodar a cabeca durante o alongamento.',
     contraindicacoes:
       'Evitar em tontura importante, sintomas neurologicos novos ou trauma cervical recente.',
-    imagemKey: ExerciseImageType.CONTROLE_CERVICAL,
+    imagemKey: ExerciseImageType.ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO,
     tags: ['cervical', 'alongamento', 'postura', 'pescoco'],
     status: ExercicioStatus.APROVADO,
   },
@@ -350,7 +350,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Nao manter posicao final por tempo prolongado e evitar sintomas intensos.',
     contraindicacoes:
       'Evitar em deficit neurologico progressivo, perda de forca ou dor neural irritavel.',
-    imagemKey: ExerciseImageType.PUNHO_PREENSAO,
+    imagemKey: ExerciseImageType.DESLIZAMENTO_NEURAL_MEDIANO,
     tags: ['punho', 'mao', 'neural', 'mediano'],
     status: ExercicioStatus.APROVADO,
   },

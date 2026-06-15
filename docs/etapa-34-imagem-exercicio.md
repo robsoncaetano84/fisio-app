@@ -27,6 +27,7 @@ Migrations relevantes:
 - `1780800000000-NormalizeExerciseImageFields`
 - `1780900000000-AddUniqueExerciseMediaAsset`
 - `1781000000000-SeedExpandedExerciseCatalog`
+- `1781100000000-ExpandExerciseSpecificImageTypes`
 
 Regras atuais:
 - `imagemTipo` em atividade e `imagemKey` em exercicio aceitam somente chaves proprias conhecidas.
@@ -35,6 +36,7 @@ Regras atuais:
 - a IA nao pode retornar URL de imagem; ela retorna apenas `imagemTipo`.
 - a sugestao de IA tenta casar o rascunho com um exercicio aprovado do catalogo.
 - o catalogo inicial contem 18 exercicios aprovados, incluindo variacoes para cervical, toracica, lombar, ombro, joelho, quadril, tornozelo e punho/mao.
+- cada exercicio inicial possui uma chave de imagem especifica, mantendo as chaves genericas apenas para compatibilidade e fallback.
 
 Chaves permitidas:
 - `MOBILIDADE_GERAL`
@@ -45,6 +47,24 @@ Chaves permitidas:
 - `QUADRIL_GLUTEOS`
 - `TORNOZELO_EQUILIBRIO`
 - `PUNHO_PREENSAO`
+- `MOBILIDADE_LOMBAR_GATO_CAMELO`
+- `PONTE_CURTA`
+- `CONTROLE_CERVICAL_PROFUNDO`
+- `ELEVACAO_ASSISTIDA_OMBRO`
+- `AGACHAMENTO_PARCIAL_ASSISTIDO`
+- `ABDUCAO_QUADRIL_DECUBITO_LATERAL`
+- `EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO`
+- `PREENSAO_MANUAL_BOLA_MACIA`
+- `MOBILIDADE_TORACICA_ROTACAO_SENTADA`
+- `RETRACAO_ESCAPULAR_SENTADA`
+- `ISOMETRIA_ROTACAO_EXTERNA_OMBRO`
+- `EXTENSAO_JOELHO_SENTADO`
+- `SENTAR_LEVANTAR_CONTROLADO`
+- `ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO`
+- `MARCHA_ESTACIONARIA_APOIO`
+- `MOBILIDADE_PUNHO_FLEXAO_EXTENSAO`
+- `ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO`
+- `DESLIZAMENTO_NEURAL_MEDIANO`
 
 ### Mobile
 
@@ -126,3 +146,5 @@ A migration `1781000000000-SeedExpandedExerciseCatalog` adiciona 10 exercicios a
 - mobilidade de punho em flexao e extensao;
 - alongamento cervical lateral assistido;
 - deslizamento neural mediano.
+
+A migration `1781100000000-ExpandExerciseSpecificImageTypes` amplia as constraints de `imagem_tipo`/`imagem_key` e atualiza os 18 exercicios iniciais para chaves especificas por exercicio. Prescricoes existentes vinculadas a esses exercicios tambem recebem a chave especifica correspondente.
