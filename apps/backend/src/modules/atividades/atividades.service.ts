@@ -72,7 +72,7 @@ export class AtividadesService {
       descricao: dto.descricao?.trim() || exercicio?.descricao || null,
       instrucoesExecucao:
         dto.instrucoesExecucao?.trim() || exercicio?.instrucoesPadrao || null,
-      imagemUrl: dto.imagemUrl?.trim() || null,
+      imagemUrl: null,
       imagemTipo: dto.imagemTipo?.trim() || exercicio?.imagemKey || null,
       dataLimite: dto.dataLimite ? new Date(dto.dataLimite) : null,
       diaPrescricao:
@@ -160,7 +160,7 @@ export class AtividadesService {
       titulo: `${origem.titulo} (copia)`,
       descricao: origem.descricao,
       instrucoesExecucao: origem.instrucoesExecucao,
-      imagemUrl: origem.imagemUrl,
+      imagemUrl: null,
       imagemTipo: origem.imagemTipo,
       dataLimite: origem.dataLimite,
       diaPrescricao: diaDestino,
@@ -209,8 +209,6 @@ export class AtividadesService {
       (typeof dto.instrucoesExecucao === 'string' &&
         (dto.instrucoesExecucao.trim() || null) !==
           atividade.instrucoesExecucao) ||
-      (typeof dto.imagemUrl === 'string' &&
-        (dto.imagemUrl.trim() || null) !== atividade.imagemUrl) ||
       (typeof dto.imagemTipo === 'string' &&
         (dto.imagemTipo.trim() || null) !== atividade.imagemTipo) ||
       (typeof dto.dataLimite === 'string' &&
@@ -264,9 +262,6 @@ export class AtividadesService {
       atividade.instrucoesExecucao =
         dto.instrucoesExecucao.trim() || exercicio?.instrucoesPadrao || null;
     }
-    if (typeof dto.imagemUrl === 'string') {
-      atividade.imagemUrl = dto.imagemUrl.trim() || null;
-    }
     if (typeof dto.imagemTipo === 'string') {
       atividade.imagemTipo =
         dto.imagemTipo.trim() || exercicio?.imagemKey || null;
@@ -312,6 +307,7 @@ export class AtividadesService {
       atividade.aceiteProfissionalEm = null;
     }
 
+    atividade.imagemUrl = null;
     return this.atividadeRepository.save(atividade);
   }
 
@@ -699,7 +695,6 @@ export class AtividadesService {
     titulo: string;
     descricao: string;
     instrucoesExecucao?: string;
-    imagemUrl?: string;
     imagemTipo?: string;
     referencias?: string[];
     source: 'ai' | 'rules';

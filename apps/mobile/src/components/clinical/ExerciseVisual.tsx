@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import React, { useMemo } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import Svg, {
   Circle,
   Line,
@@ -104,12 +104,6 @@ export function inferExerciseImageType(...values: unknown[]): ExerciseImageType 
     return "PUNHO_PREENSAO";
   }
   return DEFAULT_TYPE;
-}
-
-export function isValidExerciseImageUrl(value?: string | null) {
-  const trimmed = String(value || "").trim();
-  if (!trimmed) return false;
-  return /^https?:\/\/[^\s]+$/i.test(trimmed);
 }
 
 function Pose({ type }: { type: ExerciseImageType }) {
@@ -229,14 +223,12 @@ function Pose({ type }: { type: ExerciseImageType }) {
 }
 
 type Props = {
-  imageUrl?: string | null;
   imageType?: string | null;
   title?: string | null;
   compact?: boolean;
 };
 
-export function ExerciseVisual({ imageUrl, imageType, title, compact }: Props) {
-  const [imageFailed, setImageFailed] = useState(false);
+export function ExerciseVisual({ imageType, title, compact }: Props) {
   const resolvedType = useMemo(
     () =>
       imageType
@@ -247,21 +239,6 @@ export function ExerciseVisual({ imageUrl, imageType, title, compact }: Props) {
   const option =
     EXERCISE_IMAGE_OPTIONS.find((item) => item.value === resolvedType) ||
     EXERCISE_IMAGE_OPTIONS[0];
-  const hasRemoteImage = isValidExerciseImageUrl(imageUrl) && !imageFailed;
-
-  if (hasRemoteImage) {
-    return (
-      <View style={[styles.frame, compact && styles.frameCompact]}>
-        <Image
-          source={{ uri: String(imageUrl).trim() }}
-          style={[styles.remoteImage, compact && styles.remoteImageCompact]}
-          resizeMode="cover"
-          onError={() => setImageFailed(true)}
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.frame, styles.generatedFrame, compact && styles.frameCompact]}>
       <Svg width="100%" height="100%" viewBox="0 0 168 168">
@@ -305,13 +282,6 @@ const styles = StyleSheet.create({
   generatedFrame: {
     borderWidth: 1,
     borderColor: COLORS.gray200,
-  },
-  remoteImage: {
-    width: "100%",
-    height: "100%",
-  },
-  remoteImageCompact: {
-    height: 74,
   },
   caption: {
     position: "absolute",

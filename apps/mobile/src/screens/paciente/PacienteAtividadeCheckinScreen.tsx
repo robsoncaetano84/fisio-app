@@ -312,7 +312,6 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
 
           <View style={styles.exerciseGuide}>
             <ExerciseVisual
-              imageUrl={atividadeDetalhe?.imagemUrl}
               imageType={atividadeDetalhe?.imagemTipo}
               title={tituloAtual}
             />

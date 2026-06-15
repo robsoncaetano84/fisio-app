@@ -1813,7 +1813,6 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                   diaSelecionadoItens.map((atividade: Atividade) => (
                     <View key={atividade.id} style={styles.activityItem}>
                       <ExerciseVisual
-                        imageUrl={atividade.imagemUrl}
                         imageType={atividade.imagemTipo}
                         title={atividade.titulo}
                         compact
@@ -1874,7 +1873,6 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                       ?.itens.map((atividade) => (
                         <View key={atividade.id} style={styles.activityItem}>
                           <ExerciseVisual
-                            imageUrl={atividade.imagemUrl}
                             imageType={atividade.imagemTipo}
                             title={atividade.titulo}
                             compact
@@ -2555,7 +2553,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
 
 
 

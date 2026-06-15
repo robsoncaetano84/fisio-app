@@ -9,7 +9,6 @@ type AtividadeAiSuggestion = {
   titulo: string;
   descricao: string;
   instrucoesExecucao?: string;
-  imagemUrl?: string;
   imagemTipo?: string;
   referencias?: string[];
   source: 'ai' | 'rules';

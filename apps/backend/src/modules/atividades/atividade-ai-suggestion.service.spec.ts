@@ -107,7 +107,7 @@ describe('AtividadeAiSuggestionService', () => {
         'Hall CM, Brody LT. Exercicio terapeutico: recuperacao funcional.',
       ],
     });
-    expect(result.imagemUrl).toBeUndefined();
+    expect(result).not.toHaveProperty('imagemUrl');
     expect(result.descricao).toContain('Plano com controle de carga.');
     expect(result.descricao).not.toContain('Referencia inventada');
     expect(openAiService.createJsonResponse).toHaveBeenCalledWith(

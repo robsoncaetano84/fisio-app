@@ -36,7 +36,6 @@ import {
   ExerciseImageType,
   ExerciseVisual,
   inferExerciseImageType,
-  isValidExerciseImageUrl,
   normalizeExerciseImageType,
 } from "../../components/clinical/ExerciseVisual";
 
@@ -99,7 +98,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   const [exercicioId, setExercicioId] = useState<string | null>(null);
   const [descricao, setDescricao] = useState("");
   const [instrucoesExecucao, setInstrucoesExecucao] = useState("");
-  const [imagemUrl, setImagemUrl] = useState("");
   const [imagemTipo, setImagemTipo] =
     useState<ExerciseImageType>("MOBILIDADE_GERAL");
   const [referenciasBibliograficas, setReferenciasBibliograficas] =
@@ -242,7 +240,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       [exercicio.objetivo, exercicio.descricao].filter(Boolean).join("\n\n"),
     );
     setInstrucoesExecucao(exercicio.instrucoesPadrao || "");
-    setImagemUrl("");
     setImagemTipo(
       exercicio.imagemKey
         ? normalizeExerciseImageType(exercicio.imagemKey)
@@ -297,7 +294,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     }
 
     setExercicioId(exercicioIdSugerido || null);
-    setImagemUrl("");
     if (tituloSugerido) setTitulo(tituloSugerido);
     if (descricaoFinal) setDescricao(descricaoFinal);
     if (instrucoesSugeridas) setInstrucoesExecucao(instrucoesSugeridas);
@@ -403,15 +399,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       return;
     }
 
-    if (imagemUrl.trim() && !isValidExerciseImageUrl(imagemUrl)) {
-      showToast({
-        message:
-          "Informe uma URL propria/interna iniciando com http:// ou https://",
-        type: "error",
-      });
-      return;
-    }
-
     const parsedOrder = Number.parseInt(ordemNoDia, 10);
     if (!Number.isFinite(parsedOrder) || parsedOrder < 1 || parsedOrder > 20) {
       showToast({
@@ -451,7 +438,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
             .filter(Boolean)
             .join("\n\n") || undefined,
         instrucoesExecucao: instrucoesExecucao.trim(),
-        imagemUrl: imagemUrl.trim() || "",
         imagemTipo,
         diaPrescricao,
         ordemNoDia: parsedOrder,
@@ -491,7 +477,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       markerIndex >= 0 ? descricaoAtual.slice(0, markerIndex) : descricaoAtual,
     );
     setInstrucoesExecucao(atividade.instrucoesExecucao || "");
-    setImagemUrl(atividade.imagemUrl || "");
     setImagemTipo(
       atividade.imagemTipo
         ? normalizeExerciseImageType(atividade.imagemTipo)
@@ -523,7 +508,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     setTitulo("");
     setDescricao("");
     setInstrucoesExecucao("");
-    setImagemUrl("");
     setImagemTipo("MOBILIDADE_GERAL");
     setReferenciasBibliograficas("");
     setDiaPrescricao(1);
@@ -828,7 +812,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
           <View style={styles.exerciseImagePanel}>
             <Text style={styles.exerciseImageTitle}>Imagem do exercício</Text>
             <ExerciseVisual
-              imageUrl={imagemUrl}
               imageType={imagemTipo}
               title={titulo}
             />
@@ -859,18 +842,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                 </TouchableOpacity>
               ))}
             </View>
-            <Input
-              label="URL de imagem propria/interna (opcional)"
-              value={imagemUrl}
-              onChangeText={(value) => {
-                markDraftChanged();
-                setImagemUrl(value);
-              }}
-              placeholder="https://sua-base-de-imagens/..."
-              autoCapitalize="none"
-              keyboardType="url"
-              maxLength={2048}
-            />
           </View>
 
           <Input
@@ -1108,7 +1079,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                   </TouchableOpacity>
                 ) : null}
                 <ExerciseVisual
-                  imageUrl={atividade.imagemUrl}
                   imageType={atividade.imagemTipo}
                   title={atividade.titulo}
                   compact
