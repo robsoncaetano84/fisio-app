@@ -359,10 +359,17 @@ export class ExerciciosCatalogService implements OnModuleInit {
       where: {
         exercicioId: exercicio.id,
         assetKey: exercicio.imagemKey,
-        ativo: true,
       },
     });
     if (existing) {
+      existing.tipo = 'ILUSTRACAO';
+      existing.sourceType = 'PROPRIA';
+      existing.sourceUrl = null;
+      existing.author = 'Synap';
+      existing.license = 'PROPRIETARIA_SYNAP';
+      existing.licenseUrl = null;
+      existing.attributionText = 'Ilustracao propria Synap.';
+      existing.ativo = true;
       existing.revisadoPorUsuarioId = usuarioId;
       existing.revisadoEm = new Date();
       existing.versao += 1;

@@ -290,8 +290,15 @@ describe('ExerciciosCatalogService', () => {
       versao: 2,
       imagemKey: 'MOBILIDADE_LOMBAR',
     };
+    const midia = {
+      id: 'midia-1',
+      exercicioId: 'exercicio-1',
+      assetKey: 'MOBILIDADE_LOMBAR',
+      ativo: false,
+      versao: 1,
+    };
     exercicioRepository.findOne.mockResolvedValueOnce(exercicio);
-    midiaRepository.findOne.mockResolvedValue(null);
+    midiaRepository.findOne.mockResolvedValue(midia);
     qb.getOne.mockResolvedValue({
       id: 'exercicio-1',
       ativo: true,
@@ -322,12 +329,16 @@ describe('ExerciciosCatalogService', () => {
         revisadoPorUsuarioId: 'admin-1',
       }),
     );
-    expect(midiaRepository.create).toHaveBeenCalledWith(
+    expect(midiaRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         exercicioId: 'exercicio-1',
         assetKey: 'MOBILIDADE_LOMBAR',
+        sourceType: 'PROPRIA',
+        license: 'PROPRIETARIA_SYNAP',
         ativo: true,
+        versao: 2,
       }),
     );
+    expect(midiaRepository.create).not.toHaveBeenCalled();
   });
 });
