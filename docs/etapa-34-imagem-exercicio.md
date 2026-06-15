@@ -110,6 +110,7 @@ Assets mobile:
 - caminho: `apps/mobile/assets/exercises`;
 - nome do arquivo em kebab-case, alinhado ao slug do exercicio;
 - formato JPG otimizado para reduzir o bundle mobile;
+- dimensao quadrada entre 1000px e 1600px por lado;
 - sem texto, logo ou marca d'agua no arquivo de imagem;
 - referencia visual: matriz anatomica masculina do projeto, com escala de cinza, fundo claro e destaque verde Synap.
 

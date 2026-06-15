@@ -14,6 +14,8 @@ const backendEnumPath = join(
 const assetsDir = join(root, "assets/exercises");
 const maxAssetBytes = 250 * 1024;
 const maxTotalAssetBytes = 4 * 1024 * 1024;
+const minAssetEdge = 1000;
+const maxAssetEdge = 1600;
 
 const genericImageTypes = new Set([
   "MOBILIDADE_GERAL",
@@ -30,6 +32,35 @@ const component = readFileSync(componentPath, "utf8");
 const seed = readFileSync(seedPath, "utf8");
 const backendEnum = readFileSync(backendEnumPath, "utf8");
 const failures = [];
+
+const readJpegDimensions = (filePath) => {
+  const buffer = readFileSync(filePath);
+  let offset = 2;
+
+  if (buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+
+  while (offset < buffer.length) {
+    if (buffer[offset] !== 0xff) return null;
+    const marker = buffer[offset + 1];
+    const length = buffer.readUInt16BE(offset + 2);
+
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      marker !== 0xc4 &&
+      marker !== 0xcc
+    ) {
+      return {
+        height: buffer.readUInt16BE(offset + 5),
+        width: buffer.readUInt16BE(offset + 7),
+      };
+    }
+
+    offset += 2 + length;
+  }
+
+  return null;
+};
 
 const sorted = (items) => [...items].sort();
 const sameSet = (left, right) =>
@@ -172,12 +203,37 @@ for (const fileName of localJpgAssets) {
 
 let totalAssetBytes = 0;
 for (const fileName of localJpgAssets) {
-  const size = statSync(join(assetsDir, fileName)).size;
+  const assetPath = join(assetsDir, fileName);
+  const size = statSync(assetPath).size;
+  const dimensions = readJpegDimensions(assetPath);
   totalAssetBytes += size;
 
   if (size > maxAssetBytes) {
     failures.push(
       `${fileName}: ${size} bytes excede limite de ${maxAssetBytes} bytes`,
+    );
+  }
+
+  if (!dimensions) {
+    failures.push(`${fileName}: nao foi possivel ler dimensoes do JPG`);
+    continue;
+  }
+
+  if (dimensions.width !== dimensions.height) {
+    failures.push(
+      `${fileName}: imagem deve ser quadrada (${dimensions.width}x${dimensions.height})`,
+    );
+  }
+
+  if (dimensions.width < minAssetEdge || dimensions.width > maxAssetEdge) {
+    failures.push(
+      `${fileName}: largura ${dimensions.width}px fora do intervalo ${minAssetEdge}-${maxAssetEdge}px`,
+    );
+  }
+
+  if (dimensions.height < minAssetEdge || dimensions.height > maxAssetEdge) {
+    failures.push(
+      `${fileName}: altura ${dimensions.height}px fora do intervalo ${minAssetEdge}-${maxAssetEdge}px`,
     );
   }
 }
