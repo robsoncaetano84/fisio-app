@@ -4,6 +4,7 @@ import { OpenAiService } from '../ai/openai.service';
 import { Laudo } from '../laudos/entities/laudo.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
+import { EXERCISE_IMAGE_TYPES } from './exercise-image-type.enum';
 
 type AtividadeAiSuggestion = {
   titulo: string;
@@ -175,16 +176,7 @@ export class AtividadeAiSuggestionService {
   }
 
   private getExerciseImageTypes(): string[] {
-    return [
-      'MOBILIDADE_GERAL',
-      'MOBILIDADE_LOMBAR',
-      'CONTROLE_CERVICAL',
-      'OMBRO_MANGUITO',
-      'JOELHO_AGACHAMENTO',
-      'QUADRIL_GLUTEOS',
-      'TORNOZELO_EQUILIBRIO',
-      'PUNHO_PREENSAO',
-    ];
+    return EXERCISE_IMAGE_TYPES;
   }
 
   private normalizeExerciseImageType(value: unknown): string | undefined {

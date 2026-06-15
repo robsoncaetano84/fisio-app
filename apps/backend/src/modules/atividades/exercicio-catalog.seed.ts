@@ -1,4 +1,5 @@
 import { ExercicioStatus } from './entities/exercicio.entity';
+import { ExerciseImageType } from './exercise-image-type.enum';
 
 export type ExercicioSeed = {
   nome: string;
@@ -11,7 +12,7 @@ export type ExercicioSeed = {
   instrucoesPadrao: string;
   cuidados: string;
   contraindicacoes: string;
-  imagemKey: string;
+  imagemKey: ExerciseImageType;
   tags: string[];
   status: ExercicioStatus;
 };
@@ -32,7 +33,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Evitar amplitudes forcadas. Priorizar conforto, respiracao e controle.',
     contraindicacoes:
       'Suspender em caso de dor neurologica progressiva, perda de forca ou tontura.',
-    imagemKey: 'MOBILIDADE_LOMBAR',
+    imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
     tags: ['lombar', 'mobilidade', 'controle_motor', 'dor_lombar'],
     status: ExercicioStatus.APROVADO,
   },
@@ -51,7 +52,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
       'Evitar hiperextensao lombar e empurrar com excesso pelo pescoco.',
     contraindicacoes:
       'Nao executar se houver dor intensa, piora neurologica ou orientacao profissional contraria.',
-    imagemKey: 'MOBILIDADE_LOMBAR',
+    imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
     tags: ['lombar', 'quadril', 'gluteos', 'fortalecimento'],
     status: ExercicioStatus.APROVADO,
   },
@@ -69,7 +70,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Movimento deve ser pequeno e sem compensar com ombros.',
     contraindicacoes:
       'Evitar em crise vestibular, tontura importante ou sintomas neurologicos novos.',
-    imagemKey: 'CONTROLE_CERVICAL',
+    imagemKey: ExerciseImageType.CONTROLE_CERVICAL,
     tags: ['cervical', 'postura', 'controle_motor', 'pescoco'],
     status: ExercicioStatus.APROVADO,
   },
@@ -87,7 +88,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Evitar compensar elevando o ombro em direcao a orelha.',
     contraindicacoes:
       'Evitar em luxacao recente, fratura nao liberada ou dor aguda intensa.',
-    imagemKey: 'OMBRO_MANGUITO',
+    imagemKey: ExerciseImageType.OMBRO_MANGUITO,
     tags: ['ombro', 'mobilidade', 'manguito', 'escapula'],
     status: ExercicioStatus.APROVADO,
   },
@@ -106,7 +107,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Nao deixar joelho cair para dentro. Evitar velocidade alta.',
     contraindicacoes:
       'Evitar em dor aguda alta, bloqueio articular ou instabilidade importante.',
-    imagemKey: 'JOELHO_AGACHAMENTO',
+    imagemKey: ExerciseImageType.JOELHO_AGACHAMENTO,
     tags: ['joelho', 'agachamento', 'quadriceps', 'controle_valgo'],
     status: ExercicioStatus.APROVADO,
   },
@@ -123,7 +124,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Manter pe apontado para frente e pelve estavel.',
     contraindicacoes:
       'Evitar em dor aguda no quadril ou irritacao importante na regiao lateral.',
-    imagemKey: 'QUADRIL_GLUTEOS',
+    imagemKey: ExerciseImageType.QUADRIL_GLUTEOS,
     tags: ['quadril', 'gluteo_medio', 'pelve', 'fortalecimento'],
     status: ExercicioStatus.APROVADO,
   },
@@ -141,7 +142,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Executar com apoio por perto e sem fechar os olhos no inicio.',
     contraindicacoes:
       'Evitar sem supervisao em alto risco de queda ou tontura importante.',
-    imagemKey: 'TORNOZELO_EQUILIBRIO',
+    imagemKey: ExerciseImageType.TORNOZELO_EQUILIBRIO,
     tags: ['tornozelo', 'equilibrio', 'propriocepcao', 'apoio'],
     status: ExercicioStatus.APROVADO,
   },
@@ -159,7 +160,7 @@ export const INITIAL_EXERCISE_CATALOG: ExercicioSeed[] = [
     cuidados: 'Usar baixa intensidade no inicio e evitar prender a respiracao.',
     contraindicacoes:
       'Evitar em inflamacao aguda intensa ou compressao neural sem liberacao.',
-    imagemKey: 'PUNHO_PREENSAO',
+    imagemKey: ExerciseImageType.PUNHO_PREENSAO,
     tags: ['punho', 'mao', 'preensao', 'fortalecimento'],
     status: ExercicioStatus.APROVADO,
   },

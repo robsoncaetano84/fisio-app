@@ -5,6 +5,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { ExerciseImageType } from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
 
 export class CreateExercicioCatalogDto {
@@ -53,9 +54,8 @@ export class CreateExercicioCatalogDto {
   contraindicacoes?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  imagemKey?: string;
+  @IsEnum(ExerciseImageType)
+  imagemKey?: ExerciseImageType;
 
   @IsOptional()
   @IsArray()

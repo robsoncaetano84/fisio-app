@@ -6,6 +6,7 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -15,6 +16,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { ExerciseImageType } from '../exercise-image-type.enum';
 
 export class CreateAtividadeDto {
   @IsUUID()
@@ -39,9 +41,8 @@ export class CreateAtividadeDto {
   instrucoesExecucao?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  imagemTipo?: string;
+  @IsEnum(ExerciseImageType)
+  imagemTipo?: ExerciseImageType;
 
   @IsOptional()
   @IsDateString()
