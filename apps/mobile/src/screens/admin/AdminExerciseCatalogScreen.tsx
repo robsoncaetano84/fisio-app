@@ -59,6 +59,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [items, setItems] = useState<Exercicio[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -223,6 +224,38 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       showToast({ message, type: "error" });
     } finally {
       setArchivingId(null);
+    }
+  };
+
+  const confirmRestore = (item: Exercicio) => {
+    Alert.alert(
+      "Restaurar exercicio",
+      `Deseja restaurar "${item.nome}" como rascunho para revisao?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Restaurar",
+          onPress: () => handleRestore(item),
+        },
+      ],
+    );
+  };
+
+  const handleRestore = async (item: Exercicio) => {
+    try {
+      setRestoringId(item.id);
+      await api.patch(`/exercicios/${item.id}`, { status: "RASCUNHO" });
+      showToast({
+        message: "Exercicio restaurado como rascunho",
+        type: "success",
+      });
+      if (editingId === item.id) resetForm();
+      await loadCatalog();
+    } catch (error) {
+      const { message } = parseApiError(error);
+      showToast({ message, type: "error" });
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -518,7 +551,20 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                           color={COLORS.error}
                         />
                       </TouchableOpacity>
-                    ) : null}
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.iconButton, styles.iconButtonSuccess]}
+                        onPress={() => confirmRestore(item)}
+                        disabled={restoringId === item.id}
+                        activeOpacity={0.85}
+                      >
+                        <Ionicons
+                          name="refresh-outline"
+                          size={18}
+                          color={COLORS.success}
+                        />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </Pressable>
               ))}
@@ -783,6 +829,9 @@ const styles = StyleSheet.create({
   },
   iconButtonDanger: {
     borderColor: COLORS.error + "66",
+  },
+  iconButtonSuccess: {
+    borderColor: COLORS.success + "66",
   },
   statusBadge: {
     borderRadius: BORDER_RADIUS.full,
