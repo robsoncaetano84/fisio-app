@@ -30,6 +30,7 @@ import {
 import { parseApiError } from "../../utils/apiErrors";
 import { isUuid } from "../../utils/uuid";
 import { useToast } from "../../components/ui";
+import { ExerciseVisual } from "../../components/clinical/ExerciseVisual";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PacienteAdesao">;
@@ -133,6 +134,21 @@ export function PacienteAdesaoScreen({ route }: Props) {
     };
   }, [atividades, checkins]);
 
+  const ultimoCheckinPorAtividade = useMemo(() => {
+    const map = new Map<string, AtividadeCheckinTimeline>();
+    for (const checkin of checkins) {
+      const current = map.get(checkin.atividadeId);
+      if (
+        !current ||
+        new Date(checkin.createdAt).getTime() >
+          new Date(current.createdAt).getTime()
+      ) {
+        map.set(checkin.atividadeId, checkin);
+      }
+    }
+    return map;
+  }, [checkins]);
+
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       {loading ? (
@@ -173,6 +189,84 @@ export function PacienteAdesaoScreen({ route }: Props) {
             <Text style={styles.summaryText}>
               Checks concluidos: {metrics.checksConcluidos}
             </Text>
+          </View>
+
+          <View style={styles.activitiesCard}>
+            <Text style={styles.timelineTitle}>Atividades prescritas</Text>
+            {atividades.length === 0 ? (
+              <Text style={styles.emptyText}>
+                Nenhuma atividade ativa para este paciente.
+              </Text>
+            ) : (
+              atividades.map((atividade) => {
+                const ultimoCheckin = ultimoCheckinPorAtividade.get(
+                  atividade.id,
+                );
+                return (
+                  <View key={atividade.id} style={styles.activityItem}>
+                    <ExerciseVisual
+                      imageUrl={atividade.imagemUrl}
+                      imageType={atividade.imagemTipo}
+                      title={atividade.titulo}
+                      compact
+                    />
+                    <View style={styles.activityContent}>
+                      <View style={styles.activityTitleRow}>
+                        <Text style={styles.activityTitle}>
+                          {atividade.titulo}
+                        </Text>
+                        <View
+                          style={[
+                            styles.acceptanceBadge,
+                            atividade.aceiteProfissional
+                              ? styles.acceptanceBadgeOk
+                              : styles.acceptanceBadgePending,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.acceptanceBadgeText,
+                              atividade.aceiteProfissional
+                                ? styles.acceptanceBadgeTextOk
+                                : styles.acceptanceBadgeTextPending,
+                            ]}
+                          >
+                            {atividade.aceiteProfissional
+                              ? "Aceita"
+                              : "Pendente"}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.activityMeta}>
+                        {atividade.diaPrescricao
+                          ? `Dia ${atividade.diaPrescricao}`
+                          : "Sem dia semanal"}
+                        {atividade.repetirSemanal ? " • semanal" : ""}
+                      </Text>
+                      {atividade.instrucoesExecucao ? (
+                        <Text
+                          style={styles.activityInstructions}
+                          numberOfLines={3}
+                        >
+                          {atividade.instrucoesExecucao}
+                        </Text>
+                      ) : null}
+                      <Text style={styles.activityCheckin}>
+                        {ultimoCheckin
+                          ? `Ultimo check-in: ${new Date(
+                              ultimoCheckin.createdAt,
+                            ).toLocaleDateString("pt-BR")} - ${
+                              ultimoCheckin.concluiu
+                                ? "concluiu"
+                                : "nao concluiu"
+                            }`
+                          : "Sem check-in registrado"}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </View>
 
           <View style={styles.timelineCard}>
@@ -278,6 +372,15 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     marginBottom: 2,
   },
+  activitiesCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    padding: SPACING.base,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.sm,
+  },
   timelineCard: {
     backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.md,
@@ -295,6 +398,69 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.sm,
+  },
+  activityItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray100,
+    paddingBottom: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  activityContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  activityTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  activityTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+  activityMeta: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  activityInstructions: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  activityCheckin: {
+    color: COLORS.gray600,
+    fontSize: FONTS.sizes.xs,
+    marginTop: 4,
+  },
+  acceptanceBadge: {
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+  },
+  acceptanceBadgeOk: {
+    backgroundColor: COLORS.success + "1F",
+  },
+  acceptanceBadgePending: {
+    backgroundColor: COLORS.warning + "1F",
+  },
+  acceptanceBadgeText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "800",
+  },
+  acceptanceBadgeTextOk: {
+    color: COLORS.success,
+  },
+  acceptanceBadgeTextPending: {
+    color: COLORS.warning,
   },
   timelineItem: {
     flexDirection: "row",
