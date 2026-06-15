@@ -140,15 +140,19 @@ describe('LaudoPdfService', () => {
       'patient',
     );
 
-    const sections = addSectionsSpy.mock.calls[0][1];
+    const sections = addSectionsSpy.mock.calls[0][1] as Array<{
+      title: string;
+      value: string;
+    }>;
     const examSection = sections.find(
       (section: { title: string }) => section.title === 'Achados da avaliacao',
     );
 
-    expect(examSection.value).toContain('Coluna lombar');
-    expect(examSection.value).not.toContain('Selecionado');
-    expect(examSection.value).not.toContain('Nao informado');
-    expect(examSection.value).not.toContain('Avaliacao por regioes');
+    expect(examSection).toBeDefined();
+    expect(examSection!.value).toContain('Coluna lombar');
+    expect(examSection!.value).not.toContain('Selecionado');
+    expect(examSection!.value).not.toContain('Nao informado');
+    expect(examSection!.value).not.toContain('Avaliacao por regioes');
 
     addSectionsSpy.mockRestore();
     addObservationSpy.mockRestore();

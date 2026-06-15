@@ -1,4 +1,7 @@
-import { LaudoAiSuggestionService } from './laudo-ai-suggestion.service';
+import {
+  GenerateLaudoSuggestionInput,
+  LaudoAiSuggestionService,
+} from './laudo-ai-suggestion.service';
 
 describe('LaudoAiSuggestionService', () => {
   const createOpenAiService = () =>
@@ -10,7 +13,7 @@ describe('LaudoAiSuggestionService', () => {
       createJsonResponse: jest.fn(),
     }) as any;
 
-  const baseInput = {
+  const baseInput: GenerateLaudoSuggestionInput = {
     paciente: {
       nomeCompleto: 'Paciente Teste',
       idade: 32,

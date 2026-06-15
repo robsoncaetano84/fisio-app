@@ -112,8 +112,8 @@ describe('laudo exame fisico structured util', () => {
     const parsed = parseStructuredExame(`${prefix}${JSON.stringify(payload)}`);
 
     expect(parsed).toBeTruthy();
-    expect(parsed.version).toBe(2);
-    expect(parsed.raciocinioClinico?.tipoLesao).toBe('Mecanica');
+    expect(parsed!.version).toBe(2);
+    expect(parsed!.raciocinioClinico?.tipoLesao).toBe('Mecanica');
   });
 
   it('keeps reading legacy structured V1 payloads', () => {
@@ -123,7 +123,7 @@ describe('laudo exame fisico structured util', () => {
     );
 
     expect(parsed).toBeTruthy();
-    expect(parsed.version).toBe(1);
+    expect(parsed!.version).toBe(1);
   });
 
   it('returns null when parsing payload without prefix', () => {

@@ -49,6 +49,7 @@ describe('PacientesService', () => {
       {} as any,
       pacienteScopeService as any,
       pacienteProfessionalService as any,
+      {} as any,
     );
 
     return {
