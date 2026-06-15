@@ -25,6 +25,7 @@ Migrations relevantes:
 - `1780600000000-AddAtividadeExerciseImageFields`
 - `1780700000000-CreateExerciseCatalog`
 - `1780800000000-NormalizeExerciseImageFields`
+- `1780900000000-AddUniqueExerciseMediaAsset`
 
 Regras atuais:
 - `imagemTipo` em atividade e `imagemKey` em exercicio aceitam somente chaves proprias conhecidas.
@@ -103,8 +104,9 @@ Midias:
 
 ## Validacoes ja executadas nesta etapa
 
-- backend lint, build e testes focados;
-- mobile validate critical;
+- backend lint, `tsc --noEmit`, testes focados e suite completa;
+- mobile `validate:critical`;
 - migration run no banco de desenvolvimento;
+- migration show sem pendencias no banco de desenvolvimento;
 - health check do backend local;
 - push da branch `etapa-34-imagem-exercicio`.
