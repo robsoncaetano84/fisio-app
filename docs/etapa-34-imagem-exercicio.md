@@ -138,6 +138,7 @@ Assets mobile:
 ## Validacoes ja executadas nesta etapa
 
 - backend lint, build, `tsc --noEmit`, testes focados e suite completa;
+- backend `AtividadesService` cobre criacao por catalogo e sugestao com `exercicioId`/imagem especifica;
 - mobile `validate:critical`;
 - mobile `check:exercise-assets` cobrindo contrato com o enum do backend, 18 assets especificos e limite de peso do bundle;
 - migration run no banco de desenvolvimento;
