@@ -9,6 +9,7 @@ import {
 } from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
 import { ExercicioMidiaRevisaoClinicaStatus } from '../entities/exercicio-midia.entity';
+import { MASTER_EXERCISE_CATALOG } from '../exercise-catalog-master.seed';
 import { PREVIEW_EXERCISE_CATALOG } from '../exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from '../exercicio-catalog.seed';
 import { ExpandExerciseSpecificImageTypes1781100000000 } from '../../../migrations/1781100000000-ExpandExerciseSpecificImageTypes';
@@ -143,6 +144,26 @@ describe('exercise image DTO validation', () => {
         (item) =>
           item.status === ExercicioStatus.RASCUNHO &&
           allowedTypes.has(item.imagemKey),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps the master catalog as draft exercises without images', () => {
+    const slugs = MASTER_EXERCISE_CATALOG.map((item) => item.slug);
+    const allSlugs = [
+      ...INITIAL_EXERCISE_CATALOG.map((item) => item.slug),
+      ...PREVIEW_EXERCISE_CATALOG.map((item) => item.slug),
+      ...slugs,
+    ];
+
+    expect(MASTER_EXERCISE_CATALOG).toHaveLength(212);
+    expect(new Set(slugs).size).toBe(MASTER_EXERCISE_CATALOG.length);
+    expect(new Set(allSlugs).size).toBe(allSlugs.length);
+    expect(allSlugs).toHaveLength(300);
+    expect(
+      MASTER_EXERCISE_CATALOG.every(
+        (item) =>
+          item.status === ExercicioStatus.RASCUNHO && item.imagemKey === null,
       ),
     ).toBe(true);
   });
