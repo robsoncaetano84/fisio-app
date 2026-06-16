@@ -92,7 +92,7 @@ Preencher uma linha por imagem revisada.
 
 ## Registro no sistema
 
-A decisao de cada imagem deve ser registrada no admin do catalogo. O backend grava essa decisao na midia principal do exercicio:
+A decisao de cada imagem deve ser registrada no admin do catalogo. A tela permite filtrar por pendentes, aprovadas e itens que exigem acao. O backend grava essa decisao na midia principal do exercicio:
 
 - `PENDENTE`: ainda nao revisada;
 - `APROVADA`: imagem clinicamente aceita;

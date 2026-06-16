@@ -108,7 +108,8 @@ Revisao clinica:
 - se uma imagem estiver ambigua, regenerar somente o asset afetado e manter a mesma chave;
 - a aprovacao tecnica automatizada de contrato/assets nao substitui a aprovacao clinica humana;
 - a revisao clinica fica registrada na midia principal em `revisao_clinica_status`, `revisao_clinica_observacao`, `revisao_clinica_por_usuario_id` e `revisao_clinica_em`;
-- o admin pode atualizar a revisao pelo endpoint `PATCH /exercicios/:id/revisao-clinica-imagem`.
+- o admin pode atualizar a revisao pelo endpoint `PATCH /exercicios/:id/revisao-clinica-imagem`;
+- a tela admin do catalogo mostra badges, contadores e filtros para pendentes, aprovadas e itens que exigem acao.
 
 Status de revisao clinica da midia:
 - `PENDENTE`: ainda precisa de validacao humana;

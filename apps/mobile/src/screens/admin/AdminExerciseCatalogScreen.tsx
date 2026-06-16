@@ -34,6 +34,7 @@ type ExerciseStatus = Exercicio["status"];
 type MediaClinicalReviewStatus = NonNullable<
   ExercicioMidia["revisaoClinicaStatus"]
 >;
+type ReviewStatusFilter = MediaClinicalReviewStatus | "TODAS" | "ACAO";
 
 const STATUS_OPTIONS: Array<{ value: ExerciseStatus; label: string }> = [
   { value: "RASCUNHO", label: "Rascunho" },
@@ -50,6 +51,12 @@ const REVIEW_STATUS_OPTIONS: Array<{
   { value: "REGENERAR_IMAGEM", label: "Regenerar imagem" },
   { value: "AJUSTAR_TEXTO", label: "Ajustar texto" },
   { value: "REMOVER_DO_CATALOGO", label: "Remover do catalogo" },
+];
+
+const REVIEW_ACTION_STATUSES: MediaClinicalReviewStatus[] = [
+  "REGENERAR_IMAGEM",
+  "AJUSTAR_TEXTO",
+  "REMOVER_DO_CATALOGO",
 ];
 
 const emptyForm = {
@@ -82,6 +89,10 @@ function getPrimaryMedia(
   );
 }
 
+function getReviewStatus(item?: Exercicio | null): MediaClinicalReviewStatus {
+  return getPrimaryMedia(item)?.revisaoClinicaStatus || "PENDENTE";
+}
+
 export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -96,6 +107,8 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const [statusFilter, setStatusFilter] = useState<ExerciseStatus | "TODOS">(
     "TODOS",
   );
+  const [reviewFilter, setReviewFilter] =
+    useState<ReviewStatusFilter>("TODAS");
   const [form, setForm] = useState(emptyForm);
 
   const loadCatalog = async () => {
@@ -117,10 +130,45 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
     loadCatalog().catch(() => undefined);
   }, []);
 
+  const reviewSummary = useMemo(() => {
+    const initial = {
+      total: items.length,
+      acao: 0,
+      PENDENTE: 0,
+      APROVADA: 0,
+      REGENERAR_IMAGEM: 0,
+      AJUSTAR_TEXTO: 0,
+      REMOVER_DO_CATALOGO: 0,
+    };
+
+    return items.reduce((summary, item) => {
+      const status = getReviewStatus(item);
+      summary[status] += 1;
+      if (REVIEW_ACTION_STATUSES.includes(status)) {
+        summary.acao += 1;
+      }
+      return summary;
+    }, initial);
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items.filter((item) => {
       if (statusFilter !== "TODOS" && item.status !== statusFilter) {
+        return false;
+      }
+      const reviewStatus = getReviewStatus(item);
+      if (
+        reviewFilter === "ACAO" &&
+        !REVIEW_ACTION_STATUSES.includes(reviewStatus)
+      ) {
+        return false;
+      }
+      if (
+        reviewFilter !== "TODAS" &&
+        reviewFilter !== "ACAO" &&
+        reviewStatus !== reviewFilter
+      ) {
         return false;
       }
       if (!term) return true;
@@ -139,7 +187,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         .toLowerCase()
         .includes(term);
     });
-  }, [items, search, statusFilter]);
+  }, [items, search, statusFilter, reviewFilter]);
 
   const editingItem = useMemo(
     () => items.find((item) => item.id === editingId) || null,
@@ -368,6 +416,29 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                 onPress={() => setStatusFilter(option.value)}
               />
             ))}
+          </View>
+          <Text style={styles.filterLabel}>Revisao clinica</Text>
+          <View style={styles.statusRow}>
+            <FilterChip
+              label={`Todas (${reviewSummary.total})`}
+              active={reviewFilter === "TODAS"}
+              onPress={() => setReviewFilter("TODAS")}
+            />
+            <FilterChip
+              label={`Pendentes (${reviewSummary.PENDENTE})`}
+              active={reviewFilter === "PENDENTE"}
+              onPress={() => setReviewFilter("PENDENTE")}
+            />
+            <FilterChip
+              label={`Aprovadas (${reviewSummary.APROVADA})`}
+              active={reviewFilter === "APROVADA"}
+              onPress={() => setReviewFilter("APROVADA")}
+            />
+            <FilterChip
+              label={`Acao (${reviewSummary.acao})`}
+              active={reviewFilter === "ACAO"}
+              onPress={() => setReviewFilter("ACAO")}
+            />
           </View>
         </View>
 
@@ -807,6 +878,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: SPACING.xs,
+  },
+  filterLabel: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "800",
+    marginBottom: SPACING.xs,
+    marginTop: SPACING.sm,
   },
   formPanel: {
     backgroundColor: COLORS.white,
