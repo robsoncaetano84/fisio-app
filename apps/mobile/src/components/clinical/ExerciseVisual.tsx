@@ -41,7 +41,77 @@ export type ExerciseImageType =
   | "MARCHA_ESTACIONARIA_APOIO"
   | "MOBILIDADE_PUNHO_FLEXAO_EXTENSAO"
   | "ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO"
-  | "DESLIZAMENTO_NEURAL_MEDIANO";
+  | "DESLIZAMENTO_NEURAL_MEDIANO"
+  | "PRANCHA_FRONTAL_ANTEBRACO"
+  | "BIRD_DOG_EXTENSAO_ALTERNADA"
+  | "ELEVACAO_PERNA_RETA"
+  | "ALONGAMENTO_POSTERIOR_COXA_FAIXA"
+  | "ALONGAMENTO_PIRIFORME_DECUBITO_DORSAL"
+  | "ELEVACAO_PANTURRILHA_APOIO"
+  | "DORSIFLEXAO_TORNOZELO_FAIXA"
+  | "ROTACAO_EXTERNA_OMBRO_FAIXA"
+  | "REMADA_SENTADA_FAIXA"
+  | "ABDUCAO_OMBRO_EM_PE"
+  | "MOBILIDADE_TORACICA_QUATRO_APOIOS"
+  | "DEAD_BUG_CONTROLE_LOMBOPELVICO"
+  | "PRANCHA_LATERAL_JOELHOS_APOIADOS"
+  | "CLAMSHELL_ABERTURA_QUADRIL"
+  | "EXTENSAO_QUADRIL_QUATRO_APOIOS"
+  | "STEP_UP_BAIXO_APOIO"
+  | "AVANCO_ASSISTIDO_CURTO_APOIO"
+  | "WALL_SLIDE_DESLIZAMENTO_BRACOS"
+  | "PENDULAR_OMBRO_CODMAN"
+  | "FLEXAO_OMBRO_BASTAO_DECUBITO"
+  | "FLEXAO_EXTENSAO_COTOVELO_HALTER"
+  | "PRONACAO_SUPINACAO_ANTEBRACO"
+  | "OPOSICAO_POLEGAR"
+  | "EVERSAO_TORNOZELO_FAIXA"
+  | "ALONGAMENTO_PANTURRILHA_PAREDE"
+  | "FLEXAO_JOELHO_EM_PE_APOIO"
+  | "AGACHAMENTO_ISOMETRICO_PAREDE"
+  | "PONTE_COM_MARCHA_ALTERNADA"
+  | "ELEVACAO_LATERAL_PERNA_EM_PE"
+  | "RESPIRACAO_DIAFRAGMATICA_DECUBITO"
+  | "INCLINACAO_PELVICA_POSTERIOR_DECUBITO"
+  | "JOELHO_AO_PEITO_UNILATERAL"
+  | "ROTACAO_LOMBAR_DECUBITO"
+  | "ISOMETRIA_QUADRICEPS_TOALHA"
+  | "EXTENSAO_TERMINAL_JOELHO_FAIXA"
+  | "ISOMETRIA_ADUTORES_BOLA"
+  | "FLEXAO_PLANTAR_FAIXA"
+  | "INVERSAO_TORNOZELO_FAIXA"
+  | "CIRCULOS_TORNOZELO_SENTADO"
+  | "EXTENSAO_TORACICA_ENCOSTO_CADEIRA"
+  | "ALONGAMENTO_PEITORAL_PORTA"
+  | "ISOMETRIA_FLEXAO_OMBRO_PAREDE"
+  | "ISOMETRIA_ABDUCAO_OMBRO_PAREDE"
+  | "ROTACAO_INTERNA_OMBRO_FAIXA"
+  | "EXTENSAO_OMBRO_FAIXA"
+  | "REMADA_EM_PE_FAIXA"
+  | "DESVIO_RADIAL_ULNAR_PUNHO"
+  | "EXTENSAO_DEDOS_ELASTICO"
+  | "EQUILIBRIO_UNIPODAL_APOIO"
+  | "DESLIZAMENTO_CALCANHAR_DECUBITO"
+  | "FLEXAO_BRACO_PAREDE"
+  | "SOCO_SERRATIL_DECUBITO"
+  | "RELOGIO_ESCAPULAR_PAREDE"
+  | "ELEVACAO_PLANO_ESCAPULA_SCAPTION"
+  | "EXTENSAO_COTOVELO_FAIXA"
+  | "PULL_APART_FAIXA"
+  | "ABDUCAO_QUADRIL_FAIXA_JOELHOS"
+  | "CAMINHADA_LATERAL_FAIXA"
+  | "DOBRADICA_QUADRIL_BASTAO"
+  | "STEP_DOWN_BAIXO"
+  | "CAMINHADA_CALCANHARES"
+  | "CAMINHADA_PONTA_PES"
+  | "SHORT_FOOT_ARCO_PLANTAR"
+  | "ENRUGAR_TOALHA_DEDOS_PE"
+  | "ROTACAO_CERVICAL_SENTADA"
+  | "EXTENSAO_CERVICAL_SENTADA"
+  | "MARCHA_SENTADA"
+  | "EXTENSAO_JOELHO_SENTADO_LONGA"
+  | "ROTACAO_TRONCO_SENTADA"
+  | "APOIO_TANDEM_COM_APOIO";
 
 export const EXERCISE_IMAGE_OPTIONS: Array<{
   value: ExerciseImageType;
@@ -178,6 +248,356 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
     label: "Deslizamento neural mediano",
     hint: "Movimento neural leve sem sintomas persistentes",
   },
+  {
+    value: "PRANCHA_FRONTAL_ANTEBRACO",
+    label: "Prancha frontal no antebraco",
+    hint: "Alinhamento cabeca-tronco-pelve, cotovelos sob ombros e ausencia de queda lombar",
+  },
+  {
+    value: "BIRD_DOG_EXTENSAO_ALTERNADA",
+    label: "Bird-dog / extensao alternada",
+    hint: "Coluna neutra, pelve estavel e extensao contralateral clara de braco e perna",
+  },
+  {
+    value: "ELEVACAO_PERNA_RETA",
+    label: "Elevacao de perna reta",
+    hint: "Perna elevada com joelho estendido, pelve estavel e amplitude moderada",
+  },
+  {
+    value: "ALONGAMENTO_POSTERIOR_COXA_FAIXA",
+    label: "Alongamento posterior de coxa com faixa",
+    hint: "Faixa no pe, joelho quase estendido e alongamento sem tracao agressiva",
+  },
+  {
+    value: "ALONGAMENTO_PIRIFORME_DECUBITO_DORSAL",
+    label: "Alongamento piriforme em decubito dorsal",
+    hint: "Posicao tipo figura 4, apoio das maos e ausencia de flexao cervical forcada",
+  },
+  {
+    value: "ELEVACAO_PANTURRILHA_APOIO",
+    label: "Elevacao de panturrilha com apoio",
+    hint: "Subida controlada dos calcanhares, apoio seguro e tronco alinhado",
+  },
+  {
+    value: "DORSIFLEXAO_TORNOZELO_FAIXA",
+    label: "Dorsiflexao de tornozelo com faixa",
+    hint: "Faixa no antepe, movimento de dorsiflexao e joelho sem compensacao",
+  },
+  {
+    value: "ROTACAO_EXTERNA_OMBRO_FAIXA",
+    label: "Rotacao externa de ombro com faixa",
+    hint: "Cotovelo junto ao corpo, ombro relaxado e arco de rotacao externa compreensivel",
+  },
+  {
+    value: "REMADA_SENTADA_FAIXA",
+    label: "Remada sentada com faixa",
+    hint: "Tronco ereto, escapulas controladas e cotovelos puxando para tras sem elevacao dos ombros",
+  },
+  {
+    value: "ABDUCAO_OMBRO_EM_PE",
+    label: "Abducao de ombro em pe",
+    hint: "Elevacao lateral ate a linha do ombro, sem compensacao cervical ou elevacao excessiva da escapula",
+  },
+  {
+    value: "MOBILIDADE_TORACICA_QUATRO_APOIOS",
+    label: "Mobilidade toracica em quatro apoios",
+    hint: "Rotacao toracica clara, pelve estavel e ausencia de carga excessiva cervical",
+  },
+  {
+    value: "DEAD_BUG_CONTROLE_LOMBOPELVICO",
+    label: "Dead bug",
+    hint: "Controle lombopelvico, braco e perna contralaterais e amplitude segura",
+  },
+  {
+    value: "PRANCHA_LATERAL_JOELHOS_APOIADOS",
+    label: "Prancha lateral com joelhos apoiados",
+    hint: "Alinhamento lateral e se a posicao dos joelhos esta suficientemente clara",
+  },
+  {
+    value: "CLAMSHELL_ABERTURA_QUADRIL",
+    label: "Clamshell / abertura de quadril",
+    hint: "Abertura do joelho superior, pes juntos e pelve sem rotacao posterior",
+  },
+  {
+    value: "EXTENSAO_QUADRIL_QUATRO_APOIOS",
+    label: "Extensao de quadril em quatro apoios",
+    hint: "Ativacao de gluteos, pelve nivelada e ausencia de hiperextensao lombar",
+  },
+  {
+    value: "STEP_UP_BAIXO_APOIO",
+    label: "Step-up baixo com apoio",
+    hint: "Degrau baixo, apoio seguro e joelho alinhado ao pe",
+  },
+  {
+    value: "AVANCO_ASSISTIDO_CURTO_APOIO",
+    label: "Avanco assistido curto com apoio",
+    hint: "Amplitude curta, tronco ereto e joelho anterior sem valgo",
+  },
+  {
+    value: "WALL_SLIDE_DESLIZAMENTO_BRACOS",
+    label: "Wall slide",
+    hint: "Controle escapular, subida dos bracos e ausencia de elevacao compensatoria dos ombros",
+  },
+  {
+    value: "PENDULAR_OMBRO_CODMAN",
+    label: "Pendular de ombro / Codman",
+    hint: "Braco relaxado, tronco apoiado e movimento pendular pequeno",
+  },
+  {
+    value: "FLEXAO_OMBRO_BASTAO_DECUBITO",
+    label: "Flexao de ombro com bastao",
+    hint: "Movimento assistido, amplitude confortavel e ausencia de compensacao cervical",
+  },
+  {
+    value: "FLEXAO_EXTENSAO_COTOVELO_HALTER",
+    label: "Flexao/extensao de cotovelo com halter",
+    hint: "Cotovelo junto ao corpo, ombro relaxado e carga visual leve",
+  },
+  {
+    value: "PRONACAO_SUPINACAO_ANTEBRACO",
+    label: "Pronacao/supinacao de antebraco",
+    hint: "Apoio do antebraco, cotovelo a 90 graus e rotacao clara da palma",
+  },
+  {
+    value: "OPOSICAO_POLEGAR",
+    label: "Oposicao do polegar",
+    hint: "Movimento do polegar, punho neutro e clareza para paciente",
+  },
+  {
+    value: "EVERSAO_TORNOZELO_FAIXA",
+    label: "Eversao de tornozelo com faixa",
+    hint: "Movimento do pe para fora, joelho estavel e faixa bem posicionada",
+  },
+  {
+    value: "ALONGAMENTO_PANTURRILHA_PAREDE",
+    label: "Alongamento de panturrilha na parede",
+    hint: "Calcanhar posterior no solo, joelho posterior estendido e apoio na parede",
+  },
+  {
+    value: "FLEXAO_JOELHO_EM_PE_APOIO",
+    label: "Flexao de joelho em pe com apoio",
+    hint: "Flexao do joelho sem compensacao lombar e apoio seguro",
+  },
+  {
+    value: "AGACHAMENTO_ISOMETRICO_PAREDE",
+    label: "Agachamento isometrico na parede",
+    hint: "Amplitude rasa, costas apoiadas e alinhamento dos joelhos",
+  },
+  {
+    value: "PONTE_COM_MARCHA_ALTERNADA",
+    label: "Ponte com marcha alternada",
+    hint: "Pelve nivelada, ponte sem hiperextensao e elevacao pequena do joelho",
+  },
+  {
+    value: "ELEVACAO_LATERAL_PERNA_EM_PE",
+    label: "Elevacao lateral de perna em pe",
+    hint: "Pelve estavel, tronco sem inclinacao e amplitude baixa",
+  },
+  {
+    value: "RESPIRACAO_DIAFRAGMATICA_DECUBITO",
+    label: "Respiracao diafragmatica em decubito",
+    hint: "Maos em torax/abdome, postura relaxada e destaque no movimento abdominal",
+  },
+  {
+    value: "INCLINACAO_PELVICA_POSTERIOR_DECUBITO",
+    label: "Inclinacao pelvica posterior",
+    hint: "Controle lombopelvico, joelhos flexionados e movimento sutil da pelve",
+  },
+  {
+    value: "JOELHO_AO_PEITO_UNILATERAL",
+    label: "Joelho ao peito unilateral",
+    hint: "Alongamento suave, ombros relaxados e ausencia de tracao cervical",
+  },
+  {
+    value: "ROTACAO_LOMBAR_DECUBITO",
+    label: "Rotacao lombar em decubito",
+    hint: "Joelhos rodando juntos, ombros apoiados e amplitude confortavel",
+  },
+  {
+    value: "ISOMETRIA_QUADRICEPS_TOALHA",
+    label: "Isometria de quadriceps com toalha",
+    hint: "Toalha sob joelho, pressao para baixo e tornozelo relaxado",
+  },
+  {
+    value: "EXTENSAO_TERMINAL_JOELHO_FAIXA",
+    label: "Extensao terminal de joelho com faixa",
+    hint: "Faixa atras do joelho, pe apoiado e extensao sem hiperextensao",
+  },
+  {
+    value: "ISOMETRIA_ADUTORES_BOLA",
+    label: "Isometria de adutores com bola",
+    hint: "Bola entre joelhos, pes apoiados e tronco ereto",
+  },
+  {
+    value: "FLEXAO_PLANTAR_FAIXA",
+    label: "Flexao plantar com faixa",
+    hint: "Faixa no antepe, movimento para baixo e joelho sem compensacao",
+  },
+  {
+    value: "INVERSAO_TORNOZELO_FAIXA",
+    label: "Inversao de tornozelo com faixa",
+    hint: "Movimento do pe para dentro e joelho estavel",
+  },
+  {
+    value: "CIRCULOS_TORNOZELO_SENTADO",
+    label: "Circulos de tornozelo sentado",
+    hint: "Movimento circular no tornozelo, coxa estavel e tronco alinhado",
+  },
+  {
+    value: "EXTENSAO_TORACICA_ENCOSTO_CADEIRA",
+    label: "Extensao toracica no encosto",
+    hint: "Extensao no torax, nao na lombar, e apoio seguro na cadeira",
+  },
+  {
+    value: "ALONGAMENTO_PEITORAL_PORTA",
+    label: "Alongamento peitoral na porta",
+    hint: "Antebraco no batente, ombro relaxado e rotacao leve do tronco",
+  },
+  {
+    value: "ISOMETRIA_FLEXAO_OMBRO_PAREDE",
+    label: "Isometria de flexao de ombro na parede",
+    hint: "Pressao para frente, ombro baixo e tronco neutro",
+  },
+  {
+    value: "ISOMETRIA_ABDUCAO_OMBRO_PAREDE",
+    label: "Isometria de abducao de ombro na parede",
+    hint: "Pressao lateral, sem elevacao do ombro e sem inclinacao do tronco",
+  },
+  {
+    value: "ROTACAO_INTERNA_OMBRO_FAIXA",
+    label: "Rotacao interna de ombro com faixa",
+    hint: "Cotovelo junto ao corpo e movimento sem rotacao do tronco",
+  },
+  {
+    value: "EXTENSAO_OMBRO_FAIXA",
+    label: "Extensao de ombro com faixa",
+    hint: "Puxada para tras, cotovelo estavel e ombro sem encolher",
+  },
+  {
+    value: "REMADA_EM_PE_FAIXA",
+    label: "Remada em pe com faixa",
+    hint: "Escapulas controladas, cotovelos para tras e postura neutra",
+  },
+  {
+    value: "DESVIO_RADIAL_ULNAR_PUNHO",
+    label: "Desvio radial/ulnar de punho",
+    hint: "Antebraco apoiado, um unico peso e movimento lateral do punho",
+  },
+  {
+    value: "EXTENSAO_DEDOS_ELASTICO",
+    label: "Extensao dos dedos com elastico",
+    hint: "Elastico nos dedos, punho neutro e abertura controlada",
+  },
+  {
+    value: "EQUILIBRIO_UNIPODAL_APOIO",
+    label: "Equilibrio unipodal com apoio",
+    hint: "Apoio leve, pelve nivelada e tronco sem inclinacao",
+  },
+  {
+    value: "DESLIZAMENTO_CALCANHAR_DECUBITO",
+    label: "Deslizamento de calcanhar",
+    hint: "Calcanhar deslizando no solo, pelve estavel e movimento suave",
+  },
+  {
+    value: "FLEXAO_BRACO_PAREDE",
+    label: "Flexao de braco na parede",
+    hint: "Alinhamento de tronco, cotovelos e apoio seguro das maos na parede",
+  },
+  {
+    value: "SOCO_SERRATIL_DECUBITO",
+    label: "Soco do serratil em decubito",
+    hint: "Ombro a 90 graus, cotovelo estendido e movimento de protracao escapular",
+  },
+  {
+    value: "RELOGIO_ESCAPULAR_PAREDE",
+    label: "Relogio escapular na parede",
+    hint: "Mao apoiada, movimento escapular circular e tronco sem rodar",
+  },
+  {
+    value: "ELEVACAO_PLANO_ESCAPULA_SCAPTION",
+    label: "Elevacao no plano da escapula",
+    hint: "Elevacao no plano escapular, polegar para cima e ombro sem compensacao",
+  },
+  {
+    value: "EXTENSAO_COTOVELO_FAIXA",
+    label: "Extensao de cotovelo com faixa",
+    hint: "Cotovelo junto ao corpo, punho neutro e extensao sem elevar o ombro",
+  },
+  {
+    value: "PULL_APART_FAIXA",
+    label: "Pull-apart com faixa",
+    hint: "Cotovelos estendidos, escapulas controladas e faixa na altura correta",
+  },
+  {
+    value: "ABDUCAO_QUADRIL_FAIXA_JOELHOS",
+    label: "Abducao de quadril com faixa",
+    hint: "Apoio leve, pelve nivelada e movimento lateral sem inclinacao do tronco",
+  },
+  {
+    value: "CAMINHADA_LATERAL_FAIXA",
+    label: "Caminhada lateral com faixa",
+    hint: "Joelhos alinhados, quadril ativo e passo lateral controlado",
+  },
+  {
+    value: "DOBRADICA_QUADRIL_BASTAO",
+    label: "Dobradica de quadril com bastao",
+    hint: "Coluna neutra, movimento partindo do quadril e bastao alinhado",
+  },
+  {
+    value: "STEP_DOWN_BAIXO",
+    label: "Step-down baixo",
+    hint: "Controle do joelho, apoio seguro e descida lenta do membro livre",
+  },
+  {
+    value: "CAMINHADA_CALCANHARES",
+    label: "Caminhada nos calcanhares",
+    hint: "Dorsiflexao dos tornozelos, dedos elevados e postura ereta",
+  },
+  {
+    value: "CAMINHADA_PONTA_PES",
+    label: "Caminhada na ponta dos pes",
+    hint: "Elevacao dos calcanhares, alinhamento dos tornozelos e equilibrio",
+  },
+  {
+    value: "SHORT_FOOT_ARCO_PLANTAR",
+    label: "Short foot",
+    hint: "Elevacao sutil do arco sem flexionar excessivamente os dedos",
+  },
+  {
+    value: "ENRUGAR_TOALHA_DEDOS_PE",
+    label: "Enrugar toalha com dedos",
+    hint: "Dedos puxando a toalha, calcanhar apoiado e tornozelo estavel",
+  },
+  {
+    value: "ROTACAO_CERVICAL_SENTADA",
+    label: "Rotacao cervical sentada",
+    hint: "Movimento apenas da cervical, ombros relaxados e tronco alinhado",
+  },
+  {
+    value: "EXTENSAO_CERVICAL_SENTADA",
+    label: "Extensao cervical sentada",
+    hint: "Extensao cervical controlada, sem exagero de amplitude ou compensacao toracica",
+  },
+  {
+    value: "MARCHA_SENTADA",
+    label: "Marcha sentada",
+    hint: "Elevacao alternada do joelho, tronco ereto e apoio estavel na cadeira",
+  },
+  {
+    value: "EXTENSAO_JOELHO_SENTADO_LONGA",
+    label: "Extensao de joelho sentado",
+    hint: "Extensao do joelho sem travar, coxa apoiada e tornozelo neutro",
+  },
+  {
+    value: "ROTACAO_TRONCO_SENTADA",
+    label: "Rotacao de tronco sentada",
+    hint: "Rotacao toracica controlada, pelve estavel e pes apoiados",
+  },
+  {
+    value: "APOIO_TANDEM_COM_APOIO",
+    label: "Apoio tandem com apoio",
+    hint: "Pes em linha, apoio leve da mao e tronco sem inclinacao lateral",
+  },
 ];
 
 const DEFAULT_TYPE: ExerciseImageType = "MOBILIDADE_GERAL";
@@ -203,6 +623,76 @@ const EXERCISE_IMAGE_ASSETS: Partial<
   MOBILIDADE_PUNHO_FLEXAO_EXTENSAO: require("../../../assets/exercises/mobilidade-punho-flexao-extensao.jpg"),
   ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO: require("../../../assets/exercises/alongamento-cervical-lateral-assistido.jpg"),
   DESLIZAMENTO_NEURAL_MEDIANO: require("../../../assets/exercises/deslizamento-neural-mediano.jpg"),
+  PRANCHA_FRONTAL_ANTEBRACO: require("../../../assets/exercises/prancha-frontal-antebraco.jpg"),
+  BIRD_DOG_EXTENSAO_ALTERNADA: require("../../../assets/exercises/bird-dog-extensao-alternada.jpg"),
+  ELEVACAO_PERNA_RETA: require("../../../assets/exercises/elevacao-perna-reta.jpg"),
+  ALONGAMENTO_POSTERIOR_COXA_FAIXA: require("../../../assets/exercises/alongamento-posterior-coxa-faixa.jpg"),
+  ALONGAMENTO_PIRIFORME_DECUBITO_DORSAL: require("../../../assets/exercises/alongamento-piriforme-decubito-dorsal.jpg"),
+  ELEVACAO_PANTURRILHA_APOIO: require("../../../assets/exercises/elevacao-panturrilha-apoio.jpg"),
+  DORSIFLEXAO_TORNOZELO_FAIXA: require("../../../assets/exercises/dorsiflexao-tornozelo-faixa.jpg"),
+  ROTACAO_EXTERNA_OMBRO_FAIXA: require("../../../assets/exercises/rotacao-externa-ombro-faixa.jpg"),
+  REMADA_SENTADA_FAIXA: require("../../../assets/exercises/remada-sentada-faixa.jpg"),
+  ABDUCAO_OMBRO_EM_PE: require("../../../assets/exercises/abducao-ombro-em-pe.jpg"),
+  MOBILIDADE_TORACICA_QUATRO_APOIOS: require("../../../assets/exercises/mobilidade-toracica-quatro-apoios-thread-needle.jpg"),
+  DEAD_BUG_CONTROLE_LOMBOPELVICO: require("../../../assets/exercises/dead-bug-controle-lombopelvico.jpg"),
+  PRANCHA_LATERAL_JOELHOS_APOIADOS: require("../../../assets/exercises/prancha-lateral-joelhos-apoiados.jpg"),
+  CLAMSHELL_ABERTURA_QUADRIL: require("../../../assets/exercises/clamshell-abertura-quadril.jpg"),
+  EXTENSAO_QUADRIL_QUATRO_APOIOS: require("../../../assets/exercises/extensao-quadril-quatro-apoios.jpg"),
+  STEP_UP_BAIXO_APOIO: require("../../../assets/exercises/step-up-baixo-apoio.jpg"),
+  AVANCO_ASSISTIDO_CURTO_APOIO: require("../../../assets/exercises/avanco-assistido-curto-apoio.jpg"),
+  WALL_SLIDE_DESLIZAMENTO_BRACOS: require("../../../assets/exercises/wall-slide-deslizamento-bracos-parede.jpg"),
+  PENDULAR_OMBRO_CODMAN: require("../../../assets/exercises/pendular-ombro-codman.jpg"),
+  FLEXAO_OMBRO_BASTAO_DECUBITO: require("../../../assets/exercises/flexao-ombro-bastao-decubito.jpg"),
+  FLEXAO_EXTENSAO_COTOVELO_HALTER: require("../../../assets/exercises/flexao-extensao-cotovelo-halter.jpg"),
+  PRONACAO_SUPINACAO_ANTEBRACO: require("../../../assets/exercises/pronacao-supinacao-antebraco.jpg"),
+  OPOSICAO_POLEGAR: require("../../../assets/exercises/oposicao-polegar.jpg"),
+  EVERSAO_TORNOZELO_FAIXA: require("../../../assets/exercises/eversao-tornozelo-faixa.jpg"),
+  ALONGAMENTO_PANTURRILHA_PAREDE: require("../../../assets/exercises/alongamento-panturrilha-parede.jpg"),
+  FLEXAO_JOELHO_EM_PE_APOIO: require("../../../assets/exercises/flexao-joelho-em-pe-apoio.jpg"),
+  AGACHAMENTO_ISOMETRICO_PAREDE: require("../../../assets/exercises/agachamento-isometrico-parede.jpg"),
+  PONTE_COM_MARCHA_ALTERNADA: require("../../../assets/exercises/ponte-com-marcha-alternada.jpg"),
+  ELEVACAO_LATERAL_PERNA_EM_PE: require("../../../assets/exercises/elevacao-lateral-perna-em-pe.jpg"),
+  RESPIRACAO_DIAFRAGMATICA_DECUBITO: require("../../../assets/exercises/respiracao-diafragmatica-decubito.jpg"),
+  INCLINACAO_PELVICA_POSTERIOR_DECUBITO: require("../../../assets/exercises/inclinacao-pelvica-posterior-decubito.jpg"),
+  JOELHO_AO_PEITO_UNILATERAL: require("../../../assets/exercises/joelho-ao-peito-unilateral.jpg"),
+  ROTACAO_LOMBAR_DECUBITO: require("../../../assets/exercises/rotacao-lombar-decubito.jpg"),
+  ISOMETRIA_QUADRICEPS_TOALHA: require("../../../assets/exercises/isometria-quadriceps-toalha.jpg"),
+  EXTENSAO_TERMINAL_JOELHO_FAIXA: require("../../../assets/exercises/extensao-terminal-joelho-faixa.jpg"),
+  ISOMETRIA_ADUTORES_BOLA: require("../../../assets/exercises/isometria-adutores-bola.jpg"),
+  FLEXAO_PLANTAR_FAIXA: require("../../../assets/exercises/flexao-plantar-faixa.jpg"),
+  INVERSAO_TORNOZELO_FAIXA: require("../../../assets/exercises/inversao-tornozelo-faixa.jpg"),
+  CIRCULOS_TORNOZELO_SENTADO: require("../../../assets/exercises/circulos-tornozelo-sentado.jpg"),
+  EXTENSAO_TORACICA_ENCOSTO_CADEIRA: require("../../../assets/exercises/extensao-toracica-encosto-cadeira.jpg"),
+  ALONGAMENTO_PEITORAL_PORTA: require("../../../assets/exercises/alongamento-peitoral-porta.jpg"),
+  ISOMETRIA_FLEXAO_OMBRO_PAREDE: require("../../../assets/exercises/isometria-flexao-ombro-parede.jpg"),
+  ISOMETRIA_ABDUCAO_OMBRO_PAREDE: require("../../../assets/exercises/isometria-abducao-ombro-parede.jpg"),
+  ROTACAO_INTERNA_OMBRO_FAIXA: require("../../../assets/exercises/rotacao-interna-ombro-faixa.jpg"),
+  EXTENSAO_OMBRO_FAIXA: require("../../../assets/exercises/extensao-ombro-faixa.jpg"),
+  REMADA_EM_PE_FAIXA: require("../../../assets/exercises/remada-em-pe-faixa.jpg"),
+  DESVIO_RADIAL_ULNAR_PUNHO: require("../../../assets/exercises/desvio-radial-ulnar-punho.jpg"),
+  EXTENSAO_DEDOS_ELASTICO: require("../../../assets/exercises/extensao-dedos-elastico.jpg"),
+  EQUILIBRIO_UNIPODAL_APOIO: require("../../../assets/exercises/equilibrio-unipodal-apoio.jpg"),
+  DESLIZAMENTO_CALCANHAR_DECUBITO: require("../../../assets/exercises/deslizamento-calcanhar-decubito.jpg"),
+  FLEXAO_BRACO_PAREDE: require("../../../assets/exercises/flexao-braco-parede.jpg"),
+  SOCO_SERRATIL_DECUBITO: require("../../../assets/exercises/soco-serratil-decubito.jpg"),
+  RELOGIO_ESCAPULAR_PAREDE: require("../../../assets/exercises/relogio-escapular-parede.jpg"),
+  ELEVACAO_PLANO_ESCAPULA_SCAPTION: require("../../../assets/exercises/elevacao-plano-escapula-scaption.jpg"),
+  EXTENSAO_COTOVELO_FAIXA: require("../../../assets/exercises/extensao-cotovelo-faixa.jpg"),
+  PULL_APART_FAIXA: require("../../../assets/exercises/pull-apart-faixa.jpg"),
+  ABDUCAO_QUADRIL_FAIXA_JOELHOS: require("../../../assets/exercises/abducao-quadril-faixa-joelhos.jpg"),
+  CAMINHADA_LATERAL_FAIXA: require("../../../assets/exercises/caminhada-lateral-faixa.jpg"),
+  DOBRADICA_QUADRIL_BASTAO: require("../../../assets/exercises/dobradica-quadril-bastao.jpg"),
+  STEP_DOWN_BAIXO: require("../../../assets/exercises/step-down-baixo.jpg"),
+  CAMINHADA_CALCANHARES: require("../../../assets/exercises/caminhada-calcanhares.jpg"),
+  CAMINHADA_PONTA_PES: require("../../../assets/exercises/caminhada-ponta-pes.jpg"),
+  SHORT_FOOT_ARCO_PLANTAR: require("../../../assets/exercises/short-foot-arco-plantar.jpg"),
+  ENRUGAR_TOALHA_DEDOS_PE: require("../../../assets/exercises/enrugar-toalha-dedos-pe.jpg"),
+  ROTACAO_CERVICAL_SENTADA: require("../../../assets/exercises/rotacao-cervical-sentada.jpg"),
+  EXTENSAO_CERVICAL_SENTADA: require("../../../assets/exercises/extensao-cervical-sentada.jpg"),
+  MARCHA_SENTADA: require("../../../assets/exercises/marcha-sentada.jpg"),
+  EXTENSAO_JOELHO_SENTADO_LONGA: require("../../../assets/exercises/extensao-joelho-sentado-longa.jpg"),
+  ROTACAO_TRONCO_SENTADA: require("../../../assets/exercises/rotacao-tronco-sentada.jpg"),
+  APOIO_TANDEM_COM_APOIO: require("../../../assets/exercises/apoio-tandem-com-apoio.jpg"),
 };
 
 function normalizeText(value: unknown) {
@@ -1439,13 +1929,10 @@ type Props = {
   compact?: boolean;
 };
 
-export function ExerciseVisual({ imageType, title, compact }: Props) {
+export function ExerciseVisual({ imageType, compact }: Props) {
   const resolvedType = useMemo(
-    () =>
-      imageType
-        ? normalizeExerciseImageType(imageType)
-        : inferExerciseImageType(title),
-    [imageType, title],
+    () => (imageType ? normalizeExerciseImageType(imageType) : DEFAULT_TYPE),
+    [imageType],
   );
   const option =
     EXERCISE_IMAGE_OPTIONS.find((item) => item.value === resolvedType) ||

@@ -73,7 +73,7 @@ export class AtividadesService {
       instrucoesExecucao:
         dto.instrucoesExecucao?.trim() || exercicio?.instrucoesPadrao || null,
       imagemUrl: null,
-      imagemTipo: dto.imagemTipo?.trim() || exercicio?.imagemKey || null,
+      imagemTipo: exercicio?.imagemKey || null,
       dataLimite: dto.dataLimite ? new Date(dto.dataLimite) : null,
       diaPrescricao:
         typeof dto.diaPrescricao === 'number' ? dto.diaPrescricao : null,
@@ -262,10 +262,6 @@ export class AtividadesService {
       atividade.instrucoesExecucao =
         dto.instrucoesExecucao.trim() || exercicio?.instrucoesPadrao || null;
     }
-    if (typeof dto.imagemTipo === 'string') {
-      atividade.imagemTipo =
-        dto.imagemTipo.trim() || exercicio?.imagemKey || null;
-    }
     if (exercicio) {
       if (typeof dto.titulo !== 'string') {
         atividade.titulo = exercicio.nome;
@@ -276,9 +272,9 @@ export class AtividadesService {
       if (typeof dto.instrucoesExecucao !== 'string') {
         atividade.instrucoesExecucao = exercicio.instrucoesPadrao;
       }
-      if (typeof dto.imagemTipo !== 'string') {
-        atividade.imagemTipo = exercicio.imagemKey;
-      }
+      atividade.imagemTipo = exercicio.imagemKey;
+    } else if (dto.exercicioId === null) {
+      atividade.imagemTipo = null;
     }
     if (typeof dto.dataLimite === 'string') {
       atividade.dataLimite = dto.dataLimite ? new Date(dto.dataLimite) : null;
@@ -735,7 +731,7 @@ export class AtividadesService {
       ...suggestion,
       exercicioId: exercicio?.id,
       exercicioNome: exercicio?.nome,
-      imagemTipo: exercicio?.imagemKey || suggestion.imagemTipo || undefined,
+      imagemTipo: exercicio?.imagemKey || undefined,
     };
   }
 }

@@ -32,10 +32,8 @@ import { Atividade, Exercicio } from "../../types";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
-  EXERCISE_IMAGE_OPTIONS,
   ExerciseImageType,
   ExerciseVisual,
-  inferExerciseImageType,
   normalizeExerciseImageType,
 } from "../../components/clinical/ExerciseVisual";
 
@@ -243,12 +241,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     setImagemTipo(
       exercicio.imagemKey
         ? normalizeExerciseImageType(exercicio.imagemKey)
-        : inferExerciseImageType(
-            exercicio.nome,
-            exercicio.objetivo,
-            exercicio.descricao,
-            exercicio.tags?.join(" "),
-          ),
+        : "MOBILIDADE_GERAL",
     );
     showToast({
       message: "Exercício do catálogo aplicado à prescrição",
@@ -299,8 +292,6 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     if (instrucoesSugeridas) setInstrucoesExecucao(instrucoesSugeridas);
     if (imagemTipoSugerida) {
       setImagemTipo(normalizeExerciseImageType(imagemTipoSugerida));
-    } else if (tituloSugerido || descricaoFinal) {
-      setImagemTipo(inferExerciseImageType(tituloSugerido, descricaoFinal));
     }
     if (referenciasFinal) setReferenciasBibliograficas(referenciasFinal);
   };
@@ -438,12 +429,12 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
             .filter(Boolean)
             .join("\n\n") || undefined,
         instrucoesExecucao: instrucoesExecucao.trim(),
-        imagemTipo,
         diaPrescricao,
         ordemNoDia: parsedOrder,
         repetirSemanal,
         aceiteProfissional,
         dataLimite: dataLimiteApi || undefined,
+        ...(exercicioId ? { imagemTipo } : {}),
       };
 
       if (editingAtividadeId) {
@@ -480,7 +471,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     setImagemTipo(
       atividade.imagemTipo
         ? normalizeExerciseImageType(atividade.imagemTipo)
-        : inferExerciseImageType(atividade.titulo, atividade.descricao),
+        : "MOBILIDADE_GERAL",
     );
     setReferenciasBibliograficas(
       markerIndex >= 0
@@ -659,7 +650,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
               <View style={styles.catalogTitleWrap}>
                 <Text style={styles.catalogTitle}>Catálogo Synap</Text>
                 <Text style={styles.catalogSubtitle}>
-                  Selecione uma imagem e instrução própria revisada
+                  Exercícios com imagem própria revisada
                 </Text>
               </View>
               {exercicioId ? (
@@ -668,6 +659,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                   onPress={() => {
                     markDraftChanged();
                     setExercicioId(null);
+                    setImagemTipo("MOBILIDADE_GERAL");
                   }}
                   activeOpacity={0.85}
                 >
@@ -816,32 +808,11 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
               title={titulo}
             />
             <Text style={styles.sectionLabel}>Ilustração orientativa</Text>
-            <View style={styles.imageTypeGrid}>
-              {EXERCISE_IMAGE_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.imageTypeChip,
-                    imagemTipo === option.value && styles.imageTypeChipActive,
-                  ]}
-                  onPress={() => {
-                    markDraftChanged();
-                    setImagemTipo(option.value);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Text
-                    style={[
-                      styles.imageTypeChipText,
-                      imagemTipo === option.value &&
-                        styles.imageTypeChipTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Text style={styles.exerciseImageHint}>
+              {exercicioId
+                ? "Imagem vinculada ao catálogo revisado."
+                : "Sem imagem específica do catálogo."}
+            </Text>
           </View>
 
           <Input
@@ -1311,30 +1282,10 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     fontWeight: "700",
   },
-  imageTypeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.xs,
-  },
-  imageTypeChip: {
-    borderWidth: 1,
-    borderColor: COLORS.primary + "66",
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    backgroundColor: COLORS.white,
-  },
-  imageTypeChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  imageTypeChipText: {
-    color: COLORS.primary,
+  exerciseImageHint: {
+    color: COLORS.textSecondary,
     fontSize: FONTS.sizes.xs,
-    fontWeight: "700",
-  },
-  imageTypeChipTextActive: {
-    color: COLORS.white,
+    lineHeight: 16,
   },
   acceptanceChecklist: {
     marginTop: SPACING.xs,

@@ -101,6 +101,45 @@ describe('AtividadesService', () => {
     );
   });
 
+  it('does not persist a manual image type without an approved catalog exercise', async () => {
+    const {
+      service,
+      atividadeRepository,
+      pacienteRepository,
+      exerciciosCatalogService,
+    } = makeService();
+    pacienteRepository.findOne.mockResolvedValue({
+      id: 'paciente-1',
+      usuarioId: 'profissional-1',
+      ativo: true,
+    });
+
+    const result = await service.create(
+      {
+        pacienteId: 'paciente-1',
+        titulo: 'Exercicio personalizado',
+        instrucoesExecucao: 'Execute com controle e sem dor.',
+        imagemTipo: ExerciseImageType.PONTE_CURTA,
+      },
+      'profissional-1',
+    );
+
+    expect(result).toMatchObject({
+      id: 'atividade-1',
+      titulo: 'Exercicio personalizado',
+      exercicioId: null,
+      imagemUrl: null,
+      imagemTipo: null,
+    });
+    expect(exerciciosCatalogService.findApprovedById).not.toHaveBeenCalled();
+    expect(atividadeRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exercicioId: null,
+        imagemTipo: null,
+      }),
+    );
+  });
+
   it('returns the matched catalog exercise and specific image key in AI suggestions', async () => {
     const {
       service,
@@ -150,6 +189,46 @@ describe('AtividadesService', () => {
       descricao: 'Ativar gluteos e cadeia posterior.',
       instrucoesExecucao: '1. Eleve o quadril devagar.',
       imagemTipo: ExerciseImageType.MOBILIDADE_LOMBAR,
+    });
+  });
+
+  it('does not return an image key in AI suggestions without approved catalog match', async () => {
+    const {
+      service,
+      pacienteRepository,
+      anamneseRepository,
+      laudoRepository,
+      atividadeAiSuggestionService,
+      exerciciosCatalogService,
+    } = makeService();
+    pacienteRepository.findOne.mockResolvedValue({
+      id: 'paciente-1',
+      usuarioId: 'profissional-1',
+      ativo: true,
+    });
+    anamneseRepository.findOne.mockResolvedValue(null);
+    laudoRepository.findOne.mockResolvedValue(null);
+    atividadeAiSuggestionService.generate.mockResolvedValue({
+      titulo: 'Ponte curta',
+      descricao: 'Ativar gluteos e cadeia posterior.',
+      instrucoesExecucao: '1. Eleve o quadril devagar.',
+      imagemTipo: ExerciseImageType.PONTE_CURTA,
+      referencias: [],
+      source: 'rules',
+    });
+    exerciciosCatalogService.findBestMatchForSuggestion.mockResolvedValue(null);
+
+    const result = await service.generateAiSuggestion(
+      { pacienteId: 'paciente-1' },
+      'profissional-1',
+    );
+
+    expect(result).toMatchObject({
+      titulo: 'Ponte curta',
+      exercicioId: undefined,
+      exercicioNome: undefined,
+      imagemTipo: undefined,
+      source: 'rules',
     });
   });
 

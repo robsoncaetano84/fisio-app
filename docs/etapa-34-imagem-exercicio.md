@@ -29,16 +29,20 @@ Migrations relevantes:
 - `1781000000000-SeedExpandedExerciseCatalog`
 - `1781100000000-ExpandExerciseSpecificImageTypes`
 - `1781200000000-AddExerciseMediaClinicalReview`
+- `1781300000000-SeedPreviewExerciseCatalog`
 
 Regras atuais:
 - `imagemTipo` em atividade e `imagemKey` em exercicio aceitam somente chaves proprias conhecidas.
 - `imagem_url` legado e limpo pela migration `178080`.
 - o banco tem constraints para impedir chaves de imagem desconhecidas.
 - a IA nao pode retornar URL de imagem; ela retorna apenas `imagemTipo`.
-- a sugestao de IA tenta casar o rascunho com um exercicio aprovado do catalogo.
-- o catalogo inicial contem 18 exercicios aprovados, incluindo variacoes para cervical, toracica, lombar, ombro, joelho, quadril, tornozelo e punho/mao.
+- a sugestao de IA tenta casar o rascunho com um exercicio aprovado do catalogo e so libera `imagemTipo` quando a midia principal tambem esta clinicamente aprovada.
+- o catalogo inicial contem 18 exercicios base, incluindo variacoes para cervical, toracica, lombar, ombro, joelho, quadril, tornozelo e punho/mao.
+- a expansao visual contem mais 70 exercicios em `RASCUNHO`, com assets integrados e revisao clinica pendente.
 - cada exercicio inicial possui uma chave de imagem especifica, mantendo as chaves genericas apenas para compatibilidade e fallback.
 - a sugestao local por regras prioriza chaves especificas de movimento antes das chaves genericas.
+- prescricoes novas nao persistem imagem especifica escolhida manualmente fora de um exercicio aprovado do catalogo.
+- enquanto a midia principal estiver com revisao clinica diferente de `APROVADA`, o exercicio fica visivel somente para admin/manutencao.
 
 Chaves permitidas:
 - `MOBILIDADE_GERAL`
@@ -74,7 +78,7 @@ Componente visual:
 - `ExerciseVisual` renderiza ilustracoes locais por `imagemTipo`.
 - nao renderiza URL remota;
 - usa JPG proprio otimizado para movimentos especificos gerados a partir da matriz anatomica do projeto;
-- mantem SVG local como fallback para tipos genericos ou sem asset raster;
+- mantem SVG local generico quando a prescricao nao possui `imagemTipo` especifico liberado;
 - mostra marca d'agua discreta `Synap` no componente, nao embutida no arquivo;
 - e usado no fluxo do profissional e do paciente.
 
@@ -89,7 +93,7 @@ Telas contempladas:
 
 1. Admin cadastra ou revisa um exercicio no catalogo.
 2. Admin escolhe uma `imagemKey` propria entre as chaves permitidas.
-3. Profissional seleciona o exercicio no catalogo ao prescrever.
+3. Profissional seleciona o exercicio clinicamente aprovado no catalogo ao prescrever.
 4. A prescricao herda titulo, descricao, instrucoes e `imagemTipo`.
 5. Paciente visualiza a mesma ilustracao e o passo a passo.
 6. Check-ins e tela de adesao preservam a mesma referencia visual.
@@ -110,6 +114,7 @@ Revisao clinica:
 - a revisao clinica fica registrada na midia principal em `revisao_clinica_status`, `revisao_clinica_observacao`, `revisao_clinica_por_usuario_id` e `revisao_clinica_em`;
 - o admin pode atualizar a revisao pelo endpoint `PATCH /exercicios/:id/revisao-clinica-imagem`;
 - a tela admin do catalogo mostra badges, contadores e filtros para pendentes, aprovadas e itens que exigem acao.
+- somente midias com `revisao_clinica_status = APROVADA` entram no catalogo do profissional, no casamento da IA e na heranca de imagem da prescricao.
 
 Status de revisao clinica da midia:
 - `PENDENTE`: ainda precisa de validacao humana;
@@ -131,6 +136,16 @@ Assets mobile:
 - dimensao quadrada entre 1000px e 1600px por lado;
 - sem texto, logo ou marca d'agua no arquivo de imagem;
 - referencia visual: matriz anatomica masculina do projeto, com escala de cinza, fundo claro e destaque verde Synap.
+
+Previews de expansao ainda nao oficiais:
+- `docs/etapa-34-galeria-preview-10-exercicios.html`;
+- `docs/etapa-34-galeria-preview-mais-20-exercicios.html`;
+- `docs/etapa-34-galeria-preview-lote-03-20-exercicios.html`;
+- `docs/etapa-34-galeria-preview-lote-04-20-exercicios.html`.
+
+Esses lotes ja foram convertidos para JPG otimizado, mapeados no mobile e
+criados no backend como rascunho. Eles ainda dependem de revisao clinica e
+mudanca de status antes de aparecerem para prescricao.
 
 ## O que nao fazer
 
@@ -160,7 +175,7 @@ Assets mobile:
 - backend lint, build, `tsc --noEmit`, testes focados e suite completa;
 - backend `AtividadesService` cobre criacao por catalogo e sugestao com `exercicioId`/imagem especifica;
 - mobile `validate:critical`;
-- mobile `check:exercise-assets` cobrindo contrato com o enum do backend, 18 assets especificos e limite de peso do bundle;
+- mobile `check:exercise-assets` cobrindo contrato com o enum do backend, 88 assets especificos e limite de peso do bundle;
 - migration run no banco de desenvolvimento;
 - migration show sem pendencias no banco de desenvolvimento;
 - health check do backend local;
@@ -181,3 +196,7 @@ A migration `1781000000000-SeedExpandedExerciseCatalog` adiciona 10 exercicios a
 - deslizamento neural mediano.
 
 A migration `1781100000000-ExpandExerciseSpecificImageTypes` amplia as constraints de `imagem_tipo`/`imagem_key` e atualiza os 18 exercicios iniciais para chaves especificas por exercicio. Prescricoes existentes vinculadas a esses exercicios tambem recebem a chave especifica correspondente.
+
+A migration `1781300000000-SeedPreviewExerciseCatalog` adiciona 70 exercicios
+de expansao como `RASCUNHO`, amplia as constraints para as novas chaves de
+imagem e cria midias proprias com `revisao_clinica_status = PENDENTE`.

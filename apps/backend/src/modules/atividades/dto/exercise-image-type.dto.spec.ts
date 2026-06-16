@@ -9,9 +9,11 @@ import {
 } from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
 import { ExercicioMidiaRevisaoClinicaStatus } from '../entities/exercicio-midia.entity';
+import { PREVIEW_EXERCISE_CATALOG } from '../exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from '../exercicio-catalog.seed';
 import { ExpandExerciseSpecificImageTypes1781100000000 } from '../../../migrations/1781100000000-ExpandExerciseSpecificImageTypes';
 import { AddExerciseMediaClinicalReview1781200000000 } from '../../../migrations/1781200000000-AddExerciseMediaClinicalReview';
+import { SeedPreviewExerciseCatalog1781300000000 } from '../../../migrations/1781300000000-SeedPreviewExerciseCatalog';
 import { UpdateExercicioMidiaClinicalReviewDto } from './update-exercicio-midia-clinical-review.dto';
 
 describe('exercise image DTO validation', () => {
@@ -81,15 +83,23 @@ describe('exercise image DTO validation', () => {
     expect(errors.some((error) => error.property === 'nome')).toBe(true);
   });
 
-  it('keeps database image constraints aligned with the backend enum', () => {
+  it('keeps the base database image constraints aligned with the base seed', () => {
     const migration = new ExpandExerciseSpecificImageTypes1781100000000();
+    const baseImageTypes = new Set(
+      INITIAL_EXERCISE_CATALOG.map((item) => item.imagemKey),
+    );
 
-    expect(
-      [
-        ...(migration as any).legacyImageTypes,
-        ...(migration as any).specificImageTypes,
-      ].sort(),
-    ).toEqual([...EXERCISE_IMAGE_TYPES].sort());
+    expect((migration as any).specificImageTypes).toEqual(
+      expect.arrayContaining([...baseImageTypes]),
+    );
+  });
+
+  it('keeps the final database image constraints aligned with the backend enum', () => {
+    const migration = new SeedPreviewExerciseCatalog1781300000000();
+
+    expect([...(migration as any).allowedImageTypes].sort()).toEqual(
+      [...EXERCISE_IMAGE_TYPES].sort(),
+    );
   });
 
   it('uses only known image keys in the initial proprietary catalog', () => {
@@ -120,6 +130,21 @@ describe('exercise image DTO validation', () => {
       ]),
     );
     expect(slugs).toHaveLength(18);
+  });
+
+  it('keeps preview expansion exercises as drafts pending clinical review', () => {
+    const allowedTypes = new Set(EXERCISE_IMAGE_TYPES);
+    const slugs = PREVIEW_EXERCISE_CATALOG.map((item) => item.slug);
+
+    expect(PREVIEW_EXERCISE_CATALOG).toHaveLength(70);
+    expect(new Set(slugs).size).toBe(PREVIEW_EXERCISE_CATALOG.length);
+    expect(
+      PREVIEW_EXERCISE_CATALOG.every(
+        (item) =>
+          item.status === ExercicioStatus.RASCUNHO &&
+          allowedTypes.has(item.imagemKey),
+      ),
+    ).toBe(true);
   });
 
   it('uses specific image keys for each seeded proprietary exercise', () => {

@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Not, Repository } from 'typeorm';
+import { Brackets, Not, Repository, SelectQueryBuilder } from 'typeorm';
 import { CreateExercicioCatalogDto } from './dto/create-exercicio-catalog.dto';
 import { UpdateExercicioMidiaClinicalReviewDto } from './dto/update-exercicio-midia-clinical-review.dto';
 import { UpdateExercicioCatalogDto } from './dto/update-exercicio-catalog.dto';
@@ -15,6 +15,7 @@ import {
   ExercicioMidia,
   ExercicioMidiaRevisaoClinicaStatus,
 } from './entities/exercicio-midia.entity';
+import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
 
 export type ExercicioCatalogFilters = {
@@ -49,18 +50,13 @@ export class ExerciciosCatalogService implements OnModuleInit {
   }
 
   async findAll(filters: ExercicioCatalogFilters = {}): Promise<Exercicio[]> {
-    const qb = this.exercicioRepository
-      .createQueryBuilder('exercicio')
-      .leftJoinAndSelect(
-        'exercicio.midias',
-        'midia',
-        'midia.ativo = :midiaAtiva',
-        { midiaAtiva: true },
-      );
+    const qb = this.exercicioRepository.createQueryBuilder('exercicio');
 
     if (filters.includeDrafts) {
+      this.joinActiveMedia(qb);
       qb.where('1 = 1');
     } else {
+      this.joinClinicallyApprovedPrimaryMedia(qb);
       qb.where('exercicio.ativo = :ativo', { ativo: true }).andWhere(
         'exercicio.status = :status',
         {
@@ -112,14 +108,10 @@ export class ExerciciosCatalogService implements OnModuleInit {
   }
 
   async findOne(id: string): Promise<Exercicio | null> {
-    return this.exercicioRepository
-      .createQueryBuilder('exercicio')
-      .leftJoinAndSelect(
-        'exercicio.midias',
-        'midia',
-        'midia.ativo = :midiaAtiva',
-        { midiaAtiva: true },
-      )
+    const qb = this.exercicioRepository.createQueryBuilder('exercicio');
+    this.joinClinicallyApprovedPrimaryMedia(qb);
+
+    return qb
       .where('exercicio.id = :id', { id })
       .andWhere('exercicio.ativo = :ativo', { ativo: true })
       .andWhere('exercicio.status = :status', {
@@ -129,9 +121,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
   }
 
   async findApprovedById(id: string): Promise<Exercicio | null> {
-    return this.exercicioRepository.findOne({
-      where: { id, ativo: true, status: ExercicioStatus.APROVADO },
-    });
+    return this.findOne(id);
   }
 
   async findOneForAdmin(id: string): Promise<Exercicio | null> {
@@ -330,10 +320,16 @@ export class ExerciciosCatalogService implements OnModuleInit {
   async findBestMatchForSuggestion(
     input: ExercicioSuggestionMatchInput,
   ): Promise<Exercicio | null> {
-    const candidates = await this.exercicioRepository.find({
-      where: { ativo: true, status: ExercicioStatus.APROVADO },
-      order: { regiaoCorporal: 'ASC', nome: 'ASC' },
-    });
+    const qb = this.exercicioRepository.createQueryBuilder('exercicio');
+    this.joinClinicallyApprovedPrimaryMedia(qb);
+    const candidates = await qb
+      .where('exercicio.ativo = :ativo', { ativo: true })
+      .andWhere('exercicio.status = :status', {
+        status: ExercicioStatus.APROVADO,
+      })
+      .orderBy('exercicio.regiaoCorporal', 'ASC')
+      .addOrderBy('exercicio.nome', 'ASC')
+      .getMany();
     if (!candidates.length) return null;
 
     const context = this.normalizeForMatch(
@@ -367,12 +363,15 @@ export class ExerciciosCatalogService implements OnModuleInit {
     const total = await this.exercicioRepository.count();
     if (total > 0) return;
 
-    for (const item of INITIAL_EXERCISE_CATALOG) {
+    for (const item of [
+      ...INITIAL_EXERCISE_CATALOG,
+      ...PREVIEW_EXERCISE_CATALOG,
+    ]) {
       const exercicio = await this.exercicioRepository.save(
         this.exercicioRepository.create({
           ...item,
           revisadoEm: new Date(),
-          ativo: true,
+          ativo: item.status !== ExercicioStatus.ARQUIVADO,
           versao: 1,
         }),
       );
@@ -395,6 +394,35 @@ export class ExerciciosCatalogService implements OnModuleInit {
         }),
       );
     }
+  }
+
+  private joinActiveMedia(
+    qb: SelectQueryBuilder<Exercicio>,
+  ): SelectQueryBuilder<Exercicio> {
+    return qb.leftJoinAndSelect(
+      'exercicio.midias',
+      'midia',
+      'midia.ativo = :midiaAtiva',
+      { midiaAtiva: true },
+    );
+  }
+
+  private joinClinicallyApprovedPrimaryMedia(
+    qb: SelectQueryBuilder<Exercicio>,
+  ): SelectQueryBuilder<Exercicio> {
+    return qb.innerJoinAndSelect(
+      'exercicio.midias',
+      'midia',
+      [
+        'midia.ativo = :midiaAtiva',
+        'midia.assetKey = exercicio.imagemKey',
+        'midia.revisaoClinicaStatus = :revisaoClinicaStatus',
+      ].join(' AND '),
+      {
+        midiaAtiva: true,
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+      },
+    );
   }
 
   private async syncPrimaryMedia(

@@ -2,6 +2,11 @@
 
 Ilustracoes proprias do Synap para exercicios prescritos.
 
+Estado atual:
+- 18 assets iniciais do catalogo base;
+- 70 assets de expansao em preview, integrados como rascunho e pendentes de revisao clinica;
+- 88 JPGs especificos mapeados em `ExerciseVisual`.
+
 Padrao usado:
 - base visual: matriz anatomica masculina posterior do projeto;
 - estilo: anatomia em escala de cinza, fundo clinico claro e destaque verde Synap;

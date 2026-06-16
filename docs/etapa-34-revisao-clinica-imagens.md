@@ -21,6 +21,18 @@ Esta matriz nao substitui avaliacao profissional. Codex valida consistencia tecn
 4. Se houver ambiguidade, regenerar apenas a imagem afetada, mantendo slug e chave.
 5. Depois de aprovada, registrar profissional, data, observacao e versao revisada.
 6. No admin do catalogo, abrir o exercicio e atualizar a revisao clinica da imagem principal.
+7. Somente itens marcados como `APROVADA` ficam disponiveis no catalogo do profissional, na sugestao de IA e na prescricao com imagem especifica.
+
+Galerias de preview para expansao do catalogo:
+- `docs/etapa-34-galeria-preview-10-exercicios.html`;
+- `docs/etapa-34-galeria-preview-mais-20-exercicios.html`;
+- `docs/etapa-34-galeria-preview-lote-03-20-exercicios.html`;
+- `docs/etapa-34-galeria-preview-lote-04-20-exercicios.html`.
+
+Essas galerias ainda nao representam aprovacao clinica. As 70 imagens de
+preview ja foram convertidas para assets mobile, mapeadas no backend/mobile e
+criadas como exercicios `RASCUNHO`; cada item ainda precisa de revisao clinica,
+registro de decisao e alteracao de status antes de aparecer para prescricao.
 
 ## Criterios de aceite
 
@@ -101,6 +113,8 @@ A decisao de cada imagem deve ser registrada no admin do catalogo. A tela permit
 - `REMOVER_DO_CATALOGO`: retirar do fluxo de prescricao.
 
 O registro tecnico fica em `exercicio_midias`, separado do status operacional do exercicio. Isso evita confundir um exercicio `APROVADO` para manutencao/catalogo com uma imagem ainda pendente de revisao clinica.
+
+Enquanto a midia principal estiver `PENDENTE` ou exigir acao, o exercicio permanece acessivel para admin/manutencao, mas nao entra no fluxo normal de prescricao. Prescricoes personalizadas sem exercicio aprovado ficam sem `imagemTipo` especifico e usam apenas a ilustracao generica do componente.
 
 ## Quando regenerar uma imagem
 

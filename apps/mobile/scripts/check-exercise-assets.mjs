@@ -7,13 +7,17 @@ const seedPath = join(
   root,
   "../backend/src/modules/atividades/exercicio-catalog.seed.ts",
 );
+const previewSeedPath = join(
+  root,
+  "../backend/src/modules/atividades/exercise-catalog-preview.seed.ts",
+);
 const backendEnumPath = join(
   root,
   "../backend/src/modules/atividades/exercise-image-type.enum.ts",
 );
 const assetsDir = join(root, "assets/exercises");
 const maxAssetBytes = 250 * 1024;
-const maxTotalAssetBytes = 4 * 1024 * 1024;
+const maxTotalAssetBytes = 8 * 1024 * 1024;
 const minAssetEdge = 1000;
 const maxAssetEdge = 1600;
 
@@ -29,7 +33,10 @@ const genericImageTypes = new Set([
 ]);
 
 const component = readFileSync(componentPath, "utf8");
-const seed = readFileSync(seedPath, "utf8");
+const seed = [seedPath, previewSeedPath]
+  .filter((filePath) => existsSync(filePath))
+  .map((filePath) => readFileSync(filePath, "utf8"))
+  .join("\n");
 const backendEnum = readFileSync(backendEnumPath, "utf8");
 const failures = [];
 

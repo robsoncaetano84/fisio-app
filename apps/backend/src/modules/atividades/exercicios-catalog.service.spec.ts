@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { ExerciseImageType } from './exercise-image-type.enum';
 import { ExercicioStatus } from './entities/exercicio.entity';
+import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
 import { ExercicioMidiaRevisaoClinicaStatus } from './entities/exercicio-midia.entity';
@@ -11,6 +12,7 @@ describe('ExerciciosCatalogService', () => {
 
   const makeQueryBuilder = () => {
     const qb = {
+      innerJoinAndSelect: jest.fn(),
       leftJoinAndSelect: jest.fn(),
       where: jest.fn(),
       andWhere: jest.fn(),
@@ -70,12 +72,10 @@ describe('ExerciciosCatalogService', () => {
 
     await service.onModuleInit();
 
-    expect(exercicioRepository.save).toHaveBeenCalledTimes(
-      INITIAL_EXERCISE_CATALOG.length,
-    );
-    expect(midiaRepository.save).toHaveBeenCalledTimes(
-      INITIAL_EXERCISE_CATALOG.length,
-    );
+    const expectedTotal =
+      INITIAL_EXERCISE_CATALOG.length + PREVIEW_EXERCISE_CATALOG.length;
+    expect(exercicioRepository.save).toHaveBeenCalledTimes(expectedTotal);
+    expect(midiaRepository.save).toHaveBeenCalledTimes(expectedTotal);
     expect(exercicioRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         slug: 'mobilidade-lombar-gato-camelo',
@@ -94,6 +94,15 @@ describe('ExerciciosCatalogService', () => {
         revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
       }),
     );
+    expect(exercicioRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: 'prancha-frontal-antebraco',
+        imagemKey: ExerciseImageType.PRANCHA_FRONTAL_ANTEBRACO,
+        status: ExercicioStatus.RASCUNHO,
+        ativo: true,
+        versao: 1,
+      }),
+    );
   });
 
   it('does not auto seed outside development', async () => {
@@ -105,7 +114,7 @@ describe('ExerciciosCatalogService', () => {
     expect(exercicioRepository.count).not.toHaveBeenCalled();
   });
 
-  it('filters approved active exercises and active media', async () => {
+  it('filters approved active exercises with clinically approved primary media', async () => {
     const { service, exercicioRepository } = makeService();
     const qb = makeQueryBuilder();
     qb.getMany.mockResolvedValue([{ id: 'exercicio-1' }]);
@@ -120,11 +129,18 @@ describe('ExerciciosCatalogService', () => {
     });
 
     expect(result).toEqual([{ id: 'exercicio-1' }]);
-    expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
+    expect(qb.innerJoinAndSelect).toHaveBeenCalledWith(
       'exercicio.midias',
       'midia',
-      'midia.ativo = :midiaAtiva',
-      { midiaAtiva: true },
+      [
+        'midia.ativo = :midiaAtiva',
+        'midia.assetKey = exercicio.imagemKey',
+        'midia.revisaoClinicaStatus = :revisaoClinicaStatus',
+      ].join(' AND '),
+      {
+        midiaAtiva: true,
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+      },
     );
     expect(qb.where).toHaveBeenCalledWith('exercicio.ativo = :ativo', {
       ativo: true,
@@ -156,6 +172,13 @@ describe('ExerciciosCatalogService', () => {
       { id: 'exercicio-rascunho', status: ExercicioStatus.RASCUNHO },
       { id: 'exercicio-arquivado', status: ExercicioStatus.ARQUIVADO },
     ]);
+    expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
+      'exercicio.midias',
+      'midia',
+      'midia.ativo = :midiaAtiva',
+      { midiaAtiva: true },
+    );
+    expect(qb.innerJoinAndSelect).not.toHaveBeenCalled();
     expect(qb.where).toHaveBeenCalledWith('1 = 1');
     expect(qb.andWhere).not.toHaveBeenCalledWith('exercicio.status = :status', {
       status: ExercicioStatus.APROVADO,
@@ -164,29 +187,49 @@ describe('ExerciciosCatalogService', () => {
 
   it('finds approved exercise by id for prescriptions', async () => {
     const { service, exercicioRepository } = makeService();
-    exercicioRepository.findOne.mockResolvedValue({ id: 'exercicio-1' });
+    const qb = makeQueryBuilder();
+    qb.getOne.mockResolvedValue({ id: 'exercicio-1' });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
 
     await expect(service.findApprovedById('exercicio-1')).resolves.toEqual({
       id: 'exercicio-1',
     });
-    expect(exercicioRepository.findOne).toHaveBeenCalledWith({
-      where: {
-        id: 'exercicio-1',
-        ativo: true,
-        status: ExercicioStatus.APROVADO,
+    expect(qb.innerJoinAndSelect).toHaveBeenCalledWith(
+      'exercicio.midias',
+      'midia',
+      [
+        'midia.ativo = :midiaAtiva',
+        'midia.assetKey = exercicio.imagemKey',
+        'midia.revisaoClinicaStatus = :revisaoClinicaStatus',
+      ].join(' AND '),
+      {
+        midiaAtiva: true,
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
       },
+    );
+    expect(qb.where).toHaveBeenCalledWith('exercicio.id = :id', {
+      id: 'exercicio-1',
     });
+    expect(qb.andWhere).toHaveBeenCalledWith('exercicio.ativo = :ativo', {
+      ativo: true,
+    });
+    expect(qb.andWhere).toHaveBeenCalledWith('exercicio.status = :status', {
+      status: ExercicioStatus.APROVADO,
+    });
+    expect(exercicioRepository.findOne).not.toHaveBeenCalled();
   });
 
   it('matches an AI suggestion to the best proprietary catalog exercise', async () => {
     const { service, exercicioRepository } = makeService();
-    exercicioRepository.find.mockResolvedValue(
+    const qb = makeQueryBuilder();
+    qb.getMany.mockResolvedValue(
       INITIAL_EXERCISE_CATALOG.map((item, index) => ({
         id: `exercicio-${index + 1}`,
         ativo: true,
         ...item,
       })),
     );
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
 
     const result = await service.findBestMatchForSuggestion({
       titulo: 'Ponte curta para controle lombar',
@@ -201,10 +244,26 @@ describe('ExerciciosCatalogService', () => {
       slug: 'ponte-curta',
       imagemKey: 'PONTE_CURTA',
     });
-    expect(exercicioRepository.find).toHaveBeenCalledWith({
-      where: { ativo: true, status: ExercicioStatus.APROVADO },
-      order: { regiaoCorporal: 'ASC', nome: 'ASC' },
+    expect(qb.innerJoinAndSelect).toHaveBeenCalledWith(
+      'exercicio.midias',
+      'midia',
+      [
+        'midia.ativo = :midiaAtiva',
+        'midia.assetKey = exercicio.imagemKey',
+        'midia.revisaoClinicaStatus = :revisaoClinicaStatus',
+      ].join(' AND '),
+      {
+        midiaAtiva: true,
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+      },
+    );
+    expect(qb.where).toHaveBeenCalledWith('exercicio.ativo = :ativo', {
+      ativo: true,
     });
+    expect(qb.andWhere).toHaveBeenCalledWith('exercicio.status = :status', {
+      status: ExercicioStatus.APROVADO,
+    });
+    expect(exercicioRepository.find).not.toHaveBeenCalled();
   });
 
   it('creates an admin exercise with proprietary media metadata', async () => {
