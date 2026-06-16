@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { CreateExercicioCatalogDto } from './dto/create-exercicio-catalog.dto';
 import { UpdateExercicioCatalogDto } from './dto/update-exercicio-catalog.dto';
+import { UpdateExercicioMidiaClinicalReviewDto } from './dto/update-exercicio-midia-clinical-review.dto';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
 
 @Controller('exercicios')
@@ -95,5 +96,20 @@ export class ExerciciosController {
     @CurrentUser() usuario: Usuario,
   ) {
     return this.exerciciosCatalogService.archive(id, usuario.id);
+  }
+
+  @Patch(':id/revisao-clinica-imagem')
+  @Throttle({ default: { ttl: 60, limit: 40 } })
+  @Roles(UserRole.ADMIN)
+  reviewPrimaryMedia(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateExercicioMidiaClinicalReviewDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.exerciciosCatalogService.reviewPrimaryMedia(
+      id,
+      dto,
+      usuario.id,
+    );
   }
 }

@@ -20,6 +20,7 @@ Esta matriz nao substitui avaliacao profissional. Codex valida consistencia tecn
    - `REMOVER_DO_CATALOGO`: exercicio nao deve seguir para prescricao neste momento.
 4. Se houver ambiguidade, regenerar apenas a imagem afetada, mantendo slug e chave.
 5. Depois de aprovada, registrar profissional, data, observacao e versao revisada.
+6. No admin do catalogo, abrir o exercicio e atualizar a revisao clinica da imagem principal.
 
 ## Criterios de aceite
 
@@ -89,6 +90,18 @@ Preencher uma linha por imagem revisada.
 | 17 | `PENDENTE` | | | |
 | 18 | `PENDENTE` | | | |
 
+## Registro no sistema
+
+A decisao de cada imagem deve ser registrada no admin do catalogo. O backend grava essa decisao na midia principal do exercicio:
+
+- `PENDENTE`: ainda nao revisada;
+- `APROVADA`: imagem clinicamente aceita;
+- `REGENERAR_IMAGEM`: precisa refazer o JPG;
+- `AJUSTAR_TEXTO`: imagem aceita, texto precisa ajuste;
+- `REMOVER_DO_CATALOGO`: retirar do fluxo de prescricao.
+
+O registro tecnico fica em `exercicio_midias`, separado do status operacional do exercicio. Isso evita confundir um exercicio `APROVADO` para manutencao/catalogo com uma imagem ainda pendente de revisao clinica.
+
 ## Quando regenerar uma imagem
 
 Regenerar somente o asset afetado quando:
@@ -121,4 +134,3 @@ Todo novo exercicio com imagem propria deve seguir o mesmo fluxo:
 8. Atualizar testes de contrato e assets.
 9. Revisar clinicamente a imagem e o texto.
 10. Aprovar o exercicio somente apos revisao clinica registrada.
-

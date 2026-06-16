@@ -8,8 +8,11 @@ import {
   ExerciseImageType,
 } from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
+import { ExercicioMidiaRevisaoClinicaStatus } from '../entities/exercicio-midia.entity';
 import { INITIAL_EXERCISE_CATALOG } from '../exercicio-catalog.seed';
 import { ExpandExerciseSpecificImageTypes1781100000000 } from '../../../migrations/1781100000000-ExpandExerciseSpecificImageTypes';
+import { AddExerciseMediaClinicalReview1781200000000 } from '../../../migrations/1781200000000-AddExerciseMediaClinicalReview';
+import { UpdateExercicioMidiaClinicalReviewDto } from './update-exercicio-midia-clinical-review.dto';
 
 describe('exercise image DTO validation', () => {
   it('accepts only known local exercise image types for prescriptions', async () => {
@@ -145,5 +148,29 @@ describe('exercise image DTO validation', () => {
       ]),
     );
     expect(new Set(imageKeys).size).toBe(INITIAL_EXERCISE_CATALOG.length);
+  });
+
+  it('accepts only known clinical review status values for exercise media', async () => {
+    const dto = plainToInstance(UpdateExercicioMidiaClinicalReviewDto, {
+      status: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+      observacao: 'Imagem clara para uso.',
+    });
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
+
+    const invalidDto = plainToInstance(UpdateExercicioMidiaClinicalReviewDto, {
+      status: 'APROVACAO_LIVRE',
+    });
+
+    const errors = await validate(invalidDto);
+    expect(errors.some((error) => error.property === 'status')).toBe(true);
+  });
+
+  it('keeps database clinical review constraints aligned with the backend enum', () => {
+    const migration = new AddExerciseMediaClinicalReview1781200000000();
+
+    expect((migration as any).statuses.sort()).toEqual(
+      Object.values(ExercicioMidiaRevisaoClinicaStatus).sort(),
+    );
   });
 });

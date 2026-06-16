@@ -12,6 +12,7 @@ describe('ExerciciosController', () => {
       create: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       update: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       archive: jest.fn().mockResolvedValue({ success: true }),
+      reviewPrimaryMedia: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
     } as unknown as jest.Mocked<ExerciciosCatalogService>;
 
     const controller = new ExerciciosController(service);
@@ -91,5 +92,24 @@ describe('ExerciciosController', () => {
     expect(
       Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.archive),
     ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.reviewPrimaryMedia,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+  });
+
+  it('forwards primary media clinical review updates', () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const dto = {
+      status: 'APROVADA',
+      observacao: 'Imagem clara para uso.',
+    } as any;
+
+    controller.reviewPrimaryMedia(id, dto, { id: 'adm-1' } as any);
+
+    expect(service.reviewPrimaryMedia).toHaveBeenCalledWith(id, dto, 'adm-1');
   });
 });

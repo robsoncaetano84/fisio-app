@@ -2,6 +2,14 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Exercicio } from './exercicio.entity';
 
+export enum ExercicioMidiaRevisaoClinicaStatus {
+  PENDENTE = 'PENDENTE',
+  APROVADA = 'APROVADA',
+  REGENERAR_IMAGEM = 'REGENERAR_IMAGEM',
+  AJUSTAR_TEXTO = 'AJUSTAR_TEXTO',
+  REMOVER_DO_CATALOGO = 'REMOVER_DO_CATALOGO',
+}
+
 @Entity('exercicio_midias')
 @Index('IDX_EXERCICIO_MIDIA_EXERCICIO', ['exercicioId', 'ativo'])
 @Index('UQ_EXERCICIO_MIDIA_ASSET', ['exercicioId', 'assetKey'], {
@@ -53,6 +61,27 @@ export class ExercicioMidia extends BaseEntity {
 
   @Column({ name: 'revisado_em', type: 'timestamp', nullable: true })
   revisadoEm: Date | null;
+
+  @Column({
+    name: 'revisao_clinica_status',
+    type: 'varchar',
+    length: 40,
+    default: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+  })
+  revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus;
+
+  @Column({ name: 'revisao_clinica_observacao', type: 'text', nullable: true })
+  revisaoClinicaObservacao: string | null;
+
+  @Column({
+    name: 'revisao_clinica_por_usuario_id',
+    type: 'uuid',
+    nullable: true,
+  })
+  revisaoClinicaPorUsuarioId: string | null;
+
+  @Column({ name: 'revisao_clinica_em', type: 'timestamp', nullable: true })
+  revisaoClinicaEm: Date | null;
 
   @Column({ default: true })
   ativo: boolean;

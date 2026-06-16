@@ -8,9 +8,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Not, Repository } from 'typeorm';
 import { CreateExercicioCatalogDto } from './dto/create-exercicio-catalog.dto';
+import { UpdateExercicioMidiaClinicalReviewDto } from './dto/update-exercicio-midia-clinical-review.dto';
 import { UpdateExercicioCatalogDto } from './dto/update-exercicio-catalog.dto';
 import { Exercicio, ExercicioStatus } from './entities/exercicio.entity';
-import { ExercicioMidia } from './entities/exercicio-midia.entity';
+import {
+  ExercicioMidia,
+  ExercicioMidiaRevisaoClinicaStatus,
+} from './entities/exercicio-midia.entity';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
 
 export type ExercicioCatalogFilters = {
@@ -285,6 +289,44 @@ export class ExerciciosCatalogService implements OnModuleInit {
     return { success: true };
   }
 
+  async reviewPrimaryMedia(
+    id: string,
+    dto: UpdateExercicioMidiaClinicalReviewDto,
+    usuarioId: string,
+  ): Promise<Exercicio> {
+    const exercicio = await this.exercicioRepository.findOne({
+      where: { id },
+    });
+    if (!exercicio) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+    if (!exercicio.imagemKey) {
+      throw new BadRequestException('Exercicio sem imagem principal');
+    }
+
+    const midia = await this.midiaRepository.findOne({
+      where: {
+        exercicioId: exercicio.id,
+        assetKey: exercicio.imagemKey,
+        ativo: true,
+      },
+    });
+    if (!midia) {
+      throw new NotFoundException('Midia principal nao encontrada');
+    }
+
+    midia.revisaoClinicaStatus = dto.status;
+    midia.revisaoClinicaObservacao = this.normalizeOptionalString(
+      dto.observacao,
+    );
+    midia.revisaoClinicaPorUsuarioId = usuarioId;
+    midia.revisaoClinicaEm = new Date();
+    midia.versao += 1;
+    await this.midiaRepository.save(midia);
+
+    return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
+  }
+
   async findBestMatchForSuggestion(
     input: ExercicioSuggestionMatchInput,
   ): Promise<Exercicio | null> {
@@ -347,6 +389,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
           licenseUrl: null,
           attributionText: 'Ilustracao propria Synap.',
           revisadoEm: new Date(),
+          revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
           ativo: true,
           versao: 1,
         }),
@@ -419,6 +462,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
         versao: exercicio.versao,
         revisadoPorUsuarioId: usuarioId,
         revisadoEm: new Date(),
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
         ativo: true,
       }),
     );

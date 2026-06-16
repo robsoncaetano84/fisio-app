@@ -3,6 +3,7 @@ import { ExerciseImageType } from './exercise-image-type.enum';
 import { ExercicioStatus } from './entities/exercicio.entity';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
+import { ExercicioMidiaRevisaoClinicaStatus } from './entities/exercicio-midia.entity';
 
 describe('ExerciciosCatalogService', () => {
   const originalNodeEnv = process.env.NODE_ENV;
@@ -90,6 +91,7 @@ describe('ExerciciosCatalogService', () => {
         sourceType: 'PROPRIA',
         license: 'PROPRIETARIA_SYNAP',
         attributionText: 'Ilustracao propria Synap.',
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
       }),
     );
   });
@@ -250,6 +252,70 @@ describe('ExerciciosCatalogService', () => {
         assetKey: 'MOBILIDADE_LOMBAR',
         sourceType: 'PROPRIA',
         license: 'PROPRIETARIA_SYNAP',
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+      }),
+    );
+  });
+
+  it('marks the primary media clinical review status for admin', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const qb = makeQueryBuilder();
+    const midia = {
+      id: 'midia-1',
+      exercicioId: 'exercicio-1',
+      assetKey: 'PONTE_CURTA',
+      ativo: true,
+      revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+      versao: 1,
+    };
+    exercicioRepository.findOne.mockResolvedValue({
+      id: 'exercicio-1',
+      imagemKey: 'PONTE_CURTA',
+    });
+    midiaRepository.findOne.mockResolvedValue(midia);
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-1',
+      midias: [
+        {
+          id: 'midia-1',
+          revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+        },
+      ],
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await expect(
+      service.reviewPrimaryMedia(
+        'exercicio-1',
+        {
+          status: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+          observacao: 'Imagem clara para uso.',
+        },
+        'admin-1',
+      ),
+    ).resolves.toEqual({
+      id: 'exercicio-1',
+      midias: [
+        {
+          id: 'midia-1',
+          revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+        },
+      ],
+    });
+
+    expect(midiaRepository.findOne).toHaveBeenCalledWith({
+      where: {
+        exercicioId: 'exercicio-1',
+        assetKey: 'PONTE_CURTA',
+        ativo: true,
+      },
+    });
+    expect(midiaRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+        revisaoClinicaObservacao: 'Imagem clara para uso.',
+        revisaoClinicaPorUsuarioId: 'admin-1',
+        versao: 2,
       }),
     );
   });

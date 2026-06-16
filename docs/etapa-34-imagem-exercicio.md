@@ -18,7 +18,7 @@ Motivos:
 
 Tabelas principais:
 - `exercicios`: catalogo proprio de exercicios, com nome, slug, regiao, categoria, nivel, objetivo, instrucoes, cuidados, contraindicacoes, tags, status e `imagem_key`.
-- `exercicio_midias`: metadados da midia propria, com `asset_key`, tipo, origem, autor, licenca, versao e revisao.
+- `exercicio_midias`: metadados da midia propria, com `asset_key`, tipo, origem, autor, licenca, versao, revisao administrativa e revisao clinica da imagem.
 - `atividades`: prescricao do paciente. Guarda `exercicio_id`, `instrucoes_execucao`, `imagem_tipo` e mantem `imagem_url` apenas como legado tecnico, sempre nulo para novas prescricoes.
 
 Migrations relevantes:
@@ -28,6 +28,7 @@ Migrations relevantes:
 - `1780900000000-AddUniqueExerciseMediaAsset`
 - `1781000000000-SeedExpandedExerciseCatalog`
 - `1781100000000-ExpandExerciseSpecificImageTypes`
+- `1781200000000-AddExerciseMediaClinicalReview`
 
 Regras atuais:
 - `imagemTipo` em atividade e `imagemKey` em exercicio aceitam somente chaves proprias conhecidas.
@@ -105,7 +106,16 @@ Revisao clinica:
 - a matriz de revisao esta em `docs/etapa-34-revisao-clinica-imagens.md`;
 - a galeria local para conferencia visual esta em `docs/etapa-34-galeria-revisao-imagens.html`;
 - se uma imagem estiver ambigua, regenerar somente o asset afetado e manter a mesma chave;
-- a aprovacao tecnica automatizada de contrato/assets nao substitui a aprovacao clinica humana.
+- a aprovacao tecnica automatizada de contrato/assets nao substitui a aprovacao clinica humana;
+- a revisao clinica fica registrada na midia principal em `revisao_clinica_status`, `revisao_clinica_observacao`, `revisao_clinica_por_usuario_id` e `revisao_clinica_em`;
+- o admin pode atualizar a revisao pelo endpoint `PATCH /exercicios/:id/revisao-clinica-imagem`.
+
+Status de revisao clinica da midia:
+- `PENDENTE`: ainda precisa de validacao humana;
+- `APROVADA`: imagem liberada clinicamente;
+- `REGENERAR_IMAGEM`: asset precisa ser refeito;
+- `AJUSTAR_TEXTO`: imagem serve, mas instrucoes/descricao precisam mudar;
+- `REMOVER_DO_CATALOGO`: exercicio nao deve seguir para prescricao neste momento.
 
 Midias:
 - `sourceType`: `PROPRIA`

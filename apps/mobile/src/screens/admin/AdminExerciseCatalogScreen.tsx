@@ -20,7 +20,7 @@ import {
 } from "../../constants/theme";
 import { api } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
-import { Exercicio, RootStackParamList } from "../../types";
+import { Exercicio, ExercicioMidia, RootStackParamList } from "../../types";
 import {
   EXERCISE_IMAGE_OPTIONS,
   ExerciseImageType,
@@ -31,11 +31,25 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, "AdminExercises">;
 
 type ExerciseStatus = Exercicio["status"];
+type MediaClinicalReviewStatus = NonNullable<
+  ExercicioMidia["revisaoClinicaStatus"]
+>;
 
 const STATUS_OPTIONS: Array<{ value: ExerciseStatus; label: string }> = [
   { value: "RASCUNHO", label: "Rascunho" },
   { value: "APROVADO", label: "Aprovado" },
   { value: "ARQUIVADO", label: "Arquivado" },
+];
+
+const REVIEW_STATUS_OPTIONS: Array<{
+  value: MediaClinicalReviewStatus;
+  label: string;
+}> = [
+  { value: "PENDENTE", label: "Pendente" },
+  { value: "APROVADA", label: "Aprovada" },
+  { value: "REGENERAR_IMAGEM", label: "Regenerar imagem" },
+  { value: "AJUSTAR_TEXTO", label: "Ajustar texto" },
+  { value: "REMOVER_DO_CATALOGO", label: "Remover do catalogo" },
 ];
 
 const emptyForm = {
@@ -52,7 +66,21 @@ const emptyForm = {
   imagemKey: "MOBILIDADE_GERAL" as ExerciseImageType,
   tagsText: "",
   status: "RASCUNHO" as ExerciseStatus,
+  revisaoClinicaObservacao: "",
 };
+
+function getPrimaryMedia(
+  item?: Exercicio | null,
+  imageKey?: string | null,
+): ExercicioMidia | null {
+  const midias = item?.midias || [];
+  const targetKey = imageKey || item?.imagemKey;
+  return (
+    midias.find((midia) => midia.ativo && midia.assetKey === targetKey) ||
+    midias.find((midia) => midia.ativo) ||
+    null
+  );
+}
 
 export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const { showToast } = useToast();
@@ -60,6 +88,8 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [reviewingStatus, setReviewingStatus] =
+    useState<MediaClinicalReviewStatus | null>(null);
   const [items, setItems] = useState<Exercicio[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -111,6 +141,16 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
     });
   }, [items, search, statusFilter]);
 
+  const editingItem = useMemo(
+    () => items.find((item) => item.id === editingId) || null,
+    [editingId, items],
+  );
+
+  const editingPrimaryMedia = useMemo(
+    () => getPrimaryMedia(editingItem, form.imagemKey),
+    [editingItem, form.imagemKey],
+  );
+
   const updateForm = <Key extends keyof typeof form>(
     key: Key,
     value: (typeof form)[Key],
@@ -124,6 +164,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   };
 
   const startEdit = (item: Exercicio) => {
+    const primaryMedia = getPrimaryMedia(item);
     setEditingId(item.id);
     setForm({
       nome: item.nome || "",
@@ -139,6 +180,8 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       imagemKey: normalizeExerciseImageType(item.imagemKey),
       tagsText: (item.tags || []).join(", "),
       status: item.status || "RASCUNHO",
+      revisaoClinicaObservacao:
+        primaryMedia?.revisaoClinicaObservacao || "",
     });
   };
 
@@ -256,6 +299,28 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       showToast({ message, type: "error" });
     } finally {
       setRestoringId(null);
+    }
+  };
+
+  const handleClinicalReview = async (status: MediaClinicalReviewStatus) => {
+    if (!editingId) return;
+
+    try {
+      setReviewingStatus(status);
+      await api.patch(`/exercicios/${editingId}/revisao-clinica-imagem`, {
+        status,
+        observacao: form.revisaoClinicaObservacao.trim() || undefined,
+      });
+      showToast({
+        message: "Revisao clinica da imagem atualizada",
+        type: "success",
+      });
+      await loadCatalog();
+    } catch (error) {
+      const { message } = parseApiError(error);
+      showToast({ message, type: "error" });
+    } finally {
+      setReviewingStatus(null);
     }
   };
 
@@ -451,6 +516,46 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                   />
                 ))}
               </View>
+              {editingId ? (
+                <View style={styles.reviewPanel}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.sectionLabel}>
+                      Revisao clinica da imagem
+                    </Text>
+                    <ReviewBadge
+                      status={editingPrimaryMedia?.revisaoClinicaStatus}
+                    />
+                  </View>
+                  <Input
+                    label="Observacao da revisao"
+                    value={form.revisaoClinicaObservacao}
+                    onChangeText={(value) =>
+                      updateForm("revisaoClinicaObservacao", value)
+                    }
+                    placeholder="Ex.: movimento claro para paciente"
+                    multiline
+                    maxLength={2000}
+                    showCount
+                  />
+                  <View style={styles.chipGrid}>
+                    {REVIEW_STATUS_OPTIONS.map((option) => (
+                      <FilterChip
+                        key={option.value}
+                        label={
+                          reviewingStatus === option.value
+                            ? "Salvando..."
+                            : option.label
+                        }
+                        active={
+                          (editingPrimaryMedia?.revisaoClinicaStatus ||
+                            "PENDENTE") === option.value
+                        }
+                        onPress={() => handleClinicalReview(option.value)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
               <View style={styles.actions}>
                 <Button
                   title={editingId ? "Salvar alterações" : "Criar exercício"}
@@ -514,6 +619,9 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                     <View style={styles.exerciseTitleRow}>
                       <Text style={styles.exerciseName}>{item.nome}</Text>
                       <StatusBadge status={item.status} />
+                      <ReviewBadge
+                        status={getPrimaryMedia(item)?.revisaoClinicaStatus}
+                      />
                     </View>
                     <Text style={styles.exerciseInfo}>
                       {item.regiaoCorporal.replace(/_/g, " ")} •{" "}
@@ -617,6 +725,41 @@ function StatusBadge({ status }: { status: ExerciseStatus }) {
         ]}
       >
         {STATUS_OPTIONS.find((item) => item.value === status)?.label || status}
+      </Text>
+    </View>
+  );
+}
+
+function ReviewBadge({
+  status,
+}: {
+  status?: MediaClinicalReviewStatus | null;
+}) {
+  const value = status || "PENDENTE";
+  const label =
+    REVIEW_STATUS_OPTIONS.find((item) => item.value === value)?.label || value;
+  const isApproved = value === "APROVADA";
+  const requiresAction =
+    value === "REGENERAR_IMAGEM" ||
+    value === "AJUSTAR_TEXTO" ||
+    value === "REMOVER_DO_CATALOGO";
+
+  return (
+    <View
+      style={[
+        styles.reviewBadge,
+        isApproved && styles.reviewBadgeApproved,
+        requiresAction && styles.reviewBadgeAction,
+      ]}
+    >
+      <Text
+        style={[
+          styles.reviewBadgeText,
+          isApproved && styles.reviewBadgeTextApproved,
+          requiresAction && styles.reviewBadgeTextAction,
+        ]}
+      >
+        {label}
       </Text>
     </View>
   );
@@ -753,6 +896,20 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginTop: SPACING.sm,
   },
+  reviewPanel: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    gap: SPACING.sm,
+    backgroundColor: COLORS.gray50,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
+  },
   refreshButton: {
     width: 38,
     height: 38,
@@ -855,5 +1012,28 @@ const styles = StyleSheet.create({
   },
   statusBadgeTextArchived: {
     color: COLORS.gray700,
+  },
+  reviewBadge: {
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    backgroundColor: COLORS.warning + "1F",
+  },
+  reviewBadgeApproved: {
+    backgroundColor: COLORS.success + "1F",
+  },
+  reviewBadgeAction: {
+    backgroundColor: COLORS.error + "1F",
+  },
+  reviewBadgeText: {
+    color: COLORS.warning,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "800",
+  },
+  reviewBadgeTextApproved: {
+    color: COLORS.success,
+  },
+  reviewBadgeTextAction: {
+    color: COLORS.error,
   },
 });

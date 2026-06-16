@@ -456,6 +456,15 @@ export interface ExercicioMidia {
   versao: number;
   revisadoPorUsuarioId?: string | null;
   revisadoEm?: string | null;
+  revisaoClinicaStatus?:
+    | "PENDENTE"
+    | "APROVADA"
+    | "REGENERAR_IMAGEM"
+    | "AJUSTAR_TEXTO"
+    | "REMOVER_DO_CATALOGO";
+  revisaoClinicaObservacao?: string | null;
+  revisaoClinicaPorUsuarioId?: string | null;
+  revisaoClinicaEm?: string | null;
   ativo: boolean;
   createdAt: string;
   updatedAt: string;
