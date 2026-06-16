@@ -100,6 +100,13 @@ Status do exercicio:
 - `APROVADO`: disponivel para prescricao e sugestao.
 - `ARQUIVADO`: removido da prescricao e da sugestao, preservado para historico/admin.
 
+Revisao clinica:
+- o pacote das 18 imagens deve ser validado por profissional habilitado antes de liberacao ampla;
+- a matriz de revisao esta em `docs/etapa-34-revisao-clinica-imagens.md`;
+- a galeria local para conferencia visual esta em `docs/etapa-34-galeria-revisao-imagens.html`;
+- se uma imagem estiver ambigua, regenerar somente o asset afetado e manter a mesma chave;
+- a aprovacao tecnica automatizada de contrato/assets nao substitui a aprovacao clinica humana.
+
 Midias:
 - `sourceType`: `PROPRIA`
 - `author`: `Synap`
@@ -128,12 +135,14 @@ Assets mobile:
 3. Adicionar a opcao equivalente em `EXERCISE_IMAGE_OPTIONS` no mobile.
 4. Implementar o desenho no `ExerciseVisual` ou apontar para asset proprio versionado.
 5. Atualizar seed/migration se for exercicio inicial.
-6. Adicionar ou atualizar teste de validacao.
-7. Rodar:
+6. Adicionar a imagem na matriz de revisao clinica.
+7. Adicionar ou atualizar teste de validacao.
+8. Rodar:
    - backend `npm run lint:ci`
    - backend `npm run build`
    - backend testes de atividades/catalogo
    - mobile `npm run validate:critical`
+9. Aprovar o exercicio somente depois da revisao clinica registrada.
 
 ## Validacoes ja executadas nesta etapa
 

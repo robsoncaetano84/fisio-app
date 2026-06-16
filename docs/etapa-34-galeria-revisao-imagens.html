@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synap - Revisao clinica das imagens de exercicios</title>
+    <style>
+      :root {
+        --bg: #f7faf8;
+        --paper: #ffffff;
+        --ink: #1f2933;
+        --muted: #667085;
+        --line: #d9e7df;
+        --primary: #2f7f62;
+        --primary-soft: #e7f3ee;
+        --warn: #9a6700;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 24px;
+        padding-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(24px, 4vw, 38px);
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 860px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .notice {
+        margin-top: 16px;
+        border: 1px solid #f3d48a;
+        background: #fff8e5;
+        color: var(--warn);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-weight: 650;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 20px 0 24px;
+      }
+
+      .meta div {
+        min-height: 56px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 10px 12px;
+      }
+
+      .meta span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      .image-wrap {
+        position: relative;
+        display: grid;
+        place-items: center;
+        aspect-ratio: 1 / 1;
+        background: #f1f5f3;
+      }
+
+      .image-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+
+      .watermark {
+        position: absolute;
+        right: 12px;
+        bottom: 10px;
+        color: rgba(47, 127, 98, 0.2);
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .body {
+        padding: 14px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 4px 8px;
+      }
+
+      .name {
+        margin-top: 10px;
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .key {
+        margin-top: 6px;
+        color: var(--muted);
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          "Liberation Mono",
+          monospace;
+        font-size: 11px;
+        overflow-wrap: anywhere;
+      }
+
+      .check {
+        margin-top: 12px;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .decision {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .box {
+        min-height: 28px;
+        border: 1px dashed #a7b8af;
+        border-radius: 6px;
+        padding: 5px 7px;
+      }
+
+      footer {
+        margin-top: 24px;
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 920px) {
+        .grid,
+        .meta {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 620px) {
+        main {
+          width: min(100% - 20px, 1180px);
+          padding-top: 20px;
+        }
+
+        .grid,
+        .meta {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        main {
+          width: 100%;
+          padding: 0;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .card {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Revisao clinica das imagens de exercicios</h1>
+        <p class="lead">
+          Galeria local para conferir as 18 imagens proprias do catalogo Synap.
+          A aprovacao deve ser registrada por profissional habilitado na matriz
+          <code>docs/etapa-34-revisao-clinica-imagens.md</code>.
+        </p>
+        <p class="notice">
+          Status atual: PENDENTE_REVISAO_CLINICA. Nao considerar aprovado para
+          uso amplo com pacientes ate finalizar a revisao humana.
+        </p>
+      </header>
+
+      <section class="meta" aria-label="Registro da revisao">
+        <div><span>Profissional</span></div>
+        <div><span>Registro profissional</span></div>
+        <div><span>Data</span></div>
+        <div><span>Parecer geral</span></div>
+      </section>
+
+      <section class="grid" aria-label="Imagens para revisao">
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/mobilidade-lombar-gato-camelo.jpg" alt="Mobilidade lombar em gato-camelo" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">1</span>
+            <h2 class="name">Mobilidade lombar em gato-camelo</h2>
+            <p class="key">MOBILIDADE_LOMBAR_GATO_CAMELO</p>
+            <p class="check">Validar quatro apoios, alternancia de flexao/extensao da coluna e movimento suave.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/ponte-curta.jpg" alt="Ponte curta" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">2</span>
+            <h2 class="name">Ponte curta</h2>
+            <p class="key">PONTE_CURTA</p>
+            <p class="check">Validar decubito dorsal, joelhos flexionados e elevacao curta do quadril sem hiperextensao lombar.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/controle-cervical-profundo.jpg" alt="Controle cervical profundo" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">3</span>
+            <h2 class="name">Controle cervical profundo</h2>
+            <p class="key">CONTROLE_CERVICAL_PROFUNDO</p>
+            <p class="check">Validar recolhimento leve do queixo, baixa amplitude e ombros relaxados.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/elevacao-assistida-ombro.jpg" alt="Elevacao assistida de ombro" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">4</span>
+            <h2 class="name">Elevacao assistida de ombro</h2>
+            <p class="key">ELEVACAO_ASSISTIDA_OMBRO</p>
+            <p class="check">Validar elevacao com apoio, amplitude toleravel e escapula controlada.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/agachamento-parcial-assistido.jpg" alt="Agachamento parcial assistido" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">5</span>
+            <h2 class="name">Agachamento parcial assistido</h2>
+            <p class="key">AGACHAMENTO_PARCIAL_ASSISTIDO</p>
+            <p class="check">Validar apoio seguro, agachamento curto e joelhos alinhados aos pes.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/abducao-quadril-decubito-lateral.jpg" alt="Abducao de quadril em decubito lateral" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">6</span>
+            <h2 class="name">Abducao de quadril em decubito lateral</h2>
+            <p class="key">ABDUCAO_QUADRIL_DECUBITO_LATERAL</p>
+            <p class="check">Validar perna superior elevando lateralmente, pelve estavel e ausencia de rotacao posterior.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/equilibrio-bipodal-transferencia-peso.jpg" alt="Equilibrio bipodal com transferencia de peso" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">7</span>
+            <h2 class="name">Equilibrio bipodal com transferencia de peso</h2>
+            <p class="key">EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO</p>
+            <p class="check">Validar apoio bipodal, transferencia lenta de peso e apoio de seguranca proximo.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/preensao-manual-bola-macia.jpg" alt="Preensao manual com bola macia" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">8</span>
+            <h2 class="name">Preensao manual com bola macia</h2>
+            <p class="key">PREENSAO_MANUAL_BOLA_MACIA</p>
+            <p class="check">Validar bola na palma, punho neutro e aperto gradual sem tensao proximal excessiva.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/mobilidade-toracica-rotacao-sentada.jpg" alt="Mobilidade toracica em rotacao sentada" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">9</span>
+            <h2 class="name">Mobilidade toracica em rotacao sentada</h2>
+            <p class="key">MOBILIDADE_TORACICA_ROTACAO_SENTADA</p>
+            <p class="check">Validar sedestacao, rotacao controlada do tronco e pelve estavel.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/retracao-escapular-sentada.jpg" alt="Retracao escapular sentada" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">10</span>
+            <h2 class="name">Retracao escapular sentada</h2>
+            <p class="key">RETRACAO_ESCAPULAR_SENTADA</p>
+            <p class="check">Validar escapulas para tras e para baixo, ombros relaxados e sem elevacao compensatoria.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/isometria-rotacao-externa-ombro.jpg" alt="Isometria de rotacao externa de ombro" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">11</span>
+            <h2 class="name">Isometria de rotacao externa de ombro</h2>
+            <p class="key">ISOMETRIA_ROTACAO_EXTERNA_OMBRO</p>
+            <p class="check">Validar cotovelo a 90 graus junto ao corpo e dorso da mao pressionando apoio.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/extensao-joelho-sentado.jpg" alt="Extensao de joelho sentado" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">12</span>
+            <h2 class="name">Extensao de joelho sentado</h2>
+            <p class="key">EXTENSAO_JOELHO_SENTADO</p>
+            <p class="check">Validar extensao controlada do joelho em sedestacao, sem balanco rapido.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/sentar-levantar-controlado.jpg" alt="Sentar e levantar controlado" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">13</span>
+            <h2 class="name">Sentar e levantar controlado</h2>
+            <p class="key">SENTAR_LEVANTAR_CONTROLADO</p>
+            <p class="check">Validar transferencia da cadeira, joelhos alinhados e descida controlada.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/alongamento-flexores-quadril-meio-ajoelhado.jpg" alt="Alongamento de flexores de quadril em meio ajoelhado" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">14</span>
+            <h2 class="name">Alongamento de flexores de quadril em meio ajoelhado</h2>
+            <p class="key">ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO</p>
+            <p class="check">Validar meio ajoelhado, retroversao leve da pelve e tronco alinhado.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/marcha-estacionaria-apoio.jpg" alt="Marcha estacionaria com apoio" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">15</span>
+            <h2 class="name">Marcha estacionaria com apoio</h2>
+            <p class="key">MARCHA_ESTACIONARIA_APOIO</p>
+            <p class="check">Validar apoio seguro proximo, elevacao alternada dos pes e postura alinhada.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/mobilidade-punho-flexao-extensao.jpg" alt="Mobilidade de punho em flexao e extensao" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">16</span>
+            <h2 class="name">Mobilidade de punho em flexao e extensao</h2>
+            <p class="key">MOBILIDADE_PUNHO_FLEXAO_EXTENSAO</p>
+            <p class="check">Validar antebraco apoiado, mao livre e flexao/extensao ativa sem amplitude forcada.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/alongamento-cervical-lateral-assistido.jpg" alt="Alongamento cervical lateral assistido" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">17</span>
+            <h2 class="name">Alongamento cervical lateral assistido</h2>
+            <p class="key">ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO</p>
+            <p class="check">Validar inclinacao lateral suave, mao como apoio leve e sem tracao forte.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="image-wrap">
+            <img src="../apps/mobile/assets/exercises/deslizamento-neural-mediano.jpg" alt="Deslizamento neural mediano" />
+            <span class="watermark">Synap</span>
+          </div>
+          <div class="body">
+            <span class="eyebrow">18</span>
+            <h2 class="name">Deslizamento neural mediano</h2>
+            <p class="key">DESLIZAMENTO_NEURAL_MEDIANO</p>
+            <p class="check">Validar movimento neural leve, sem postura de tensao maxima sustentada.</p>
+            <div class="decision"><div class="box">Aprovada</div><div class="box">Regenerar</div><div class="box">Ajustar texto</div><div class="box">Observacao</div></div>
+          </div>
+        </article>
+      </section>
+
+      <footer>
+        Arquivo local de revisao. As imagens sao carregadas de
+        <code>apps/mobile/assets/exercises</code>. Se alguma imagem estiver
+        ausente, execute <code>npm run check:exercise-assets</code> no app
+        mobile antes da validacao clinica.
+      </footer>
+    </main>
+  </body>
+</html>

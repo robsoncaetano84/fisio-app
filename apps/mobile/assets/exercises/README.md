@@ -14,4 +14,6 @@ Ao adicionar um novo exercicio com imagem propria:
 1. gerar a ilustracao no mesmo padrao visual;
 2. exportar como JPG otimizado, com nome em kebab-case equivalente ao slug;
 3. mapear o asset em `ExerciseVisual`;
-4. manter fallback SVG para tipos genericos ou imagens ainda nao geradas.
+4. manter fallback SVG para tipos genericos ou imagens ainda nao geradas;
+5. adicionar o item em `docs/etapa-34-revisao-clinica-imagens.md`;
+6. validar a imagem com profissional antes de aprovar o exercicio para prescricao.
