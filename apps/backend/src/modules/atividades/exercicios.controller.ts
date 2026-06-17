@@ -50,6 +50,29 @@ export class ExerciciosController {
     });
   }
 
+  @Get('admin/fila-imagens')
+  @Throttle({ default: { ttl: 60, limit: 60 } })
+  @Roles(UserRole.ADMIN)
+  findImageProductionQueue(
+    @Query('q') q?: string,
+    @Query('regiaoCorporal') regiaoCorporal?: string,
+    @Query('categoria') categoria?: string,
+    @Query('nivel') nivel?: string,
+    @Query('tag') tag?: string,
+    @Query('filaStatus') filaStatus?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.exerciciosCatalogService.findImageProductionQueue({
+      q,
+      regiaoCorporal,
+      categoria,
+      nivel,
+      tag,
+      filaStatus,
+      limit,
+    });
+  }
+
   @Get(':id')
   @Throttle({ default: { ttl: 60, limit: 120 } })
   @Roles(UserRole.ADMIN, UserRole.USER)

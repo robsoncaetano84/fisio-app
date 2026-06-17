@@ -68,6 +68,21 @@ describe('exercise image DTO validation', () => {
     expect(errors.some((error) => error.property === 'imagemKey')).toBe(true);
   });
 
+  it('accepts null image keys for draft catalog records without image', async () => {
+    const dto = plainToInstance(CreateExercicioCatalogDto, {
+      nome: 'Exercicio sem imagem',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'MOBILIDADE',
+      nivel: 'INICIANTE',
+      objetivo: 'Preparar revisao futura.',
+      instrucoesPadrao: '1. Revisar clinicamente antes de prescrever.',
+      imagemKey: null,
+      status: ExercicioStatus.RASCUNHO,
+    });
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
+  });
+
   it('requires non-empty catalog fields before admin creation', async () => {
     const dto = plainToInstance(CreateExercicioCatalogDto, {
       nome: '',

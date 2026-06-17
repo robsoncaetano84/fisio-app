@@ -62,7 +62,7 @@ export class CreateExercicioCatalogDto {
 
   @IsOptional()
   @IsEnum(ExerciseImageType)
-  imagemKey?: ExerciseImageType;
+  imagemKey?: ExerciseImageType | null;
 
   @IsOptional()
   @IsArray()

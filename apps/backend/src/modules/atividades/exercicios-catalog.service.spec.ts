@@ -185,6 +185,174 @@ describe('ExerciciosCatalogService', () => {
     });
   });
 
+  it('lists the image production queue with priorities and status summary', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getMany.mockResolvedValue([
+      {
+        id: 'exercicio-pendente',
+        nome: 'Ponte curta',
+        slug: 'ponte-curta',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'FORTALECIMENTO',
+        nivel: 'INICIANTE',
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: 'PONTE_CURTA',
+        tags: ['lombar'],
+        midias: [
+          {
+            ativo: true,
+            assetKey: 'PONTE_CURTA',
+            revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+          },
+        ],
+      },
+      {
+        id: 'exercicio-sem-imagem',
+        nome: 'Agachamento assistido',
+        slug: 'agachamento-assistido',
+        regiaoCorporal: 'JOELHO',
+        categoria: 'FORTALECIMENTO',
+        nivel: 'INICIANTE',
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: null,
+        tags: ['joelho'],
+        midias: [],
+      },
+      {
+        id: 'exercicio-aprovado',
+        nome: 'Gato camelo',
+        slug: 'gato-camelo',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'MOBILIDADE',
+        nivel: 'INICIANTE',
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: 'MOBILIDADE_LOMBAR_GATO_CAMELO',
+        tags: ['lombar'],
+        midias: [
+          {
+            ativo: true,
+            assetKey: 'MOBILIDADE_LOMBAR_GATO_CAMELO',
+            revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+          },
+        ],
+      },
+      {
+        id: 'exercicio-regenerar',
+        nome: 'Bird dog',
+        slug: 'bird-dog',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'CONTROLE_MOTOR',
+        nivel: 'INTERMEDIARIO',
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: 'BIRD_DOG',
+        tags: ['core'],
+        midias: [
+          {
+            ativo: true,
+            assetKey: 'BIRD_DOG',
+            revisaoClinicaStatus:
+              ExercicioMidiaRevisaoClinicaStatus.REGENERAR_IMAGEM,
+          },
+        ],
+      },
+    ]);
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.findImageProductionQueue({ limit: '2' });
+
+    expect(result.total).toBe(3);
+    expect(result.limit).toBe(2);
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]).toMatchObject({
+      id: 'exercicio-sem-imagem',
+      filaStatus: 'SEM_IMAGEM',
+      prioridade: 100,
+      mediaReviewStatus: null,
+    });
+    expect(result.items[1]).toMatchObject({
+      id: 'exercicio-regenerar',
+      filaStatus: 'REGENERAR_IMAGEM',
+      prioridade: 90,
+      mediaReviewStatus: ExercicioMidiaRevisaoClinicaStatus.REGENERAR_IMAGEM,
+    });
+    expect(result.resumo).toMatchObject({
+      SEM_IMAGEM: 1,
+      REGENERAR_IMAGEM: 1,
+      IMAGEM_PENDENTE_REVISAO: 1,
+    });
+    expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
+      'exercicio.midias',
+      'midia',
+      'midia.ativo = :midiaAtiva AND midia.assetKey = exercicio.imagemKey',
+      { midiaAtiva: true },
+    );
+    expect(qb.where).toHaveBeenCalledWith('exercicio.ativo = :ativo', {
+      ativo: true,
+    });
+  });
+
+  it('filters the image production queue by queue status', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getMany.mockResolvedValue([
+      {
+        id: 'exercicio-sem-imagem',
+        nome: 'Agachamento assistido',
+        slug: 'agachamento-assistido',
+        regiaoCorporal: 'JOELHO',
+        categoria: 'FORTALECIMENTO',
+        nivel: 'INICIANTE',
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: null,
+        tags: [],
+        midias: [],
+      },
+      {
+        id: 'exercicio-pendente',
+        nome: 'Ponte curta',
+        slug: 'ponte-curta',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'FORTALECIMENTO',
+        nivel: 'INICIANTE',
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: 'PONTE_CURTA',
+        tags: [],
+        midias: [
+          {
+            ativo: true,
+            assetKey: 'PONTE_CURTA',
+            revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+          },
+        ],
+      },
+    ]);
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.findImageProductionQueue({
+      filaStatus: 'imagem_pendente_revisao',
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({
+      id: 'exercicio-pendente',
+      filaStatus: 'IMAGEM_PENDENTE_REVISAO',
+    });
+  });
+
+  it('rejects invalid image production queue filters', async () => {
+    const { service, exercicioRepository } = makeService();
+
+    await expect(
+      service.findImageProductionQueue({ filaStatus: 'SOLTO' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.findImageProductionQueue({ limit: '0' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(exercicioRepository.createQueryBuilder).not.toHaveBeenCalled();
+  });
+
   it('finds approved exercise by id for prescriptions', async () => {
     const { service, exercicioRepository } = makeService();
     const qb = makeQueryBuilder();
@@ -288,7 +456,7 @@ describe('ExerciciosCatalogService', () => {
         instrucoesPadrao: '1. Execute com controle.',
         imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
         tags: ['Lombar', 'Mobilidade lombar'],
-        status: ExercicioStatus.APROVADO,
+        status: ExercicioStatus.RASCUNHO,
       },
       'admin-1',
     );
@@ -314,6 +482,54 @@ describe('ExerciciosCatalogService', () => {
         revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
       }),
     );
+  });
+
+  it('rejects approved exercise creation without primary image', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    exercicioRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.create(
+        {
+          nome: 'Exercicio sem imagem',
+          regiaoCorporal: 'LOMBAR',
+          categoria: 'MOBILIDADE',
+          nivel: 'INICIANTE',
+          objetivo: 'Preparar revisao futura.',
+          instrucoesPadrao: '1. Revisar antes de prescrever.',
+          imagemKey: null,
+          status: ExercicioStatus.APROVADO,
+        },
+        'admin-1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(exercicioRepository.save).not.toHaveBeenCalled();
+    expect(midiaRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects approved exercise creation before primary media approval', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    exercicioRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.create(
+        {
+          nome: 'Exercicio com imagem pendente',
+          regiaoCorporal: 'LOMBAR',
+          categoria: 'MOBILIDADE',
+          nivel: 'INICIANTE',
+          objetivo: 'Preparar revisao futura.',
+          instrucoesPadrao: '1. Revisar antes de prescrever.',
+          imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR,
+          status: ExercicioStatus.APROVADO,
+        },
+        'admin-1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(exercicioRepository.save).not.toHaveBeenCalled();
+    expect(midiaRepository.save).not.toHaveBeenCalled();
   });
 
   it('marks the primary media clinical review status for admin', async () => {
@@ -424,6 +640,147 @@ describe('ExerciciosCatalogService', () => {
     expect(midiaRepository.save).not.toHaveBeenCalled();
   });
 
+  it('removes the primary image and disables media when admin clears imagemKey', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const qb = makeQueryBuilder();
+    exercicioRepository.findOne.mockResolvedValue({
+      id: 'exercicio-1',
+      nome: 'Ponte curta',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'FORTALECIMENTO',
+      nivel: 'INICIANTE',
+      objetivo: 'Ativar gluteos.',
+      instrucoesPadrao: '1. Execute com controle.',
+      imagemKey: 'PONTE_CURTA',
+      status: ExercicioStatus.RASCUNHO,
+      ativo: true,
+      versao: 1,
+    });
+    exercicioRepository.save.mockImplementation(async (input) => ({
+      ...input,
+      id: 'exercicio-1',
+    }));
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-1',
+      imagemKey: null,
+      midias: [],
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await expect(
+      service.update('exercicio-1', { imagemKey: null }, 'admin-1'),
+    ).resolves.toEqual({
+      id: 'exercicio-1',
+      imagemKey: null,
+      midias: [],
+    });
+
+    expect(exercicioRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        imagemKey: null,
+        versao: 2,
+        revisadoPorUsuarioId: 'admin-1',
+      }),
+    );
+    expect(midiaRepository.update).toHaveBeenCalledWith(
+      { exercicioId: 'exercicio-1' },
+      { ativo: false },
+    );
+    expect(midiaRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects approving an exercise without primary image', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    exercicioRepository.findOne.mockResolvedValue({
+      id: 'exercicio-1',
+      nome: 'Exercicio sem imagem',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'MOBILIDADE',
+      nivel: 'INICIANTE',
+      objetivo: 'Preparar revisao futura.',
+      instrucoesPadrao: '1. Revisar antes de prescrever.',
+      imagemKey: null,
+      status: ExercicioStatus.RASCUNHO,
+      ativo: true,
+      versao: 1,
+    });
+
+    await expect(
+      service.update(
+        'exercicio-1',
+        { status: ExercicioStatus.APROVADO },
+        'admin-1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(exercicioRepository.save).not.toHaveBeenCalled();
+    expect(midiaRepository.save).not.toHaveBeenCalled();
+    expect(midiaRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('approves an exercise only when its primary media is clinically approved', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const qb = makeQueryBuilder();
+    const exercicio = {
+      id: 'exercicio-1',
+      nome: 'Ponte curta',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'FORTALECIMENTO',
+      nivel: 'INICIANTE',
+      objetivo: 'Ativar gluteos.',
+      instrucoesPadrao: '1. Execute com controle.',
+      imagemKey: 'PONTE_CURTA',
+      status: ExercicioStatus.RASCUNHO,
+      ativo: true,
+      versao: 1,
+    };
+    const midia = {
+      id: 'midia-1',
+      exercicioId: 'exercicio-1',
+      assetKey: 'PONTE_CURTA',
+      ativo: true,
+      revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+      versao: 1,
+    };
+    exercicioRepository.findOne.mockResolvedValue(exercicio);
+    exercicioRepository.save.mockImplementation(async (input) => input);
+    midiaRepository.findOne.mockResolvedValue(midia);
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-1',
+      status: ExercicioStatus.APROVADO,
+      imagemKey: 'PONTE_CURTA',
+      midias: [midia],
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await expect(
+      service.update(
+        'exercicio-1',
+        { status: ExercicioStatus.APROVADO },
+        'admin-1',
+      ),
+    ).resolves.toMatchObject({
+      id: 'exercicio-1',
+      status: ExercicioStatus.APROVADO,
+    });
+
+    expect(exercicioRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ExercicioStatus.APROVADO,
+        imagemKey: 'PONTE_CURTA',
+        versao: 2,
+      }),
+    );
+    expect(midiaRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'midia-1',
+        assetKey: 'PONTE_CURTA',
+        ativo: true,
+        versao: 2,
+      }),
+    );
+  });
+
   it('archives exercise and disables its media', async () => {
     const { service, exercicioRepository, midiaRepository } = makeService();
     const exercicio = {
@@ -452,7 +809,7 @@ describe('ExerciciosCatalogService', () => {
     );
   });
 
-  it('restores archived exercise when admin changes status', async () => {
+  it('restores archived exercise as draft when admin changes status', async () => {
     const { service, exercicioRepository, midiaRepository } = makeService();
     const qb = makeQueryBuilder();
     const exercicio = {
@@ -474,20 +831,20 @@ describe('ExerciciosCatalogService', () => {
     qb.getOne.mockResolvedValue({
       id: 'exercicio-1',
       ativo: true,
-      status: ExercicioStatus.APROVADO,
+      status: ExercicioStatus.RASCUNHO,
     });
     exercicioRepository.createQueryBuilder.mockReturnValue(qb);
 
     await expect(
       service.update(
         'exercicio-1',
-        { status: ExercicioStatus.APROVADO },
+        { status: ExercicioStatus.RASCUNHO },
         'admin-1',
       ),
     ).resolves.toEqual({
       id: 'exercicio-1',
       ativo: true,
-      status: ExercicioStatus.APROVADO,
+      status: ExercicioStatus.RASCUNHO,
     });
 
     expect(exercicioRepository.findOne).toHaveBeenCalledWith({
@@ -496,7 +853,7 @@ describe('ExerciciosCatalogService', () => {
     expect(exercicioRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         ativo: true,
-        status: ExercicioStatus.APROVADO,
+        status: ExercicioStatus.RASCUNHO,
         versao: 3,
         revisadoPorUsuarioId: 'admin-1',
       }),

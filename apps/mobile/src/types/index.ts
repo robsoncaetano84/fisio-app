@@ -494,6 +494,36 @@ export interface Exercicio {
   updatedAt: string;
 }
 
+export type ExercicioImageQueueStatus =
+  | "SEM_IMAGEM"
+  | "SEM_MIDIA_PRINCIPAL"
+  | "IMAGEM_PENDENTE_REVISAO"
+  | "REGENERAR_IMAGEM"
+  | "AJUSTAR_TEXTO"
+  | "REMOVER_DO_CATALOGO";
+
+export interface ExercicioImageQueueItem {
+  id: string;
+  nome: string;
+  slug: string;
+  regiaoCorporal: string;
+  categoria: string;
+  nivel: string;
+  exercicioStatus: Exercicio["status"];
+  imagemKey?: string | null;
+  mediaReviewStatus?: ExercicioMidia["revisaoClinicaStatus"] | null;
+  filaStatus: ExercicioImageQueueStatus;
+  prioridade: number;
+  tags: string[];
+}
+
+export interface ExercicioImageQueueResponse {
+  total: number;
+  limit: number;
+  resumo: Record<ExercicioImageQueueStatus, number>;
+  items: ExercicioImageQueueItem[];
+}
+
 export interface AtividadeCheckinTimeline {
   id: string;
   atividadeId: string;

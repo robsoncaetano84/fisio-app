@@ -27,6 +27,48 @@ export type ExercicioCatalogFilters = {
   includeDrafts?: boolean;
 };
 
+export const EXERCISE_IMAGE_QUEUE_STATUSES = [
+  'SEM_IMAGEM',
+  'SEM_MIDIA_PRINCIPAL',
+  'IMAGEM_PENDENTE_REVISAO',
+  'REGENERAR_IMAGEM',
+  'AJUSTAR_TEXTO',
+  'REMOVER_DO_CATALOGO',
+] as const;
+
+export type ExercicioImageQueueStatus =
+  (typeof EXERCISE_IMAGE_QUEUE_STATUSES)[number];
+
+export type ExercicioImageQueueFilters = Omit<
+  ExercicioCatalogFilters,
+  'includeDrafts'
+> & {
+  filaStatus?: string;
+  limit?: string | number;
+};
+
+export type ExercicioImageQueueItem = {
+  id: string;
+  nome: string;
+  slug: string;
+  regiaoCorporal: string;
+  categoria: string;
+  nivel: string;
+  exercicioStatus: ExercicioStatus;
+  imagemKey: string | null;
+  mediaReviewStatus: ExercicioMidiaRevisaoClinicaStatus | null;
+  filaStatus: ExercicioImageQueueStatus;
+  prioridade: number;
+  tags: string[];
+};
+
+export type ExercicioImageQueueResponse = {
+  total: number;
+  limit: number;
+  resumo: Record<ExercicioImageQueueStatus, number>;
+  items: ExercicioImageQueueItem[];
+};
+
 export type ExercicioSuggestionMatchInput = {
   titulo?: string | null;
   descricao?: string | null;
@@ -107,6 +149,97 @@ export class ExerciciosCatalogService implements OnModuleInit {
       .getMany();
   }
 
+  async findImageProductionQueue(
+    filters: ExercicioImageQueueFilters = {},
+  ): Promise<ExercicioImageQueueResponse> {
+    const filaStatus = this.normalizeQueueStatus(filters.filaStatus);
+    const limit = this.normalizeQueueLimit(filters.limit);
+    const qb = this.exercicioRepository.createQueryBuilder('exercicio');
+
+    qb.leftJoinAndSelect(
+      'exercicio.midias',
+      'midia',
+      [
+        'midia.ativo = :midiaAtiva',
+        'midia.assetKey = exercicio.imagemKey',
+      ].join(' AND '),
+      { midiaAtiva: true },
+    )
+      .where('exercicio.ativo = :ativo', { ativo: true })
+      .andWhere('exercicio.status != :arquivado', {
+        arquivado: ExercicioStatus.ARQUIVADO,
+      })
+      .andWhere(
+        new Brackets((inner) => {
+          inner
+            .where('exercicio.imagemKey IS NULL')
+            .orWhere('midia.id IS NULL')
+            .orWhere('midia.revisaoClinicaStatus != :aprovada', {
+              aprovada: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+            });
+        }),
+      );
+
+    if (filters.regiaoCorporal) {
+      qb.andWhere('exercicio.regiaoCorporal = :regiaoCorporal', {
+        regiaoCorporal: filters.regiaoCorporal.trim().toUpperCase(),
+      });
+    }
+
+    if (filters.categoria) {
+      qb.andWhere('exercicio.categoria = :categoria', {
+        categoria: filters.categoria.trim().toUpperCase(),
+      });
+    }
+
+    if (filters.nivel) {
+      qb.andWhere('exercicio.nivel = :nivel', {
+        nivel: filters.nivel.trim().toUpperCase(),
+      });
+    }
+
+    if (filters.tag) {
+      qb.andWhere('exercicio.tags @> :tag::jsonb', {
+        tag: JSON.stringify([filters.tag.trim().toLowerCase()]),
+      });
+    }
+
+    if (filters.q?.trim()) {
+      const q = `%${filters.q.trim()}%`;
+      qb.andWhere(
+        new Brackets((inner) => {
+          inner
+            .where('exercicio.nome ILIKE :q', { q })
+            .orWhere('exercicio.objetivo ILIKE :q', { q })
+            .orWhere('exercicio.descricao ILIKE :q', { q });
+        }),
+      );
+    }
+
+    const exercises = await qb
+      .orderBy('exercicio.regiaoCorporal', 'ASC')
+      .addOrderBy('exercicio.nome', 'ASC')
+      .getMany();
+    const queueItems = exercises
+      .map((exercicio) => this.toImageQueueItem(exercicio))
+      .filter((item): item is ExercicioImageQueueItem => Boolean(item))
+      .filter((item) => !filaStatus || item.filaStatus === filaStatus)
+      .sort(
+        (a, b) =>
+          b.prioridade - a.prioridade ||
+          a.regiaoCorporal.localeCompare(b.regiaoCorporal) ||
+          a.nome.localeCompare(b.nome),
+      );
+    const resumo = this.createImageQueueSummary(queueItems);
+
+    return {
+      total: queueItems.length,
+      limit,
+      resumo,
+      items: queueItems.slice(0, limit),
+    };
+  }
+
   async findOne(id: string): Promise<Exercicio | null> {
     const qb = this.exercicioRepository.createQueryBuilder('exercicio');
     this.joinClinicallyApprovedPrimaryMedia(qb);
@@ -156,6 +289,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
     const slug = await this.resolveUniqueSlug(dto.slug || nome);
     const imagemKey = this.normalizeOptionalString(dto.imagemKey);
     const status = dto.status ?? ExercicioStatus.RASCUNHO;
+    await this.assertApprovalRequirements(status, imagemKey);
     const exercicio = await this.exercicioRepository.save(
       this.exercicioRepository.create({
         nome,
@@ -241,7 +375,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
         dto.contraindicacoes,
       );
     }
-    if (typeof dto.imagemKey === 'string') {
+    if (dto.imagemKey !== undefined) {
       exercicio.imagemKey = this.normalizeOptionalString(dto.imagemKey);
     }
     if (Array.isArray(dto.tags)) {
@@ -251,6 +385,11 @@ export class ExerciciosCatalogService implements OnModuleInit {
       exercicio.status = dto.status;
       exercicio.ativo = dto.status !== ExercicioStatus.ARQUIVADO;
     }
+    await this.assertApprovalRequirements(
+      exercicio.status,
+      exercicio.imagemKey,
+      exercicio.id,
+    );
 
     exercicio.versao += 1;
     exercicio.revisadoPorUsuarioId = usuarioId;
@@ -547,6 +686,148 @@ export class ExerciciosCatalogService implements OnModuleInit {
           .filter(Boolean),
       ),
     ).slice(0, 30);
+  }
+
+  private async assertApprovalRequirements(
+    status: ExercicioStatus,
+    imagemKey: string | null,
+    exercicioId?: string,
+  ): Promise<void> {
+    if (status !== ExercicioStatus.APROVADO) return;
+
+    if (!imagemKey) {
+      throw new BadRequestException(
+        'Exercicio aprovado precisa ter imagem principal',
+      );
+    }
+    const primaryAssetKey = imagemKey;
+
+    if (!exercicioId) {
+      throw new BadRequestException(
+        'Exercicio aprovado precisa ter midia principal aprovada',
+      );
+    }
+
+    const primaryMedia = await this.midiaRepository.findOne({
+      where: {
+        exercicioId,
+        assetKey: primaryAssetKey,
+        ativo: true,
+      },
+    });
+    if (
+      primaryMedia?.revisaoClinicaStatus !==
+      ExercicioMidiaRevisaoClinicaStatus.APROVADA
+    ) {
+      throw new BadRequestException(
+        'Exercicio aprovado precisa ter midia principal aprovada',
+      );
+    }
+  }
+
+  private normalizeQueueStatus(
+    value?: string | null,
+  ): ExercicioImageQueueStatus | null {
+    const status = String(value || '')
+      .trim()
+      .toUpperCase();
+    if (!status) return null;
+    if (
+      !EXERCISE_IMAGE_QUEUE_STATUSES.includes(
+        status as ExercicioImageQueueStatus,
+      )
+    ) {
+      throw new BadRequestException('Status da fila de imagens invalido');
+    }
+    return status as ExercicioImageQueueStatus;
+  }
+
+  private normalizeQueueLimit(value?: string | number): number {
+    if (value === undefined || value === null || value === '') return 100;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new BadRequestException('Limit da fila de imagens invalido');
+    }
+    return Math.min(parsed, 300);
+  }
+
+  private toImageQueueItem(
+    exercicio: Exercicio,
+  ): ExercicioImageQueueItem | null {
+    const primaryMedia = this.findPrimaryMedia(exercicio);
+    const filaStatus = this.resolveImageQueueStatus(exercicio, primaryMedia);
+    if (!filaStatus) return null;
+
+    return {
+      id: exercicio.id,
+      nome: exercicio.nome,
+      slug: exercicio.slug,
+      regiaoCorporal: exercicio.regiaoCorporal,
+      categoria: exercicio.categoria,
+      nivel: exercicio.nivel,
+      exercicioStatus: exercicio.status,
+      imagemKey: exercicio.imagemKey,
+      mediaReviewStatus: primaryMedia?.revisaoClinicaStatus ?? null,
+      filaStatus,
+      prioridade: this.getImageQueuePriority(filaStatus),
+      tags: exercicio.tags || [],
+    };
+  }
+
+  private findPrimaryMedia(exercicio: Exercicio): ExercicioMidia | null {
+    if (!exercicio.imagemKey) return null;
+    return (
+      (exercicio.midias || []).find(
+        (midia) => midia.ativo && midia.assetKey === exercicio.imagemKey,
+      ) ?? null
+    );
+  }
+
+  private resolveImageQueueStatus(
+    exercicio: Exercicio,
+    primaryMedia: ExercicioMidia | null,
+  ): ExercicioImageQueueStatus | null {
+    if (!exercicio.imagemKey) return 'SEM_IMAGEM';
+    if (!primaryMedia) return 'SEM_MIDIA_PRINCIPAL';
+
+    switch (primaryMedia.revisaoClinicaStatus) {
+      case ExercicioMidiaRevisaoClinicaStatus.PENDENTE:
+        return 'IMAGEM_PENDENTE_REVISAO';
+      case ExercicioMidiaRevisaoClinicaStatus.REGENERAR_IMAGEM:
+        return 'REGENERAR_IMAGEM';
+      case ExercicioMidiaRevisaoClinicaStatus.AJUSTAR_TEXTO:
+        return 'AJUSTAR_TEXTO';
+      case ExercicioMidiaRevisaoClinicaStatus.REMOVER_DO_CATALOGO:
+        return 'REMOVER_DO_CATALOGO';
+      case ExercicioMidiaRevisaoClinicaStatus.APROVADA:
+        return null;
+    }
+    return null;
+  }
+
+  private getImageQueuePriority(status: ExercicioImageQueueStatus): number {
+    const priorities: Record<ExercicioImageQueueStatus, number> = {
+      SEM_IMAGEM: 100,
+      REGENERAR_IMAGEM: 90,
+      SEM_MIDIA_PRINCIPAL: 85,
+      IMAGEM_PENDENTE_REVISAO: 70,
+      AJUSTAR_TEXTO: 60,
+      REMOVER_DO_CATALOGO: 20,
+    };
+    return priorities[status];
+  }
+
+  private createImageQueueSummary(
+    items: ExercicioImageQueueItem[],
+  ): Record<ExercicioImageQueueStatus, number> {
+    const summary = EXERCISE_IMAGE_QUEUE_STATUSES.reduce(
+      (acc, status) => ({ ...acc, [status]: 0 }),
+      {} as Record<ExercicioImageQueueStatus, number>,
+    );
+    for (const item of items) {
+      summary[item.filaStatus] += 1;
+    }
+    return summary;
   }
 
   private scoreSuggestionCandidate(

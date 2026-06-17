@@ -9,6 +9,7 @@ describe('ExerciciosController', () => {
       findAll: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       findOneForAdmin: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      findImageProductionQueue: jest.fn().mockResolvedValue({ items: [] }),
       create: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       update: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       archive: jest.fn().mockResolvedValue({ success: true }),
@@ -87,6 +88,12 @@ describe('ExerciciosController', () => {
       Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.create),
     ).toEqual([UserRole.ADMIN]);
     expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.findImageProductionQueue,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
       Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.update),
     ).toEqual([UserRole.ADMIN]);
     expect(
@@ -111,5 +118,29 @@ describe('ExerciciosController', () => {
     controller.reviewPrimaryMedia(id, dto, { id: 'adm-1' } as any);
 
     expect(service.reviewPrimaryMedia).toHaveBeenCalledWith(id, dto, 'adm-1');
+  });
+
+  it('forwards image production queue filters for admins', () => {
+    const { controller, service } = make();
+
+    controller.findImageProductionQueue(
+      'joelho',
+      'joelho',
+      'fortalecimento',
+      'iniciante',
+      'dor_joelho',
+      'SEM_IMAGEM',
+      '25',
+    );
+
+    expect(service.findImageProductionQueue).toHaveBeenCalledWith({
+      q: 'joelho',
+      regiaoCorporal: 'joelho',
+      categoria: 'fortalecimento',
+      nivel: 'iniciante',
+      tag: 'dor_joelho',
+      filaStatus: 'SEM_IMAGEM',
+      limit: '25',
+    });
   });
 });

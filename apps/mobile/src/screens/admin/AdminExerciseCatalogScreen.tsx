@@ -12,15 +12,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Button, Input, useToast } from "../../components/ui";
-import {
-  BORDER_RADIUS,
-  COLORS,
-  FONTS,
-  SPACING,
-} from "../../constants/theme";
+import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../constants/theme";
 import { api } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
-import { Exercicio, ExercicioMidia, RootStackParamList } from "../../types";
+import {
+  Exercicio,
+  ExercicioImageQueueItem,
+  ExercicioImageQueueResponse,
+  ExercicioImageQueueStatus,
+  ExercicioMidia,
+  RootStackParamList,
+} from "../../types";
 import {
   EXERCISE_IMAGE_OPTIONS,
   ExerciseImageType,
@@ -35,6 +37,8 @@ type MediaClinicalReviewStatus = NonNullable<
   ExercicioMidia["revisaoClinicaStatus"]
 >;
 type ReviewStatusFilter = MediaClinicalReviewStatus | "TODAS" | "ACAO";
+type QueueStatusFilter = ExercicioImageQueueStatus | "TODOS";
+type FormImageKey = ExerciseImageType | "";
 
 const STATUS_OPTIONS: Array<{ value: ExerciseStatus; label: string }> = [
   { value: "RASCUNHO", label: "Rascunho" },
@@ -59,6 +63,23 @@ const REVIEW_ACTION_STATUSES: MediaClinicalReviewStatus[] = [
   "REMOVER_DO_CATALOGO",
 ];
 
+const QUEUE_STATUS_OPTIONS: Array<{
+  value: ExercicioImageQueueStatus;
+  label: string;
+}> = [
+  { value: "SEM_IMAGEM", label: "Sem imagem" },
+  { value: "SEM_MIDIA_PRINCIPAL", label: "Sem midia" },
+  { value: "IMAGEM_PENDENTE_REVISAO", label: "Revisao pendente" },
+  { value: "REGENERAR_IMAGEM", label: "Regenerar" },
+  { value: "AJUSTAR_TEXTO", label: "Ajustar texto" },
+  { value: "REMOVER_DO_CATALOGO", label: "Remover" },
+];
+
+const QUEUE_STATUS_LABELS = QUEUE_STATUS_OPTIONS.reduce(
+  (labels, option) => ({ ...labels, [option.value]: option.label }),
+  {} as Record<ExercicioImageQueueStatus, string>,
+);
+
 const emptyForm = {
   nome: "",
   slug: "",
@@ -70,7 +91,7 @@ const emptyForm = {
   instrucoesPadrao: "",
   cuidados: "",
   contraindicacoes: "",
-  imagemKey: "MOBILIDADE_GERAL" as ExerciseImageType,
+  imagemKey: "" as FormImageKey,
   tagsText: "",
   status: "RASCUNHO" as ExerciseStatus,
   revisaoClinicaObservacao: "",
@@ -80,6 +101,7 @@ function getPrimaryMedia(
   item?: Exercicio | null,
   imageKey?: string | null,
 ): ExercicioMidia | null {
+  if (imageKey !== undefined && !imageKey) return null;
   const midias = item?.midias || [];
   const targetKey = imageKey || item?.imagemKey;
   return (
@@ -102,13 +124,17 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const [reviewingStatus, setReviewingStatus] =
     useState<MediaClinicalReviewStatus | null>(null);
   const [items, setItems] = useState<Exercicio[]>([]);
+  const [imageQueue, setImageQueue] =
+    useState<ExercicioImageQueueResponse | null>(null);
+  const [queueLoading, setQueueLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ExerciseStatus | "TODOS">(
     "TODOS",
   );
-  const [reviewFilter, setReviewFilter] =
-    useState<ReviewStatusFilter>("TODAS");
+  const [reviewFilter, setReviewFilter] = useState<ReviewStatusFilter>("TODAS");
+  const [queueStatusFilter, setQueueStatusFilter] =
+    useState<QueueStatusFilter>("TODOS");
   const [form, setForm] = useState(emptyForm);
 
   const loadCatalog = async () => {
@@ -126,8 +152,30 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
     }
   };
 
+  const loadImageQueue = async () => {
+    try {
+      setQueueLoading(true);
+      const response = await api.get<ExercicioImageQueueResponse>(
+        "/exercicios/admin/fila-imagens",
+        {
+          params: { limit: "300" },
+        },
+      );
+      setImageQueue(response.data || null);
+    } catch (error) {
+      const { message } = parseApiError(error);
+      showToast({ message, type: "error" });
+    } finally {
+      setQueueLoading(false);
+    }
+  };
+
+  const refreshCatalogAndQueue = async () => {
+    await Promise.all([loadCatalog(), loadImageQueue()]);
+  };
+
   React.useEffect(() => {
-    loadCatalog().catch(() => undefined);
+    refreshCatalogAndQueue().catch(() => undefined);
   }, []);
 
   const reviewSummary = useMemo(() => {
@@ -189,6 +237,14 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
     });
   }, [items, search, statusFilter, reviewFilter]);
 
+  const filteredQueueItems = useMemo(() => {
+    const queueItems = imageQueue?.items || [];
+    return queueItems.filter(
+      (item) =>
+        queueStatusFilter === "TODOS" || item.filaStatus === queueStatusFilter,
+    );
+  }, [imageQueue, queueStatusFilter]);
+
   const editingItem = useMemo(
     () => items.find((item) => item.id === editingId) || null,
     [editingId, items],
@@ -225,11 +281,12 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       instrucoesPadrao: item.instrucoesPadrao || "",
       cuidados: item.cuidados || "",
       contraindicacoes: item.contraindicacoes || "",
-      imagemKey: normalizeExerciseImageType(item.imagemKey),
+      imagemKey: item.imagemKey
+        ? normalizeExerciseImageType(item.imagemKey)
+        : "",
       tagsText: (item.tags || []).join(", "),
       status: item.status || "RASCUNHO",
-      revisaoClinicaObservacao:
-        primaryMedia?.revisaoClinicaObservacao || "",
+      revisaoClinicaObservacao: primaryMedia?.revisaoClinicaObservacao || "",
     });
   };
 
@@ -244,7 +301,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
     instrucoesPadrao: form.instrucoesPadrao.trim(),
     cuidados: form.cuidados.trim() || undefined,
     contraindicacoes: form.contraindicacoes.trim() || undefined,
-    imagemKey: form.imagemKey,
+    imagemKey: form.imagemKey || null,
     tags: form.tagsText
       .split(",")
       .map((tag) => tag.trim())
@@ -263,7 +320,25 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       !payload.instrucoesPadrao
     ) {
       showToast({
-        message: "Preencha nome, região, categoria, nível, objetivo e instruções.",
+        message:
+          "Preencha nome, região, categoria, nível, objetivo e instruções.",
+        type: "error",
+      });
+      return;
+    }
+    if (payload.status === "APROVADO" && !payload.imagemKey) {
+      showToast({
+        message: "Associe uma imagem propria antes de aprovar o exercicio.",
+        type: "error",
+      });
+      return;
+    }
+    if (
+      payload.status === "APROVADO" &&
+      editingPrimaryMedia?.revisaoClinicaStatus !== "APROVADA"
+    ) {
+      showToast({
+        message: "Aprove clinicamente a imagem antes de aprovar o exercicio.",
         type: "error",
       });
       return;
@@ -279,7 +354,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         showToast({ message: "Exercício criado", type: "success" });
       }
       resetForm();
-      await loadCatalog();
+      await refreshCatalogAndQueue();
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
@@ -309,7 +384,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       await api.patch(`/exercicios/${item.id}/arquivar`);
       showToast({ message: "Exercício arquivado", type: "success" });
       if (editingId === item.id) resetForm();
-      await loadCatalog();
+      await refreshCatalogAndQueue();
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
@@ -341,7 +416,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         type: "success",
       });
       if (editingId === item.id) resetForm();
-      await loadCatalog();
+      await refreshCatalogAndQueue();
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
@@ -363,13 +438,27 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         message: "Revisao clinica da imagem atualizada",
         type: "success",
       });
-      await loadCatalog();
+      await refreshCatalogAndQueue();
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
     } finally {
       setReviewingStatus(null);
     }
+  };
+
+  const startEditFromQueue = (item: ExercicioImageQueueItem) => {
+    const catalogItem = items.find(
+      (catalogExercise) => catalogExercise.id === item.id,
+    );
+    if (!catalogItem) {
+      showToast({
+        message: "Atualize o catalogo antes de editar este item",
+        type: "error",
+      });
+      return;
+    }
+    startEdit(catalogItem);
   };
 
   return (
@@ -442,6 +531,83 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
           </View>
         </View>
 
+        <View style={styles.queuePanel}>
+          <View style={styles.panelHeader}>
+            <View>
+              <Text style={styles.panelTitle}>Fila de imagens</Text>
+              <Text style={styles.panelSubtitle}>
+                {queueLoading
+                  ? "Carregando fila..."
+                  : `${filteredQueueItems.length} de ${imageQueue?.total || 0} itens precisam de acao`}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={() => refreshCatalogAndQueue().catch(() => undefined)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="refresh" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.statusRow}>
+            <FilterChip
+              label={`Todos (${imageQueue?.total || 0})`}
+              active={queueStatusFilter === "TODOS"}
+              onPress={() => setQueueStatusFilter("TODOS")}
+            />
+            {QUEUE_STATUS_OPTIONS.map((option) => (
+              <FilterChip
+                key={option.value}
+                label={`${option.label} (${imageQueue?.resumo?.[option.value] || 0})`}
+                active={queueStatusFilter === option.value}
+                onPress={() => setQueueStatusFilter(option.value)}
+              />
+            ))}
+          </View>
+          {queueLoading ? (
+            <Text style={styles.emptyText}>Carregando fila de imagens...</Text>
+          ) : filteredQueueItems.length === 0 ? (
+            <Text style={styles.emptyText}>
+              Nenhum item pendente nesta fila.
+            </Text>
+          ) : (
+            <View style={styles.queueList}>
+              {filteredQueueItems.slice(0, 30).map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={styles.queueRow}
+                  onPress={() => startEditFromQueue(item)}
+                >
+                  <View style={styles.queuePriority}>
+                    <Text style={styles.queuePriorityText}>
+                      {item.prioridade}
+                    </Text>
+                  </View>
+                  <View style={styles.queueMeta}>
+                    <View style={styles.exerciseTitleRow}>
+                      <Text style={styles.exerciseName}>{item.nome}</Text>
+                      <QueueBadge status={item.filaStatus} />
+                      <StatusBadge status={item.exercicioStatus} />
+                    </View>
+                    <Text style={styles.exerciseInfo}>
+                      {item.regiaoCorporal.replace(/_/g, " ")} -{" "}
+                      {item.categoria.replace(/_/g, " ")} - {item.nivel}
+                    </Text>
+                    <Text style={styles.exerciseTags} numberOfLines={1}>
+                      {(item.tags || []).join(", ") || "sem tags"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={COLORS.gray500}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.formPanel}>
           <View style={styles.panelHeader}>
             <View>
@@ -453,7 +619,12 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
               </Text>
             </View>
             {editingId ? (
-              <Button title="Novo" variant="outline" size="sm" onPress={resetForm} />
+              <Button
+                title="Novo"
+                variant="outline"
+                size="sm"
+                onPress={resetForm}
+              />
             ) : null}
           </View>
 
@@ -564,9 +735,17 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
             </View>
 
             <View style={styles.visualColumn}>
-              <ExerciseVisual imageType={form.imagemKey} title={form.nome} />
+              <AdminExerciseVisual
+                imageType={form.imagemKey}
+                title={form.nome}
+              />
               <Text style={styles.sectionLabel}>Ilustração própria</Text>
               <View style={styles.chipGrid}>
+                <FilterChip
+                  label="Sem imagem"
+                  active={!form.imagemKey}
+                  onPress={() => updateForm("imagemKey", "")}
+                />
                 {EXERCISE_IMAGE_OPTIONS.map((option) => (
                   <FilterChip
                     key={option.value}
@@ -588,44 +767,55 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                 ))}
               </View>
               {editingId ? (
-                <View style={styles.reviewPanel}>
-                  <View style={styles.reviewHeader}>
+                form.imagemKey ? (
+                  <View style={styles.reviewPanel}>
+                    <View style={styles.reviewHeader}>
+                      <Text style={styles.sectionLabel}>
+                        Revisao clinica da imagem
+                      </Text>
+                      <ReviewBadge
+                        status={editingPrimaryMedia?.revisaoClinicaStatus}
+                      />
+                    </View>
+                    <Input
+                      label="Observacao da revisao"
+                      value={form.revisaoClinicaObservacao}
+                      onChangeText={(value) =>
+                        updateForm("revisaoClinicaObservacao", value)
+                      }
+                      placeholder="Ex.: movimento claro para paciente"
+                      multiline
+                      maxLength={2000}
+                      showCount
+                    />
+                    <View style={styles.chipGrid}>
+                      {REVIEW_STATUS_OPTIONS.map((option) => (
+                        <FilterChip
+                          key={option.value}
+                          label={
+                            reviewingStatus === option.value
+                              ? "Salvando..."
+                              : option.label
+                          }
+                          active={
+                            (editingPrimaryMedia?.revisaoClinicaStatus ||
+                              "PENDENTE") === option.value
+                          }
+                          onPress={() => handleClinicalReview(option.value)}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.reviewPanel}>
                     <Text style={styles.sectionLabel}>
                       Revisao clinica da imagem
                     </Text>
-                    <ReviewBadge
-                      status={editingPrimaryMedia?.revisaoClinicaStatus}
-                    />
+                    <Text style={styles.emptyText}>
+                      Associe uma imagem propria antes de revisar ou aprovar.
+                    </Text>
                   </View>
-                  <Input
-                    label="Observacao da revisao"
-                    value={form.revisaoClinicaObservacao}
-                    onChangeText={(value) =>
-                      updateForm("revisaoClinicaObservacao", value)
-                    }
-                    placeholder="Ex.: movimento claro para paciente"
-                    multiline
-                    maxLength={2000}
-                    showCount
-                  />
-                  <View style={styles.chipGrid}>
-                    {REVIEW_STATUS_OPTIONS.map((option) => (
-                      <FilterChip
-                        key={option.value}
-                        label={
-                          reviewingStatus === option.value
-                            ? "Salvando..."
-                            : option.label
-                        }
-                        active={
-                          (editingPrimaryMedia?.revisaoClinicaStatus ||
-                            "PENDENTE") === option.value
-                        }
-                        onPress={() => handleClinicalReview(option.value)}
-                      />
-                    ))}
-                  </View>
-                </View>
+                )
               ) : null}
               <View style={styles.actions}>
                 <Button
@@ -659,7 +849,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
             </View>
             <TouchableOpacity
               style={styles.refreshButton}
-              onPress={() => loadCatalog().catch(() => undefined)}
+              onPress={() => refreshCatalogAndQueue().catch(() => undefined)}
               activeOpacity={0.85}
             >
               <Ionicons name="refresh" size={18} color={COLORS.primary} />
@@ -681,7 +871,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                   ]}
                   onPress={() => startEdit(item)}
                 >
-                  <ExerciseVisual
+                  <AdminExerciseVisual
                     imageType={item.imagemKey}
                     title={item.nome}
                     compact
@@ -777,6 +967,40 @@ function FilterChip({
   );
 }
 
+function AdminExerciseVisual({
+  imageType,
+  title,
+  compact,
+}: {
+  imageType?: string | null;
+  title?: string | null;
+  compact?: boolean;
+}) {
+  if (imageType) {
+    return (
+      <ExerciseVisual imageType={imageType} title={title} compact={compact} />
+    );
+  }
+
+  return (
+    <View style={[styles.noImageFrame, compact && styles.noImageFrameCompact]}>
+      <Ionicons
+        name="image-outline"
+        size={compact ? 20 : 34}
+        color={COLORS.gray500}
+      />
+      {!compact ? (
+        <>
+          <Text style={styles.noImageTitle}>Imagem pendente</Text>
+          <Text style={styles.noImageSubtitle}>
+            Crie um asset proprio antes de aprovar
+          </Text>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 function StatusBadge({ status }: { status: ExerciseStatus }) {
   const isApproved = status === "APROVADO";
   const isArchived = status === "ARQUIVADO";
@@ -831,6 +1055,31 @@ function ReviewBadge({
         ]}
       >
         {label}
+      </Text>
+    </View>
+  );
+}
+
+function QueueBadge({ status }: { status: ExercicioImageQueueStatus }) {
+  const isCritical = status === "SEM_IMAGEM" || status === "REGENERAR_IMAGEM";
+  const isText = status === "AJUSTAR_TEXTO";
+
+  return (
+    <View
+      style={[
+        styles.queueBadge,
+        isCritical && styles.queueBadgeCritical,
+        isText && styles.queueBadgeTextOnly,
+      ]}
+    >
+      <Text
+        style={[
+          styles.queueBadgeText,
+          isCritical && styles.queueBadgeTextCritical,
+          isText && styles.queueBadgeTextOnlyLabel,
+        ]}
+      >
+        {QUEUE_STATUS_LABELS[status] || status}
       </Text>
     </View>
   );
@@ -893,6 +1142,14 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
   },
+  queuePanel: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
   listPanel: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
@@ -930,6 +1187,35 @@ const styles = StyleSheet.create({
     width: 320,
     maxWidth: "100%",
     gap: SPACING.sm,
+  },
+  noImageFrame: {
+    width: "100%",
+    height: 172,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: COLORS.gray300,
+    backgroundColor: COLORS.gray50,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.md,
+  },
+  noImageFrameCompact: {
+    width: 74,
+    height: 74,
+    padding: SPACING.xs,
+  },
+  noImageTitle: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "800",
+    marginTop: SPACING.xs,
+  },
+  noImageSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    marginTop: 2,
+    textAlign: "center",
   },
   row: {
     flexDirection: "row",
@@ -987,6 +1273,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: SPACING.sm,
+  },
+  queueList: {
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  queueRow: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    backgroundColor: COLORS.gray50,
+  },
+  queuePriority: {
+    width: 34,
+    height: 34,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary + "14",
+  },
+  queuePriorityText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "900",
+  },
+  queueMeta: {
+    flex: 1,
+    minWidth: 160,
   },
   refreshButton: {
     width: 38,
@@ -1113,5 +1430,28 @@ const styles = StyleSheet.create({
   },
   reviewBadgeTextAction: {
     color: COLORS.error,
+  },
+  queueBadge: {
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    backgroundColor: COLORS.primary + "14",
+  },
+  queueBadgeCritical: {
+    backgroundColor: COLORS.error + "1F",
+  },
+  queueBadgeTextOnly: {
+    backgroundColor: COLORS.warning + "1F",
+  },
+  queueBadgeText: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "800",
+  },
+  queueBadgeTextCritical: {
+    color: COLORS.error,
+  },
+  queueBadgeTextOnlyLabel: {
+    color: COLORS.warning,
   },
 });
