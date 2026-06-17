@@ -62,11 +62,56 @@ export type ExercicioImageQueueItem = {
   tags: string[];
 };
 
+export type ExercicioImageQueueAppliedFilters = {
+  q: string | null;
+  regiaoCorporal: string | null;
+  categoria: string | null;
+  nivel: string | null;
+  tag: string | null;
+  filaStatus: ExercicioImageQueueStatus | null;
+  limit: number;
+};
+
 export type ExercicioImageQueueResponse = {
   total: number;
   limit: number;
   resumo: Record<ExercicioImageQueueStatus, number>;
+  appliedFilters: ExercicioImageQueueAppliedFilters;
   items: ExercicioImageQueueItem[];
+};
+
+export type ExercicioImageProductionBrief = {
+  exercicio: ExercicioImageQueueItem;
+  imageKeySuggestion: string;
+  assetFileNameSuggestion: string;
+  assetPathSuggestion: string;
+  tituloPaciente: string;
+  descricaoPaciente: string;
+  orientacaoProfissional: string;
+  accessibilityLabel: string;
+  productionMarkdown: string;
+  objetivoImagem: string;
+  promptBase: string;
+  negativePrompt: string;
+  enquadramento: string[];
+  identidadeVisual: string[];
+  criteriosClinicos: string[];
+  checklistRevisao: string[];
+  implementationChecklist: string[];
+};
+
+export type ExercicioImageProductionBriefsResponse = {
+  total: number;
+  limit: number;
+  resumo: Record<ExercicioImageQueueStatus, number>;
+  appliedFilters: ExercicioImageQueueAppliedFilters;
+  productionMarkdownBatch: string;
+  items: ExercicioImageProductionBrief[];
+};
+
+type ExercicioImageQueueCandidate = {
+  exercicio: Exercicio;
+  queueItem: ExercicioImageQueueItem;
 };
 
 export type ExercicioSuggestionMatchInput = {
@@ -137,8 +182,14 @@ export class ExerciciosCatalogService implements OnModuleInit {
         new Brackets((inner) => {
           inner
             .where('exercicio.nome ILIKE :q', { q })
+            .orWhere('exercicio.slug ILIKE :q', { q })
+            .orWhere('exercicio.regiaoCorporal ILIKE :q', { q })
+            .orWhere('exercicio.categoria ILIKE :q', { q })
+            .orWhere('exercicio.nivel ILIKE :q', { q })
+            .orWhere('exercicio.imagemKey ILIKE :q', { q })
             .orWhere('exercicio.objetivo ILIKE :q', { q })
-            .orWhere('exercicio.descricao ILIKE :q', { q });
+            .orWhere('exercicio.descricao ILIKE :q', { q })
+            .orWhere('CAST(exercicio.tags AS TEXT) ILIKE :q', { q });
         }),
       );
     }
@@ -152,92 +203,64 @@ export class ExerciciosCatalogService implements OnModuleInit {
   async findImageProductionQueue(
     filters: ExercicioImageQueueFilters = {},
   ): Promise<ExercicioImageQueueResponse> {
-    const filaStatus = this.normalizeQueueStatus(filters.filaStatus);
-    const limit = this.normalizeQueueLimit(filters.limit);
-    const qb = this.exercicioRepository.createQueryBuilder('exercicio');
-
-    qb.leftJoinAndSelect(
-      'exercicio.midias',
-      'midia',
-      [
-        'midia.ativo = :midiaAtiva',
-        'midia.assetKey = exercicio.imagemKey',
-      ].join(' AND '),
-      { midiaAtiva: true },
-    )
-      .where('exercicio.ativo = :ativo', { ativo: true })
-      .andWhere('exercicio.status != :arquivado', {
-        arquivado: ExercicioStatus.ARQUIVADO,
-      })
-      .andWhere(
-        new Brackets((inner) => {
-          inner
-            .where('exercicio.imagemKey IS NULL')
-            .orWhere('midia.id IS NULL')
-            .orWhere('midia.revisaoClinicaStatus != :aprovada', {
-              aprovada: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
-            });
-        }),
-      );
-
-    if (filters.regiaoCorporal) {
-      qb.andWhere('exercicio.regiaoCorporal = :regiaoCorporal', {
-        regiaoCorporal: filters.regiaoCorporal.trim().toUpperCase(),
-      });
-    }
-
-    if (filters.categoria) {
-      qb.andWhere('exercicio.categoria = :categoria', {
-        categoria: filters.categoria.trim().toUpperCase(),
-      });
-    }
-
-    if (filters.nivel) {
-      qb.andWhere('exercicio.nivel = :nivel', {
-        nivel: filters.nivel.trim().toUpperCase(),
-      });
-    }
-
-    if (filters.tag) {
-      qb.andWhere('exercicio.tags @> :tag::jsonb', {
-        tag: JSON.stringify([filters.tag.trim().toLowerCase()]),
-      });
-    }
-
-    if (filters.q?.trim()) {
-      const q = `%${filters.q.trim()}%`;
-      qb.andWhere(
-        new Brackets((inner) => {
-          inner
-            .where('exercicio.nome ILIKE :q', { q })
-            .orWhere('exercicio.objetivo ILIKE :q', { q })
-            .orWhere('exercicio.descricao ILIKE :q', { q });
-        }),
-      );
-    }
-
-    const exercises = await qb
-      .orderBy('exercicio.regiaoCorporal', 'ASC')
-      .addOrderBy('exercicio.nome', 'ASC')
-      .getMany();
-    const queueItems = exercises
-      .map((exercicio) => this.toImageQueueItem(exercicio))
-      .filter((item): item is ExercicioImageQueueItem => Boolean(item))
-      .filter((item) => !filaStatus || item.filaStatus === filaStatus)
-      .sort(
-        (a, b) =>
-          b.prioridade - a.prioridade ||
-          a.regiaoCorporal.localeCompare(b.regiaoCorporal) ||
-          a.nome.localeCompare(b.nome),
-      );
-    const resumo = this.createImageQueueSummary(queueItems);
+    const { candidates, limit, resumo, appliedFilters } =
+      await this.findImageQueueCandidates(filters);
 
     return {
-      total: queueItems.length,
+      total: candidates.length,
       limit,
       resumo,
-      items: queueItems.slice(0, limit),
+      appliedFilters,
+      items: candidates.slice(0, limit).map((candidate) => candidate.queueItem),
     };
+  }
+
+  async findImageProductionBriefs(
+    filters: ExercicioImageQueueFilters = {},
+  ): Promise<ExercicioImageProductionBriefsResponse> {
+    const { candidates, limit, resumo, appliedFilters } =
+      await this.findImageQueueCandidates(filters);
+    const items = candidates
+      .slice(0, limit)
+      .map(({ exercicio, queueItem }) =>
+        this.buildImageProductionBrief(exercicio, queueItem),
+      );
+
+    return {
+      total: candidates.length,
+      limit,
+      resumo,
+      appliedFilters,
+      productionMarkdownBatch: this.buildImageProductionBatchMarkdown(
+        items,
+        appliedFilters,
+        candidates.length,
+      ),
+      items,
+    };
+  }
+
+  async getImageProductionBrief(
+    id: string,
+  ): Promise<ExercicioImageProductionBrief> {
+    const exercicio = await this.findOneForAdmin(id);
+    if (!exercicio) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+    if (!exercicio.ativo || exercicio.status === ExercicioStatus.ARQUIVADO) {
+      throw new BadRequestException(
+        'Exercicio arquivado nao entra na producao de imagem',
+      );
+    }
+
+    const queueItem = this.toImageQueueItem(exercicio);
+    if (!queueItem) {
+      throw new BadRequestException(
+        'Exercicio nao esta na fila de producao de imagem',
+      );
+    }
+
+    return this.buildImageProductionBrief(exercicio, queueItem);
   }
 
   async findOne(id: string): Promise<Exercicio | null> {
@@ -725,6 +748,139 @@ export class ExerciciosCatalogService implements OnModuleInit {
     }
   }
 
+  private async findImageQueueCandidates(
+    filters: ExercicioImageQueueFilters = {},
+  ): Promise<{
+    candidates: ExercicioImageQueueCandidate[];
+    limit: number;
+    resumo: Record<ExercicioImageQueueStatus, number>;
+    appliedFilters: ExercicioImageQueueAppliedFilters;
+  }> {
+    const filaStatus = this.normalizeQueueStatus(filters.filaStatus);
+    const limit = this.normalizeQueueLimit(filters.limit);
+    const appliedFilters = this.buildImageQueueAppliedFilters(
+      filters,
+      filaStatus,
+      limit,
+    );
+    const qb = this.exercicioRepository.createQueryBuilder('exercicio');
+
+    qb.leftJoinAndSelect(
+      'exercicio.midias',
+      'midia',
+      [
+        'midia.ativo = :midiaAtiva',
+        'midia.assetKey = exercicio.imagemKey',
+      ].join(' AND '),
+      { midiaAtiva: true },
+    )
+      .where('exercicio.ativo = :ativo', { ativo: true })
+      .andWhere('exercicio.status != :arquivado', {
+        arquivado: ExercicioStatus.ARQUIVADO,
+      })
+      .andWhere(
+        new Brackets((inner) => {
+          inner
+            .where('exercicio.imagemKey IS NULL')
+            .orWhere('midia.id IS NULL')
+            .orWhere('midia.revisaoClinicaStatus != :aprovada', {
+              aprovada: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+            });
+        }),
+      );
+
+    if (filters.regiaoCorporal) {
+      qb.andWhere('exercicio.regiaoCorporal = :regiaoCorporal', {
+        regiaoCorporal: filters.regiaoCorporal.trim().toUpperCase(),
+      });
+    }
+
+    if (filters.categoria) {
+      qb.andWhere('exercicio.categoria = :categoria', {
+        categoria: filters.categoria.trim().toUpperCase(),
+      });
+    }
+
+    if (filters.nivel) {
+      qb.andWhere('exercicio.nivel = :nivel', {
+        nivel: filters.nivel.trim().toUpperCase(),
+      });
+    }
+
+    if (filters.tag) {
+      qb.andWhere('exercicio.tags @> :tag::jsonb', {
+        tag: JSON.stringify([filters.tag.trim().toLowerCase()]),
+      });
+    }
+
+    if (filters.q?.trim()) {
+      const q = `%${filters.q.trim()}%`;
+      qb.andWhere(
+        new Brackets((inner) => {
+          inner
+            .where('exercicio.nome ILIKE :q', { q })
+            .orWhere('exercicio.slug ILIKE :q', { q })
+            .orWhere('exercicio.regiaoCorporal ILIKE :q', { q })
+            .orWhere('exercicio.categoria ILIKE :q', { q })
+            .orWhere('exercicio.nivel ILIKE :q', { q })
+            .orWhere('exercicio.imagemKey ILIKE :q', { q })
+            .orWhere('exercicio.objetivo ILIKE :q', { q })
+            .orWhere('exercicio.descricao ILIKE :q', { q })
+            .orWhere('CAST(exercicio.tags AS TEXT) ILIKE :q', { q });
+        }),
+      );
+    }
+
+    const exercises = await qb
+      .orderBy('exercicio.regiaoCorporal', 'ASC')
+      .addOrderBy('exercicio.nome', 'ASC')
+      .getMany();
+    const candidates = exercises
+      .map((exercicio) => {
+        const queueItem = this.toImageQueueItem(exercicio);
+        return queueItem ? { exercicio, queueItem } : null;
+      })
+      .filter((candidate): candidate is ExercicioImageQueueCandidate =>
+        Boolean(candidate),
+      )
+      .filter(
+        (candidate) =>
+          !filaStatus || candidate.queueItem.filaStatus === filaStatus,
+      )
+      .sort(
+        (a, b) =>
+          b.queueItem.prioridade - a.queueItem.prioridade ||
+          a.queueItem.regiaoCorporal.localeCompare(
+            b.queueItem.regiaoCorporal,
+          ) ||
+          a.queueItem.nome.localeCompare(b.queueItem.nome),
+      );
+    const resumo = this.createImageQueueSummary(
+      candidates.map((candidate) => candidate.queueItem),
+    );
+
+    return { candidates, limit, resumo, appliedFilters };
+  }
+
+  private buildImageQueueAppliedFilters(
+    filters: ExercicioImageQueueFilters,
+    filaStatus: ExercicioImageQueueStatus | null,
+    limit: number,
+  ): ExercicioImageQueueAppliedFilters {
+    return {
+      q: this.normalizeOptionalString(filters.q),
+      regiaoCorporal:
+        this.normalizeOptionalString(filters.regiaoCorporal)?.toUpperCase() ??
+        null,
+      categoria:
+        this.normalizeOptionalString(filters.categoria)?.toUpperCase() ?? null,
+      nivel: this.normalizeOptionalString(filters.nivel)?.toUpperCase() ?? null,
+      tag: this.normalizeOptionalString(filters.tag)?.toLowerCase() ?? null,
+      filaStatus,
+      limit,
+    };
+  }
+
   private normalizeQueueStatus(
     value?: string | null,
   ): ExercicioImageQueueStatus | null {
@@ -828,6 +984,263 @@ export class ExerciciosCatalogService implements OnModuleInit {
       summary[item.filaStatus] += 1;
     }
     return summary;
+  }
+
+  private buildImageProductionBrief(
+    exercicio: Exercicio,
+    queueItem: ExercicioImageQueueItem,
+  ): ExercicioImageProductionBrief {
+    const slug = this.toSlug(exercicio.slug || exercicio.nome);
+    const imageKeySuggestion = this.toImageKeySuggestion(
+      exercicio.imagemKey || slug,
+    );
+    const assetFileNameSuggestion = `${slug}.jpg`;
+    const assetPathSuggestion = `apps/mobile/assets/exercises/${assetFileNameSuggestion}`;
+    const tags = (exercicio.tags || []).join(', ') || 'sem tags';
+    const description = exercicio.descricao
+      ? `Descricao: ${exercicio.descricao}.`
+      : '';
+    const cuidados = exercicio.cuidados
+      ? `Cuidados: ${exercicio.cuidados}.`
+      : '';
+    const contraindicacoes = exercicio.contraindicacoes
+      ? `Contraindicacoes: ${exercicio.contraindicacoes}.`
+      : '';
+    const tituloPaciente = exercicio.nome;
+    const descricaoPaciente = this.compactText(exercicio.instrucoesPadrao, 500);
+    const orientacaoProfissional = this.compactText(
+      [`Objetivo: ${exercicio.objetivo}.`, cuidados, contraindicacoes].join(
+        ' ',
+      ),
+      800,
+    );
+    const accessibilityLabel = this.compactText(
+      `Ilustracao do exercicio ${exercicio.nome}, regiao ${exercicio.regiaoCorporal}, categoria ${exercicio.categoria}, nivel ${exercicio.nivel}.`,
+      300,
+    );
+    const objetivoImagem = [
+      `Representar o exercicio "${exercicio.nome}" de forma clinicamente clara para prescricao fisioterapeutica.`,
+      `Regiao ${exercicio.regiaoCorporal}, categoria ${exercicio.categoria}, nivel ${exercicio.nivel}.`,
+    ].join(' ');
+    const promptBase = [
+      'Ilustracao fisioterapeutica propria Synap, estilo anatomico limpo, alta nitidez, fundo branco quente, sem texto embutido e sem marca d agua.',
+      'Figura humana adulta com anatomia realista em tons de cinza, musculatura relevante destacada em verde Synap e setas discretas para indicar direcao do movimento.',
+      'Usar enquadramento 3/4 quando ajudar a entender apoios e trajetoria, mantendo proporcoes naturais e articulacoes plausiveis.',
+      `Exercicio: ${exercicio.nome}. Objetivo clinico: ${exercicio.objetivo}. ${description}`,
+      `Instrucoes do movimento: ${exercicio.instrucoesPadrao}. ${cuidados} ${contraindicacoes}`,
+      `Tags de contexto: ${tags}.`,
+    ]
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const negativePrompt =
+      'logos externos, watermark, texto na imagem, pessoas reais identificaveis, foto stock, baixa resolucao, anatomia deformada, membros extras, lado errado, articulacoes impossiveis, apoio incoerente, amplitude agressiva, fundo poluido, objetos desnecessarios';
+    const enquadramento = [
+      'Mostrar corpo inteiro ou recorte suficiente para entender todos os apoios.',
+      'Preferir vista 3/4 para movimentos com alternancia de membros ou apoios complexos.',
+      'Quando o exercicio tiver fase inicial e final, mostrar as duas fases no mesmo quadro sem confundir a direcao.',
+      'Manter o paciente centralizado, com respiro lateral para setas e sem cortar extremidades importantes.',
+    ];
+    const identidadeVisual = [
+      'Base visual em cinza anatomico, fundo claro e limpo, com contraste suficiente em cards pequenos.',
+      'Destaques musculares e setas em verde Synap, sem usar marca de terceiros.',
+      'Sem logo, sem marca d agua e sem texto dentro da imagem; identificacao fica no app e no metadata.',
+      'Qualidade final minima de 1024x1024 antes de converter para JPG otimizado.',
+    ];
+    const criteriosClinicos = [
+      'A postura precisa ser biomecanicamente possivel e coerente com o nome do exercicio.',
+      'Apoios no solo, cadeira, parede, bastao, faixa ou bola precisam estar claros quando forem parte da execucao.',
+      'Em movimentos alternados, confirmar contralateralidade correta entre braco e perna.',
+      'Nao representar dor, compensacoes exageradas ou amplitude maior do que a descrita.',
+      'A seta deve indicar movimento, nao carga nem direcao anatomica ambigua.',
+    ];
+    const checklistRevisao = [
+      'Movimento, posicao inicial e posicao final batem com objetivo e instrucoes.',
+      'Membros apoiados e membros em movimento estao corretos.',
+      'Musculos destacados ajudam a entender a prescricao sem poluir a imagem.',
+      'Imagem continua legivel em miniatura e no card do paciente.',
+      'Nao ha texto, logo externo, watermark ou elemento com direito de terceiros.',
+    ];
+    const implementationChecklist = [
+      `Salvar o JPG final em ${assetPathSuggestion}.`,
+      `Adicionar "${imageKeySuggestion}" ao tipo ExerciseImageType em apps/mobile/src/components/clinical/ExerciseVisual.tsx.`,
+      'Adicionar label e hint clinico em EXERCISE_IMAGE_OPTIONS.',
+      `Mapear ${imageKeySuggestion} em EXERCISE_IMAGE_ASSETS com require("../../../assets/exercises/${assetFileNameSuggestion}").`,
+      `Atualizar seed/migration do backend para usar imagemKey "${imageKeySuggestion}" quando o exercicio virar catalogo oficial.`,
+      'Rodar validacao critica do mobile e testes focados do backend antes de aprovar clinicamente.',
+    ];
+
+    return {
+      exercicio: queueItem,
+      imageKeySuggestion,
+      assetFileNameSuggestion,
+      assetPathSuggestion,
+      tituloPaciente,
+      descricaoPaciente,
+      orientacaoProfissional,
+      accessibilityLabel,
+      productionMarkdown: this.buildImageProductionMarkdown({
+        queueItem,
+        imageKeySuggestion,
+        assetFileNameSuggestion,
+        assetPathSuggestion,
+        tituloPaciente,
+        descricaoPaciente,
+        orientacaoProfissional,
+        accessibilityLabel,
+        objetivoImagem,
+        promptBase,
+        negativePrompt,
+        enquadramento,
+        identidadeVisual,
+        criteriosClinicos,
+        checklistRevisao,
+        implementationChecklist,
+      }),
+      objetivoImagem,
+      promptBase,
+      negativePrompt,
+      enquadramento,
+      identidadeVisual,
+      criteriosClinicos,
+      checklistRevisao,
+      implementationChecklist,
+    };
+  }
+
+  private buildImageProductionMarkdown(input: {
+    queueItem: ExercicioImageQueueItem;
+    imageKeySuggestion: string;
+    assetFileNameSuggestion: string;
+    assetPathSuggestion: string;
+    tituloPaciente: string;
+    descricaoPaciente: string;
+    orientacaoProfissional: string;
+    accessibilityLabel: string;
+    objetivoImagem: string;
+    promptBase: string;
+    negativePrompt: string;
+    enquadramento: string[];
+    identidadeVisual: string[];
+    criteriosClinicos: string[];
+    checklistRevisao: string[];
+    implementationChecklist: string[];
+  }): string {
+    const list = (items: string[]) =>
+      items.map((item) => `- ${item}`).join('\n');
+    return [
+      `# ${input.queueItem.nome}`,
+      '',
+      `- Status da fila: ${input.queueItem.filaStatus}`,
+      `- Regiao: ${input.queueItem.regiaoCorporal}`,
+      `- Categoria: ${input.queueItem.categoria}`,
+      `- Nivel: ${input.queueItem.nivel}`,
+      `- Chave sugerida: ${input.imageKeySuggestion}`,
+      `- Arquivo sugerido: ${input.assetFileNameSuggestion}`,
+      `- Caminho do asset: ${input.assetPathSuggestion}`,
+      '',
+      '## Paciente',
+      `Titulo: ${input.tituloPaciente}`,
+      `Texto: ${input.descricaoPaciente}`,
+      '',
+      '## Profissional',
+      input.orientacaoProfissional,
+      '',
+      '## Acessibilidade',
+      input.accessibilityLabel,
+      '',
+      '## Objetivo visual',
+      input.objetivoImagem,
+      '',
+      '## Prompt base',
+      input.promptBase,
+      '',
+      '## Prompt negativo',
+      input.negativePrompt,
+      '',
+      '## Enquadramento',
+      list(input.enquadramento),
+      '',
+      '## Identidade visual',
+      list(input.identidadeVisual),
+      '',
+      '## Criterios clinicos',
+      list(input.criteriosClinicos),
+      '',
+      '## Checklist de revisao',
+      list(input.checklistRevisao),
+      '',
+      '## Checklist tecnico',
+      list(input.implementationChecklist),
+    ].join('\n');
+  }
+
+  private buildImageProductionBatchMarkdown(
+    items: ExercicioImageProductionBrief[],
+    appliedFilters: ExercicioImageQueueAppliedFilters,
+    total: number,
+  ): string {
+    if (!items.length) {
+      return [
+        '# Pacote de producao de imagens',
+        '',
+        this.formatImageQueueAppliedFilters(appliedFilters, total, 0),
+        '',
+        'Nenhum brief encontrado para o filtro atual.',
+      ].join('\n');
+    }
+    return [
+      '# Pacote de producao de imagens',
+      '',
+      this.formatImageQueueAppliedFilters(appliedFilters, total, items.length),
+      '',
+      ...items.flatMap((item, index) => [
+        `---`,
+        '',
+        `## ${index + 1}. ${item.exercicio.nome}`,
+        '',
+        item.productionMarkdown,
+      ]),
+    ].join('\n');
+  }
+
+  private formatImageQueueAppliedFilters(
+    appliedFilters: ExercicioImageQueueAppliedFilters,
+    total: number,
+    loaded: number,
+  ): string {
+    const filters = [
+      `- Itens carregados: ${loaded}`,
+      `- Total no filtro: ${total}`,
+      `- Limite: ${appliedFilters.limit}`,
+      `- Busca: ${appliedFilters.q || 'todas'}`,
+      `- Status da fila: ${appliedFilters.filaStatus || 'TODOS'}`,
+      `- Regiao: ${appliedFilters.regiaoCorporal || 'todas'}`,
+      `- Categoria: ${appliedFilters.categoria || 'todas'}`,
+      `- Nivel: ${appliedFilters.nivel || 'todos'}`,
+      `- Tag: ${appliedFilters.tag || 'todas'}`,
+    ];
+    return ['## Filtros aplicados', ...filters].join('\n');
+  }
+
+  private compactText(value: string, maxLength: number): string {
+    const text = String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+  }
+
+  private toImageKeySuggestion(value: string): string {
+    const normalized = this.normalizeForMatch(value)
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase()
+      .slice(0, 120);
+    if (!normalized) {
+      throw new BadRequestException('Chave de imagem invalida');
+    }
+    return normalized;
   }
 
   private scoreSuggestionCandidate(

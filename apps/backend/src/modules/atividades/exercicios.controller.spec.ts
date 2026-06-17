@@ -10,6 +10,13 @@ describe('ExerciciosController', () => {
       findOne: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       findOneForAdmin: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       findImageProductionQueue: jest.fn().mockResolvedValue({ items: [] }),
+      findImageProductionBriefs: jest.fn().mockResolvedValue({
+        items: [],
+        productionMarkdownBatch: '# Pacote de producao de imagens',
+      }),
+      getImageProductionBrief: jest
+        .fn()
+        .mockResolvedValue({ id: 'exercicio-1', promptBase: 'prompt' }),
       create: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       update: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       archive: jest.fn().mockResolvedValue({ success: true }),
@@ -94,6 +101,24 @@ describe('ExerciciosController', () => {
       ),
     ).toEqual([UserRole.ADMIN]);
     expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.findImageProductionBriefs,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.exportImageProductionBriefsMarkdown,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.getImageProductionBrief,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
       Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.update),
     ).toEqual([UserRole.ADMIN]);
     expect(
@@ -142,5 +167,64 @@ describe('ExerciciosController', () => {
       filaStatus: 'SEM_IMAGEM',
       limit: '25',
     });
+  });
+
+  it('forwards image production brief batch filters for admins', () => {
+    const { controller, service } = make();
+
+    controller.findImageProductionBriefs(
+      'ombro',
+      'ombro',
+      'fortalecimento',
+      'iniciante',
+      'manguito',
+      'REGENERAR_IMAGEM',
+      '10',
+    );
+
+    expect(service.findImageProductionBriefs).toHaveBeenCalledWith({
+      q: 'ombro',
+      regiaoCorporal: 'ombro',
+      categoria: 'fortalecimento',
+      nivel: 'iniciante',
+      tag: 'manguito',
+      filaStatus: 'REGENERAR_IMAGEM',
+      limit: '10',
+    });
+  });
+
+  it('exports image production brief batch as markdown for admins', async () => {
+    const { controller, service } = make();
+
+    await expect(
+      controller.exportImageProductionBriefsMarkdown(
+        'ombro',
+        'ombro',
+        'fortalecimento',
+        'iniciante',
+        'manguito',
+        'REGENERAR_IMAGEM',
+        '10',
+      ),
+    ).resolves.toBe('# Pacote de producao de imagens');
+
+    expect(service.findImageProductionBriefs).toHaveBeenCalledWith({
+      q: 'ombro',
+      regiaoCorporal: 'ombro',
+      categoria: 'fortalecimento',
+      nivel: 'iniciante',
+      tag: 'manguito',
+      filaStatus: 'REGENERAR_IMAGEM',
+      limit: '10',
+    });
+  });
+
+  it('forwards image production brief lookup for admins', () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+
+    controller.getImageProductionBrief(id);
+
+    expect(service.getImageProductionBrief).toHaveBeenCalledWith(id);
   });
 });

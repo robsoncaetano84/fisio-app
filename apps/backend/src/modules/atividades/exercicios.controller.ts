@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -71,6 +72,62 @@ export class ExerciciosController {
       filaStatus,
       limit,
     });
+  }
+
+  @Get('admin/briefs-imagens')
+  @Throttle({ default: { ttl: 60, limit: 30 } })
+  @Roles(UserRole.ADMIN)
+  findImageProductionBriefs(
+    @Query('q') q?: string,
+    @Query('regiaoCorporal') regiaoCorporal?: string,
+    @Query('categoria') categoria?: string,
+    @Query('nivel') nivel?: string,
+    @Query('tag') tag?: string,
+    @Query('filaStatus') filaStatus?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.exerciciosCatalogService.findImageProductionBriefs({
+      q,
+      regiaoCorporal,
+      categoria,
+      nivel,
+      tag,
+      filaStatus,
+      limit,
+    });
+  }
+
+  @Get('admin/briefs-imagens/markdown')
+  @Header('Content-Type', 'text/markdown; charset=utf-8')
+  @Throttle({ default: { ttl: 60, limit: 30 } })
+  @Roles(UserRole.ADMIN)
+  async exportImageProductionBriefsMarkdown(
+    @Query('q') q?: string,
+    @Query('regiaoCorporal') regiaoCorporal?: string,
+    @Query('categoria') categoria?: string,
+    @Query('nivel') nivel?: string,
+    @Query('tag') tag?: string,
+    @Query('filaStatus') filaStatus?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const result =
+      await this.exerciciosCatalogService.findImageProductionBriefs({
+        q,
+        regiaoCorporal,
+        categoria,
+        nivel,
+        tag,
+        filaStatus,
+        limit,
+      });
+    return result.productionMarkdownBatch;
+  }
+
+  @Get('admin/:id/brief-imagem')
+  @Throttle({ default: { ttl: 60, limit: 80 } })
+  @Roles(UserRole.ADMIN)
+  getImageProductionBrief(@Param('id', ParseUUIDPipe) id: string) {
+    return this.exerciciosCatalogService.getImageProductionBrief(id);
   }
 
   @Get(':id')

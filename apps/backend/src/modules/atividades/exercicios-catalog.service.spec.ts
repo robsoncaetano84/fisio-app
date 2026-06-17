@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { Brackets } from 'typeorm';
 import { ExerciseImageType } from './exercise-image-type.enum';
 import { ExercicioStatus } from './entities/exercicio.entity';
 import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
@@ -263,6 +264,11 @@ describe('ExerciciosCatalogService', () => {
 
     expect(result.total).toBe(3);
     expect(result.limit).toBe(2);
+    expect(result.appliedFilters).toMatchObject({
+      q: null,
+      filaStatus: null,
+      limit: 2,
+    });
     expect(result.items).toHaveLength(2);
     expect(result.items[0]).toMatchObject({
       id: 'exercicio-sem-imagem',
@@ -340,6 +346,178 @@ describe('ExerciciosCatalogService', () => {
     });
   });
 
+  it('applies broad text search fields to image production queue', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getMany.mockResolvedValue([]);
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await service.findImageProductionBriefs({ q: 'joelho' });
+
+    const bracketConditions = qb.andWhere.mock.calls
+      .map(([condition]) => condition)
+      .filter((condition) => condition instanceof Brackets);
+
+    const searchInner = bracketConditions
+      .map((condition) => {
+        const inner = {
+          where: jest.fn().mockReturnThis(),
+          orWhere: jest.fn().mockReturnThis(),
+        };
+        condition.whereFactory(inner as any);
+        return inner;
+      })
+      .find((inner) =>
+        inner.where.mock.calls.some(
+          ([condition]) => condition === 'exercicio.nome ILIKE :q',
+        ),
+      );
+    expect(searchInner).toBeDefined();
+
+    expect(searchInner?.where).toHaveBeenCalledWith('exercicio.nome ILIKE :q', {
+      q: '%joelho%',
+    });
+    expect(searchInner?.orWhere).toHaveBeenCalledWith(
+      'exercicio.regiaoCorporal ILIKE :q',
+      { q: '%joelho%' },
+    );
+    expect(searchInner?.orWhere).toHaveBeenCalledWith(
+      'exercicio.categoria ILIKE :q',
+      { q: '%joelho%' },
+    );
+    expect(searchInner?.orWhere).toHaveBeenCalledWith(
+      'exercicio.imagemKey ILIKE :q',
+      { q: '%joelho%' },
+    );
+    expect(searchInner?.orWhere).toHaveBeenCalledWith(
+      'CAST(exercicio.tags AS TEXT) ILIKE :q',
+      { q: '%joelho%' },
+    );
+  });
+
+  it('builds image production briefs in batch from the queue', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getMany.mockResolvedValue([
+      {
+        id: 'exercicio-pendente',
+        nome: 'Ponte curta',
+        slug: 'ponte-curta',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'FORTALECIMENTO',
+        nivel: 'INICIANTE',
+        objetivo: 'Ativar gluteos.',
+        descricao: null,
+        instrucoesPadrao: 'Eleve o quadril com controle.',
+        cuidados: null,
+        contraindicacoes: null,
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: 'PONTE_CURTA',
+        tags: ['lombar'],
+        midias: [
+          {
+            ativo: true,
+            assetKey: 'PONTE_CURTA',
+            revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+          },
+        ],
+      },
+      {
+        id: 'exercicio-sem-imagem',
+        nome: 'Agachamento assistido',
+        slug: 'agachamento-assistido',
+        regiaoCorporal: 'JOELHO',
+        categoria: 'FORTALECIMENTO',
+        nivel: 'INICIANTE',
+        objetivo: 'Treinar controle de joelho.',
+        descricao: null,
+        instrucoesPadrao: 'Flexione joelhos e quadris com controle.',
+        cuidados: null,
+        contraindicacoes: null,
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: null,
+        tags: ['joelho'],
+        midias: [],
+      },
+      {
+        id: 'exercicio-aprovado',
+        nome: 'Gato camelo',
+        slug: 'gato-camelo',
+        regiaoCorporal: 'LOMBAR',
+        categoria: 'MOBILIDADE',
+        nivel: 'INICIANTE',
+        objetivo: 'Mobilizar coluna.',
+        descricao: null,
+        instrucoesPadrao: 'Alterne flexao e extensao.',
+        cuidados: null,
+        contraindicacoes: null,
+        status: ExercicioStatus.RASCUNHO,
+        imagemKey: 'MOBILIDADE_LOMBAR_GATO_CAMELO',
+        tags: ['lombar'],
+        midias: [
+          {
+            ativo: true,
+            assetKey: 'MOBILIDADE_LOMBAR_GATO_CAMELO',
+            revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+          },
+        ],
+      },
+    ]);
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.findImageProductionBriefs({
+      q: ' joelho ',
+      filaStatus: 'sem_imagem',
+      limit: '1',
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.limit).toBe(1);
+    expect(result.appliedFilters).toMatchObject({
+      q: 'joelho',
+      filaStatus: 'SEM_IMAGEM',
+      limit: 1,
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      imageKeySuggestion: 'AGACHAMENTO_ASSISTIDO',
+      assetFileNameSuggestion: 'agachamento-assistido.jpg',
+      assetPathSuggestion:
+        'apps/mobile/assets/exercises/agachamento-assistido.jpg',
+      tituloPaciente: 'Agachamento assistido',
+      descricaoPaciente: 'Flexione joelhos e quadris com controle.',
+      exercicio: {
+        id: 'exercicio-sem-imagem',
+        filaStatus: 'SEM_IMAGEM',
+      },
+    });
+    expect(result.items[0].promptBase).toContain('Agachamento assistido');
+    expect(result.items[0].productionMarkdown).toContain(
+      '# Agachamento assistido',
+    );
+    expect(result.items[0].productionMarkdown).toContain(
+      '## Checklist de revisao',
+    );
+    expect(result.items[0].productionMarkdown).toContain(
+      '## Checklist tecnico',
+    );
+    expect(result.productionMarkdownBatch).toContain(
+      '# Pacote de producao de imagens',
+    );
+    expect(result.productionMarkdownBatch).toContain('- Busca: joelho');
+    expect(result.productionMarkdownBatch).toContain(
+      '- Status da fila: SEM_IMAGEM',
+    );
+    expect(result.productionMarkdownBatch).toContain(
+      '## 1. Agachamento assistido',
+    );
+    expect(result.productionMarkdownBatch).toContain('# Agachamento assistido');
+    expect(result.resumo).toMatchObject({
+      SEM_IMAGEM: 1,
+      IMAGEM_PENDENTE_REVISAO: 0,
+    });
+  });
+
   it('rejects invalid image production queue filters', async () => {
     const { service, exercicioRepository } = makeService();
 
@@ -349,8 +527,108 @@ describe('ExerciciosCatalogService', () => {
     await expect(
       service.findImageProductionQueue({ limit: '0' }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.findImageProductionBriefs({ limit: '0' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(exercicioRepository.createQueryBuilder).not.toHaveBeenCalled();
+  });
+
+  it('builds an image production brief for a queued exercise', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-brief',
+      nome: 'Agachamento assistido',
+      slug: 'agachamento-assistido',
+      regiaoCorporal: 'JOELHO',
+      categoria: 'FORTALECIMENTO',
+      nivel: 'INICIANTE',
+      objetivo: 'Treinar controle de joelho e quadril.',
+      descricao: 'Agachar parcialmente usando apoio anterior.',
+      instrucoesPadrao: 'Flexione joelhos e quadris com controle.',
+      cuidados: 'Evitar valgo dinamico.',
+      contraindicacoes: null,
+      status: ExercicioStatus.RASCUNHO,
+      ativo: true,
+      imagemKey: null,
+      tags: ['joelho', 'agachamento'],
+      midias: [],
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    const result = await service.getImageProductionBrief('exercicio-brief');
+
+    expect(result).toMatchObject({
+      imageKeySuggestion: 'AGACHAMENTO_ASSISTIDO',
+      assetFileNameSuggestion: 'agachamento-assistido.jpg',
+      assetPathSuggestion:
+        'apps/mobile/assets/exercises/agachamento-assistido.jpg',
+      tituloPaciente: 'Agachamento assistido',
+      descricaoPaciente: 'Flexione joelhos e quadris com controle.',
+      exercicio: {
+        id: 'exercicio-brief',
+        filaStatus: 'SEM_IMAGEM',
+        prioridade: 100,
+      },
+    });
+    expect(result.promptBase).toContain('Agachamento assistido');
+    expect(result.promptBase).toContain('Evitar valgo dinamico');
+    expect(result.orientacaoProfissional).toContain('Treinar controle');
+    expect(result.accessibilityLabel).toContain(
+      'Ilustracao do exercicio Agachamento assistido',
+    );
+    expect(result.productionMarkdown).toContain('## Prompt negativo');
+    expect(result.productionMarkdown).toContain(
+      'Arquivo sugerido: agachamento-assistido.jpg',
+    );
+    expect(result.productionMarkdown).toContain(
+      'Caminho do asset: apps/mobile/assets/exercises/agachamento-assistido.jpg',
+    );
+    expect(result.implementationChecklist).toContain(
+      'Adicionar label e hint clinico em EXERCISE_IMAGE_OPTIONS.',
+    );
+    expect(result.negativePrompt).toContain('logos externos');
+    expect(result.checklistRevisao).toContain(
+      'Membros apoiados e membros em movimento estao corretos.',
+    );
+    expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
+      'exercicio.midias',
+      'midia',
+      'midia.ativo = :midiaAtiva',
+      { midiaAtiva: true },
+    );
+  });
+
+  it('rejects image production brief for an exercise already approved with reviewed media', async () => {
+    const { service, exercicioRepository } = makeService();
+    const qb = makeQueryBuilder();
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-aprovado',
+      nome: 'Ponte curta',
+      slug: 'ponte-curta',
+      regiaoCorporal: 'LOMBAR',
+      categoria: 'FORTALECIMENTO',
+      nivel: 'INICIANTE',
+      objetivo: 'Ativar gluteos.',
+      instrucoesPadrao: 'Eleve o quadril com controle.',
+      status: ExercicioStatus.APROVADO,
+      ativo: true,
+      imagemKey: 'PONTE_CURTA',
+      tags: ['lombar'],
+      midias: [
+        {
+          ativo: true,
+          assetKey: 'PONTE_CURTA',
+          revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+        },
+      ],
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await expect(
+      service.getImageProductionBrief('exercicio-aprovado'),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('finds approved exercise by id for prescriptions', async () => {

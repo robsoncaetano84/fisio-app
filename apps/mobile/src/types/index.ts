@@ -517,11 +517,51 @@ export interface ExercicioImageQueueItem {
   tags: string[];
 }
 
+export interface ExercicioImageQueueAppliedFilters {
+  q?: string | null;
+  regiaoCorporal?: string | null;
+  categoria?: string | null;
+  nivel?: string | null;
+  tag?: string | null;
+  filaStatus?: ExercicioImageQueueStatus | null;
+  limit: number;
+}
+
 export interface ExercicioImageQueueResponse {
   total: number;
   limit: number;
   resumo: Record<ExercicioImageQueueStatus, number>;
+  appliedFilters?: ExercicioImageQueueAppliedFilters;
   items: ExercicioImageQueueItem[];
+}
+
+export interface ExercicioImageProductionBrief {
+  exercicio: ExercicioImageQueueItem;
+  imageKeySuggestion: string;
+  assetFileNameSuggestion: string;
+  assetPathSuggestion: string;
+  tituloPaciente: string;
+  descricaoPaciente: string;
+  orientacaoProfissional: string;
+  accessibilityLabel: string;
+  productionMarkdown: string;
+  objetivoImagem: string;
+  promptBase: string;
+  negativePrompt: string;
+  enquadramento: string[];
+  identidadeVisual: string[];
+  criteriosClinicos: string[];
+  checklistRevisao: string[];
+  implementationChecklist: string[];
+}
+
+export interface ExercicioImageProductionBriefsResponse {
+  total: number;
+  limit: number;
+  resumo: Record<ExercicioImageQueueStatus, number>;
+  appliedFilters: ExercicioImageQueueAppliedFilters;
+  productionMarkdownBatch: string;
+  items: ExercicioImageProductionBrief[];
 }
 
 export interface AtividadeCheckinTimeline {

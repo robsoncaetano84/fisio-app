@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -17,6 +18,8 @@ import { api } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
 import {
   Exercicio,
+  ExercicioImageProductionBrief,
+  ExercicioImageProductionBriefsResponse,
   ExercicioImageQueueItem,
   ExercicioImageQueueResponse,
   ExercicioImageQueueStatus,
@@ -127,6 +130,12 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const [imageQueue, setImageQueue] =
     useState<ExercicioImageQueueResponse | null>(null);
   const [queueLoading, setQueueLoading] = useState(true);
+  const [imageBrief, setImageBrief] =
+    useState<ExercicioImageProductionBrief | null>(null);
+  const [imageBriefLoading, setImageBriefLoading] = useState(false);
+  const [imageBriefsBatch, setImageBriefsBatch] =
+    useState<ExercicioImageProductionBriefsResponse | null>(null);
+  const [imageBriefsBatchLoading, setImageBriefsBatchLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ExerciseStatus | "TODOS">(
@@ -162,6 +171,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         },
       );
       setImageQueue(response.data || null);
+      setImageBriefsBatch(null);
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
@@ -177,6 +187,10 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
   React.useEffect(() => {
     refreshCatalogAndQueue().catch(() => undefined);
   }, []);
+
+  React.useEffect(() => {
+    setImageBriefsBatch(null);
+  }, [queueStatusFilter, search]);
 
   const reviewSummary = useMemo(() => {
     const initial = {
@@ -239,11 +253,30 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
 
   const filteredQueueItems = useMemo(() => {
     const queueItems = imageQueue?.items || [];
-    return queueItems.filter(
-      (item) =>
-        queueStatusFilter === "TODOS" || item.filaStatus === queueStatusFilter,
-    );
-  }, [imageQueue, queueStatusFilter]);
+    const term = search.trim().toLowerCase();
+    return queueItems.filter((item) => {
+      if (
+        queueStatusFilter !== "TODOS" &&
+        item.filaStatus !== queueStatusFilter
+      ) {
+        return false;
+      }
+      if (!term) return true;
+      return [
+        item.nome,
+        item.slug,
+        item.regiaoCorporal,
+        item.categoria,
+        item.nivel,
+        item.imagemKey,
+        ...(item.tags || []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
+    });
+  }, [imageQueue, queueStatusFilter, search]);
 
   const editingItem = useMemo(
     () => items.find((item) => item.id === editingId) || null,
@@ -262,9 +295,63 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const loadImageBrief = async (id: string) => {
+    try {
+      setImageBriefLoading(true);
+      const response = await api.get<ExercicioImageProductionBrief>(
+        `/exercicios/admin/${id}/brief-imagem`,
+      );
+      setImageBrief(response.data || null);
+    } catch (error) {
+      setImageBrief(null);
+      const { message } = parseApiError(error);
+      showToast({ message, type: "error" });
+    } finally {
+      setImageBriefLoading(false);
+    }
+  };
+
+  const loadImageBriefsBatch = async () => {
+    try {
+      setImageBriefsBatchLoading(true);
+      const params: Record<string, string> = { limit: "10" };
+      if (queueStatusFilter !== "TODOS") {
+        params.filaStatus = queueStatusFilter;
+      }
+      const term = search.trim();
+      if (term) {
+        params.q = term;
+      }
+      const response = await api.get<ExercicioImageProductionBriefsResponse>(
+        "/exercicios/admin/briefs-imagens",
+        { params },
+      );
+      setImageBriefsBatch(response.data || null);
+    } catch (error) {
+      setImageBriefsBatch(null);
+      const { message } = parseApiError(error);
+      showToast({ message, type: "error" });
+    } finally {
+      setImageBriefsBatchLoading(false);
+    }
+  };
+
+  const copyTextToClipboard = async (text: string, successMessage: string) => {
+    try {
+      await Clipboard.setStringAsync(text);
+      showToast({ message: successMessage, type: "success" });
+    } catch {
+      showToast({
+        message: "Nao foi possivel copiar para a area de transferencia",
+        type: "error",
+      });
+    }
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setImageBrief(null);
   };
 
   const startEdit = (item: Exercicio) => {
@@ -288,6 +375,14 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       status: item.status || "RASCUNHO",
       revisaoClinicaObservacao: primaryMedia?.revisaoClinicaObservacao || "",
     });
+    const isInImageQueue = (imageQueue?.items || []).some(
+      (queueItem) => queueItem.id === item.id,
+    );
+    if (isInImageQueue) {
+      void loadImageBrief(item.id);
+    } else {
+      setImageBrief(null);
+    }
   };
 
   const buildPayload = () => ({
@@ -439,6 +534,11 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         type: "success",
       });
       await refreshCatalogAndQueue();
+      if (status === "APROVADA") {
+        setImageBrief(null);
+      } else {
+        await loadImageBrief(editingId);
+      }
     } catch (error) {
       const { message } = parseApiError(error);
       showToast({ message, type: "error" });
@@ -541,13 +641,29 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                   : `${filteredQueueItems.length} de ${imageQueue?.total || 0} itens precisam de acao`}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={() => refreshCatalogAndQueue().catch(() => undefined)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="refresh" size={18} color={COLORS.primary} />
-            </TouchableOpacity>
+            <View style={styles.panelHeaderActions}>
+              <Button
+                title="Briefs"
+                variant="outline"
+                size="sm"
+                onPress={() => loadImageBriefsBatch().catch(() => undefined)}
+                loading={imageBriefsBatchLoading}
+                icon={
+                  <Ionicons
+                    name="document-text-outline"
+                    size={15}
+                    color={COLORS.primary}
+                  />
+                }
+              />
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={() => refreshCatalogAndQueue().catch(() => undefined)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="refresh" size={18} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.statusRow}>
             <FilterChip
@@ -564,6 +680,126 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
               />
             ))}
           </View>
+          {imageBriefsBatch ? (
+            <View style={styles.batchBriefPanel}>
+              <View style={styles.reviewHeader}>
+                <View>
+                  <Text style={styles.sectionLabel}>
+                    Pacote de producao de imagens
+                  </Text>
+                  <Text style={styles.panelSubtitle}>
+                    {imageBriefsBatch.items.length} de {imageBriefsBatch.total}{" "}
+                    briefs carregados
+                  </Text>
+                  <Text style={styles.batchFilterText}>
+                    Busca: {imageBriefsBatch.appliedFilters.q || "todas"} -
+                    Status:{" "}
+                    {imageBriefsBatch.appliedFilters.filaStatus || "TODOS"}
+                  </Text>
+                </View>
+                {imageBriefsBatch.items[0] ? (
+                  <QueueBadge
+                    status={
+                      queueStatusFilter === "TODOS"
+                        ? imageBriefsBatch.items[0].exercicio.filaStatus
+                        : queueStatusFilter
+                    }
+                  />
+                ) : null}
+              </View>
+              {imageBriefsBatch.items.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  Nenhum brief encontrado para o filtro atual.
+                </Text>
+              ) : (
+                <>
+                  <View style={styles.batchBriefItem}>
+                    <View style={styles.briefActionHeader}>
+                      <Text style={styles.briefLabel}>
+                        Ficha consolidada do pacote
+                      </Text>
+                      <Button
+                        title="Copiar"
+                        variant="ghost"
+                        size="sm"
+                        onPress={() =>
+                          copyTextToClipboard(
+                            imageBriefsBatch.productionMarkdownBatch,
+                            "Pacote de briefs copiado",
+                          ).catch(() => undefined)
+                        }
+                        icon={
+                          <Ionicons
+                            name="copy-outline"
+                            size={15}
+                            color={COLORS.primary}
+                          />
+                        }
+                      />
+                    </View>
+                    <Text style={styles.briefPrompt} selectable>
+                      {imageBriefsBatch.productionMarkdownBatch}
+                    </Text>
+                  </View>
+                  {imageBriefsBatch.items.map((brief) => (
+                    <Pressable
+                      key={brief.exercicio.id}
+                      style={styles.batchBriefItem}
+                      onPress={() => startEditFromQueue(brief.exercicio)}
+                    >
+                      <View style={styles.exerciseTitleRow}>
+                        <Text style={styles.exerciseName}>
+                          {brief.exercicio.nome}
+                        </Text>
+                        <QueueBadge status={brief.exercicio.filaStatus} />
+                        <Ionicons
+                          name="open-outline"
+                          size={16}
+                          color={COLORS.primary}
+                        />
+                      </View>
+                      <View style={styles.briefMetaRow}>
+                        <View style={styles.briefMetaItem}>
+                          <Text style={styles.briefLabel}>Chave</Text>
+                          <Text style={styles.briefValue} selectable>
+                            {brief.imageKeySuggestion}
+                          </Text>
+                        </View>
+                        <View style={styles.briefMetaItem}>
+                          <Text style={styles.briefLabel}>Arquivo</Text>
+                          <Text style={styles.briefValue} selectable>
+                            {brief.assetFileNameSuggestion}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.briefLabel}>Caminho do asset</Text>
+                      <Text style={styles.briefText} selectable>
+                        {brief.assetPathSuggestion}
+                      </Text>
+                      <Text style={styles.briefLabel}>Texto do paciente</Text>
+                      <Text style={styles.briefText} selectable>
+                        {brief.descricaoPaciente}
+                      </Text>
+                      <Text style={styles.briefLabel}>Checklist tecnico</Text>
+                      {brief.implementationChecklist.map((item) => (
+                        <Text key={item} style={styles.briefChecklistItem}>
+                          {item}
+                        </Text>
+                      ))}
+                      <Text style={styles.briefLabel}>Prompt base</Text>
+                      <Text style={styles.briefPrompt} selectable>
+                        {brief.promptBase}
+                      </Text>
+                      <Text style={styles.briefLabel}>Ficha completa</Text>
+                      <Text style={styles.briefPrompt} selectable>
+                        {brief.productionMarkdown}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </>
+              )}
+            </View>
+          ) : null}
           {queueLoading ? (
             <Text style={styles.emptyText}>Carregando fila de imagens...</Text>
           ) : filteredQueueItems.length === 0 ? (
@@ -816,6 +1052,100 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
                     </Text>
                   </View>
                 )
+              ) : null}
+              {editingId ? (
+                <View style={styles.briefPanel}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.sectionLabel}>Brief de imagem</Text>
+                    {imageBrief ? (
+                      <Button
+                        title="Copiar"
+                        variant="ghost"
+                        size="sm"
+                        onPress={() =>
+                          copyTextToClipboard(
+                            imageBrief.productionMarkdown,
+                            "Brief de imagem copiado",
+                          ).catch(() => undefined)
+                        }
+                        icon={
+                          <Ionicons
+                            name="copy-outline"
+                            size={15}
+                            color={COLORS.primary}
+                          />
+                        }
+                      />
+                    ) : imageBriefLoading ? (
+                      <Text style={styles.briefLoading}>Carregando...</Text>
+                    ) : null}
+                  </View>
+                  {imageBrief ? (
+                    <>
+                      <View style={styles.briefMetaRow}>
+                        <View style={styles.briefMetaItem}>
+                          <Text style={styles.briefLabel}>Chave</Text>
+                          <Text style={styles.briefValue} selectable>
+                            {imageBrief.imageKeySuggestion}
+                          </Text>
+                        </View>
+                        <View style={styles.briefMetaItem}>
+                          <Text style={styles.briefLabel}>Arquivo</Text>
+                          <Text style={styles.briefValue} selectable>
+                            {imageBrief.assetFileNameSuggestion}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.briefLabel}>Caminho do asset</Text>
+                      <Text style={styles.briefText} selectable>
+                        {imageBrief.assetPathSuggestion}
+                      </Text>
+                      <Text style={styles.briefLabel}>Objetivo visual</Text>
+                      <Text style={styles.briefText}>
+                        {imageBrief.objetivoImagem}
+                      </Text>
+                      <Text style={styles.briefLabel}>Texto do paciente</Text>
+                      <Text style={styles.briefText} selectable>
+                        {imageBrief.descricaoPaciente}
+                      </Text>
+                      <Text style={styles.briefLabel}>
+                        Orientacao profissional
+                      </Text>
+                      <Text style={styles.briefText} selectable>
+                        {imageBrief.orientacaoProfissional}
+                      </Text>
+                      <Text style={styles.briefLabel}>Acessibilidade</Text>
+                      <Text style={styles.briefText} selectable>
+                        {imageBrief.accessibilityLabel}
+                      </Text>
+                      <Text style={styles.briefLabel}>Prompt base</Text>
+                      <Text style={styles.briefPrompt} selectable>
+                        {imageBrief.promptBase}
+                      </Text>
+                      <Text style={styles.briefLabel}>Ficha completa</Text>
+                      <Text style={styles.briefPrompt} selectable>
+                        {imageBrief.productionMarkdown}
+                      </Text>
+                      <Text style={styles.briefLabel}>Checklist tecnico</Text>
+                      {imageBrief.implementationChecklist.map((item) => (
+                        <Text key={item} style={styles.briefChecklistItem}>
+                          {item}
+                        </Text>
+                      ))}
+                      <Text style={styles.briefLabel}>Checklist clinico</Text>
+                      {imageBrief.checklistRevisao.map((item) => (
+                        <Text key={item} style={styles.briefChecklistItem}>
+                          {item}
+                        </Text>
+                      ))}
+                    </>
+                  ) : (
+                    <Text style={styles.emptyText}>
+                      Brief disponivel quando o exercicio estiver na fila de
+                      imagens.
+                    </Text>
+                  )}
+                </View>
               ) : null}
               <View style={styles.actions}>
                 <Button
@@ -1164,6 +1494,13 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     marginBottom: SPACING.md,
   },
+  panelHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: SPACING.xs,
+  },
   panelTitle: {
     color: COLORS.textPrimary,
     fontSize: FONTS.sizes.lg,
@@ -1267,6 +1604,94 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     gap: SPACING.sm,
     backgroundColor: COLORS.gray50,
+  },
+  briefPanel: {
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    gap: SPACING.xs,
+    backgroundColor: COLORS.white,
+  },
+  batchBriefPanel: {
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary + "08",
+  },
+  batchBriefItem: {
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    gap: SPACING.xs,
+    backgroundColor: COLORS.white,
+  },
+  batchFilterText: {
+    color: COLORS.gray600,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  briefLoading: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "700",
+  },
+  briefActionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  briefMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  briefMetaItem: {
+    flex: 1,
+    minWidth: 132,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.xs,
+    backgroundColor: COLORS.gray50,
+  },
+  briefLabel: {
+    color: COLORS.textPrimary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  briefValue: {
+    color: COLORS.primary,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  briefText: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 17,
+  },
+  briefPrompt: {
+    color: COLORS.gray700,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 17,
+    borderWidth: 1,
+    borderColor: COLORS.gray200,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.xs,
+    backgroundColor: COLORS.gray50,
+  },
+  briefChecklistItem: {
+    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.xs,
+    lineHeight: 17,
   },
   reviewHeader: {
     flexDirection: "row",
