@@ -11,6 +11,10 @@ const previewSeedPath = join(
   root,
   "../backend/src/modules/atividades/exercise-catalog-preview.seed.ts",
 );
+const masterSeedPath = join(
+  root,
+  "../backend/src/modules/atividades/exercise-catalog-master.seed.ts",
+);
 const backendEnumPath = join(
   root,
   "../backend/src/modules/atividades/exercise-image-type.enum.ts",
@@ -33,7 +37,7 @@ const genericImageTypes = new Set([
 ]);
 
 const component = readFileSync(componentPath, "utf8");
-const seed = [seedPath, previewSeedPath]
+const seed = [seedPath, previewSeedPath, masterSeedPath]
   .filter((filePath) => existsSync(filePath))
   .map((filePath) => readFileSync(filePath, "utf8"))
   .join("\n");
@@ -132,7 +136,7 @@ while (assetMatch) {
 }
 
 const seedKeys = new Set();
-const seedRegex = /imagemKey:\s*ExerciseImageType\.([A-Z0-9_]+)/g;
+const seedRegex = /ExerciseImageType\.([A-Z0-9_]+)/g;
 let seedMatch = seedRegex.exec(seed);
 while (seedMatch) {
   seedKeys.add(seedMatch[1]);
@@ -167,11 +171,7 @@ for (const key of requiredKeys) {
 
 const referencedAssetNames = new Set();
 for (const [key, relativePath] of assetMap) {
-  const resolvedPath = join(
-    root,
-    "src/components/clinical",
-    relativePath,
-  );
+  const resolvedPath = join(root, "src/components/clinical", relativePath);
   const fileName = basename(resolvedPath);
   referencedAssetNames.add(fileName);
 

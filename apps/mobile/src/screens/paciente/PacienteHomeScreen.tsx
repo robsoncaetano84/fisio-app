@@ -23,7 +23,13 @@ import * as Sharing from "expo-sharing";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLayoutEffect } from "react";
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from "../../constants/theme";
+import {
+  COLORS,
+  FONTS,
+  SPACING,
+  BORDER_RADIUS,
+  SHADOWS,
+} from "../../constants/theme";
 import {
   Atividade,
   LaudoStatus,
@@ -43,7 +49,10 @@ import {
   trackEvent,
 } from "../../services";
 import { useToast } from "../../components/ui";
-import { CareTimeline, type CareTimelineViewItem } from "../../components/clinical/CareTimeline";
+import {
+  CareTimeline,
+  type CareTimelineViewItem,
+} from "../../components/clinical/CareTimeline";
 import { ExerciseVisual } from "../../components/clinical/ExerciseVisual";
 import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -97,7 +106,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
   const [canFillAnamnese, setCanFillAnamnese] = useState(false);
   const [hasAnamnesePreenchida, setHasAnamnesePreenchida] = useState(false);
   const [ultimaEvolucaoEm, setUltimaEvolucaoEm] = useState<string | null>(null);
-  const [ultimoLaudoAtualizadoEm, setUltimoLaudoAtualizadoEm] = useState<string | null>(null);
+  const [ultimoLaudoAtualizadoEm, setUltimoLaudoAtualizadoEm] = useState<
+    string | null
+  >(null);
   const [statusLaudo, setStatusLaudo] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState<"laudo" | "plano" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,19 +120,24 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
   const [badge, setBadge] = useState("Iniciante");
   const [pendingOfflineCheckins, setPendingOfflineCheckins] = useState(0);
   const [waitingRetryCheckins, setWaitingRetryCheckins] = useState(0);
-  const [offlineOldestCreatedAt, setOfflineOldestCreatedAt] = useState<string | null>(null);
+  const [offlineOldestCreatedAt, setOfflineOldestCreatedAt] = useState<
+    string | null
+  >(null);
   const [syncingNow, setSyncingNow] = useState(false);
   const [exames, setExames] = useState<PacienteExameItem[]>([]);
   const [isLoadingExames, setIsLoadingExames] = useState(false);
   const [isUploadingExame, setIsUploadingExame] = useState(false);
-  const [downloadingExameId, setDownloadingExameId] = useState<string | null>(null);
+  const [downloadingExameId, setDownloadingExameId] = useState<string | null>(
+    null,
+  );
   const [removingExameId, setRemovingExameId] = useState<string | null>(null);
   const hasLoadedOnceRef = useRef(false);
   const degradationTrackedRef = useRef(false);
   const onboardingStorageKey = `patient:onboarding:v1:${usuario?.id || "anon"}`;
   const smartReminderSnoozeKey = `patient:smart-reminder:snooze:${usuario?.id || "anon"}`;
   const weeklySummaryViewedKey = `patient:weekly-summary:viewed:${usuario?.id || "anon"}`;
-  const [smartReminderSnoozedToday, setSmartReminderSnoozedToday] = useState(false);
+  const [smartReminderSnoozedToday, setSmartReminderSnoozedToday] =
+    useState(false);
 
   const onboardingSteps = [
     {
@@ -142,15 +158,17 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     statusLaudo === LaudoStatus.PUBLICADO_PACIENTE
       ? t("patient.statusPublished")
       : statusLaudo === LaudoStatus.VALIDADO_PROFISSIONAL
-      ? t("patient.statusValidated")
-      : statusLaudo === LaudoStatus.RASCUNHO_IA
-        ? t("patient.statusDraft")
-        : t("patient.statusUnavailable");
+        ? t("patient.statusValidated")
+        : statusLaudo === LaudoStatus.RASCUNHO_IA
+          ? t("patient.statusDraft")
+          : t("patient.statusUnavailable");
   const hasPublishedDocuments = statusLaudo === LaudoStatus.PUBLICADO_PACIENTE;
   const dateLocale =
     language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
 
-  const atividadesPorDia = useMemo<Array<{ day: number; label: string; itens: Atividade[] }>>(() => {
+  const atividadesPorDia = useMemo<
+    Array<{ day: number; label: string; itens: Atividade[] }>
+  >(() => {
     const groups = new Map<number, Atividade[]>();
 
     const sorted = [...atividades].sort((a, b) => {
@@ -180,7 +198,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
 
     return Array.from(groups.entries()).map(([day, itens]) => ({
       day,
-      label: day >= 1 && day <= 7 ? `Dia ${day}` : t("patient.noWeeklySchedule"),
+      label:
+        day >= 1 && day <= 7 ? `Dia ${day}` : t("patient.noWeeklySchedule"),
       itens,
     }));
   }, [atividades]);
@@ -191,12 +210,15 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
   }, [atividadesPorDia, selectedDia]);
   const diaAtualDaSemana = getCurrentWeekday();
   const atividadesHoje = useMemo(() => {
-    const match = atividadesPorDia.find((item) => item.day === diaAtualDaSemana);
+    const match = atividadesPorDia.find(
+      (item) => item.day === diaAtualDaSemana,
+    );
     return match?.itens ?? [];
   }, [atividadesPorDia, diaAtualDaSemana]);
 
   const atividadesConcluidas = useMemo(
-    () => atividades.filter((item) => item.ultimoCheckinConcluiu === true).length,
+    () =>
+      atividades.filter((item) => item.ultimoCheckinConcluiu === true).length,
     [atividades],
   );
 
@@ -226,7 +248,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     ).length;
     const percentual = Math.min(100, Math.round((concluidas / total) * 100));
     const proximaAtividade =
-      diaSelecionadoItens.find((item) => item.ultimoCheckinConcluiu !== true) || null;
+      diaSelecionadoItens.find((item) => item.ultimoCheckinConcluiu !== true) ||
+      null;
 
     return {
       total,
@@ -244,7 +267,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     return { total, concluidos, pendentes };
   }, [atividadesHoje]);
   const proximaAtividadeHoje = useMemo(
-    () => atividadesHoje.find((item) => item.ultimoCheckinConcluiu !== true) || null,
+    () =>
+      atividadesHoje.find((item) => item.ultimoCheckinConcluiu !== true) ||
+      null,
     [atividadesHoje],
   );
   const pendenciasHojePreview = useMemo(
@@ -255,13 +280,18 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     [atividadesHoje],
   );
 
-  const primeiraAtividadeDisponivel = useMemo(() => atividades[0] || null, [atividades]);
+  const primeiraAtividadeDisponivel = useMemo(
+    () => atividades[0] || null,
+    [atividades],
+  );
   const ultimaDataCheckin = useMemo(() => {
     const timestamps = atividades
       .map((item) =>
         item.ultimoCheckinEm ? new Date(item.ultimoCheckinEm).getTime() : null,
       )
-      .filter((ts): ts is number => typeof ts === "number" && !Number.isNaN(ts));
+      .filter(
+        (ts): ts is number => typeof ts === "number" && !Number.isNaN(ts),
+      );
     if (!timestamps.length) return null;
     return new Date(Math.max(...timestamps));
   }, [atividades]);
@@ -269,7 +299,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     if (!ultimaDataCheckin) return null;
     return Math.max(
       0,
-      Math.floor((Date.now() - ultimaDataCheckin.getTime()) / (1000 * 60 * 60 * 24)),
+      Math.floor(
+        (Date.now() - ultimaDataCheckin.getTime()) / (1000 * 60 * 60 * 24),
+      ),
     );
   }, [ultimaDataCheckin]);
   const precisaRetomada = useMemo(() => {
@@ -277,7 +309,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     if (diasSemCheckin === null) return true;
     return diasSemCheckin >= 2;
   }, [hasProfessionalLink, atividades.length, diasSemCheckin]);
-  const mostrarSmartReminder = hasProfessionalLink && precisaRetomada && !smartReminderSnoozedToday;
+  const mostrarSmartReminder =
+    hasProfessionalLink && precisaRetomada && !smartReminderSnoozedToday;
   const resumoSemanal = useMemo(() => {
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     const cutoff = Date.now() - sevenDaysMs;
@@ -288,7 +321,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     }).length;
 
     const concluidasSemana = atividades.filter((item) => {
-      if (!item.ultimoCheckinEm || item.ultimoCheckinConcluiu !== true) return false;
+      if (!item.ultimoCheckinEm || item.ultimoCheckinConcluiu !== true)
+        return false;
       const ts = new Date(item.ultimoCheckinEm).getTime();
       return !Number.isNaN(ts) && ts >= cutoff;
     }).length;
@@ -382,7 +416,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
             return;
           }
         }
-        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+        const status = axios.isAxiosError(error)
+          ? error.response?.status
+          : undefined;
         const message = getExamErrorMessage(error, t, "patient", "load");
         trackEvent("patient_exam_load_failed", {
           pacienteId: targetPacienteId,
@@ -410,7 +446,10 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
 
       const file = result.assets[0];
       if (!file?.uri || !file?.name) {
-        showToast({ type: "error", message: t("patient.examUploadInvalidFile") });
+        showToast({
+          type: "error",
+          message: t("patient.examUploadInvalidFile"),
+        });
         return;
       }
       if (typeof file.size === "number" && file.size > MAX_EXAME_SIZE_BYTES) {
@@ -421,12 +460,17 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       const formData = new FormData();
       const inferredMime = inferExamMimeType(file.name, file.mimeType);
       if (!isAllowedExamFile(file.name, inferredMime)) {
-        showToast({ type: "error", message: t("patient.examErrorUnsupportedType") });
+        showToast({
+          type: "error",
+          message: t("patient.examErrorUnsupportedType"),
+        });
         return;
       }
 
       if (Platform.OS === "web") {
-        const webAsset = file as DocumentPicker.DocumentPickerAsset & { file?: File };
+        const webAsset = file as DocumentPicker.DocumentPickerAsset & {
+          file?: File;
+        };
         if (webAsset.file) {
           formData.append("file", webAsset.file, file.name);
         } else {
@@ -468,7 +512,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       showToast({ type: "success", message: t("patient.examUploadedSuccess") });
       await loadExames(pacienteId);
     } catch (error) {
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patient", "upload");
       trackEvent("patient_exam_upload_failed", {
         pacienteId,
@@ -492,9 +538,12 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       if (Platform.OS === "web") {
         const response = await withExamRetry(
           () =>
-            api.get<Blob>(`/pacientes/${pacienteId}/exames/${item.id}/arquivo`, {
-              responseType: "blob",
-            }),
+            api.get<Blob>(
+              `/pacientes/${pacienteId}/exames/${item.id}/arquivo`,
+              {
+                responseType: "blob",
+              },
+            ),
           1,
           700,
         );
@@ -542,7 +591,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       if (webPopup && !webPopup.closed) {
         webPopup.close();
       }
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patient", "open");
       trackEvent("patient_exam_open_failed", {
         pacienteId,
@@ -560,12 +611,18 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     if (!pacienteId) return;
     setRemovingExameId(exameId);
     try {
-      await withExamRetry(() => api.delete(`/pacientes/${pacienteId}/exames/${exameId}`));
+      await withExamRetry(() =>
+        api.delete(`/pacientes/${pacienteId}/exames/${exameId}`),
+      );
       setExames((prev) => prev.filter((item) => item.id !== exameId));
-      trackEvent("patient_exam_removed", { pacienteId, exameId }).catch(() => undefined);
+      trackEvent("patient_exam_removed", { pacienteId, exameId }).catch(
+        () => undefined,
+      );
       showToast({ type: "success", message: t("patient.examRemoveSuccess") });
     } catch (error) {
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
       const message = getExamErrorMessage(error, t, "patient", "remove");
       trackEvent("patient_exam_remove_failed", {
         pacienteId,
@@ -623,9 +680,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
     ensurePatientDailyReminder(usuario.id)
       .then((created) => {
         if (created) {
-          trackEvent("patient_reminder_scheduled", { usuarioId: usuario.id }).catch(
-            () => undefined,
-          );
+          trackEvent("patient_reminder_scheduled", {
+            usuarioId: usuario.id,
+          }).catch(() => undefined);
         }
       })
       .catch(() => undefined);
@@ -705,16 +762,21 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
       }
 
       const response = await api.get<PacienteProfileResponse>("/pacientes/me");
-      const linked = !!response.data?.vinculado && !!response.data?.paciente?.id;
+      const linked =
+        !!response.data?.vinculado && !!response.data?.paciente?.id;
       const anamneseLiberada =
         !linked || !!response.data?.paciente?.anamneseLiberadaPaciente;
 
       setHasProfessionalLink(linked);
       setCanFillAnamnese(anamneseLiberada);
-      setPacienteNome(response.data.paciente?.nomeCompleto || usuario?.nome || t("home.user"));
+      setPacienteNome(
+        response.data.paciente?.nomeCompleto || usuario?.nome || t("home.user"),
+      );
       setPacienteId(response.data.paciente?.id || null);
       setUltimaEvolucaoEm(response.data.resumo?.ultimaEvolucaoEm || null);
-      setUltimoLaudoAtualizadoEm(response.data.resumo?.ultimoLaudoAtualizadoEm || null);
+      setUltimoLaudoAtualizadoEm(
+        response.data.resumo?.ultimoLaudoAtualizadoEm || null,
+      );
       setStatusLaudo(response.data.resumo?.statusLaudo || null);
 
       if (linked) {
@@ -725,7 +787,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
           setExames([]);
         }
 
-        const atividadesResponse = await api.get<Atividade[]>("/atividades/minhas");
+        const atividadesResponse =
+          await api.get<Atividade[]>("/atividades/minhas");
         setAtividades(atividadesResponse.data || []);
         if (atividadesResponse.data?.length) {
           const hasToday = atividadesResponse.data.some(
@@ -734,7 +797,9 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
           const firstDay = atividadesResponse.data
             .map((item) => item.diaPrescricao)
             .find((day) => typeof day === "number" && day >= 1 && day <= 7);
-          setSelectedDia(hasToday ? diaAtualDaSemana : firstDay || diaAtualDaSemana);
+          setSelectedDia(
+            hasToday ? diaAtualDaSemana : firstDay || diaAtualDaSemana,
+          );
         }
 
         try {
@@ -749,7 +814,8 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
         setExames([]);
       }
     } catch (error) {
-      const status = (error as { response?: { status?: number } }).response?.status;
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
       if (status === 404) {
         setHasProfessionalLink(false);
         setCanFillAnamnese(false);
@@ -970,8 +1036,7 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                 navigation.navigate("AnamneseForm", {
                   pacienteId,
                   selfMode: true,
-                  pacienteNome:
-                    pacienteNome || usuario?.nome || t("home.user"),
+                  pacienteNome: pacienteNome || usuario?.nome || t("home.user"),
                 })
             : undefined,
         EXAME_MEDICO:
@@ -1117,779 +1182,942 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
-          <Text style={styles.loadingText}>{t("patient.loadingData")}</Text>
-        </View>
-      ) : (
-        <>
-          {showOnboarding ? (
-            <View style={[styles.card, styles.onboardingCard]}>
-              <Text style={styles.onboardingLabel}>
-                {t("patient.onboardingTitle", {
-                  step: onboardingStep + 1,
-                  total: onboardingSteps.length,
-                })}
-              </Text>
-              <Text style={styles.sectionTitle}>{onboardingSteps[onboardingStep].title}</Text>
-              <Text style={styles.item}>{onboardingSteps[onboardingStep].description}</Text>
-              <View style={styles.onboardingActions}>
-                <TouchableOpacity
-                  onPress={completeOnboarding}
-                  style={styles.onboardingSkip}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.onboardingSkipText}>{t("patient.skip")}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => nextOnboardingStep().catch(() => undefined)}
-                  style={styles.onboardingNext}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.onboardingNextText}>
-                    {onboardingStep === onboardingSteps.length - 1
-                      ? t("patient.finish")
-                      : t("patient.next")}
-                  </Text>
-                </TouchableOpacity>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.loadingText}>{t("patient.loadingData")}</Text>
+          </View>
+        ) : (
+          <>
+            {showOnboarding ? (
+              <View style={[styles.card, styles.onboardingCard]}>
+                <Text style={styles.onboardingLabel}>
+                  {t("patient.onboardingTitle", {
+                    step: onboardingStep + 1,
+                    total: onboardingSteps.length,
+                  })}
+                </Text>
+                <Text style={styles.sectionTitle}>
+                  {onboardingSteps[onboardingStep].title}
+                </Text>
+                <Text style={styles.item}>
+                  {onboardingSteps[onboardingStep].description}
+                </Text>
+                <View style={styles.onboardingActions}>
+                  <TouchableOpacity
+                    onPress={completeOnboarding}
+                    style={styles.onboardingSkip}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.onboardingSkipText}>
+                      {t("patient.skip")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => nextOnboardingStep().catch(() => undefined)}
+                    style={styles.onboardingNext}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.onboardingNextText}>
+                      {onboardingStep === onboardingSteps.length - 1
+                        ? t("patient.finish")
+                        : t("patient.next")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {pacienteId && !hasAnamnesePreenchida ? (
-            <View style={[styles.card, styles.startCard]}>
-              <Text style={styles.startTitle}>{t("patient.startHereTitle")}</Text>
-              <Text style={styles.startDescription}>{t("patient.startHereDescription")}</Text>
-              <TouchableOpacity
+            {pacienteId && !hasAnamnesePreenchida ? (
+              <View style={[styles.card, styles.startCard]}>
+                <Text style={styles.startTitle}>
+                  {t("patient.startHereTitle")}
+                </Text>
+                <Text style={styles.startDescription}>
+                  {t("patient.startHereDescription")}
+                </Text>
+                <TouchableOpacity
                   style={styles.startButton}
                   activeOpacity={0.85}
                   onPress={() =>
                     navigation.navigate("AnamneseForm", {
                       pacienteId: pacienteId as string,
                       selfMode: true,
-                      pacienteNome: pacienteNome || usuario?.nome || t("home.user"),
+                      pacienteNome:
+                        pacienteNome || usuario?.nome || t("home.user"),
                     })
                   }
                 >
-                  <Ionicons name="document-text-outline" size={18} color={COLORS.white} />
-                  <Text style={styles.startButtonText}>{t("patient.startAnamnese")}</Text>
-                </TouchableOpacity>
-            </View>
-          ) : null}
-          <View style={styles.card}>
-            <Text style={styles.welcome}>
-              {t("patient.welcome", {
-                name: pacienteNome || usuario?.nome || t("home.user"),
-              })}
-            </Text>
-            <Text style={styles.subtitle}>
-              {t("patient.exclusiveAccess")}
-            </Text>
-            {pacienteId && canFillAnamnese ? (
-              <TouchableOpacity
-                style={styles.selfAnamneseButton}
-                activeOpacity={0.85}
-                onPress={() =>
-                  navigation.navigate("AnamneseForm", {
-                    pacienteId: pacienteId as string,
-                    selfMode: true,
-                    pacienteNome: pacienteNome || usuario?.nome || t("home.user"),
-                  })
-                }
-              >
-                <Ionicons
-                  name={hasAnamnesePreenchida ? "create-outline" : "document-text-outline"}
-                  size={18}
-                  color={COLORS.white}
-                />
-                <Text style={styles.selfAnamneseButtonText}>
-                  {hasAnamnesePreenchida
-                    ? t("patient.editMyAnamnese")
-                    : t("patient.fillMyAnamnese")}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          <View style={[styles.card, styles.startCard]}>
-            <View style={styles.nextActionHeader}>
-              <Ionicons name={proximaAcao.icon} size={20} color={COLORS.primary} />
-              <Text style={styles.startTitle}>{proximaAcao.title}</Text>
-            </View>
-            <Text style={styles.startDescription}>{proximaAcao.description}</Text>
-            {proximaAcao.onPress && proximaAcao.actionLabel ? (
-              <TouchableOpacity
-                style={styles.startButton}
-                onPress={proximaAcao.onPress}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.startButtonText}>{proximaAcao.actionLabel}</Text>
-                <Ionicons name="arrow-forward-outline" size={16} color={COLORS.white} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          <CareTimeline
-            title={t("careTimeline.title")}
-            subtitle={t("careTimeline.patient.subtitle")}
-            items={careTimelineItems}
-          />
-
-          {hasProfessionalLink ? (
-            <View style={[styles.card, styles.checksCard]}>
-              <Text style={styles.sectionTitle}>{t("patient.todayChecksTitle")}</Text>
-              <Text style={styles.item}>
-                {t("patient.todayChecksSummary", {
-                  done: checksHoje.concluidos,
-                  total: checksHoje.total,
-                })}
-              </Text>
-              {checksHoje.total > 0 ? (
-                <Text style={styles.item}>
-                  {t("patient.todayChecksPending", { pending: checksHoje.pendentes })}
-                </Text>
-              ) : (
-                <Text style={styles.item}>{t("patient.noActivityForDay")}</Text>
-              )}
-              {checksHoje.total > 0 && pendenciasHojePreview.length > 0 ? (
-                <View style={styles.pendingChecksList}>
-                  {pendenciasHojePreview.map((atividade) => (
-                    <TouchableOpacity
-                      key={atividade.id}
-                      style={styles.pendingCheckItem}
-                      activeOpacity={0.85}
-                      onPress={() => {
-                        trackEvent("patient_home_check_click", {
-                          source: "today_checks_list",
-                          atividadeId: atividade.id,
-                          atividadeTitulo: atividade.titulo,
-                          pendentesHoje: checksHoje.pendentes,
-                        }).catch(() => undefined);
-                        navigation.navigate("PacienteAtividadeCheckin", {
-                          atividadeId: atividade.id,
-                          titulo: atividade.titulo,
-                        });
-                      }}
-                    >
-                      <Text style={styles.pendingCheckTitle} numberOfLines={1}>
-                        {atividade.titulo}
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward-outline"
-                        size={14}
-                        color={COLORS.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : null}
-              {(proximaAtividadeHoje || primeiraAtividadeDisponivel) ? (
-                <TouchableOpacity
-                  style={styles.guidedCheckinButton}
-                  onPress={() => {
-                    const target =
-                      proximaAtividadeHoje || primeiraAtividadeDisponivel;
-                    if (!target) return;
-                    trackEvent("patient_home_check_click", {
-                      source: "today_checks_cta",
-                      atividadeId: target.id,
-                      atividadeTitulo: target.titulo,
-                      pendentesHoje: checksHoje.pendentes,
-                    }).catch(() => undefined);
-                    navigation.navigate("PacienteAtividadeCheckin", {
-                      atividadeId: target.id,
-                      titulo: target.titulo,
-                    });
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.white} />
-                  <Text style={styles.guidedCheckinText}>
-                    {t("patient.todayChecksAction")}
+                  <Ionicons
+                    name="document-text-outline"
+                    size={18}
+                    color={COLORS.white}
+                  />
+                  <Text style={styles.startButtonText}>
+                    {t("patient.startAnamnese")}
                   </Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
-          {!hasProfessionalLink ? (
+              </View>
+            ) : null}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>{t("patient.noLinkTitle")}</Text>
-              <Text style={styles.item}>{t("patient.noLinkDescription")}</Text>
-              <Text style={styles.item}>{t("patient.noLinkHint")}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{t("patient.weekGoal")}</Text>
-            <Text style={styles.item}>
-              {t("patient.progress", {
-                done: metaSemanal.concluidas,
-                total: metaSemanal.total || "-",
-              })}
-            </Text>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${metaSemanal.percentual}%` }]} />
-            </View>
-            <Text style={styles.item}>{t("patient.percentDone", { value: metaSemanal.percentual })}</Text>
-            {primeiraAtividadeDisponivel ? (
-              <TouchableOpacity
-                style={styles.guidedCheckinButton}
-                onPress={() =>
-                  navigation.navigate("PacienteAtividadeCheckin", {
-                    atividadeId: primeiraAtividadeDisponivel.id,
-                    titulo: primeiraAtividadeDisponivel.titulo,
-                  })
-                }
-                activeOpacity={0.85}
-              >
-                <Ionicons name="flash-outline" size={16} color={COLORS.white} />
-                <Text style={styles.guidedCheckinText}>{t("patient.firstGuidedCheckin")}</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {hasProfessionalLink ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{t("patient.gamification")}</Text>
-            <View style={styles.gamificationRow}>
-              <View style={styles.gamificationItem}>
-                <Text style={styles.gamificationValue}>{streak}</Text>
-                <Text style={styles.gamificationLabel}>{t("patient.streakDays")}</Text>
-              </View>
-              <View style={styles.gamificationBadge}>
-                <Ionicons name="trophy-outline" size={16} color={COLORS.warning} />
-                <Text style={styles.gamificationBadgeText}>{t("patient.badge", { badge })}</Text>
-              </View>
-            </View>
-            {pendingOfflineCheckins > 0 ? (
-              <Text style={styles.pendingSyncText}>
-                {t("patient.pendingSync", { count: pendingOfflineCheckins })}
-              </Text>
-            ) : null}
-            {waitingRetryCheckins > 0 ? (
-              <Text style={styles.pendingSyncText}>
-                {t("patient.waitingRetry", { count: waitingRetryCheckins })}
-              </Text>
-            ) : null}
-            {offlineOldestCreatedAt ? (
-              <Text style={styles.pendingSyncText}>
-                {t("patient.oldestItem", {
-                  date: new Date(offlineOldestCreatedAt).toLocaleString("pt-BR"),
+              <Text style={styles.welcome}>
+                {t("patient.welcome", {
+                  name: pacienteNome || usuario?.nome || t("home.user"),
                 })}
               </Text>
-            ) : null}
-            {isOfflineSyncDegraded ? (
-              <Text style={styles.syncAlertText}>{t("patient.syncDegradation")}</Text>
-            ) : null}
-            <TouchableOpacity
-              style={[styles.syncNowButton, syncingNow && styles.syncNowButtonDisabled]}
-              onPress={() => handleManualSync().catch(() => undefined)}
-              activeOpacity={0.85}
-              disabled={syncingNow}
-            >
-              {syncingNow ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : (
-                <>
-                  <Ionicons name="sync-outline" size={14} color={COLORS.white} />
-                  <Text style={styles.syncNowButtonText}>{t("patient.syncOfflineNow")}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-          ) : null}
-
-          {hasProfessionalLink ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{t("patient.clinicalSummary")}</Text>
-            <Text style={styles.item}>
-              {t("patient.lastEvolution", {
-                date: ultimaEvolucaoEm
-                  ? new Date(ultimaEvolucaoEm).toLocaleDateString("pt-BR")
-                  : t("patient.notRegistered"),
-              })}
-            </Text>
-            <Text style={styles.item}>
-              {t("patient.lastReportUpdated", {
-                date: ultimoLaudoAtualizadoEm
-                  ? new Date(ultimoLaudoAtualizadoEm).toLocaleDateString("pt-BR")
-                  : t("patient.notRegisteredMale"),
-              })}
-            </Text>
-            <Text style={styles.item}>
-              {t("patient.reportStatus", { status: statusLabel })}
-            </Text>
-            {hasPublishedDocuments ? (
-              <View style={styles.pdfActions}>
+              <Text style={styles.subtitle}>
+                {t("patient.exclusiveAccess")}
+              </Text>
+              {pacienteId && canFillAnamnese ? (
                 <TouchableOpacity
-                  style={styles.pdfButton}
-                  onPress={() => openMyPdf("laudo")}
+                  style={styles.selfAnamneseButton}
                   activeOpacity={0.85}
-                  disabled={loadingPdf !== null}
-                >
-                  {loadingPdf === "laudo" ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : (
-                    <>
-                      <Ionicons name="document-text-outline" size={16} color={COLORS.white} />
-                      <Text style={styles.pdfButtonText}>{t("patient.myReportPdf")}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.pdfButton, styles.pdfButtonSecondary]}
-                  onPress={() => openMyPdf("plano")}
-                  activeOpacity={0.85}
-                  disabled={loadingPdf !== null}
-                >
-                  {loadingPdf === "plano" ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                  ) : (
-                    <>
-                      <Ionicons name="medkit-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.pdfButtonSecondaryText}>{t("patient.myPlanPdf")}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.item}>{t("patient.documentsAwaitingPublication")}</Text>
-            )}
-          </View>
-          ) : null}
-
-          {hasProfessionalLink && hasPublishedDocuments ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{t("patient.recentDocuments")}</Text>
-            <View style={styles.documentItem}>
-              <View style={styles.documentMeta}>
-                <Text style={styles.documentTitle}>{t("patient.myReportPdf")}</Text>
-                <Text style={styles.documentInfo}>
-                  {t("patient.updatedAt", {
-                    date: ultimoLaudoAtualizadoEm
-                      ? new Date(ultimoLaudoAtualizadoEm).toLocaleDateString("pt-BR")
-                      : t("patient.unavailableDate"),
-                  })}
-                </Text>
-                <View style={styles.documentStatusRow}>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={14}
-                    color={COLORS.success}
-                  />
-                  <Text
-                    style={[
-                      styles.documentStatusText,
-                      styles.documentStatusApproved,
-                    ]}
-                  >
-                    {statusLabel}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.documentAction}
-                onPress={() => openMyPdf("laudo")}
-                activeOpacity={0.85}
-                disabled={loadingPdf !== null}
-              >
-                {loadingPdf === "laudo" ? (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                ) : (
-                  <Ionicons
-                    name="open-outline"
-                    size={18}
-                    color={COLORS.primary}
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.documentItem}>
-              <View style={styles.documentMeta}>
-                <Text style={styles.documentTitle}>{t("patient.treatmentPlan")}</Text>
-                <Text style={styles.documentInfo}>
-                  {t("patient.updatedAt", {
-                    date: ultimoLaudoAtualizadoEm
-                      ? new Date(ultimoLaudoAtualizadoEm).toLocaleDateString("pt-BR")
-                      : t("patient.unavailableDate"),
-                  })}
-                </Text>
-                <Text style={styles.documentInfo}>{t("patient.formatPdf")}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.documentAction}
-                onPress={() => openMyPdf("plano")}
-                activeOpacity={0.85}
-                disabled={loadingPdf !== null}
-              >
-                {loadingPdf === "plano" ? (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                ) : (
-                  <Ionicons
-                    name="open-outline"
-                    size={18}
-                    color={COLORS.primary}
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-          ) : null}
-
-          {hasProfessionalLink ? (
-          <View style={styles.card}>
-            <View style={styles.examsHeaderRow}>
-              <Text style={styles.sectionTitle}>{t("patient.documentsExams")}</Text>
-              <TouchableOpacity
-                style={[
-                  styles.attachExamButton,
-                  isUploadingExame && styles.attachExamButtonDisabled,
-                ]}
-                onPress={() => handleUploadExame().catch(() => undefined)}
-                activeOpacity={0.85}
-                disabled={isUploadingExame}
-              >
-                {isUploadingExame ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <>
-                    <Ionicons name="attach-outline" size={16} color={COLORS.white} />
-                    <Text style={styles.attachExamButtonText}>
-                      {t("patient.attachExam")}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {isLoadingExames ? (
-              <View style={styles.examsLoadingRow}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.item}>{t("patient.loadingExams")}</Text>
-              </View>
-            ) : exames.length === 0 ? (
-              <Text style={styles.item}>{t("patient.noExamsAttached")}</Text>
-            ) : (
-              exames.map((item) => (
-                <View key={item.id} style={styles.exameCard}>
-                  {isImageExam(item) ? (
-                    <TouchableOpacity
-                      style={styles.exameThumbnailButton}
-                      activeOpacity={0.9}
-                      onPress={() => handleOpenExame(item).catch(() => undefined)}
-                    >
-                      <Image
-                        source={getExamImageSource(item)}
-                        style={styles.exameThumbnail}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.exameImageBadge}>
-                        <Ionicons name="image-outline" size={14} color={COLORS.white} />
-                      </View>
-                    </TouchableOpacity>
-                  ) : null}
-                  <View style={styles.exameHeader}>
-                    <Ionicons
-                      name={isImageExam(item) ? "image-outline" : "document-text-outline"}
-                      size={18}
-                      color={COLORS.primary}
-                    />
-                    <View style={styles.exameHeaderTextWrap}>
-                      <Text numberOfLines={1} style={styles.exameTitle}>
-                        {item.nomeOriginal}
-                      </Text>
-                      <Text style={styles.exameMeta}>
-                        {formatFileSize(item.tamanhoBytes)} ·{" "}
-                        {new Date(item.createdAt).toLocaleDateString("pt-BR")}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.exameActionsRow}>
-                    <TouchableOpacity
-                      style={styles.exameActionButton}
-                      onPress={() => handleOpenExame(item).catch(() => undefined)}
-                      activeOpacity={0.85}
-                      disabled={downloadingExameId === item.id}
-                    >
-                      {downloadingExameId === item.id ? (
-                        <ActivityIndicator size="small" color={COLORS.primary} />
-                      ) : (
-                        <>
-                          <Ionicons name="open-outline" size={16} color={COLORS.primary} />
-                          <Text style={styles.exameActionText}>
-                            {t("patient.openExamAction")}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.exameActionButton, styles.exameDeleteButton]}
-                      onPress={() => handleDeleteExame(item.id).catch(() => undefined)}
-                      activeOpacity={0.85}
-                      disabled={removingExameId === item.id}
-                    >
-                      {removingExameId === item.id ? (
-                        <ActivityIndicator size="small" color={COLORS.error} />
-                      ) : (
-                        <>
-                          <Ionicons name="trash-outline" size={16} color={COLORS.error} />
-                          <Text style={styles.exameDeleteText}>
-                            {t("patient.removeExamAction")}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-          ) : null}
-
-          {hasProfessionalLink ? (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>{t("patient.dailyPlanTitle")}</Text>
-              <Text style={styles.item}>
-                {t("patient.dailyGoal", {
-                  count: planoDoDia.total || 0,
-                })}
-              </Text>
-              <Text style={styles.item}>
-                {t("patient.dailyProgress", {
-                  done: planoDoDia.concluidas,
-                  total: planoDoDia.total || 0,
-                })}
-              </Text>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[styles.progressFill, { width: `${planoDoDia.percentual}%` }]}
-                />
-              </View>
-              {planoDoDia.total > 0 ? (
-                <Text style={styles.item}>
-                  {t("patient.percentDone", { value: planoDoDia.percentual })}
-                </Text>
-              ) : (
-                <Text style={styles.item}>{t("patient.noActivityForDay")}</Text>
-              )}
-
-              {planoDoDia.proximaAtividade ? (
-                <TouchableOpacity
-                  style={styles.guidedCheckinButton}
                   onPress={() =>
-                    navigation.navigate("PacienteAtividadeCheckin", {
-                      atividadeId: planoDoDia.proximaAtividade!.id,
-                      titulo: planoDoDia.proximaAtividade!.titulo,
+                    navigation.navigate("AnamneseForm", {
+                      pacienteId: pacienteId as string,
+                      selfMode: true,
+                      pacienteNome:
+                        pacienteNome || usuario?.nome || t("home.user"),
                     })
                   }
-                  activeOpacity={0.85}
                 >
-                  <Ionicons name="play-outline" size={16} color={COLORS.white} />
-                  <Text style={styles.guidedCheckinText}>
-                    {planoDoDia.concluidas > 0
-                      ? t("patient.dailyContinue")
-                      : t("patient.dailyStartFirst")}
+                  <Ionicons
+                    name={
+                      hasAnamnesePreenchida
+                        ? "create-outline"
+                        : "document-text-outline"
+                    }
+                    size={18}
+                    color={COLORS.white}
+                  />
+                  <Text style={styles.selfAnamneseButtonText}>
+                    {hasAnamnesePreenchida
+                      ? t("patient.editMyAnamnese")
+                      : t("patient.fillMyAnamnese")}
                   </Text>
                 </TouchableOpacity>
-              ) : planoDoDia.total > 0 ? (
-                <View style={styles.dailyDoneBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-                  <Text style={styles.dailyDoneText}>{t("patient.dailyDone")}</Text>
-                </View>
               ) : null}
             </View>
-          ) : null}
 
-          {mostrarSmartReminder ? (
-            <View style={[styles.card, styles.smartReminderCard]}>
-              <Text style={styles.sectionTitle}>{t("patient.smartReminderTitle")}</Text>
-              <Text style={styles.item}>
-                {diasSemCheckin === null
-                  ? t("patient.smartReminderNoRecentCheckin")
-                  : t("patient.smartReminderNeedAction", { days: diasSemCheckin })}
+            <View style={[styles.card, styles.startCard]}>
+              <View style={styles.nextActionHeader}>
+                <Ionicons
+                  name={proximaAcao.icon}
+                  size={20}
+                  color={COLORS.primary}
+                />
+                <Text style={styles.startTitle}>{proximaAcao.title}</Text>
+              </View>
+              <Text style={styles.startDescription}>
+                {proximaAcao.description}
               </Text>
-              {(planoDoDia.proximaAtividade || primeiraAtividadeDisponivel) ? (
+              {proximaAcao.onPress && proximaAcao.actionLabel ? (
                 <TouchableOpacity
-                  style={styles.smartReminderButton}
-                  onPress={() => {
-                    const target = planoDoDia.proximaAtividade || primeiraAtividadeDisponivel;
-                    if (!target) return;
-                    trackEvent("patient_smart_reminder_cta_clicked", {
-                      atividadeId: target.id,
-                      diasSemCheckin,
-                    }).catch(() => undefined);
-                    navigation.navigate("PacienteAtividadeCheckin", {
-                      atividadeId: target.id,
-                      titulo: target.titulo,
-                    });
-                  }}
+                  style={styles.startButton}
+                  onPress={proximaAcao.onPress}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name="flash-outline" size={16} color={COLORS.white} />
-                  <Text style={styles.smartReminderButtonText}>
-                    {t("patient.smartReminderAction")}
+                  <Text style={styles.startButtonText}>
+                    {proximaAcao.actionLabel}
                   </Text>
+                  <Ionicons
+                    name="arrow-forward-outline"
+                    size={16}
+                    color={COLORS.white}
+                  />
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity
-                style={styles.smartReminderSecondaryButton}
-                onPress={() => {
-                  const today = new Date().toISOString().slice(0, 10);
-                  setSmartReminderSnoozedToday(true);
-                  AsyncStorage.setItem(smartReminderSnoozeKey, today).catch(
-                    () => undefined,
-                  );
-                  trackEvent("patient_smart_reminder_snoozed", {
-                    diasSemCheckin,
-                  }).catch(() => undefined);
-                }}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.smartReminderSecondaryButtonText}>
-                  {t("patient.smartReminderLater")}
-                </Text>
-              </TouchableOpacity>
             </View>
-          ) : null}
 
-          {hasProfessionalLink ? (
+            <CareTimeline
+              title={t("careTimeline.title")}
+              subtitle={t("careTimeline.patient.subtitle")}
+              items={careTimelineItems}
+            />
+
+            {hasProfessionalLink ? (
+              <View style={[styles.card, styles.checksCard]}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.todayChecksTitle")}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.todayChecksSummary", {
+                    done: checksHoje.concluidos,
+                    total: checksHoje.total,
+                  })}
+                </Text>
+                {checksHoje.total > 0 ? (
+                  <Text style={styles.item}>
+                    {t("patient.todayChecksPending", {
+                      pending: checksHoje.pendentes,
+                    })}
+                  </Text>
+                ) : (
+                  <Text style={styles.item}>
+                    {t("patient.noActivityForDay")}
+                  </Text>
+                )}
+                {checksHoje.total > 0 && pendenciasHojePreview.length > 0 ? (
+                  <View style={styles.pendingChecksList}>
+                    {pendenciasHojePreview.map((atividade) => (
+                      <TouchableOpacity
+                        key={atividade.id}
+                        style={styles.pendingCheckItem}
+                        activeOpacity={0.85}
+                        onPress={() => {
+                          trackEvent("patient_home_check_click", {
+                            source: "today_checks_list",
+                            atividadeId: atividade.id,
+                            atividadeTitulo: atividade.titulo,
+                            pendentesHoje: checksHoje.pendentes,
+                          }).catch(() => undefined);
+                          navigation.navigate("PacienteAtividadeCheckin", {
+                            atividadeId: atividade.id,
+                            titulo: atividade.titulo,
+                          });
+                        }}
+                      >
+                        <Text
+                          style={styles.pendingCheckTitle}
+                          numberOfLines={1}
+                        >
+                          {atividade.titulo}
+                        </Text>
+                        <Ionicons
+                          name="chevron-forward-outline"
+                          size={14}
+                          color={COLORS.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+                {proximaAtividadeHoje || primeiraAtividadeDisponivel ? (
+                  <TouchableOpacity
+                    style={styles.guidedCheckinButton}
+                    onPress={() => {
+                      const target =
+                        proximaAtividadeHoje || primeiraAtividadeDisponivel;
+                      if (!target) return;
+                      trackEvent("patient_home_check_click", {
+                        source: "today_checks_cta",
+                        atividadeId: target.id,
+                        atividadeTitulo: target.titulo,
+                        pendentesHoje: checksHoje.pendentes,
+                      }).catch(() => undefined);
+                      navigation.navigate("PacienteAtividadeCheckin", {
+                        atividadeId: target.id,
+                        titulo: target.titulo,
+                      });
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={16}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.guidedCheckinText}>
+                      {t("patient.todayChecksAction")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+            {!hasProfessionalLink ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.noLinkTitle")}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.noLinkDescription")}
+                </Text>
+                <Text style={styles.item}>{t("patient.noLinkHint")}</Text>
+              </View>
+            ) : null}
+
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>{t("patient.weeklySummaryTitle")}</Text>
+              <Text style={styles.sectionTitle}>{t("patient.weekGoal")}</Text>
               <Text style={styles.item}>
-                {t("patient.weeklySummaryStats", {
-                  done: resumoSemanal.concluidasSemana,
-                  total: resumoSemanal.totalComRegistroSemana,
+                {t("patient.progress", {
+                  done: metaSemanal.concluidas,
+                  total: metaSemanal.total || "-",
                 })}
               </Text>
               <View style={styles.progressTrack}>
                 <View
                   style={[
                     styles.progressFill,
-                    { width: `${Math.max(0, Math.min(100, resumoSemanal.aderencia))}%` },
+                    { width: `${metaSemanal.percentual}%` },
                   ]}
                 />
               </View>
               <Text style={styles.item}>
-                {t("patient.weeklySummaryAdherence", {
-                  value: resumoSemanal.aderencia,
-                })}
+                {t("patient.percentDone", { value: metaSemanal.percentual })}
               </Text>
-              <Text style={styles.weeklySummaryHint}>{resumoSemanal.mensagem}</Text>
+              {primeiraAtividadeDisponivel ? (
+                <TouchableOpacity
+                  style={styles.guidedCheckinButton}
+                  onPress={() =>
+                    navigation.navigate("PacienteAtividadeCheckin", {
+                      atividadeId: primeiraAtividadeDisponivel.id,
+                      titulo: primeiraAtividadeDisponivel.titulo,
+                    })
+                  }
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name="flash-outline"
+                    size={16}
+                    color={COLORS.white}
+                  />
+                  <Text style={styles.guidedCheckinText}>
+                    {t("patient.firstGuidedCheckin")}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
-          ) : null}
 
-          {hasProfessionalLink ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{t("patient.myActivities")}</Text>
-            {atividades.length === 0 ? (
-              <Text style={styles.item}>{t("patient.noAssignedActivity")}</Text>
-            ) : (
-              <>
-                <View style={styles.dayTabs}>
-                  {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+            {hasProfessionalLink ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.gamification")}
+                </Text>
+                <View style={styles.gamificationRow}>
+                  <View style={styles.gamificationItem}>
+                    <Text style={styles.gamificationValue}>{streak}</Text>
+                    <Text style={styles.gamificationLabel}>
+                      {t("patient.streakDays")}
+                    </Text>
+                  </View>
+                  <View style={styles.gamificationBadge}>
+                    <Ionicons
+                      name="trophy-outline"
+                      size={16}
+                      color={COLORS.warning}
+                    />
+                    <Text style={styles.gamificationBadgeText}>
+                      {t("patient.badge", { badge })}
+                    </Text>
+                  </View>
+                </View>
+                {pendingOfflineCheckins > 0 ? (
+                  <Text style={styles.pendingSyncText}>
+                    {t("patient.pendingSync", {
+                      count: pendingOfflineCheckins,
+                    })}
+                  </Text>
+                ) : null}
+                {waitingRetryCheckins > 0 ? (
+                  <Text style={styles.pendingSyncText}>
+                    {t("patient.waitingRetry", { count: waitingRetryCheckins })}
+                  </Text>
+                ) : null}
+                {offlineOldestCreatedAt ? (
+                  <Text style={styles.pendingSyncText}>
+                    {t("patient.oldestItem", {
+                      date: new Date(offlineOldestCreatedAt).toLocaleString(
+                        "pt-BR",
+                      ),
+                    })}
+                  </Text>
+                ) : null}
+                {isOfflineSyncDegraded ? (
+                  <Text style={styles.syncAlertText}>
+                    {t("patient.syncDegradation")}
+                  </Text>
+                ) : null}
+                <TouchableOpacity
+                  style={[
+                    styles.syncNowButton,
+                    syncingNow && styles.syncNowButtonDisabled,
+                  ]}
+                  onPress={() => handleManualSync().catch(() => undefined)}
+                  activeOpacity={0.85}
+                  disabled={syncingNow}
+                >
+                  {syncingNow ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="sync-outline"
+                        size={14}
+                        color={COLORS.white}
+                      />
+                      <Text style={styles.syncNowButtonText}>
+                        {t("patient.syncOfflineNow")}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {hasProfessionalLink ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.clinicalSummary")}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.lastEvolution", {
+                    date: ultimaEvolucaoEm
+                      ? new Date(ultimaEvolucaoEm).toLocaleDateString("pt-BR")
+                      : t("patient.notRegistered"),
+                  })}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.lastReportUpdated", {
+                    date: ultimoLaudoAtualizadoEm
+                      ? new Date(ultimoLaudoAtualizadoEm).toLocaleDateString(
+                          "pt-BR",
+                        )
+                      : t("patient.notRegisteredMale"),
+                  })}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.reportStatus", { status: statusLabel })}
+                </Text>
+                {hasPublishedDocuments ? (
+                  <View style={styles.pdfActions}>
                     <TouchableOpacity
-                      key={day}
-                      style={[styles.dayTab, selectedDia === day && styles.dayTabActive]}
-                      onPress={() => setSelectedDia(day)}
+                      style={styles.pdfButton}
+                      onPress={() => openMyPdf("laudo")}
                       activeOpacity={0.85}
+                      disabled={loadingPdf !== null}
                     >
+                      {loadingPdf === "laudo" ? (
+                        <ActivityIndicator size="small" color={COLORS.white} />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="document-text-outline"
+                            size={16}
+                            color={COLORS.white}
+                          />
+                          <Text style={styles.pdfButtonText}>
+                            {t("patient.myReportPdf")}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pdfButton, styles.pdfButtonSecondary]}
+                      onPress={() => openMyPdf("plano")}
+                      activeOpacity={0.85}
+                      disabled={loadingPdf !== null}
+                    >
+                      {loadingPdf === "plano" ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={COLORS.primary}
+                        />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="medkit-outline"
+                            size={16}
+                            color={COLORS.primary}
+                          />
+                          <Text style={styles.pdfButtonSecondaryText}>
+                            {t("patient.myPlanPdf")}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.item}>
+                    {t("patient.documentsAwaitingPublication")}
+                  </Text>
+                )}
+              </View>
+            ) : null}
+
+            {hasProfessionalLink && hasPublishedDocuments ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.recentDocuments")}
+                </Text>
+                <View style={styles.documentItem}>
+                  <View style={styles.documentMeta}>
+                    <Text style={styles.documentTitle}>
+                      {t("patient.myReportPdf")}
+                    </Text>
+                    <Text style={styles.documentInfo}>
+                      {t("patient.updatedAt", {
+                        date: ultimoLaudoAtualizadoEm
+                          ? new Date(
+                              ultimoLaudoAtualizadoEm,
+                            ).toLocaleDateString("pt-BR")
+                          : t("patient.unavailableDate"),
+                      })}
+                    </Text>
+                    <View style={styles.documentStatusRow}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={14}
+                        color={COLORS.success}
+                      />
                       <Text
                         style={[
-                          styles.dayTabText,
-                          selectedDia === day && styles.dayTabTextActive,
+                          styles.documentStatusText,
+                          styles.documentStatusApproved,
                         ]}
                       >
-                        D{day}
+                        {statusLabel}
                       </Text>
-                    </TouchableOpacity>
-                  ))}
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.documentAction}
+                    onPress={() => openMyPdf("laudo")}
+                    activeOpacity={0.85}
+                    disabled={loadingPdf !== null}
+                  >
+                    {loadingPdf === "laudo" ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Ionicons
+                        name="open-outline"
+                        size={18}
+                        color={COLORS.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
                 </View>
 
-                <Text style={styles.dayTitle}>{t("patient.dayPlan", { day: selectedDia })}</Text>
-                {diaSelecionadoItens.length === 0 ? (
-                  <Text style={styles.item}>{t("patient.noActivityForDay")}</Text>
-                ) : (
-                  diaSelecionadoItens.map((atividade: Atividade) => (
-                    <View key={atividade.id} style={styles.activityItem}>
-                      <ExerciseVisual
-                        imageType={atividade.imagemTipo}
-                        title={atividade.titulo}
-                        compact
+                <View style={styles.documentItem}>
+                  <View style={styles.documentMeta}>
+                    <Text style={styles.documentTitle}>
+                      {t("patient.treatmentPlan")}
+                    </Text>
+                    <Text style={styles.documentInfo}>
+                      {t("patient.updatedAt", {
+                        date: ultimoLaudoAtualizadoEm
+                          ? new Date(
+                              ultimoLaudoAtualizadoEm,
+                            ).toLocaleDateString("pt-BR")
+                          : t("patient.unavailableDate"),
+                      })}
+                    </Text>
+                    <Text style={styles.documentInfo}>
+                      {t("patient.formatPdf")}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.documentAction}
+                    onPress={() => openMyPdf("plano")}
+                    activeOpacity={0.85}
+                    disabled={loadingPdf !== null}
+                  >
+                    {loadingPdf === "plano" ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Ionicons
+                        name="open-outline"
+                        size={18}
+                        color={COLORS.primary}
                       />
-                      <View style={styles.activityMeta}>
-                        <Text style={styles.activityTitle}>
-                          {atividade.ordemNoDia ? `${atividade.ordemNoDia}. ` : ""}
-                          {atividade.titulo}
-                        </Text>
-                        <Text style={styles.activityInfo}>
-                          {atividade.ultimoCheckinConcluiu === true
-                            ? t("patient.lastCheckDone")
-                            : atividade.ultimoCheckinConcluiu === false
-                              ? t("patient.lastCheckNotDone")
-                              : t("patient.noCheckYet")}
-                        </Text>
-                        {atividade.descricao ? (
-                          <Text style={styles.activityInfo} numberOfLines={2}>
-                            {atividade.descricao}
-                          </Text>
-                        ) : null}
-                        {atividade.instrucoesExecucao ? (
-                          <Text style={styles.activityInfo} numberOfLines={2}>
-                            {atividade.instrucoesExecucao}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <TouchableOpacity
-                        style={styles.activityAction}
-                        onPress={() =>
-                          navigation.navigate("PacienteAtividadeCheckin", {
-                            atividadeId: atividade.id,
-                            titulo: atividade.titulo,
-                          })
-                        }
-                        activeOpacity={0.85}
-                      >
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+
+            {hasProfessionalLink ? (
+              <View style={styles.card}>
+                <View style={styles.examsHeaderRow}>
+                  <Text style={styles.sectionTitle}>
+                    {t("patient.documentsExams")}
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.attachExamButton,
+                      isUploadingExame && styles.attachExamButtonDisabled,
+                    ]}
+                    onPress={() => handleUploadExame().catch(() => undefined)}
+                    activeOpacity={0.85}
+                    disabled={isUploadingExame}
+                  >
+                    {isUploadingExame ? (
+                      <ActivityIndicator size="small" color={COLORS.white} />
+                    ) : (
+                      <>
                         <Ionicons
-                          name={
-                            atividade.ultimoCheckinConcluiu === true
-                              ? "checkmark-done-outline"
-                              : "create-outline"
-                          }
+                          name="attach-outline"
                           size={16}
                           color={COLORS.white}
                         />
-                          <Text style={styles.activityActionText}>{t("patient.check")}</Text>
-                      </TouchableOpacity>
+                        <Text style={styles.attachExamButtonText}>
+                          {t("patient.attachExam")}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {isLoadingExames ? (
+                  <View style={styles.examsLoadingRow}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={styles.item}>{t("patient.loadingExams")}</Text>
+                  </View>
+                ) : exames.length === 0 ? (
+                  <Text style={styles.item}>
+                    {t("patient.noExamsAttached")}
+                  </Text>
+                ) : (
+                  exames.map((item) => (
+                    <View key={item.id} style={styles.exameCard}>
+                      {isImageExam(item) ? (
+                        <TouchableOpacity
+                          style={styles.exameThumbnailButton}
+                          activeOpacity={0.9}
+                          onPress={() =>
+                            handleOpenExame(item).catch(() => undefined)
+                          }
+                        >
+                          <Image
+                            source={getExamImageSource(item)}
+                            style={styles.exameThumbnail}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.exameImageBadge}>
+                            <Ionicons
+                              name="image-outline"
+                              size={14}
+                              color={COLORS.white}
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      ) : null}
+                      <View style={styles.exameHeader}>
+                        <Ionicons
+                          name={
+                            isImageExam(item)
+                              ? "image-outline"
+                              : "document-text-outline"
+                          }
+                          size={18}
+                          color={COLORS.primary}
+                        />
+                        <View style={styles.exameHeaderTextWrap}>
+                          <Text numberOfLines={1} style={styles.exameTitle}>
+                            {item.nomeOriginal}
+                          </Text>
+                          <Text style={styles.exameMeta}>
+                            {formatFileSize(item.tamanhoBytes)} ·{" "}
+                            {new Date(item.createdAt).toLocaleDateString(
+                              "pt-BR",
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.exameActionsRow}>
+                        <TouchableOpacity
+                          style={styles.exameActionButton}
+                          onPress={() =>
+                            handleOpenExame(item).catch(() => undefined)
+                          }
+                          activeOpacity={0.85}
+                          disabled={downloadingExameId === item.id}
+                        >
+                          {downloadingExameId === item.id ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={COLORS.primary}
+                            />
+                          ) : (
+                            <>
+                              <Ionicons
+                                name="open-outline"
+                                size={16}
+                                color={COLORS.primary}
+                              />
+                              <Text style={styles.exameActionText}>
+                                {t("patient.openExamAction")}
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.exameActionButton,
+                            styles.exameDeleteButton,
+                          ]}
+                          onPress={() =>
+                            handleDeleteExame(item.id).catch(() => undefined)
+                          }
+                          activeOpacity={0.85}
+                          disabled={removingExameId === item.id}
+                        >
+                          {removingExameId === item.id ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={COLORS.error}
+                            />
+                          ) : (
+                            <>
+                              <Ionicons
+                                name="trash-outline"
+                                size={16}
+                                color={COLORS.error}
+                              />
+                              <Text style={styles.exameDeleteText}>
+                                {t("patient.removeExamAction")}
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   ))
                 )}
+              </View>
+            ) : null}
 
-                {atividadesPorDia.some((grupo) => grupo.day === 8) ? (
-                  <View style={styles.dayGroup}>
-                    <Text style={styles.dayTitle}>{t("patient.noWeeklySchedule")}</Text>
-                    {atividadesPorDia
-                      .find((grupo) => grupo.day === 8)
-                      ?.itens.map((atividade) => (
+            {hasProfessionalLink ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.dailyPlanTitle")}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.dailyGoal", {
+                    count: planoDoDia.total || 0,
+                  })}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.dailyProgress", {
+                    done: planoDoDia.concluidas,
+                    total: planoDoDia.total || 0,
+                  })}
+                </Text>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${planoDoDia.percentual}%` },
+                    ]}
+                  />
+                </View>
+                {planoDoDia.total > 0 ? (
+                  <Text style={styles.item}>
+                    {t("patient.percentDone", { value: planoDoDia.percentual })}
+                  </Text>
+                ) : (
+                  <Text style={styles.item}>
+                    {t("patient.noActivityForDay")}
+                  </Text>
+                )}
+
+                {planoDoDia.proximaAtividade ? (
+                  <TouchableOpacity
+                    style={styles.guidedCheckinButton}
+                    onPress={() =>
+                      navigation.navigate("PacienteAtividadeCheckin", {
+                        atividadeId: planoDoDia.proximaAtividade!.id,
+                        titulo: planoDoDia.proximaAtividade!.titulo,
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="play-outline"
+                      size={16}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.guidedCheckinText}>
+                      {planoDoDia.concluidas > 0
+                        ? t("patient.dailyContinue")
+                        : t("patient.dailyStartFirst")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : planoDoDia.total > 0 ? (
+                  <View style={styles.dailyDoneBadge}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color={COLORS.success}
+                    />
+                    <Text style={styles.dailyDoneText}>
+                      {t("patient.dailyDone")}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {mostrarSmartReminder ? (
+              <View style={[styles.card, styles.smartReminderCard]}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.smartReminderTitle")}
+                </Text>
+                <Text style={styles.item}>
+                  {diasSemCheckin === null
+                    ? t("patient.smartReminderNoRecentCheckin")
+                    : t("patient.smartReminderNeedAction", {
+                        days: diasSemCheckin,
+                      })}
+                </Text>
+                {planoDoDia.proximaAtividade || primeiraAtividadeDisponivel ? (
+                  <TouchableOpacity
+                    style={styles.smartReminderButton}
+                    onPress={() => {
+                      const target =
+                        planoDoDia.proximaAtividade ||
+                        primeiraAtividadeDisponivel;
+                      if (!target) return;
+                      trackEvent("patient_smart_reminder_cta_clicked", {
+                        atividadeId: target.id,
+                        diasSemCheckin,
+                      }).catch(() => undefined);
+                      navigation.navigate("PacienteAtividadeCheckin", {
+                        atividadeId: target.id,
+                        titulo: target.titulo,
+                      });
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="flash-outline"
+                      size={16}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.smartReminderButtonText}>
+                      {t("patient.smartReminderAction")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.smartReminderSecondaryButton}
+                  onPress={() => {
+                    const today = new Date().toISOString().slice(0, 10);
+                    setSmartReminderSnoozedToday(true);
+                    AsyncStorage.setItem(smartReminderSnoozeKey, today).catch(
+                      () => undefined,
+                    );
+                    trackEvent("patient_smart_reminder_snoozed", {
+                      diasSemCheckin,
+                    }).catch(() => undefined);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.smartReminderSecondaryButtonText}>
+                    {t("patient.smartReminderLater")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {hasProfessionalLink ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.weeklySummaryTitle")}
+                </Text>
+                <Text style={styles.item}>
+                  {t("patient.weeklySummaryStats", {
+                    done: resumoSemanal.concluidasSemana,
+                    total: resumoSemanal.totalComRegistroSemana,
+                  })}
+                </Text>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${Math.max(0, Math.min(100, resumoSemanal.aderencia))}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.item}>
+                  {t("patient.weeklySummaryAdherence", {
+                    value: resumoSemanal.aderencia,
+                  })}
+                </Text>
+                <Text style={styles.weeklySummaryHint}>
+                  {resumoSemanal.mensagem}
+                </Text>
+              </View>
+            ) : null}
+
+            {hasProfessionalLink ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>
+                  {t("patient.myActivities")}
+                </Text>
+                {atividades.length === 0 ? (
+                  <Text style={styles.item}>
+                    {t("patient.noAssignedActivity")}
+                  </Text>
+                ) : (
+                  <>
+                    <View style={styles.dayTabs}>
+                      {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                        <TouchableOpacity
+                          key={day}
+                          style={[
+                            styles.dayTab,
+                            selectedDia === day && styles.dayTabActive,
+                          ]}
+                          onPress={() => setSelectedDia(day)}
+                          activeOpacity={0.85}
+                        >
+                          <Text
+                            style={[
+                              styles.dayTabText,
+                              selectedDia === day && styles.dayTabTextActive,
+                            ]}
+                          >
+                            D{day}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <Text style={styles.dayTitle}>
+                      {t("patient.dayPlan", { day: selectedDia })}
+                    </Text>
+                    {diaSelecionadoItens.length === 0 ? (
+                      <Text style={styles.item}>
+                        {t("patient.noActivityForDay")}
+                      </Text>
+                    ) : (
+                      diaSelecionadoItens.map((atividade: Atividade) => (
                         <View key={atividade.id} style={styles.activityItem}>
                           <ExerciseVisual
                             imageType={atividade.imagemTipo}
+                            imageUrl={atividade.imagemUrl}
+                            cacheKey={atividade.imagemTipo || atividade.id}
                             title={atividade.titulo}
                             compact
                           />
                           <View style={styles.activityMeta}>
-                            <Text style={styles.activityTitle}>{atividade.titulo}</Text>
-                            <Text style={styles.activityInfo}>
-                              {atividade.dataLimite
-                                ? t("patient.deadline", {
-                                    date: parseDatePreservingDateOnly(
-                                      atividade.dataLimite,
-                                    ).toLocaleDateString("pt-BR"),
-                                  })
-                                : t("patient.noDeadline")}
+                            <Text style={styles.activityTitle}>
+                              {atividade.ordemNoDia
+                                ? `${atividade.ordemNoDia}. `
+                                : ""}
+                              {atividade.titulo}
                             </Text>
+                            <Text style={styles.activityInfo}>
+                              {atividade.ultimoCheckinConcluiu === true
+                                ? t("patient.lastCheckDone")
+                                : atividade.ultimoCheckinConcluiu === false
+                                  ? t("patient.lastCheckNotDone")
+                                  : t("patient.noCheckYet")}
+                            </Text>
+                            {atividade.descricao ? (
+                              <Text
+                                style={styles.activityInfo}
+                                numberOfLines={2}
+                              >
+                                {atividade.descricao}
+                              </Text>
+                            ) : null}
                             {atividade.instrucoesExecucao ? (
-                              <Text style={styles.activityInfo} numberOfLines={2}>
+                              <Text
+                                style={styles.activityInfo}
+                                numberOfLines={2}
+                              >
                                 {atividade.instrucoesExecucao}
                               </Text>
                             ) : null}
@@ -1904,26 +2132,107 @@ export function PacienteHomeScreen({ navigation }: PacienteHomeScreenProps) {
                             }
                             activeOpacity={0.85}
                           >
-                            <Ionicons name="create-outline" size={16} color={COLORS.white} />
-                            <Text style={styles.activityActionText}>{t("patient.check")}</Text>
+                            <Ionicons
+                              name={
+                                atividade.ultimoCheckinConcluiu === true
+                                  ? "checkmark-done-outline"
+                                  : "create-outline"
+                              }
+                              size={16}
+                              color={COLORS.white}
+                            />
+                            <Text style={styles.activityActionText}>
+                              {t("patient.check")}
+                            </Text>
                           </TouchableOpacity>
                         </View>
-                      ))}
-                  </View>
-                ) : null}
-              </>
-            )}
-          </View>
-          ) : null}
-        </>
-      )}
+                      ))
+                    )}
+
+                    {atividadesPorDia.some((grupo) => grupo.day === 8) ? (
+                      <View style={styles.dayGroup}>
+                        <Text style={styles.dayTitle}>
+                          {t("patient.noWeeklySchedule")}
+                        </Text>
+                        {atividadesPorDia
+                          .find((grupo) => grupo.day === 8)
+                          ?.itens.map((atividade) => (
+                            <View
+                              key={atividade.id}
+                              style={styles.activityItem}
+                            >
+                              <ExerciseVisual
+                                imageType={atividade.imagemTipo}
+                                imageUrl={atividade.imagemUrl}
+                                cacheKey={atividade.imagemTipo || atividade.id}
+                                title={atividade.titulo}
+                                compact
+                              />
+                              <View style={styles.activityMeta}>
+                                <Text style={styles.activityTitle}>
+                                  {atividade.titulo}
+                                </Text>
+                                <Text style={styles.activityInfo}>
+                                  {atividade.dataLimite
+                                    ? t("patient.deadline", {
+                                        date: parseDatePreservingDateOnly(
+                                          atividade.dataLimite,
+                                        ).toLocaleDateString("pt-BR"),
+                                      })
+                                    : t("patient.noDeadline")}
+                                </Text>
+                                {atividade.instrucoesExecucao ? (
+                                  <Text
+                                    style={styles.activityInfo}
+                                    numberOfLines={2}
+                                  >
+                                    {atividade.instrucoesExecucao}
+                                  </Text>
+                                ) : null}
+                              </View>
+                              <TouchableOpacity
+                                style={styles.activityAction}
+                                onPress={() =>
+                                  navigation.navigate(
+                                    "PacienteAtividadeCheckin",
+                                    {
+                                      atividadeId: atividade.id,
+                                      titulo: atividade.titulo,
+                                    },
+                                  )
+                                }
+                                activeOpacity={0.85}
+                              >
+                                <Ionicons
+                                  name="create-outline"
+                                  size={16}
+                                  color={COLORS.white}
+                                />
+                                <Text style={styles.activityActionText}>
+                                  {t("patient.check")}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                      </View>
+                    ) : null}
+                  </>
+                )}
+              </View>
+            ) : null}
+          </>
+        )}
 
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={logout}
           activeOpacity={0.85}
         >
-          <Ionicons name="information-circle-outline" size={18} color={COLORS.white} />
+          <Ionicons
+            name="information-circle-outline"
+            size={18}
+            color={COLORS.white}
+          />
           <Text style={styles.primaryButtonText}>{t("common.exit")}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -2553,20 +2862,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

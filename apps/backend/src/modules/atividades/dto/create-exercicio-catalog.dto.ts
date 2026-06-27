@@ -2,10 +2,12 @@ import {
   IsArray,
   IsEnum,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import type { ExerciseTranslations } from '../exercise-catalog-localization';
 import { ExerciseImageType } from '../exercise-image-type.enum';
 import { ExercicioStatus } from '../entities/exercicio.entity';
 
@@ -68,6 +70,10 @@ export class CreateExercicioCatalogDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsObject()
+  translations?: ExerciseTranslations;
 
   @IsOptional()
   @IsEnum(ExercicioStatus)

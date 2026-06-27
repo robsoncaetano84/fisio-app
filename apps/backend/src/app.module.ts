@@ -11,6 +11,8 @@ import { AppConfigModule } from './config/app-config.module';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
+import { RedisModule } from './common/redis.module';
+import { RedisThrottlerStorage } from './common/redis-throttler.storage';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -29,12 +31,17 @@ import { ClinicalGovernanceModule } from './modules/clinical-governance/clinical
 @Module({
   imports: [
     AppConfigModule,
+    RedisModule,
     DatabaseModule,
 
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      imports: [ConfigModule, RedisModule],
+      inject: [ConfigService, RedisThrottlerStorage],
+      useFactory: (
+        configService: ConfigService,
+        storage: RedisThrottlerStorage,
+      ) => ({
+        storage,
         throttlers: [
           {
             name: 'default',

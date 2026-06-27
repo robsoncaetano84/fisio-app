@@ -72,7 +72,7 @@ export class AtividadesService {
       descricao: dto.descricao?.trim() || exercicio?.descricao || null,
       instrucoesExecucao:
         dto.instrucoesExecucao?.trim() || exercicio?.instrucoesPadrao || null,
-      imagemUrl: null,
+      imagemUrl: this.getExerciseImageUrl(exercicio),
       imagemTipo: exercicio?.imagemKey || null,
       dataLimite: dto.dataLimite ? new Date(dto.dataLimite) : null,
       diaPrescricao:
@@ -160,7 +160,7 @@ export class AtividadesService {
       titulo: `${origem.titulo} (copia)`,
       descricao: origem.descricao,
       instrucoesExecucao: origem.instrucoesExecucao,
-      imagemUrl: null,
+      imagemUrl: origem.imagemUrl,
       imagemTipo: origem.imagemTipo,
       dataLimite: origem.dataLimite,
       diaPrescricao: diaDestino,
@@ -273,8 +273,10 @@ export class AtividadesService {
         atividade.instrucoesExecucao = exercicio.instrucoesPadrao;
       }
       atividade.imagemTipo = exercicio.imagemKey;
+      atividade.imagemUrl = this.getExerciseImageUrl(exercicio);
     } else if (dto.exercicioId === null) {
       atividade.imagemTipo = null;
+      atividade.imagemUrl = null;
     }
     if (typeof dto.dataLimite === 'string') {
       atividade.dataLimite = dto.dataLimite ? new Date(dto.dataLimite) : null;
@@ -303,7 +305,6 @@ export class AtividadesService {
       atividade.aceiteProfissionalEm = null;
     }
 
-    atividade.imagemUrl = null;
     return this.atividadeRepository.save(atividade);
   }
 
@@ -692,6 +693,7 @@ export class AtividadesService {
     descricao: string;
     instrucoesExecucao?: string;
     imagemTipo?: string;
+    imagemUrl?: string;
     referencias?: string[];
     source: 'ai' | 'rules';
     model?: string;
@@ -732,6 +734,21 @@ export class AtividadesService {
       exercicioId: exercicio?.id,
       exercicioNome: exercicio?.nome,
       imagemTipo: exercicio?.imagemKey || undefined,
+      imagemUrl: this.getExerciseImageUrl(exercicio) || undefined,
     };
+  }
+
+  private getExerciseImageUrl(exercicio?: Exercicio | null): string | null {
+    if (!exercicio?.imagemKey) return null;
+    const primaryMedia =
+      exercicio.midias?.find(
+        (midia) => midia.ativo && midia.assetKey === exercicio.imagemKey,
+      ) ?? null;
+    return (
+      primaryMedia?.thumbnailUrl ||
+      primaryMedia?.imageUrl ||
+      primaryMedia?.sourceUrl ||
+      null
+    );
   }
 }

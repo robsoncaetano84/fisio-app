@@ -14,8 +14,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Button, Input, useToast } from "../../components/ui";
 import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../constants/theme";
+import { useLanguage } from "../../i18n/LanguageProvider";
 import { api } from "../../services";
 import { parseApiError } from "../../utils/apiErrors";
+import {
+  getLocalizedExerciseSearchText,
+  getLocalizedExerciseText,
+} from "../../utils/exerciseTranslations";
 import {
   Exercicio,
   ExercicioImageProductionBrief,
@@ -118,8 +123,13 @@ function getReviewStatus(item?: Exercicio | null): MediaClinicalReviewStatus {
   return getPrimaryMedia(item)?.revisaoClinicaStatus || "PENDENTE";
 }
 
+function getMediaImageUrl(media?: ExercicioMidia | null) {
+  return media?.thumbnailUrl || media?.imageUrl || media?.sourceUrl || null;
+}
+
 export function AdminExerciseCatalogScreen({ navigation }: Props) {
   const { showToast } = useToast();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
@@ -234,22 +244,9 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
         return false;
       }
       if (!term) return true;
-      return [
-        item.nome,
-        item.slug,
-        item.regiaoCorporal,
-        item.categoria,
-        item.nivel,
-        item.objetivo,
-        item.descricao,
-        ...(item.tags || []),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(term);
+      return getLocalizedExerciseSearchText(item, language).includes(term);
     });
-  }, [items, search, statusFilter, reviewFilter]);
+  }, [items, search, statusFilter, reviewFilter, language]);
 
   const filteredQueueItems = useMemo(() => {
     const queueItems = imageQueue?.items || [];
@@ -263,20 +260,24 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
       }
       if (!term) return true;
       return [
-        item.nome,
-        item.slug,
-        item.regiaoCorporal,
-        item.categoria,
-        item.nivel,
+        getLocalizedExerciseSearchText(
+          {
+            ...item,
+            objetivo: "",
+            descricao: "",
+            instrucoesPadrao: "",
+            cuidados: "",
+            contraindicacoes: "",
+          },
+          language,
+        ),
         item.imagemKey,
-        ...(item.tags || []),
       ]
         .filter(Boolean)
         .join(" ")
-        .toLowerCase()
         .includes(term);
     });
-  }, [imageQueue, queueStatusFilter, search]);
+  }, [imageQueue, queueStatusFilter, search, language]);
 
   const editingItem = useMemo(
     () => items.find((item) => item.id === editingId) || null,
@@ -973,6 +974,7 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
             <View style={styles.visualColumn}>
               <AdminExerciseVisual
                 imageType={form.imagemKey}
+                media={editingPrimaryMedia}
                 title={form.nome}
               />
               <Text style={styles.sectionLabel}>Ilustração própria</Text>
@@ -1192,81 +1194,87 @@ export function AdminExerciseCatalogScreen({ navigation }: Props) {
             <Text style={styles.emptyText}>Nenhum exercício encontrado.</Text>
           ) : (
             <View style={styles.exerciseList}>
-              {filteredItems.map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={[
-                    styles.exerciseRow,
-                    editingId === item.id && styles.exerciseRowActive,
-                  ]}
-                  onPress={() => startEdit(item)}
-                >
-                  <AdminExerciseVisual
-                    imageType={item.imagemKey}
-                    title={item.nome}
-                    compact
-                  />
-                  <View style={styles.exerciseMeta}>
-                    <View style={styles.exerciseTitleRow}>
-                      <Text style={styles.exerciseName}>{item.nome}</Text>
-                      <StatusBadge status={item.status} />
-                      <ReviewBadge
-                        status={getPrimaryMedia(item)?.revisaoClinicaStatus}
-                      />
+              {filteredItems.map((item) => {
+                const localized = getLocalizedExerciseText(item, language);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={[
+                      styles.exerciseRow,
+                      editingId === item.id && styles.exerciseRowActive,
+                    ]}
+                    onPress={() => startEdit(item)}
+                  >
+                    <AdminExerciseVisual
+                      imageType={item.imagemKey}
+                      media={getPrimaryMedia(item)}
+                      title={localized.nome}
+                      compact
+                    />
+                    <View style={styles.exerciseMeta}>
+                      <View style={styles.exerciseTitleRow}>
+                        <Text style={styles.exerciseName}>
+                          {localized.nome}
+                        </Text>
+                        <StatusBadge status={item.status} />
+                        <ReviewBadge
+                          status={getPrimaryMedia(item)?.revisaoClinicaStatus}
+                        />
+                      </View>
+                      <Text style={styles.exerciseInfo}>
+                        {item.regiaoCorporal.replace(/_/g, " ")} •{" "}
+                        {item.categoria.replace(/_/g, " ")} • {item.nivel}
+                      </Text>
+                      <Text style={styles.exerciseObjective} numberOfLines={2}>
+                        {localized.objetivo}
+                      </Text>
+                      <Text style={styles.exerciseTags} numberOfLines={1}>
+                        {(item.tags || []).join(", ") || "sem tags"}
+                      </Text>
                     </View>
-                    <Text style={styles.exerciseInfo}>
-                      {item.regiaoCorporal.replace(/_/g, " ")} •{" "}
-                      {item.categoria.replace(/_/g, " ")} • {item.nivel}
-                    </Text>
-                    <Text style={styles.exerciseObjective} numberOfLines={2}>
-                      {item.objetivo}
-                    </Text>
-                    <Text style={styles.exerciseTags} numberOfLines={1}>
-                      {(item.tags || []).join(", ") || "sem tags"}
-                    </Text>
-                  </View>
-                  <View style={styles.rowActions}>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => startEdit(item)}
-                      activeOpacity={0.85}
-                    >
-                      <Ionicons
-                        name="create-outline"
-                        size={18}
-                        color={COLORS.primary}
-                      />
-                    </TouchableOpacity>
-                    {item.status !== "ARQUIVADO" && item.ativo ? (
+                    <View style={styles.rowActions}>
                       <TouchableOpacity
-                        style={[styles.iconButton, styles.iconButtonDanger]}
-                        onPress={() => confirmArchive(item)}
-                        disabled={archivingId === item.id}
+                        style={styles.iconButton}
+                        onPress={() => startEdit(item)}
                         activeOpacity={0.85}
                       >
                         <Ionicons
-                          name="archive-outline"
+                          name="create-outline"
                           size={18}
-                          color={COLORS.error}
+                          color={COLORS.primary}
                         />
                       </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.iconButton, styles.iconButtonSuccess]}
-                        onPress={() => confirmRestore(item)}
-                        disabled={restoringId === item.id}
-                        activeOpacity={0.85}
-                      >
-                        <Ionicons
-                          name="refresh-outline"
-                          size={18}
-                          color={COLORS.success}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </Pressable>
-              ))}
+                      {item.status !== "ARQUIVADO" && item.ativo ? (
+                        <TouchableOpacity
+                          style={[styles.iconButton, styles.iconButtonDanger]}
+                          onPress={() => confirmArchive(item)}
+                          disabled={archivingId === item.id}
+                          activeOpacity={0.85}
+                        >
+                          <Ionicons
+                            name="archive-outline"
+                            size={18}
+                            color={COLORS.error}
+                          />
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.iconButton, styles.iconButtonSuccess]}
+                          onPress={() => confirmRestore(item)}
+                          disabled={restoringId === item.id}
+                          activeOpacity={0.85}
+                        >
+                          <Ionicons
+                            name="refresh-outline"
+                            size={18}
+                            color={COLORS.success}
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
         </View>
@@ -1299,16 +1307,24 @@ function FilterChip({
 
 function AdminExerciseVisual({
   imageType,
+  media,
   title,
   compact,
 }: {
   imageType?: string | null;
+  media?: ExercicioMidia | null;
   title?: string | null;
   compact?: boolean;
 }) {
   if (imageType) {
     return (
-      <ExerciseVisual imageType={imageType} title={title} compact={compact} />
+      <ExerciseVisual
+        imageType={imageType}
+        imageUrl={getMediaImageUrl(media)}
+        cacheKey={imageType}
+        title={title}
+        compact={compact}
+      />
     );
   }
 

@@ -80,6 +80,12 @@ services:
         value: "30"
       - key: REDIS_URL
         sync: false
+      - key: REDIS_KEY_PREFIX
+        value: fisio-app
+      - key: CACHE_TTL_SECONDS
+        value: "60"
+      - key: CACHE_HEAVY_TTL_SECONDS
+        value: "120"
       - key: ALLOW_ADMIN_REGISTRATION
         value: "false"
       - key: MASTER_ADMIN_EMAILS

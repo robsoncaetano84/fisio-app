@@ -37,6 +37,32 @@ export class ExercicioMidia extends BaseEntity {
   @Column({ name: 'source_url', type: 'text', nullable: true })
   sourceUrl: string | null;
 
+  @Column({
+    name: 'storage_path',
+    type: 'varchar',
+    length: 512,
+    nullable: true,
+  })
+  storagePath: string | null;
+
+  @Column({ name: 'thumbnail_url', type: 'text', nullable: true })
+  thumbnailUrl: string | null;
+
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  imageUrl: string | null;
+
+  @Column({ name: 'mime_type', type: 'varchar', length: 80, nullable: true })
+  mimeType: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  width: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  height: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  bytes: number | null;
+
   @Column({ type: 'varchar', length: 140, nullable: true })
   author: string | null;
 

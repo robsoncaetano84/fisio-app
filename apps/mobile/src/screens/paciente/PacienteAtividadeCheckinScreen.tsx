@@ -129,7 +129,8 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
 
     if (!concluiu) {
       if (!motivoCategoria && !motivoNaoExecucao.trim()) {
-        next.motivoNaoExecucao = "Informe o motivo quando não concluir a atividade";
+        next.motivoNaoExecucao =
+          "Informe o motivo quando não concluir a atividade";
       }
       setErrors(next);
       return Object.keys(next).length === 0;
@@ -205,9 +206,12 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
           const delta = dorAntesInt - dorDepoisInt;
           if (delta > 0) {
             showToast({
-              message: `${t("patient.checkinGreat")} ${t("patient.checkinPainReduced", {
-                value: delta,
-              })}`,
+              message: `${t("patient.checkinGreat")} ${t(
+                "patient.checkinPainReduced",
+                {
+                  value: delta,
+                },
+              )}`,
               type: "success",
             });
           } else if (delta === 0) {
@@ -222,7 +226,10 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
             });
           }
         } else {
-          showToast({ message: "Check-in registrado com sucesso", type: "success" });
+          showToast({
+            message: "Check-in registrado com sucesso",
+            type: "success",
+          });
         }
       } else {
         await trackEvent("patient_checkin_not_completed", {
@@ -230,7 +237,10 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
           motivoCategoria: motivoCategoria || null,
           origem: "paciente",
         });
-        showToast({ message: "Check-in registrado com sucesso", type: "success" });
+        showToast({
+          message: "Check-in registrado com sucesso",
+          type: "success",
+        });
       }
       navigation.goBack();
     } catch (error) {
@@ -290,7 +300,8 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
           feedbackLivre: null,
         });
         showToast({
-          message: "Sem conexão. Check-in rápido salvo offline para sincronização.",
+          message:
+            "Sem conexão. Check-in rápido salvo offline para sincronização.",
           type: "info",
         });
         navigation.goBack();
@@ -313,6 +324,8 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
           <View style={styles.exerciseGuide}>
             <ExerciseVisual
               imageType={atividadeDetalhe?.imagemTipo}
+              imageUrl={atividadeDetalhe?.imagemUrl}
+              cacheKey={atividadeDetalhe?.imagemTipo || atividadeId}
               title={tituloAtual}
             />
             {loadingAtividadeDetalhe ? (
@@ -332,7 +345,9 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
             </View>
             {descricaoAtividade ? (
               <View style={styles.instructionBlock}>
-                <Text style={styles.instructionTitle}>Objetivo da prescrição</Text>
+                <Text style={styles.instructionTitle}>
+                  Objetivo da prescrição
+                </Text>
                 <Text style={styles.instructionText}>{descricaoAtividade}</Text>
               </View>
             ) : null}
@@ -356,7 +371,9 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
                 size={16}
                 color={concluiu ? COLORS.white : COLORS.primary}
               />
-              <Text style={[styles.toggleText, concluiu && styles.toggleTextActive]}>
+              <Text
+                style={[styles.toggleText, concluiu && styles.toggleTextActive]}
+              >
                 Concluí
               </Text>
             </TouchableOpacity>
@@ -369,7 +386,12 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
                 size={16}
                 color={!concluiu ? COLORS.white : COLORS.primary}
               />
-              <Text style={[styles.toggleText, !concluiu && styles.toggleTextActive]}>
+              <Text
+                style={[
+                  styles.toggleText,
+                  !concluiu && styles.toggleTextActive,
+                ]}
+              >
                 Não concluí
               </Text>
             </TouchableOpacity>
@@ -464,7 +486,8 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
                     <Text
                       style={[
                         styles.optionPillText,
-                        melhoriaSessao === item.value && styles.optionPillTextActive,
+                        melhoriaSessao === item.value &&
+                          styles.optionPillTextActive,
                       ]}
                     >
                       {item.label}
@@ -473,7 +496,9 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
                 ))}
               </View>
               {errors.melhoriaSessao ? (
-                <Text style={styles.validationError}>{errors.melhoriaSessao}</Text>
+                <Text style={styles.validationError}>
+                  {errors.melhoriaSessao}
+                </Text>
               ) : null}
 
               <Input
@@ -495,7 +520,10 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
                     onPress={() => {
                       setMotivoCategoria(motivo);
                       if (errors.motivoNaoExecucao) {
-                        setErrors((prev) => ({ ...prev, motivoNaoExecucao: "" }));
+                        setErrors((prev) => ({
+                          ...prev,
+                          motivoNaoExecucao: "",
+                        }));
                       }
                     }}
                     style={[
@@ -506,7 +534,8 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
                     <Text
                       style={[
                         styles.optionPillText,
-                        motivoCategoria === motivo && styles.optionPillTextActive,
+                        motivoCategoria === motivo &&
+                          styles.optionPillTextActive,
                       ]}
                     >
                       {motivo}
@@ -542,8 +571,16 @@ export function PacienteAtividadeCheckinScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.actions}>
-          <Button title="Cancelar" onPress={() => navigation.goBack()} variant="outline" />
-          <Button title="Salvar check-in" onPress={handleSalvar} loading={saving} />
+          <Button
+            title="Cancelar"
+            onPress={() => navigation.goBack()}
+            variant="outline"
+          />
+          <Button
+            title="Salvar check-in"
+            onPress={handleSalvar}
+            loading={saving}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

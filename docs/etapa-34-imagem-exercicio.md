@@ -6,6 +6,7 @@ A etapa 34 usa uma base propria de exercicios e ilustracoes locais do Synap.
 Nao usamos imagens aleatorias da internet, URL externa em prescricao, logo de terceiros ou geracao de imagem por IA a cada nova prescricao.
 
 Motivos:
+
 - custo recorrente zero para gerar/mostrar imagens;
 - padrao visual consistente no app;
 - menor risco de direito autoral, direito de imagem e atribuicao indevida;
@@ -17,11 +18,13 @@ Motivos:
 ### Backend
 
 Tabelas principais:
+
 - `exercicios`: catalogo proprio de exercicios, com nome, slug, regiao, categoria, nivel, objetivo, instrucoes, cuidados, contraindicacoes, tags, status e `imagem_key`.
 - `exercicio_midias`: metadados da midia propria, com `asset_key`, tipo, origem, autor, licenca, versao, revisao administrativa e revisao clinica da imagem.
 - `atividades`: prescricao do paciente. Guarda `exercicio_id`, `instrucoes_execucao`, `imagem_tipo` e mantem `imagem_url` apenas como legado tecnico, sempre nulo para novas prescricoes.
 
 Migrations relevantes:
+
 - `1780600000000-AddAtividadeExerciseImageFields`
 - `1780700000000-CreateExerciseCatalog`
 - `1780800000000-NormalizeExerciseImageFields`
@@ -32,6 +35,7 @@ Migrations relevantes:
 - `1781300000000-SeedPreviewExerciseCatalog`
 
 Regras atuais:
+
 - `imagemTipo` em atividade e `imagemKey` em exercicio aceitam somente chaves proprias conhecidas.
 - `imagem_url` legado e limpo pela migration `178080`.
 - o banco tem constraints para impedir chaves de imagem desconhecidas.
@@ -45,6 +49,7 @@ Regras atuais:
 - enquanto a midia principal estiver com revisao clinica diferente de `APROVADA`, o exercicio fica visivel somente para admin/manutencao.
 
 Chaves permitidas:
+
 - `MOBILIDADE_GERAL`
 - `MOBILIDADE_LOMBAR`
 - `CONTROLE_CERVICAL`
@@ -75,14 +80,16 @@ Chaves permitidas:
 ### Mobile
 
 Componente visual:
+
 - `ExerciseVisual` renderiza ilustracoes locais por `imagemTipo`.
 - nao renderiza URL remota;
 - usa JPG proprio otimizado para movimentos especificos gerados a partir da matriz anatomica do projeto;
 - mantem SVG local generico quando a prescricao nao possui `imagemTipo` especifico liberado;
-- mostra marca d'agua discreta `Synap` no componente, nao embutida no arquivo;
+- nao mostra marca d'agua no componente nem no arquivo;
 - e usado no fluxo do profissional e do paciente.
 
 Telas contempladas:
+
 - prescricao profissional: selecao pelo catalogo e pre-visualizacao da ilustracao;
 - tela do paciente: atividades do dia e atividades sem dia semanal;
 - check-in do paciente: imagem e instrucoes de execucao;
@@ -101,11 +108,13 @@ Telas contempladas:
 ## Governanca
 
 Status do exercicio:
+
 - `RASCUNHO`: disponivel para manutencao admin, nao aparece para prescricao.
 - `APROVADO`: disponivel para prescricao e sugestao.
 - `ARQUIVADO`: removido da prescricao e da sugestao, preservado para historico/admin.
 
 Revisao clinica:
+
 - o pacote das 18 imagens deve ser validado por profissional habilitado antes de liberacao ampla;
 - a matriz de revisao esta em `docs/etapa-34-revisao-clinica-imagens.md`;
 - a galeria local para conferencia visual esta em `docs/etapa-34-galeria-revisao-imagens.html`;
@@ -117,6 +126,7 @@ Revisao clinica:
 - somente midias com `revisao_clinica_status = APROVADA` entram no catalogo do profissional, no casamento da IA e na heranca de imagem da prescricao.
 
 Status de revisao clinica da midia:
+
 - `PENDENTE`: ainda precisa de validacao humana;
 - `APROVADA`: imagem liberada clinicamente;
 - `REGENERAR_IMAGEM`: asset precisa ser refeito;
@@ -124,27 +134,30 @@ Status de revisao clinica da midia:
 - `REMOVER_DO_CATALOGO`: exercicio nao deve seguir para prescricao neste momento.
 
 Midias:
+
 - `sourceType`: `PROPRIA`
 - `author`: `Synap`
 - `license`: `PROPRIETARIA_SYNAP`
-- `attributionText`: `Ilustracao propria Synap.`
+- `attributionText`: `Ilustração própria Synap.`
 
 Assets mobile:
-- caminho: `apps/mobile/assets/exercises`;
-- nome do arquivo em kebab-case, alinhado ao slug do exercicio;
-- formato JPG otimizado para reduzir o bundle mobile;
-- dimensao quadrada entre 1000px e 1600px por lado;
-- sem texto, logo ou marca d'agua no arquivo de imagem;
-- referencia visual: matriz anatomica masculina do projeto, com escala de cinza, fundo claro e destaque verde Synap.
 
-Previews de expansao ainda nao oficiais:
+- caminho: `apps/mobile/assets/exercises`;
+- nome do arquivo em kebab-case, alinhado ao slug do exercício;
+- formato JPG otimizado para reduzir o bundle mobile;
+- dimensão quadrada entre 1000px e 1600px por lado;
+- sem texto, logo ou marca d'água no arquivo de imagem;
+- referência visual: adulto neutro, sem identidade facial forte, roupa esportiva justa cinza-claro/off-white, sem logo, fundo claro, corpo em tons suaves de cinza e destaque verde Synap no músculo-alvo ou na direção do movimento.
+
+Previews de expansão ainda não oficiais:
+
 - `docs/etapa-34-galeria-preview-10-exercicios.html`;
 - `docs/etapa-34-galeria-preview-mais-20-exercicios.html`;
 - `docs/etapa-34-galeria-preview-lote-03-20-exercicios.html`;
 - `docs/etapa-34-galeria-preview-lote-04-20-exercicios.html`.
 
-Esses lotes ja foram convertidos para JPG otimizado, mapeados no mobile e
-criados no backend como rascunho. Eles ainda dependem de revisao clinica e
+Esses lotes já foram convertidos para JPG otimizado, mapeados no mobile e
+criados no backend como rascunho. Eles ainda dependem de revisão clínica e
 mudanca de status antes de aparecerem para prescricao.
 
 ## O que nao fazer
@@ -184,6 +197,7 @@ mudanca de status antes de aparecerem para prescricao.
 ## Expansao do catalogo inicial
 
 A migration `1781000000000-SeedExpandedExerciseCatalog` adiciona 10 exercicios aprovados ao catalogo proprio:
+
 - mobilidade toracica em rotacao sentada;
 - retracao escapular sentada;
 - isometria de rotacao externa de ombro;

@@ -1,18 +1,14 @@
-import React, { useMemo } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
+  Platform,
   StyleSheet,
   Text,
   type ImageSourcePropType,
   View,
 } from "react-native";
-import Svg, {
-  Circle,
-  Line,
-  Path,
-  Rect,
-  Text as SvgText,
-} from "react-native-svg";
+import * as FileSystem from "expo-file-system/legacy";
+import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
 import { BORDER_RADIUS, COLORS, FONTS, SPACING } from "../../constants/theme";
 
 export type ExerciseImageType =
@@ -27,6 +23,22 @@ export type ExerciseImageType =
   | "MOBILIDADE_LOMBAR_GATO_CAMELO"
   | "PONTE_CURTA"
   | "CONTROLE_CERVICAL_PROFUNDO"
+  | "RETRACAO_CERVICAL_EM_PE_PAREDE"
+  | "RETRACAO_CERVICAL_DECUBITO_TOALHA"
+  | "FLEXAO_CERVICAL_ATIVA_CURTA"
+  | "ROTACAO_CERVICAL_DECUBITO_DORSAL"
+  | "INCLINACAO_CERVICAL_SEM_APOIO_MANUAL"
+  | "ISOMETRIA_CERVICAL_FLEXAO_MAO"
+  | "ISOMETRIA_CERVICAL_EXTENSAO_PAREDE"
+  | "ISOMETRIA_CERVICAL_LATERAL_BILATERAL"
+  | "DESLIZAMENTO_CERVICAL_TOALHA"
+  | "ALONGAMENTO_ELEVADOR_ESCAPULA_SENTADO"
+  | "MOBILIDADE_SUBOCCIPITAL_TOALHA"
+  | "CONTROLE_OCULAR_CERVICAL_SENTADO"
+  | "PROTRACAO_RETRACAO_CERVICAL_SENTADA"
+  | "ABERTURA_MANDIBULAR_CONTROLADA"
+  | "DESVIO_LATERAL_MANDIBULAR_CONTROLADO"
+  | "PROTRUSAO_MANDIBULAR_SUAVE"
   | "ELEVACAO_ASSISTIDA_OMBRO"
   | "AGACHAMENTO_PARCIAL_ASSISTIDO"
   | "ABDUCAO_QUADRIL_DECUBITO_LATERAL"
@@ -111,7 +123,20 @@ export type ExerciseImageType =
   | "MARCHA_SENTADA"
   | "EXTENSAO_JOELHO_SENTADO_LONGA"
   | "ROTACAO_TRONCO_SENTADA"
-  | "APOIO_TANDEM_COM_APOIO";
+  | "APOIO_TANDEM_COM_APOIO"
+  | "DORSIFLEXAO_PAREDE_JOELHO_A_PAREDE"
+  | "MOBILIDADE_TORNOZELO_FAIXA_POSTERIOR"
+  | "ALONGAMENTO_GASTROCNEMIO_DEGRAU"
+  | "EVERSAO_TORNOZELO_ATIVA_SEM_FAIXA"
+  | "INVERSAO_TORNOZELO_ATIVA_SEM_FAIXA"
+  | "FLEXAO_EXTENSAO_DEDOS_PE"
+  | "ABDUCAO_DEDOS_PE"
+  | "ELEVACAO_ISOLADA_HALLUX"
+  | "ELEVACAO_DEDOS_MENORES_ISOLADA"
+  | "DOMING_FOOT_SENTADO"
+  | "DOMING_FOOT_EM_PE"
+  | "ELEVACAO_PANTURRILHA_UNILATERAL_APOIO"
+  | "ELEVACAO_TIBIAL_NA_PAREDE";
 
 export const EXERCISE_IMAGE_OPTIONS: Array<{
   value: ExerciseImageType;
@@ -150,8 +175,8 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   },
   {
     value: "TORNOZELO_EQUILIBRIO",
-    label: "Tornozelo/equilibrio",
-    hint: "Apoio e propriocepcao",
+    label: "Tornozelo/equilíbrio",
+    hint: "Apoio e propriocepção",
   },
   {
     value: "PUNHO_PREENSAO",
@@ -174,9 +199,89 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
     hint: "Recolher o queixo com baixa amplitude",
   },
   {
+    value: "RETRACAO_CERVICAL_EM_PE_PAREDE",
+    label: "Retração cervical em pé na parede",
+    hint: "Recolher o queixo com apoio posterior da parede",
+  },
+  {
+    value: "RETRACAO_CERVICAL_DECUBITO_TOALHA",
+    label: "Retração cervical em decúbito com toalha",
+    hint: "Chin tuck leve com nuca apoiada em toalha",
+  },
+  {
+    value: "FLEXAO_CERVICAL_ATIVA_CURTA",
+    label: "Flexão cervical ativa curta",
+    hint: "Flexão leve sem curvar o tronco",
+  },
+  {
+    value: "ROTACAO_CERVICAL_DECUBITO_DORSAL",
+    label: "Rotação cervical em decúbito dorsal",
+    hint: "Rotação leve da cabeça apoiada",
+  },
+  {
+    value: "INCLINACAO_CERVICAL_SEM_APOIO_MANUAL",
+    label: "Inclinação cervical sem apoio manual",
+    hint: "Inclinação lateral ativa com ombros nivelados",
+  },
+  {
+    value: "ISOMETRIA_CERVICAL_FLEXAO_MAO",
+    label: "Isometria cervical em flexão com mão",
+    hint: "Resistência manual suave na testa",
+  },
+  {
+    value: "ISOMETRIA_CERVICAL_EXTENSAO_PAREDE",
+    label: "Isometria cervical em extensão na parede",
+    hint: "Pressão posterior leve contra a parede",
+  },
+  {
+    value: "ISOMETRIA_CERVICAL_LATERAL_BILATERAL",
+    label: "Isometria cervical lateral bilateral",
+    hint: "Resistência manual lateral sem inclinar a cabeça",
+  },
+  {
+    value: "DESLIZAMENTO_CERVICAL_TOALHA",
+    label: "Deslizamento cervical com toalha",
+    hint: "Guia suave com toalha atrás do pescoço",
+  },
+  {
+    value: "ALONGAMENTO_ELEVADOR_ESCAPULA_SENTADO",
+    label: "Alongamento do elevador da escápula sentado",
+    hint: "Inclinação e rotação cervical suave",
+  },
+  {
+    value: "MOBILIDADE_SUBOCCIPITAL_TOALHA",
+    label: "Mobilidade suboccipital com toalha",
+    hint: "Micro-movimento com apoio na base do crânio",
+  },
+  {
+    value: "CONTROLE_OCULAR_CERVICAL_SENTADO",
+    label: "Controle ocular cervical sentado",
+    hint: "Olhos no alvo com rotação curta da cabeça",
+  },
+  {
+    value: "PROTRACAO_RETRACAO_CERVICAL_SENTADA",
+    label: "Protração e retração cervical sentada",
+    hint: "Deslizamento anterior e posterior da cabeça",
+  },
+  {
+    value: "ABERTURA_MANDIBULAR_CONTROLADA",
+    label: "Abertura mandibular controlada",
+    hint: "Abertura pequena e alinhada da mandíbula",
+  },
+  {
+    value: "DESVIO_LATERAL_MANDIBULAR_CONTROLADO",
+    label: "Desvio lateral mandibular controlado",
+    hint: "Deslocamento lateral curto da mandíbula",
+  },
+  {
+    value: "PROTRUSAO_MANDIBULAR_SUAVE",
+    label: "Protrusão mandibular suave",
+    hint: "Mandíbula inferior avança levemente",
+  },
+  {
     value: "ELEVACAO_ASSISTIDA_OMBRO",
-    label: "Elevacao assistida de ombro",
-    hint: "Elevacao com apoio e amplitude toleravel",
+    label: "Elevação assistida de ombro",
+    hint: "Elevação com apoio e amplitude tolerável",
   },
   {
     value: "AGACHAMENTO_PARCIAL_ASSISTIDO",
@@ -186,7 +291,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "ABDUCAO_QUADRIL_DECUBITO_LATERAL",
     label: "Abducao de quadril lateral",
-    hint: "Elevacao lateral da perna com pelve estavel",
+    hint: "Elevação lateral da perna com pelve estável",
   },
   {
     value: "EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO",
@@ -200,7 +305,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   },
   {
     value: "MOBILIDADE_TORACICA_ROTACAO_SENTADA",
-    label: "Rotacao toracica sentada",
+    label: "Rotação torácica sentada",
     hint: "Giro controlado do tronco em sedestacao",
   },
   {
@@ -260,7 +365,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   },
   {
     value: "ELEVACAO_PERNA_RETA",
-    label: "Elevacao de perna reta",
+    label: "Elevação de perna reta",
     hint: "Perna elevada com joelho estendido, pelve estavel e amplitude moderada",
   },
   {
@@ -275,13 +380,13 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   },
   {
     value: "ELEVACAO_PANTURRILHA_APOIO",
-    label: "Elevacao de panturrilha com apoio",
+    label: "Elevação de panturrilha com apoio",
     hint: "Subida controlada dos calcanhares, apoio seguro e tronco alinhado",
   },
   {
     value: "DORSIFLEXAO_TORNOZELO_FAIXA",
-    label: "Dorsiflexao de tornozelo com faixa",
-    hint: "Faixa no antepe, movimento de dorsiflexao e joelho sem compensacao",
+    label: "Dorsiflexão de tornozelo com faixa",
+    hint: "Faixa no antepé, movimento de dorsiflexão e joelho sem compensação",
   },
   {
     value: "ROTACAO_EXTERNA_OMBRO_FAIXA",
@@ -291,17 +396,17 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "REMADA_SENTADA_FAIXA",
     label: "Remada sentada com faixa",
-    hint: "Tronco ereto, escapulas controladas e cotovelos puxando para tras sem elevacao dos ombros",
+    hint: "Tronco ereto, escápulas controladas e cotovelos puxando para trás sem elevação dos ombros",
   },
   {
     value: "ABDUCAO_OMBRO_EM_PE",
     label: "Abducao de ombro em pe",
-    hint: "Elevacao lateral ate a linha do ombro, sem compensacao cervical ou elevacao excessiva da escapula",
+    hint: "Elevação lateral até a linha do ombro, sem compensação cervical ou elevação excessiva da escápula",
   },
   {
     value: "MOBILIDADE_TORACICA_QUATRO_APOIOS",
     label: "Mobilidade toracica em quatro apoios",
-    hint: "Rotacao toracica clara, pelve estavel e ausencia de carga excessiva cervical",
+    hint: "Rotação torácica clara, pelve estável e ausência de carga excessiva cervical",
   },
   {
     value: "DEAD_BUG_CONTROLE_LOMBOPELVICO",
@@ -336,7 +441,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "WALL_SLIDE_DESLIZAMENTO_BRACOS",
     label: "Wall slide",
-    hint: "Controle escapular, subida dos bracos e ausencia de elevacao compensatoria dos ombros",
+    hint: "Controle escapular, subida dos braços e ausência de elevação compensatória dos ombros",
   },
   {
     value: "PENDULAR_OMBRO_CODMAN",
@@ -346,7 +451,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "FLEXAO_OMBRO_BASTAO_DECUBITO",
     label: "Flexao de ombro com bastao",
-    hint: "Movimento assistido, amplitude confortavel e ausencia de compensacao cervical",
+    hint: "Movimento assistido, amplitude confortável e ausência de compensação cervical",
   },
   {
     value: "FLEXAO_EXTENSAO_COTOVELO_HALTER",
@@ -365,7 +470,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   },
   {
     value: "EVERSAO_TORNOZELO_FAIXA",
-    label: "Eversao de tornozelo com faixa",
+    label: "Eversão de tornozelo com faixa",
     hint: "Movimento do pe para fora, joelho estavel e faixa bem posicionada",
   },
   {
@@ -376,7 +481,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "FLEXAO_JOELHO_EM_PE_APOIO",
     label: "Flexao de joelho em pe com apoio",
-    hint: "Flexao do joelho sem compensacao lombar e apoio seguro",
+    hint: "Flexão do joelho sem compensação lombar e apoio seguro",
   },
   {
     value: "AGACHAMENTO_ISOMETRICO_PAREDE",
@@ -386,11 +491,11 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "PONTE_COM_MARCHA_ALTERNADA",
     label: "Ponte com marcha alternada",
-    hint: "Pelve nivelada, ponte sem hiperextensao e elevacao pequena do joelho",
+    hint: "Pelve nivelada, ponte sem hiperextensão e elevação pequena do joelho",
   },
   {
     value: "ELEVACAO_LATERAL_PERNA_EM_PE",
-    label: "Elevacao lateral de perna em pe",
+    label: "Elevação lateral de perna em pé",
     hint: "Pelve estavel, tronco sem inclinacao e amplitude baixa",
   },
   {
@@ -431,16 +536,16 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "FLEXAO_PLANTAR_FAIXA",
     label: "Flexao plantar com faixa",
-    hint: "Faixa no antepe, movimento para baixo e joelho sem compensacao",
+    hint: "Faixa no antepé, movimento para baixo e joelho sem compensação",
   },
   {
     value: "INVERSAO_TORNOZELO_FAIXA",
-    label: "Inversao de tornozelo com faixa",
+    label: "Inversão de tornozelo com faixa",
     hint: "Movimento do pe para dentro e joelho estavel",
   },
   {
     value: "CIRCULOS_TORNOZELO_SENTADO",
-    label: "Circulos de tornozelo sentado",
+    label: "Círculos de tornozelo sentado",
     hint: "Movimento circular no tornozelo, coxa estavel e tronco alinhado",
   },
   {
@@ -461,7 +566,7 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "ISOMETRIA_ABDUCAO_OMBRO_PAREDE",
     label: "Isometria de abducao de ombro na parede",
-    hint: "Pressao lateral, sem elevacao do ombro e sem inclinacao do tronco",
+    hint: "Pressão lateral, sem elevação do ombro e sem inclinação do tronco",
   },
   {
     value: "ROTACAO_INTERNA_OMBRO_FAIXA",
@@ -515,8 +620,8 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   },
   {
     value: "ELEVACAO_PLANO_ESCAPULA_SCAPTION",
-    label: "Elevacao no plano da escapula",
-    hint: "Elevacao no plano escapular, polegar para cima e ombro sem compensacao",
+    label: "Elevação no plano da escápula",
+    hint: "Elevação no plano escapular, polegar para cima e ombro sem compensação",
   },
   {
     value: "EXTENSAO_COTOVELO_FAIXA",
@@ -551,22 +656,87 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "CAMINHADA_CALCANHARES",
     label: "Caminhada nos calcanhares",
-    hint: "Dorsiflexao dos tornozelos, dedos elevados e postura ereta",
+    hint: "Dorsiflexão dos tornozelos, dedos elevados e postura ereta",
   },
   {
     value: "CAMINHADA_PONTA_PES",
-    label: "Caminhada na ponta dos pes",
-    hint: "Elevacao dos calcanhares, alinhamento dos tornozelos e equilibrio",
+    label: "Caminhada na ponta dos pés",
+    hint: "Elevação dos calcanhares, alinhamento dos tornozelos e equilíbrio",
   },
   {
     value: "SHORT_FOOT_ARCO_PLANTAR",
     label: "Short foot",
-    hint: "Elevacao sutil do arco sem flexionar excessivamente os dedos",
+    hint: "Elevação sutil do arco sem flexionar excessivamente os dedos",
   },
   {
     value: "ENRUGAR_TOALHA_DEDOS_PE",
     label: "Enrugar toalha com dedos",
     hint: "Dedos puxando a toalha, calcanhar apoiado e tornozelo estavel",
+  },
+  {
+    value: "DORSIFLEXAO_PAREDE_JOELHO_A_PAREDE",
+    label: "Dorsiflexão joelho à parede",
+    hint: "Joelho avança em direção à parede com o calcanhar apoiado",
+  },
+  {
+    value: "MOBILIDADE_TORNOZELO_FAIXA_POSTERIOR",
+    label: "Mobilidade de tornozelo com faixa",
+    hint: "Faixa no tornozelo, tração posterior e joelho avançando com controle",
+  },
+  {
+    value: "ALONGAMENTO_GASTROCNEMIO_DEGRAU",
+    label: "Alongamento de gastrocnêmio no degrau",
+    hint: "Joelho estendido, calcanhar desce no degrau e apoio seguro",
+  },
+  {
+    value: "EVERSAO_TORNOZELO_ATIVA_SEM_FAIXA",
+    label: "Eversão ativa de tornozelo",
+    hint: "Antepé gira para fora com joelho estável e sem faixa",
+  },
+  {
+    value: "INVERSAO_TORNOZELO_ATIVA_SEM_FAIXA",
+    label: "Inversão ativa de tornozelo",
+    hint: "Antepé gira para dentro com joelho estável e sem faixa",
+  },
+  {
+    value: "FLEXAO_EXTENSAO_DEDOS_PE",
+    label: "Flexão e extensão dos dedos do pé",
+    hint: "Dedos flexionam e estendem sem compensar no tornozelo",
+  },
+  {
+    value: "ABDUCAO_DEDOS_PE",
+    label: "Abdução dos dedos do pé",
+    hint: "Dedos afastam com arco controlado e calcanhar apoiado",
+  },
+  {
+    value: "ELEVACAO_ISOLADA_HALLUX",
+    label: "Elevação isolada do hálux",
+    hint: "Hálux eleva enquanto os dedos menores permanecem apoiados",
+  },
+  {
+    value: "ELEVACAO_DEDOS_MENORES_ISOLADA",
+    label: "Elevação isolada dos dedos menores",
+    hint: "Dedos menores elevam enquanto o hálux permanece apoiado",
+  },
+  {
+    value: "DOMING_FOOT_SENTADO",
+    label: "Doming foot sentado",
+    hint: "Arco plantar sobe suavemente sem enrolar os dedos",
+  },
+  {
+    value: "DOMING_FOOT_EM_PE",
+    label: "Doming foot em pé",
+    hint: "Arco plantar ativo em apoio, com dedos relaxados",
+  },
+  {
+    value: "ELEVACAO_PANTURRILHA_UNILATERAL_APOIO",
+    label: "Elevação unilateral de panturrilha",
+    hint: "Subida controlada do calcanhar com apoio leve para equilíbrio",
+  },
+  {
+    value: "ELEVACAO_TIBIAL_NA_PAREDE",
+    label: "Elevação tibial na parede",
+    hint: "Calcanhares apoiados e dedos elevando em direção às canelas",
   },
   {
     value: "ROTACAO_CERVICAL_SENTADA",
@@ -576,12 +746,12 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "EXTENSAO_CERVICAL_SENTADA",
     label: "Extensao cervical sentada",
-    hint: "Extensao cervical controlada, sem exagero de amplitude ou compensacao toracica",
+    hint: "Extensão cervical controlada, sem exagero de amplitude ou compensação torácica",
   },
   {
     value: "MARCHA_SENTADA",
     label: "Marcha sentada",
-    hint: "Elevacao alternada do joelho, tronco ereto e apoio estavel na cadeira",
+    hint: "Elevação alternada do joelho, tronco ereto e apoio estável na cadeira",
   },
   {
     value: "EXTENSAO_JOELHO_SENTADO_LONGA",
@@ -591,12 +761,12 @@ export const EXERCISE_IMAGE_OPTIONS: Array<{
   {
     value: "ROTACAO_TRONCO_SENTADA",
     label: "Rotacao de tronco sentada",
-    hint: "Rotacao toracica controlada, pelve estavel e pes apoiados",
+    hint: "Rotação torácica controlada, pelve estável e pés apoiados",
   },
   {
     value: "APOIO_TANDEM_COM_APOIO",
     label: "Apoio tandem com apoio",
-    hint: "Pes em linha, apoio leve da mao e tronco sem inclinacao lateral",
+    hint: "Pés em linha, apoio leve da mão e tronco sem inclinação lateral",
   },
 ];
 
@@ -608,6 +778,22 @@ const EXERCISE_IMAGE_ASSETS: Partial<
   MOBILIDADE_LOMBAR_GATO_CAMELO: require("../../../assets/exercises/mobilidade-lombar-gato-camelo.jpg"),
   PONTE_CURTA: require("../../../assets/exercises/ponte-curta.jpg"),
   CONTROLE_CERVICAL_PROFUNDO: require("../../../assets/exercises/controle-cervical-profundo.jpg"),
+  RETRACAO_CERVICAL_EM_PE_PAREDE: require("../../../assets/exercises/retracao-cervical-em-pe-na-parede.jpg"),
+  RETRACAO_CERVICAL_DECUBITO_TOALHA: require("../../../assets/exercises/retracao-cervical-em-decubito-com-toalha.jpg"),
+  FLEXAO_CERVICAL_ATIVA_CURTA: require("../../../assets/exercises/flexao-cervical-ativa-curta.jpg"),
+  ROTACAO_CERVICAL_DECUBITO_DORSAL: require("../../../assets/exercises/rotacao-cervical-em-decubito-dorsal.jpg"),
+  INCLINACAO_CERVICAL_SEM_APOIO_MANUAL: require("../../../assets/exercises/inclinacao-cervical-sem-apoio-manual.jpg"),
+  ISOMETRIA_CERVICAL_FLEXAO_MAO: require("../../../assets/exercises/isometria-cervical-em-flexao-com-mao.jpg"),
+  ISOMETRIA_CERVICAL_EXTENSAO_PAREDE: require("../../../assets/exercises/isometria-cervical-em-extensao-na-parede.jpg"),
+  ISOMETRIA_CERVICAL_LATERAL_BILATERAL: require("../../../assets/exercises/isometria-cervical-lateral-bilateral.jpg"),
+  DESLIZAMENTO_CERVICAL_TOALHA: require("../../../assets/exercises/deslizamento-cervical-com-toalha.jpg"),
+  ALONGAMENTO_ELEVADOR_ESCAPULA_SENTADO: require("../../../assets/exercises/alongamento-elevador-da-escapula-sentado.jpg"),
+  MOBILIDADE_SUBOCCIPITAL_TOALHA: require("../../../assets/exercises/mobilidade-suboccipital-com-toalha.jpg"),
+  CONTROLE_OCULAR_CERVICAL_SENTADO: require("../../../assets/exercises/controle-ocular-cervical-sentado.jpg"),
+  PROTRACAO_RETRACAO_CERVICAL_SENTADA: require("../../../assets/exercises/protracao-retracao-cervical-sentada.jpg"),
+  ABERTURA_MANDIBULAR_CONTROLADA: require("../../../assets/exercises/abertura-mandibular-controlada.jpg"),
+  DESVIO_LATERAL_MANDIBULAR_CONTROLADO: require("../../../assets/exercises/desvio-lateral-mandibular-controlado.jpg"),
+  PROTRUSAO_MANDIBULAR_SUAVE: require("../../../assets/exercises/protrusao-mandibular-suave.jpg"),
   ELEVACAO_ASSISTIDA_OMBRO: require("../../../assets/exercises/elevacao-assistida-ombro.jpg"),
   AGACHAMENTO_PARCIAL_ASSISTIDO: require("../../../assets/exercises/agachamento-parcial-assistido.jpg"),
   ABDUCAO_QUADRIL_DECUBITO_LATERAL: require("../../../assets/exercises/abducao-quadril-decubito-lateral.jpg"),
@@ -687,6 +873,19 @@ const EXERCISE_IMAGE_ASSETS: Partial<
   CAMINHADA_PONTA_PES: require("../../../assets/exercises/caminhada-ponta-pes.jpg"),
   SHORT_FOOT_ARCO_PLANTAR: require("../../../assets/exercises/short-foot-arco-plantar.jpg"),
   ENRUGAR_TOALHA_DEDOS_PE: require("../../../assets/exercises/enrugar-toalha-dedos-pe.jpg"),
+  DORSIFLEXAO_PAREDE_JOELHO_A_PAREDE: require("../../../assets/exercises/dorsiflexao-parede-joelho-a-parede.jpg"),
+  MOBILIDADE_TORNOZELO_FAIXA_POSTERIOR: require("../../../assets/exercises/mobilidade-tornozelo-com-faixa-posterior.jpg"),
+  ALONGAMENTO_GASTROCNEMIO_DEGRAU: require("../../../assets/exercises/alongamento-gastrocnemio-no-degrau.jpg"),
+  EVERSAO_TORNOZELO_ATIVA_SEM_FAIXA: require("../../../assets/exercises/eversao-tornozelo-ativa-sem-faixa.jpg"),
+  INVERSAO_TORNOZELO_ATIVA_SEM_FAIXA: require("../../../assets/exercises/inversao-tornozelo-ativa-sem-faixa.jpg"),
+  FLEXAO_EXTENSAO_DEDOS_PE: require("../../../assets/exercises/flexao-extensao-dedos-do-pe.jpg"),
+  ABDUCAO_DEDOS_PE: require("../../../assets/exercises/abducao-dedos-do-pe.jpg"),
+  ELEVACAO_ISOLADA_HALLUX: require("../../../assets/exercises/elevacao-isolada-do-hallux.jpg"),
+  ELEVACAO_DEDOS_MENORES_ISOLADA: require("../../../assets/exercises/elevacao-dedos-menores-isolada.jpg"),
+  DOMING_FOOT_SENTADO: require("../../../assets/exercises/doming-foot-sentado.jpg"),
+  DOMING_FOOT_EM_PE: require("../../../assets/exercises/doming-foot-em-pe.jpg"),
+  ELEVACAO_PANTURRILHA_UNILATERAL_APOIO: require("../../../assets/exercises/elevacao-panturrilha-unilateral-apoio.jpg"),
+  ELEVACAO_TIBIAL_NA_PAREDE: require("../../../assets/exercises/elevacao-tibial-na-parede.jpg"),
   ROTACAO_CERVICAL_SENTADA: require("../../../assets/exercises/rotacao-cervical-sentada.jpg"),
   EXTENSAO_CERVICAL_SENTADA: require("../../../assets/exercises/extensao-cervical-sentada.jpg"),
   MARCHA_SENTADA: require("../../../assets/exercises/marcha-sentada.jpg"),
@@ -706,12 +905,18 @@ function normalizeText(value: unknown) {
 export function normalizeExerciseImageType(
   value?: string | null,
 ): ExerciseImageType {
-  const normalized = String(value || "").trim().toUpperCase();
-  const match = EXERCISE_IMAGE_OPTIONS.find((item) => item.value === normalized);
+  const normalized = String(value || "")
+    .trim()
+    .toUpperCase();
+  const match = EXERCISE_IMAGE_OPTIONS.find(
+    (item) => item.value === normalized,
+  );
   return match?.value || DEFAULT_TYPE;
 }
 
-export function inferExerciseImageType(...values: unknown[]): ExerciseImageType {
+export function inferExerciseImageType(
+  ...values: unknown[]
+): ExerciseImageType {
   const text = normalizeText(values.join(" "));
   const hasAny = (terms: string[]) => terms.some((term) => text.includes(term));
 
@@ -1815,15 +2020,84 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "JOELHO_AGACHAMENTO") {
     return (
       <>
-        <Circle cx="84" cy="30" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Line x1="84" y1="42" x2="76" y2="84" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="76" y1="84" x2="110" y2="102" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="110" y1="102" x2="138" y2="126" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="78" y1="82" x2="42" y2="110" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="42" y1="110" x2="28" y2="138" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="76" y1="56" x2="42" y2="70" stroke={muted} strokeWidth="4" strokeLinecap="round" />
-        <Line x1="86" y1="58" x2="120" y2="72" stroke={muted} strokeWidth="4" strokeLinecap="round" />
-        <Path d="M96 101 C108 92 122 93 136 103" stroke={accent} strokeWidth="5" fill="none" strokeLinecap="round" />
+        <Circle
+          cx="84"
+          cy="30"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Line
+          x1="84"
+          y1="42"
+          x2="76"
+          y2="84"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="76"
+          y1="84"
+          x2="110"
+          y2="102"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="110"
+          y1="102"
+          x2="138"
+          y2="126"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="78"
+          y1="82"
+          x2="42"
+          y2="110"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="42"
+          y1="110"
+          x2="28"
+          y2="138"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="76"
+          y1="56"
+          x2="42"
+          y2="70"
+          stroke={muted}
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="86"
+          y1="58"
+          x2="120"
+          y2="72"
+          stroke={muted}
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M96 101 C108 92 122 93 136 103"
+          stroke={accent}
+          strokeWidth="5"
+          fill="none"
+          strokeLinecap="round"
+        />
       </>
     );
   }
@@ -1831,13 +2105,66 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "OMBRO_MANGUITO") {
     return (
       <>
-        <Circle cx="82" cy="28" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Line x1="82" y1="42" x2="82" y2="96" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="82" y1="56" x2="42" y2="34" stroke={accent} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="82" y1="56" x2="122" y2="34" stroke={accent} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="82" y1="96" x2="58" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="82" y1="96" x2="106" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Path d="M36 64 C56 50 108 50 128 64" stroke={muted} strokeWidth="3" fill="none" strokeDasharray="4 6" />
+        <Circle
+          cx="82"
+          cy="28"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Line
+          x1="82"
+          y1="42"
+          x2="82"
+          y2="96"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="56"
+          x2="42"
+          y2="34"
+          stroke={accent}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="56"
+          x2="122"
+          y2="34"
+          stroke={accent}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="96"
+          x2="58"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="96"
+          x2="106"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M36 64 C56 50 108 50 128 64"
+          stroke={muted}
+          strokeWidth="3"
+          fill="none"
+          strokeDasharray="4 6"
+        />
       </>
     );
   }
@@ -1845,13 +2172,64 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "CONTROLE_CERVICAL") {
     return (
       <>
-        <Circle cx="84" cy="28" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Line x1="84" y1="42" x2="84" y2="94" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="60" y1="58" x2="108" y2="58" stroke={muted} strokeWidth="5" strokeLinecap="round" />
-        <Line x1="84" y1="94" x2="62" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="84" y1="94" x2="106" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Path d="M67 32 C78 18 92 18 102 32" stroke={accent} strokeWidth="4" fill="none" strokeLinecap="round" />
-        <Path d="M56 48 C70 40 98 40 112 48" stroke={accent} strokeWidth="4" fill="none" strokeLinecap="round" />
+        <Circle
+          cx="84"
+          cy="28"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Line
+          x1="84"
+          y1="42"
+          x2="84"
+          y2="94"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="60"
+          y1="58"
+          x2="108"
+          y2="58"
+          stroke={muted}
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="84"
+          y1="94"
+          x2="62"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="84"
+          y1="94"
+          x2="106"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M67 32 C78 18 92 18 102 32"
+          stroke={accent}
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M56 48 C70 40 98 40 112 48"
+          stroke={accent}
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+        />
       </>
     );
   }
@@ -1859,12 +2237,55 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "MOBILIDADE_LOMBAR") {
     return (
       <>
-        <Circle cx="80" cy="30" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Path d="M82 44 C68 58 66 78 80 96" stroke={stroke} strokeWidth="7" fill="none" strokeLinecap="round" />
-        <Line x1="78" y1="62" x2="44" y2="82" stroke={muted} strokeWidth="4" strokeLinecap="round" />
-        <Line x1="80" y1="96" x2="52" y2="134" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="82" y1="96" x2="112" y2="134" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Path d="M96 74 C118 82 128 98 126 120" stroke={accent} strokeWidth="5" fill="none" strokeLinecap="round" />
+        <Circle
+          cx="80"
+          cy="30"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Path
+          d="M82 44 C68 58 66 78 80 96"
+          stroke={stroke}
+          strokeWidth="7"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="78"
+          y1="62"
+          x2="44"
+          y2="82"
+          stroke={muted}
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="80"
+          y1="96"
+          x2="52"
+          y2="134"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="96"
+          x2="112"
+          y2="134"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M96 74 C118 82 128 98 126 120"
+          stroke={accent}
+          strokeWidth="5"
+          fill="none"
+          strokeLinecap="round"
+        />
       </>
     );
   }
@@ -1872,12 +2293,59 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "QUADRIL_GLUTEOS") {
     return (
       <>
-        <Circle cx="78" cy="28" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Line x1="78" y1="42" x2="78" y2="86" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="78" y1="86" x2="44" y2="128" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="78" y1="86" x2="118" y2="112" stroke={accent} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="118" y1="112" x2="142" y2="112" stroke={accent} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="60" y1="58" x2="104" y2="58" stroke={muted} strokeWidth="5" strokeLinecap="round" />
+        <Circle
+          cx="78"
+          cy="28"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Line
+          x1="78"
+          y1="42"
+          x2="78"
+          y2="86"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="78"
+          y1="86"
+          x2="44"
+          y2="128"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="78"
+          y1="86"
+          x2="118"
+          y2="112"
+          stroke={accent}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="118"
+          y1="112"
+          x2="142"
+          y2="112"
+          stroke={accent}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="60"
+          y1="58"
+          x2="104"
+          y2="58"
+          stroke={muted}
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
       </>
     );
   }
@@ -1885,13 +2353,66 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "TORNOZELO_EQUILIBRIO") {
     return (
       <>
-        <Circle cx="82" cy="28" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Line x1="82" y1="42" x2="82" y2="88" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="82" y1="58" x2="50" y2="70" stroke={muted} strokeWidth="5" strokeLinecap="round" />
-        <Line x1="82" y1="58" x2="116" y2="46" stroke={muted} strokeWidth="5" strokeLinecap="round" />
-        <Line x1="82" y1="88" x2="76" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="76" y1="136" x2="104" y2="140" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Path d="M44 146 C70 134 100 134 126 146" stroke={accent} strokeWidth="4" fill="none" strokeLinecap="round" />
+        <Circle
+          cx="82"
+          cy="28"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Line
+          x1="82"
+          y1="42"
+          x2="82"
+          y2="88"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="58"
+          x2="50"
+          y2="70"
+          stroke={muted}
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="58"
+          x2="116"
+          y2="46"
+          stroke={muted}
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="82"
+          y1="88"
+          x2="76"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="76"
+          y1="136"
+          x2="104"
+          y2="140"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M44 146 C70 134 100 134 126 146"
+          stroke={accent}
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+        />
       </>
     );
   }
@@ -1899,37 +2420,151 @@ function Pose({ type }: { type: ExerciseImageType }) {
   if (type === "PUNHO_PREENSAO") {
     return (
       <>
-        <Circle cx="70" cy="30" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-        <Line x1="70" y1="44" x2="70" y2="94" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="70" y1="58" x2="116" y2="80" stroke={accent} strokeWidth="6" strokeLinecap="round" />
-        <Circle cx="132" cy="88" r="12" fill="none" stroke={accent} strokeWidth="4" />
-        <Line x1="70" y1="94" x2="48" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Line x1="70" y1="94" x2="92" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-        <Path d="M120 70 C134 74 142 82 146 96" stroke={muted} strokeWidth="3" fill="none" strokeDasharray="4 5" />
+        <Circle
+          cx="70"
+          cy="30"
+          r="10"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="4"
+        />
+        <Line
+          x1="70"
+          y1="44"
+          x2="70"
+          y2="94"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="70"
+          y1="58"
+          x2="116"
+          y2="80"
+          stroke={accent}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Circle
+          cx="132"
+          cy="88"
+          r="12"
+          fill="none"
+          stroke={accent}
+          strokeWidth="4"
+        />
+        <Line
+          x1="70"
+          y1="94"
+          x2="48"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Line
+          x1="70"
+          y1="94"
+          x2="92"
+          y2="136"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M120 70 C134 74 142 82 146 96"
+          stroke={muted}
+          strokeWidth="3"
+          fill="none"
+          strokeDasharray="4 5"
+        />
       </>
     );
   }
 
   return (
     <>
-      <Circle cx="82" cy="28" r="10" fill="none" stroke={stroke} strokeWidth="4" />
-      <Line x1="82" y1="42" x2="82" y2="92" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-      <Line x1="82" y1="58" x2="48" y2="82" stroke={muted} strokeWidth="5" strokeLinecap="round" />
-      <Line x1="82" y1="58" x2="116" y2="82" stroke={muted} strokeWidth="5" strokeLinecap="round" />
-      <Line x1="82" y1="92" x2="56" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-      <Line x1="82" y1="92" x2="108" y2="136" stroke={stroke} strokeWidth="6" strokeLinecap="round" />
-      <Path d="M42 112 C62 100 102 100 122 112" stroke={accent} strokeWidth="4" fill="none" strokeLinecap="round" />
+      <Circle
+        cx="82"
+        cy="28"
+        r="10"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="4"
+      />
+      <Line
+        x1="82"
+        y1="42"
+        x2="82"
+        y2="92"
+        stroke={stroke}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="82"
+        y1="58"
+        x2="48"
+        y2="82"
+        stroke={muted}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="82"
+        y1="58"
+        x2="116"
+        y2="82"
+        stroke={muted}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="82"
+        y1="92"
+        x2="56"
+        y2="136"
+        stroke={stroke}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="82"
+        y1="92"
+        x2="108"
+        y2="136"
+        stroke={stroke}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M42 112 C62 100 102 100 122 112"
+        stroke={accent}
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
     </>
   );
 }
 
 type Props = {
   imageType?: string | null;
+  imageUrl?: string | null;
+  thumbnailUrl?: string | null;
+  cacheKey?: string | null;
   title?: string | null;
   compact?: boolean;
 };
 
-export function ExerciseVisual({ imageType, compact }: Props) {
+export function ExerciseVisual({
+  imageType,
+  imageUrl,
+  thumbnailUrl,
+  cacheKey,
+  compact,
+}: Props) {
   const resolvedType = useMemo(
     () => (imageType ? normalizeExerciseImageType(imageType) : DEFAULT_TYPE),
     [imageType],
@@ -1938,8 +2573,14 @@ export function ExerciseVisual({ imageType, compact }: Props) {
     EXERCISE_IMAGE_OPTIONS.find((item) => item.value === resolvedType) ||
     EXERCISE_IMAGE_OPTIONS[0];
   const asset = EXERCISE_IMAGE_ASSETS[resolvedType];
+  const remoteUrl = normalizeRemoteImageUrl(thumbnailUrl || imageUrl);
+  const remoteSource = useCachedExerciseImage(
+    remoteUrl,
+    cacheKey || imageType || resolvedType,
+  );
+  const rasterSource = remoteSource || asset;
 
-  if (asset) {
+  if (rasterSource) {
     return (
       <View
         style={[
@@ -1949,10 +2590,11 @@ export function ExerciseVisual({ imageType, compact }: Props) {
           compact && styles.frameCompact,
         ]}
       >
-        <Image source={asset} style={styles.exerciseImage} resizeMode="contain" />
-        <Text style={[styles.watermark, compact && styles.watermarkCompact]}>
-          Synap
-        </Text>
+        <Image
+          source={rasterSource}
+          style={styles.exerciseImage}
+          resizeMode="contain"
+        />
         {!compact ? (
           <View style={styles.caption}>
             <Text style={styles.captionTitle}>{option.label}</Text>
@@ -1964,22 +2606,22 @@ export function ExerciseVisual({ imageType, compact }: Props) {
   }
 
   return (
-    <View style={[styles.frame, styles.generatedFrame, compact && styles.frameCompact]}>
+    <View
+      style={[
+        styles.frame,
+        styles.generatedFrame,
+        compact && styles.frameCompact,
+      ]}
+    >
       <Svg width="100%" height="100%" viewBox="0 0 168 168">
         <Rect x="8" y="8" width="152" height="152" rx="18" fill="#F7FBFA" />
-        <Path d="M24 140 H144" stroke={COLORS.gray300} strokeWidth="5" strokeLinecap="round" />
+        <Path
+          d="M24 140 H144"
+          stroke={COLORS.gray300}
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
         <Pose type={resolvedType} />
-        <SvgText
-          x="132"
-          y="151"
-          fill={COLORS.gray400}
-          fontSize="11"
-          fontWeight="700"
-          opacity="0.72"
-          textAnchor="middle"
-        >
-          Synap
-        </SvgText>
       </Svg>
       {!compact ? (
         <View style={styles.caption}>
@@ -1989,6 +2631,113 @@ export function ExerciseVisual({ imageType, compact }: Props) {
       ) : null}
     </View>
   );
+}
+
+function useCachedExerciseImage(
+  remoteUrl: string | null,
+  cacheKey?: string | null,
+): ImageSourcePropType | null {
+  const [source, setSource] = useState<ImageSourcePropType | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!remoteUrl) {
+      setSource(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const url = remoteUrl;
+
+    if (Platform.OS === "web") {
+      setSource({ uri: url });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const cacheBase = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+    if (!cacheBase) {
+      setSource({ uri: url });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const cacheDir = `${cacheBase}synap-exercise-images/`;
+    const extension = getRemoteImageExtension(url);
+    const safeKey = toSafeCacheKey(cacheKey || "exercise");
+    const localUri = `${cacheDir}${safeKey}-${hashText(url)}.${extension}`;
+
+    async function cacheRemoteImage() {
+      try {
+        await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
+        const info = await FileSystem.getInfoAsync(localUri);
+        if (cancelled) return;
+
+        if (info.exists) {
+          setSource({ uri: localUri });
+          return;
+        }
+
+        const downloaded = await FileSystem.downloadAsync(url, localUri);
+        if (cancelled) return;
+
+        if (downloaded.status >= 200 && downloaded.status < 300) {
+          setSource({ uri: downloaded.uri });
+        } else {
+          setSource({ uri: url });
+        }
+      } catch {
+        if (!cancelled) {
+          setSource({ uri: url });
+        }
+      }
+    }
+
+    cacheRemoteImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [remoteUrl, cacheKey]);
+
+  return source;
+}
+
+function normalizeRemoteImageUrl(value?: string | null): string | null {
+  const normalized = String(value || "").trim();
+  if (!normalized) return null;
+  return /^https?:\/\//i.test(normalized) ? normalized : null;
+}
+
+function getRemoteImageExtension(value: string): string {
+  const path = value.split("?")[0]?.toLowerCase() || "";
+  const extension = path.match(/\.([a-z0-9]+)$/)?.[1];
+  if (extension && ["jpg", "jpeg", "png", "webp"].includes(extension)) {
+    return extension === "jpeg" ? "jpg" : extension;
+  }
+  return "jpg";
+}
+
+function toSafeCacheKey(value: string): string {
+  const safe = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return safe || "exercise";
+}
+
+function hashText(value: string): string {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash.toString(36);
 }
 
 const styles = StyleSheet.create({
@@ -2014,20 +2763,6 @@ const styles = StyleSheet.create({
   exerciseImage: {
     width: "100%",
     height: "100%",
-  },
-  watermark: {
-    position: "absolute",
-    right: SPACING.sm,
-    bottom: 66,
-    color: COLORS.gray400,
-    fontSize: 11,
-    fontWeight: "700",
-    opacity: 0.5,
-  },
-  watermarkCompact: {
-    right: 6,
-    bottom: 4,
-    fontSize: 9,
   },
   caption: {
     position: "absolute",

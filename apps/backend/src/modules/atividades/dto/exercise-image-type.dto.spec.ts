@@ -163,7 +163,8 @@ describe('exercise image DTO validation', () => {
     ).toBe(true);
   });
 
-  it('keeps the master catalog as draft exercises without images', () => {
+  it('keeps the master catalog as draft exercises with optional image keys', () => {
+    const allowedTypes = new Set(EXERCISE_IMAGE_TYPES);
     const slugs = MASTER_EXERCISE_CATALOG.map((item) => item.slug);
     const allSlugs = [
       ...INITIAL_EXERCISE_CATALOG.map((item) => item.slug),
@@ -178,7 +179,8 @@ describe('exercise image DTO validation', () => {
     expect(
       MASTER_EXERCISE_CATALOG.every(
         (item) =>
-          item.status === ExercicioStatus.RASCUNHO && item.imagemKey === null,
+          item.status === ExercicioStatus.RASCUNHO &&
+          (item.imagemKey === null || allowedTypes.has(item.imagemKey)),
       ),
     ).toBe(true);
   });

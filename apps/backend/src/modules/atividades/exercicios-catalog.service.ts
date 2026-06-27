@@ -4,19 +4,27 @@ import {
   Injectable,
   NotFoundException,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Not, Repository, SelectQueryBuilder } from 'typeorm';
 import { CreateExercicioCatalogDto } from './dto/create-exercicio-catalog.dto';
+import { UpdateExercicioMidiaStorageDto } from './dto/update-exercicio-midia-storage.dto';
 import { UpdateExercicioMidiaClinicalReviewDto } from './dto/update-exercicio-midia-clinical-review.dto';
 import { UpdateExercicioCatalogDto } from './dto/update-exercicio-catalog.dto';
 import { Exercicio, ExercicioStatus } from './entities/exercicio.entity';
+import {
+  ExerciseTranslations,
+  buildExerciseLocalization,
+  normalizeExerciseTranslations,
+} from './exercise-catalog-localization';
 import {
   ExercicioMidia,
   ExercicioMidiaRevisaoClinicaStatus,
 } from './entities/exercicio-midia.entity';
 import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
+import { RedisService } from '../../common/redis.service';
 
 export type ExercicioCatalogFilters = {
   q?: string;
@@ -60,6 +68,7 @@ export type ExercicioImageQueueItem = {
   filaStatus: ExercicioImageQueueStatus;
   prioridade: number;
   tags: string[];
+  translations: ExerciseTranslations;
 };
 
 export type ExercicioImageQueueAppliedFilters = {
@@ -114,6 +123,56 @@ type ExercicioImageQueueCandidate = {
   queueItem: ExercicioImageQueueItem;
 };
 
+const EXERCISE_IMAGE_VISUAL_STANDARD = [
+  'Adulto neutro, sem identidade facial forte e sem aparência de pessoa real identificável.',
+  'Roupa esportiva justa cinza-claro/off-white, sem logo e sem variação de figurino entre exercícios.',
+  'Fundo claro, limpo e uniforme, sem cenário clínico poluído e sem objetos desnecessários.',
+  'Corpo e roupa em tons suaves de cinza, com anatomia limpa e leitura boa em miniatura.',
+  'Destaque verde Synap somente no músculo-alvo ou na direção do movimento, com setas discretas quando ajudarem a compreensão.',
+  "Sem texto embutido, sem logo, sem assinatura, sem marca d'água e sem marca de terceiros.",
+] as const;
+
+const EXERCISE_IMAGE_VISUAL_REJECTION_CRITERIA = [
+  'roupa escura, colorida, com logo ou diferente do padrão cinza-claro/off-white',
+  'torso exposto, nudez anatômica, músculos expostos ou aparência de atlas anatômico sem roupa',
+  'rosto borrado, identidade facial forte demais ou aparência de pessoa real identificável',
+  'fundo escuro, cenário clínico poluído, sombras pesadas ou objetos que não fazem parte do exercício',
+  'destaque verde excessivo, em região errada ou sem relação com o movimento prescrito',
+  "texto embutido, marca d'água, assinatura, letras, números ou artefatos de geração",
+  'pose clinicamente impossível, ambígua, com contralateralidade incorreta ou apoio incoerente',
+  'recorte que prejudique mãos, pés, apoios, direção do movimento ou leitura em miniatura',
+] as const;
+
+const EXERCISE_IMAGE_NEGATIVE_PROMPT = [
+  'logos externos',
+  'texto na imagem',
+  "marca d'água",
+  'assinatura',
+  'números',
+  'letras',
+  'pessoas reais identificáveis',
+  'foto stock',
+  'rosto borrado',
+  'identidade facial forte',
+  'variação forte de rosto entre assets',
+  'roupa escura',
+  'roupa colorida',
+  'logo na roupa',
+  'corpo sem roupa',
+  'nudez anatômica',
+  'tórax exposto',
+  'músculos expostos como atlas anatômico',
+  'baixa resolução',
+  'anatomia deformada',
+  'membros extras',
+  'lado errado',
+  'articulações impossíveis',
+  'apoio incoerente',
+  'amplitude agressiva',
+  'fundo poluído',
+  'objetos desnecessários',
+] as const;
+
 export type ExercicioSuggestionMatchInput = {
   titulo?: string | null;
   descricao?: string | null;
@@ -128,6 +187,8 @@ export class ExerciciosCatalogService implements OnModuleInit {
     private readonly exercicioRepository: Repository<Exercicio>,
     @InjectRepository(ExercicioMidia)
     private readonly midiaRepository: Repository<ExercicioMidia>,
+    @Optional()
+    private readonly redisService?: RedisService,
   ) {}
 
   async onModuleInit() {
@@ -137,6 +198,16 @@ export class ExerciciosCatalogService implements OnModuleInit {
   }
 
   async findAll(filters: ExercicioCatalogFilters = {}): Promise<Exercicio[]> {
+    return this.rememberCache(
+      this.buildCacheKey('exercicios:list', filters),
+      this.getCacheTtlSeconds(false),
+      () => this.findAllFromDatabase(filters),
+    );
+  }
+
+  private async findAllFromDatabase(
+    filters: ExercicioCatalogFilters = {},
+  ): Promise<Exercicio[]> {
     const qb = this.exercicioRepository.createQueryBuilder('exercicio');
 
     if (filters.includeDrafts) {
@@ -189,6 +260,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
             .orWhere('exercicio.imagemKey ILIKE :q', { q })
             .orWhere('exercicio.objetivo ILIKE :q', { q })
             .orWhere('exercicio.descricao ILIKE :q', { q })
+            .orWhere('CAST(exercicio.translations AS TEXT) ILIKE :q', { q })
             .orWhere('CAST(exercicio.tags AS TEXT) ILIKE :q', { q });
         }),
       );
@@ -245,18 +317,18 @@ export class ExerciciosCatalogService implements OnModuleInit {
   ): Promise<ExercicioImageProductionBrief> {
     const exercicio = await this.findOneForAdmin(id);
     if (!exercicio) {
-      throw new NotFoundException('Exercicio nao encontrado');
+      throw new NotFoundException('Exercício não encontrado');
     }
     if (!exercicio.ativo || exercicio.status === ExercicioStatus.ARQUIVADO) {
       throw new BadRequestException(
-        'Exercicio arquivado nao entra na producao de imagem',
+        'Exercício arquivado não entra na produção de imagem',
       );
     }
 
     const queueItem = this.toImageQueueItem(exercicio);
     if (!queueItem) {
       throw new BadRequestException(
-        'Exercicio nao esta na fila de producao de imagem',
+        'Exercício não está na fila de produção de imagem',
       );
     }
 
@@ -312,21 +384,41 @@ export class ExerciciosCatalogService implements OnModuleInit {
     const slug = await this.resolveUniqueSlug(dto.slug || nome);
     const imagemKey = this.normalizeOptionalString(dto.imagemKey);
     const status = dto.status ?? ExercicioStatus.RASCUNHO;
+    const localization = buildExerciseLocalization({
+      nome,
+      slug,
+      regiaoCorporal,
+      categoria,
+      nivel,
+      objetivo,
+      descricao: dto.descricao,
+      instrucoesPadrao,
+      cuidados: dto.cuidados,
+      contraindicacoes: dto.contraindicacoes,
+    });
+    const pt = localization.pt;
     await this.assertApprovalRequirements(status, imagemKey);
     const exercicio = await this.exercicioRepository.save(
       this.exercicioRepository.create({
-        nome,
+        nome: pt.nome,
         slug,
         regiaoCorporal: regiaoCorporal.toUpperCase(),
         categoria: categoria.toUpperCase(),
         nivel: nivel.toUpperCase(),
-        objetivo,
-        descricao: this.normalizeOptionalString(dto.descricao),
-        instrucoesPadrao,
-        cuidados: this.normalizeOptionalString(dto.cuidados),
-        contraindicacoes: this.normalizeOptionalString(dto.contraindicacoes),
+        objetivo: pt.objetivo,
+        descricao: this.normalizeOptionalString(pt.descricao),
+        instrucoesPadrao: pt.instrucoesPadrao,
+        cuidados: this.normalizeOptionalString(pt.cuidados),
+        contraindicacoes: this.normalizeOptionalString(pt.contraindicacoes),
         imagemKey,
         tags: this.normalizeTags(dto.tags),
+        translations: normalizeExerciseTranslations(dto.translations, {
+          ...pt,
+          slug,
+          regiaoCorporal,
+          categoria,
+          nivel,
+        }),
         status,
         versao: 1,
         revisadoPorUsuarioId: usuarioId,
@@ -336,6 +428,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
     );
 
     await this.syncPrimaryMedia(exercicio, usuarioId);
+    await this.invalidateExerciseCatalogCache();
     return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
   }
 
@@ -408,6 +501,32 @@ export class ExerciciosCatalogService implements OnModuleInit {
       exercicio.status = dto.status;
       exercicio.ativo = dto.status !== ExercicioStatus.ARQUIVADO;
     }
+    const localization = buildExerciseLocalization(exercicio);
+    exercicio.nome = localization.pt.nome;
+    exercicio.objetivo = localization.pt.objetivo;
+    exercicio.descricao = this.normalizeOptionalString(
+      localization.pt.descricao,
+    );
+    exercicio.instrucoesPadrao = localization.pt.instrucoesPadrao;
+    exercicio.cuidados = this.normalizeOptionalString(localization.pt.cuidados);
+    exercicio.contraindicacoes = this.normalizeOptionalString(
+      localization.pt.contraindicacoes,
+    );
+    exercicio.translations = normalizeExerciseTranslations(
+      dto.translations ?? exercicio.translations,
+      {
+        nome: exercicio.nome,
+        slug: exercicio.slug,
+        regiaoCorporal: exercicio.regiaoCorporal,
+        categoria: exercicio.categoria,
+        nivel: exercicio.nivel,
+        objetivo: exercicio.objetivo,
+        descricao: exercicio.descricao,
+        instrucoesPadrao: exercicio.instrucoesPadrao,
+        cuidados: exercicio.cuidados,
+        contraindicacoes: exercicio.contraindicacoes,
+      },
+    );
     await this.assertApprovalRequirements(
       exercicio.status,
       exercicio.imagemKey,
@@ -420,6 +539,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
 
     const saved = await this.exercicioRepository.save(exercicio);
     await this.syncPrimaryMedia(saved, usuarioId);
+    await this.invalidateExerciseCatalogCache();
     return (await this.findOneForAdmin(saved.id)) ?? saved;
   }
 
@@ -438,6 +558,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
     exercicio.revisadoEm = new Date();
     await this.exercicioRepository.save(exercicio);
     await this.midiaRepository.update({ exercicioId: id }, { ativo: false });
+    await this.invalidateExerciseCatalogCache();
     return { success: true };
   }
 
@@ -475,7 +596,51 @@ export class ExerciciosCatalogService implements OnModuleInit {
     midia.revisaoClinicaEm = new Date();
     midia.versao += 1;
     await this.midiaRepository.save(midia);
+    await this.invalidateExerciseCatalogCache();
 
+    return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
+  }
+
+  async updatePrimaryMediaStorage(
+    id: string,
+    dto: UpdateExercicioMidiaStorageDto,
+    usuarioId: string,
+  ): Promise<Exercicio> {
+    const exercicio = await this.exercicioRepository.findOne({
+      where: { id },
+    });
+    if (!exercicio) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+    if (!exercicio.imagemKey) {
+      throw new BadRequestException('Exercicio sem imagem principal');
+    }
+
+    await this.syncPrimaryMedia(exercicio, usuarioId);
+    const midia = await this.midiaRepository.findOne({
+      where: {
+        exercicioId: exercicio.id,
+        assetKey: exercicio.imagemKey,
+        ativo: true,
+      },
+    });
+    if (!midia) {
+      throw new NotFoundException('Midia principal nao encontrada');
+    }
+
+    const changedVisualSource = this.applyMediaStorageMetadata(midia, dto);
+    if (changedVisualSource) {
+      midia.revisaoClinicaStatus = ExercicioMidiaRevisaoClinicaStatus.PENDENTE;
+      midia.revisaoClinicaObservacao = null;
+      midia.revisaoClinicaPorUsuarioId = null;
+      midia.revisaoClinicaEm = null;
+    }
+    midia.revisadoPorUsuarioId = usuarioId;
+    midia.revisadoEm = new Date();
+    midia.versao += 1;
+
+    await this.midiaRepository.save(midia);
+    await this.invalidateExerciseCatalogCache();
     return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
   }
 
@@ -529,9 +694,12 @@ export class ExerciciosCatalogService implements OnModuleInit {
       ...INITIAL_EXERCISE_CATALOG,
       ...PREVIEW_EXERCISE_CATALOG,
     ]) {
+      const localization = buildExerciseLocalization(item);
       const exercicio = await this.exercicioRepository.save(
         this.exercicioRepository.create({
           ...item,
+          ...localization.pt,
+          translations: localization.translations,
           revisadoEm: new Date(),
           ativo: item.status !== ExercicioStatus.ARQUIVADO,
           versao: 1,
@@ -624,8 +792,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
     });
     if (existing) {
       existing.tipo = 'ILUSTRACAO';
-      existing.sourceType = 'PROPRIA';
-      existing.sourceUrl = null;
+      this.applyDefaultMediaOwnership(existing);
       existing.author = 'Synap';
       existing.license = 'PROPRIETARIA_SYNAP';
       existing.licenseUrl = null;
@@ -658,6 +825,98 @@ export class ExerciciosCatalogService implements OnModuleInit {
     );
   }
 
+  private applyMediaStorageMetadata(
+    midia: ExercicioMidia,
+    dto: UpdateExercicioMidiaStorageDto,
+  ): boolean {
+    const previousStoragePath = midia.storagePath;
+    const previousThumbnailUrl = midia.thumbnailUrl;
+    const previousImageUrl = midia.imageUrl;
+
+    if (this.hasOwn(dto, 'storagePath')) {
+      midia.storagePath = this.normalizeOptionalStoragePath(dto.storagePath);
+    }
+    if (this.hasOwn(dto, 'thumbnailUrl')) {
+      midia.thumbnailUrl = this.normalizeOptionalUrl(
+        dto.thumbnailUrl,
+        'thumbnailUrl',
+      );
+    }
+    if (this.hasOwn(dto, 'imageUrl')) {
+      midia.imageUrl = this.normalizeOptionalUrl(dto.imageUrl, 'imageUrl');
+    }
+    if (this.hasOwn(dto, 'sourceUrl')) {
+      midia.sourceUrl = this.normalizeOptionalUrl(dto.sourceUrl, 'sourceUrl');
+    }
+    if (this.hasOwn(dto, 'mimeType')) {
+      midia.mimeType = this.normalizeOptionalMimeType(dto.mimeType);
+    }
+    if (this.hasOwn(dto, 'width')) {
+      midia.width = dto.width ?? null;
+    }
+    if (this.hasOwn(dto, 'height')) {
+      midia.height = dto.height ?? null;
+    }
+    if (this.hasOwn(dto, 'bytes')) {
+      midia.bytes = dto.bytes ?? null;
+    }
+
+    this.applyDefaultMediaOwnership(midia);
+
+    return (
+      previousStoragePath !== midia.storagePath ||
+      previousThumbnailUrl !== midia.thumbnailUrl ||
+      previousImageUrl !== midia.imageUrl
+    );
+  }
+
+  private applyDefaultMediaOwnership(midia: ExercicioMidia): void {
+    const remoteUrl = midia.imageUrl || midia.thumbnailUrl || midia.sourceUrl;
+    const hasRemoteStorage = Boolean(midia.storagePath || remoteUrl);
+    midia.sourceType = hasRemoteStorage ? 'SUPABASE_STORAGE' : 'PROPRIA';
+    midia.sourceUrl = remoteUrl || null;
+    midia.author = 'Synap';
+    midia.license = 'PROPRIETARIA_SYNAP';
+    midia.licenseUrl = null;
+    midia.attributionText = 'Ilustracao propria Synap.';
+  }
+
+  private hasOwn<T extends object>(target: T, key: keyof T): boolean {
+    return Object.prototype.hasOwnProperty.call(target, key);
+  }
+
+  private normalizeOptionalStoragePath(value: unknown): string | null {
+    const normalized = this.normalizeOptionalString(value);
+    if (!normalized) return null;
+    if (normalized.includes('..') || normalized.startsWith('/')) {
+      throw new BadRequestException('storagePath invalido');
+    }
+    return normalized.replace(/\\/g, '/');
+  }
+
+  private normalizeOptionalUrl(value: unknown, field: string): string | null {
+    const normalized = this.normalizeOptionalString(value);
+    if (!normalized) return null;
+    try {
+      const parsed = new URL(normalized);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('invalid_protocol');
+      }
+      return parsed.toString();
+    } catch {
+      throw new BadRequestException(`${field} invalido`);
+    }
+  }
+
+  private normalizeOptionalMimeType(value: unknown): string | null {
+    const normalized = this.normalizeOptionalString(value);
+    if (!normalized) return null;
+    if (!/^image\/[a-z0-9.+-]+$/i.test(normalized)) {
+      throw new BadRequestException('mimeType invalido');
+    }
+    return normalized.toLowerCase();
+  }
+
   private async resolveUniqueSlug(
     value: string,
     currentId?: string,
@@ -683,9 +942,53 @@ export class ExerciciosCatalogService implements OnModuleInit {
     return slug;
   }
 
-  private normalizeOptionalString(value?: string | null): string | null {
+  private normalizeOptionalString(value?: unknown): string | null {
     const trimmed = String(value || '').trim();
     return trimmed || null;
+  }
+
+  private async rememberCache<T>(
+    key: string,
+    ttlSeconds: number,
+    factory: () => Promise<T>,
+  ): Promise<T> {
+    if (!this.redisService) return factory();
+    return this.redisService.remember(key, ttlSeconds, factory);
+  }
+
+  private async invalidateExerciseCatalogCache(): Promise<void> {
+    await this.redisService?.deleteByPrefix('exercicios:');
+  }
+
+  private getCacheTtlSeconds(heavy: boolean): number {
+    const envKey = heavy ? 'CACHE_HEAVY_TTL_SECONDS' : 'CACHE_TTL_SECONDS';
+    const raw = Number(process.env[envKey] || (heavy ? 120 : 60));
+    return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 60;
+  }
+
+  private buildCacheKey(prefix: string, value: unknown): string {
+    return `${prefix}:${this.hashCacheValue(this.stableStringify(value))}`;
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      return `{${Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => `${key}:${this.stableStringify(item)}`)
+        .join(',')}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  private hashCacheValue(value: string): string {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+    }
+    return hash.toString(36);
   }
 
   private normalizeRequiredString(value: string, field: string): string {
@@ -826,6 +1129,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
             .orWhere('exercicio.imagemKey ILIKE :q', { q })
             .orWhere('exercicio.objetivo ILIKE :q', { q })
             .orWhere('exercicio.descricao ILIKE :q', { q })
+            .orWhere('CAST(exercicio.translations AS TEXT) ILIKE :q', { q })
             .orWhere('CAST(exercicio.tags AS TEXT) ILIKE :q', { q });
         }),
       );
@@ -927,6 +1231,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
       filaStatus,
       prioridade: this.getImageQueuePriority(filaStatus),
       tags: exercicio.tags || [],
+      translations: exercicio.translations || {},
     };
   }
 
@@ -995,16 +1300,16 @@ export class ExerciciosCatalogService implements OnModuleInit {
       exercicio.imagemKey || slug,
     );
     const assetFileNameSuggestion = `${slug}.jpg`;
-    const assetPathSuggestion = `apps/mobile/assets/exercises/${assetFileNameSuggestion}`;
+    const assetPathSuggestion = `exercise-images/exercises/${slug}/full.jpg`;
     const tags = (exercicio.tags || []).join(', ') || 'sem tags';
     const description = exercicio.descricao
-      ? `Descricao: ${exercicio.descricao}.`
+      ? `Descrição: ${exercicio.descricao}.`
       : '';
     const cuidados = exercicio.cuidados
       ? `Cuidados: ${exercicio.cuidados}.`
       : '';
     const contraindicacoes = exercicio.contraindicacoes
-      ? `Contraindicacoes: ${exercicio.contraindicacoes}.`
+      ? `Contraindicações: ${exercicio.contraindicacoes}.`
       : '';
     const tituloPaciente = exercicio.nome;
     const descricaoPaciente = this.compactText(exercicio.instrucoesPadrao, 500);
@@ -1015,59 +1320,59 @@ export class ExerciciosCatalogService implements OnModuleInit {
       800,
     );
     const accessibilityLabel = this.compactText(
-      `Ilustracao do exercicio ${exercicio.nome}, regiao ${exercicio.regiaoCorporal}, categoria ${exercicio.categoria}, nivel ${exercicio.nivel}.`,
+      `Ilustração do exercício ${exercicio.nome}, região ${exercicio.regiaoCorporal}, categoria ${exercicio.categoria}, nível ${exercicio.nivel}.`,
       300,
     );
     const objetivoImagem = [
-      `Representar o exercicio "${exercicio.nome}" de forma clinicamente clara para prescricao fisioterapeutica.`,
-      `Regiao ${exercicio.regiaoCorporal}, categoria ${exercicio.categoria}, nivel ${exercicio.nivel}.`,
+      `Representar o exercício "${exercicio.nome}" de forma clinicamente clara para prescrição fisioterapêutica.`,
+      `Região ${exercicio.regiaoCorporal}, categoria ${exercicio.categoria}, nível ${exercicio.nivel}.`,
     ].join(' ');
     const promptBase = [
-      'Ilustracao fisioterapeutica propria Synap, estilo anatomico limpo, alta nitidez, fundo branco quente, sem texto embutido e sem marca d agua.',
-      'Figura humana adulta com anatomia realista em tons de cinza, musculatura relevante destacada em verde Synap e setas discretas para indicar direcao do movimento.',
-      'Usar enquadramento 3/4 quando ajudar a entender apoios e trajetoria, mantendo proporcoes naturais e articulacoes plausiveis.',
-      `Exercicio: ${exercicio.nome}. Objetivo clinico: ${exercicio.objetivo}. ${description}`,
-      `Instrucoes do movimento: ${exercicio.instrucoesPadrao}. ${cuidados} ${contraindicacoes}`,
+      "Ilustração fisioterapêutica própria Synap, alta nitidez, proporção quadrada 1024x1024, sem texto embutido e sem marca d'água.",
+      ...EXERCISE_IMAGE_VISUAL_STANDARD,
+      'Usar enquadramento 3/4 quando ajudar a entender apoios e trajetória, mantendo proporções naturais, articulações plausíveis e leitura clara em miniatura.',
+      `Exercício: ${exercicio.nome}. Objetivo clínico: ${exercicio.objetivo}. ${description}`,
+      `Instruções do movimento: ${exercicio.instrucoesPadrao}. ${cuidados} ${contraindicacoes}`,
       `Tags de contexto: ${tags}.`,
     ]
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
-    const negativePrompt =
-      'logos externos, watermark, texto na imagem, pessoas reais identificaveis, foto stock, baixa resolucao, anatomia deformada, membros extras, lado errado, articulacoes impossiveis, apoio incoerente, amplitude agressiva, fundo poluido, objetos desnecessarios';
+    const negativePrompt = EXERCISE_IMAGE_NEGATIVE_PROMPT.join(', ');
     const enquadramento = [
       'Mostrar corpo inteiro ou recorte suficiente para entender todos os apoios.',
-      'Preferir vista 3/4 para movimentos com alternancia de membros ou apoios complexos.',
-      'Quando o exercicio tiver fase inicial e final, mostrar as duas fases no mesmo quadro sem confundir a direcao.',
+      'Preferir vista 3/4 para movimentos com alternância de membros ou apoios complexos.',
+      'Quando o exercício tiver fase inicial e final, mostrar as duas fases no mesmo quadro sem confundir a direção.',
       'Manter o paciente centralizado, com respiro lateral para setas e sem cortar extremidades importantes.',
     ];
     const identidadeVisual = [
-      'Base visual em cinza anatomico, fundo claro e limpo, com contraste suficiente em cards pequenos.',
-      'Destaques musculares e setas em verde Synap, sem usar marca de terceiros.',
-      'Sem logo, sem marca d agua e sem texto dentro da imagem; identificacao fica no app e no metadata.',
-      'Qualidade final minima de 1024x1024 antes de converter para JPG otimizado.',
+      ...EXERCISE_IMAGE_VISUAL_STANDARD,
+      'Qualidade final mínima de 1024x1024 antes de converter para JPG otimizado.',
     ];
     const criteriosClinicos = [
-      'A postura precisa ser biomecanicamente possivel e coerente com o nome do exercicio.',
-      'Apoios no solo, cadeira, parede, bastao, faixa ou bola precisam estar claros quando forem parte da execucao.',
-      'Em movimentos alternados, confirmar contralateralidade correta entre braco e perna.',
-      'Nao representar dor, compensacoes exageradas ou amplitude maior do que a descrita.',
-      'A seta deve indicar movimento, nao carga nem direcao anatomica ambigua.',
+      'A postura precisa ser biomecanicamente possível e coerente com o nome do exercício.',
+      'Apoios no solo, cadeira, parede, bastão, faixa ou bola precisam estar claros quando forem parte da execução.',
+      'Em movimentos alternados, confirmar contralateralidade correta entre braço e perna.',
+      'Não representar dor, compensações exageradas ou amplitude maior do que a descrita.',
+      'A seta deve indicar movimento, não carga nem direção anatômica ambígua.',
     ];
     const checklistRevisao = [
-      'Movimento, posicao inicial e posicao final batem com objetivo e instrucoes.',
-      'Membros apoiados e membros em movimento estao corretos.',
-      'Musculos destacados ajudam a entender a prescricao sem poluir a imagem.',
-      'Imagem continua legivel em miniatura e no card do paciente.',
-      'Nao ha texto, logo externo, watermark ou elemento com direito de terceiros.',
+      'Movimento, posição inicial e posição final batem com objetivo e instruções.',
+      'Membros apoiados e membros em movimento estão corretos.',
+      'Músculos destacados ajudam a entender a prescrição sem poluir a imagem.',
+      'Imagem continua legível em miniatura e no card do paciente.',
+      'Figura segue o padrão de adulto neutro, sem identidade facial forte e sem aparência de pessoa real identificável.',
+      'Figura usa roupa esportiva justa cinza-claro/off-white, sem logo, sem roupa escura e sem tórax exposto.',
+      "Não há texto, logo externo, marca d'água ou elemento com direito de terceiros.",
+      `Rejeitar se houver: ${EXERCISE_IMAGE_VISUAL_REJECTION_CRITERIA.join('; ')}.`,
     ];
     const implementationChecklist = [
-      `Salvar o JPG final em ${assetPathSuggestion}.`,
-      `Adicionar "${imageKeySuggestion}" ao tipo ExerciseImageType em apps/mobile/src/components/clinical/ExerciseVisual.tsx.`,
-      'Adicionar label e hint clinico em EXERCISE_IMAGE_OPTIONS.',
-      `Mapear ${imageKeySuggestion} em EXERCISE_IMAGE_ASSETS com require("../../../assets/exercises/${assetFileNameSuggestion}").`,
-      `Atualizar seed/migration do backend para usar imagemKey "${imageKeySuggestion}" quando o exercicio virar catalogo oficial.`,
-      'Rodar validacao critica do mobile e testes focados do backend antes de aprovar clinicamente.',
+      `Publicar o JPG full em ${assetPathSuggestion}.`,
+      `Publicar o thumbnail otimizado em exercise-images/exercises/${slug}/thumb.jpg.`,
+      `Registrar a mídia via PATCH /exercicios/{id}/midia-principal-storage com storagePath, thumbnailUrl, imageUrl, mimeType, width, height e bytes.`,
+      `Atualizar seed/migration do backend para usar imagemKey "${imageKeySuggestion}" quando o exercício virar catálogo oficial.`,
+      'Manter asset local apenas como fallback temporário para imagens já embarcadas no app.',
+      'Rodar validação crítica do mobile e testes focados do backend antes de aprovar clinicamente.',
     ];
 
     return {
@@ -1132,15 +1437,15 @@ export class ExerciciosCatalogService implements OnModuleInit {
       `# ${input.queueItem.nome}`,
       '',
       `- Status da fila: ${input.queueItem.filaStatus}`,
-      `- Regiao: ${input.queueItem.regiaoCorporal}`,
+      `- Região: ${input.queueItem.regiaoCorporal}`,
       `- Categoria: ${input.queueItem.categoria}`,
-      `- Nivel: ${input.queueItem.nivel}`,
+      `- Nível: ${input.queueItem.nivel}`,
       `- Chave sugerida: ${input.imageKeySuggestion}`,
       `- Arquivo sugerido: ${input.assetFileNameSuggestion}`,
       `- Caminho do asset: ${input.assetPathSuggestion}`,
       '',
       '## Paciente',
-      `Titulo: ${input.tituloPaciente}`,
+      `Título: ${input.tituloPaciente}`,
       `Texto: ${input.descricaoPaciente}`,
       '',
       '## Profissional',
@@ -1164,13 +1469,13 @@ export class ExerciciosCatalogService implements OnModuleInit {
       '## Identidade visual',
       list(input.identidadeVisual),
       '',
-      '## Criterios clinicos',
+      '## Critérios clínicos',
       list(input.criteriosClinicos),
       '',
-      '## Checklist de revisao',
+      '## Checklist de revisão',
       list(input.checklistRevisao),
       '',
-      '## Checklist tecnico',
+      '## Checklist técnico',
       list(input.implementationChecklist),
     ].join('\n');
   }
@@ -1182,7 +1487,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
   ): string {
     if (!items.length) {
       return [
-        '# Pacote de producao de imagens',
+        '# Pacote de produção de imagens',
         '',
         this.formatImageQueueAppliedFilters(appliedFilters, total, 0),
         '',
@@ -1190,7 +1495,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
       ].join('\n');
     }
     return [
-      '# Pacote de producao de imagens',
+      '# Pacote de produção de imagens',
       '',
       this.formatImageQueueAppliedFilters(appliedFilters, total, items.length),
       '',
@@ -1215,9 +1520,9 @@ export class ExerciciosCatalogService implements OnModuleInit {
       `- Limite: ${appliedFilters.limit}`,
       `- Busca: ${appliedFilters.q || 'todas'}`,
       `- Status da fila: ${appliedFilters.filaStatus || 'TODOS'}`,
-      `- Regiao: ${appliedFilters.regiaoCorporal || 'todas'}`,
+      `- Região: ${appliedFilters.regiaoCorporal || 'todas'}`,
       `- Categoria: ${appliedFilters.categoria || 'todas'}`,
-      `- Nivel: ${appliedFilters.nivel || 'todos'}`,
+      `- Nível: ${appliedFilters.nivel || 'todos'}`,
       `- Tag: ${appliedFilters.tag || 'todas'}`,
     ];
     return ['## Filtros aplicados', ...filters].join('\n');
@@ -1260,6 +1565,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
       exercicio.objetivo,
       exercicio.descricao,
       exercicio.instrucoesPadrao,
+      JSON.stringify(exercicio.translations || {}),
       ...(exercicio.tags || []),
     ];
 

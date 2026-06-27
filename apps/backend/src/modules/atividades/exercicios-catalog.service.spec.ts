@@ -79,9 +79,19 @@ describe('ExerciciosCatalogService', () => {
     expect(midiaRepository.save).toHaveBeenCalledTimes(expectedTotal);
     expect(exercicioRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        nome: 'Mobilidade lombar em gato-camelo',
         slug: 'mobilidade-lombar-gato-camelo',
+        objetivo: 'Reduzir rigidez lombar e melhorar controle lombo-pélvico.',
         imagemKey: ExerciseImageType.MOBILIDADE_LOMBAR_GATO_CAMELO,
         status: ExercicioStatus.APROVADO,
+        translations: expect.objectContaining({
+          pt: expect.objectContaining({
+            objetivo:
+              'Reduzir rigidez lombar e melhorar controle lombo-pélvico.',
+          }),
+          en: expect.objectContaining({ nome: expect.any(String) }),
+          es: expect.objectContaining({ nome: expect.any(String) }),
+        }),
         ativo: true,
         versao: 1,
       }),
@@ -483,7 +493,7 @@ describe('ExerciciosCatalogService', () => {
       imageKeySuggestion: 'AGACHAMENTO_ASSISTIDO',
       assetFileNameSuggestion: 'agachamento-assistido.jpg',
       assetPathSuggestion:
-        'apps/mobile/assets/exercises/agachamento-assistido.jpg',
+        'exercise-images/exercises/agachamento-assistido/full.jpg',
       tituloPaciente: 'Agachamento assistido',
       descricaoPaciente: 'Flexione joelhos e quadris com controle.',
       exercicio: {
@@ -496,13 +506,13 @@ describe('ExerciciosCatalogService', () => {
       '# Agachamento assistido',
     );
     expect(result.items[0].productionMarkdown).toContain(
-      '## Checklist de revisao',
+      '## Checklist de revisão',
     );
     expect(result.items[0].productionMarkdown).toContain(
-      '## Checklist tecnico',
+      '## Checklist técnico',
     );
     expect(result.productionMarkdownBatch).toContain(
-      '# Pacote de producao de imagens',
+      '# Pacote de produção de imagens',
     );
     expect(result.productionMarkdownBatch).toContain('- Busca: joelho');
     expect(result.productionMarkdownBatch).toContain(
@@ -563,7 +573,7 @@ describe('ExerciciosCatalogService', () => {
       imageKeySuggestion: 'AGACHAMENTO_ASSISTIDO',
       assetFileNameSuggestion: 'agachamento-assistido.jpg',
       assetPathSuggestion:
-        'apps/mobile/assets/exercises/agachamento-assistido.jpg',
+        'exercise-images/exercises/agachamento-assistido/full.jpg',
       tituloPaciente: 'Agachamento assistido',
       descricaoPaciente: 'Flexione joelhos e quadris com controle.',
       exercicio: {
@@ -576,21 +586,34 @@ describe('ExerciciosCatalogService', () => {
     expect(result.promptBase).toContain('Evitar valgo dinamico');
     expect(result.orientacaoProfissional).toContain('Treinar controle');
     expect(result.accessibilityLabel).toContain(
-      'Ilustracao do exercicio Agachamento assistido',
+      'Ilustração do exercício Agachamento assistido',
     );
     expect(result.productionMarkdown).toContain('## Prompt negativo');
     expect(result.productionMarkdown).toContain(
       'Arquivo sugerido: agachamento-assistido.jpg',
     );
     expect(result.productionMarkdown).toContain(
-      'Caminho do asset: apps/mobile/assets/exercises/agachamento-assistido.jpg',
+      'Caminho do asset: exercise-images/exercises/agachamento-assistido/full.jpg',
     );
     expect(result.implementationChecklist).toContain(
-      'Adicionar label e hint clinico em EXERCISE_IMAGE_OPTIONS.',
+      'Registrar a mídia via PATCH /exercicios/{id}/midia-principal-storage com storagePath, thumbnailUrl, imageUrl, mimeType, width, height e bytes.',
     );
     expect(result.negativePrompt).toContain('logos externos');
+    expect(result.promptBase).toContain(
+      'Adulto neutro, sem identidade facial forte',
+    );
+    expect(result.promptBase).toContain(
+      'Roupa esportiva justa cinza-claro/off-white',
+    );
+    expect(result.promptBase).toContain(
+      'Destaque verde Synap somente no músculo-alvo ou na direção do movimento',
+    );
+    expect(result.promptBase).toContain("sem marca d'água");
     expect(result.checklistRevisao).toContain(
-      'Membros apoiados e membros em movimento estao corretos.',
+      'Membros apoiados e membros em movimento estão corretos.',
+    );
+    expect(result.checklistRevisao).toContain(
+      'Figura segue o padrão de adulto neutro, sem identidade facial forte e sem aparência de pessoa real identificável.',
     );
     expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
       'exercicio.midias',
@@ -742,12 +765,22 @@ describe('ExerciciosCatalogService', () => {
     expect(result).toEqual({ id: 'exercicio-1', nome: 'Exercicio novo' });
     expect(exercicioRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        nome: 'Exercício novo',
         slug: 'exercicio-novo',
         regiaoCorporal: 'LOMBAR',
         categoria: 'MOBILIDADE',
         nivel: 'INICIANTE',
+        objetivo: 'Melhorar mobilidade lombar.',
         imagemKey: 'MOBILIDADE_LOMBAR',
         tags: ['lombar', 'mobilidade_lombar'],
+        translations: expect.objectContaining({
+          pt: expect.objectContaining({
+            nome: 'Exercício novo',
+            objetivo: 'Melhorar mobilidade lombar.',
+          }),
+          en: expect.objectContaining({ nome: 'New exercise' }),
+          es: expect.objectContaining({ nome: 'Ejercicio nuevo' }),
+        }),
         revisadoPorUsuarioId: 'admin-1',
       }),
     );
@@ -869,6 +902,91 @@ describe('ExerciciosCatalogService', () => {
         revisaoClinicaObservacao: 'Imagem clara para uso.',
         revisaoClinicaPorUsuarioId: 'admin-1',
         versao: 2,
+      }),
+    );
+  });
+
+  it('registers remote storage metadata and sends changed media back to review', async () => {
+    const { service, exercicioRepository, midiaRepository } = makeService();
+    const qb = makeQueryBuilder();
+    const midia = {
+      id: 'midia-1',
+      exercicioId: 'exercicio-1',
+      assetKey: 'PONTE_CURTA',
+      tipo: 'ILUSTRACAO',
+      sourceType: 'PROPRIA',
+      sourceUrl: null,
+      storagePath: null,
+      thumbnailUrl: null,
+      imageUrl: null,
+      mimeType: null,
+      width: null,
+      height: null,
+      bytes: null,
+      author: 'Synap',
+      license: 'PROPRIETARIA_SYNAP',
+      licenseUrl: null,
+      attributionText: 'Ilustracao propria Synap.',
+      ativo: true,
+      revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.APROVADA,
+      revisaoClinicaObservacao: 'Aprovada anteriormente.',
+      revisaoClinicaPorUsuarioId: 'admin-old',
+      revisaoClinicaEm: new Date('2026-01-01T00:00:00.000Z'),
+      versao: 1,
+    };
+    exercicioRepository.findOne.mockResolvedValue({
+      id: 'exercicio-1',
+      imagemKey: 'PONTE_CURTA',
+      ativo: true,
+      status: ExercicioStatus.RASCUNHO,
+    });
+    midiaRepository.findOne.mockResolvedValue(midia);
+    qb.getOne.mockResolvedValue({
+      id: 'exercicio-1',
+      midias: [midia],
+    });
+    exercicioRepository.createQueryBuilder.mockReturnValue(qb);
+
+    await expect(
+      service.updatePrimaryMediaStorage(
+        'exercicio-1',
+        {
+          storagePath: 'exercises/ponte-curta/full.jpg',
+          thumbnailUrl:
+            'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/thumb.jpg',
+          imageUrl:
+            'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/full.jpg',
+          mimeType: 'image/jpeg',
+          width: 1024,
+          height: 1024,
+          bytes: 42000,
+        },
+        'admin-1',
+      ),
+    ).resolves.toEqual({
+      id: 'exercicio-1',
+      midias: [midia],
+    });
+
+    expect(midiaRepository.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        storagePath: 'exercises/ponte-curta/full.jpg',
+        thumbnailUrl:
+          'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/thumb.jpg',
+        imageUrl:
+          'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/full.jpg',
+        sourceType: 'SUPABASE_STORAGE',
+        sourceUrl:
+          'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/full.jpg',
+        mimeType: 'image/jpeg',
+        width: 1024,
+        height: 1024,
+        bytes: 42000,
+        revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+        revisaoClinicaObservacao: null,
+        revisaoClinicaPorUsuarioId: null,
+        revisaoClinicaEm: null,
+        revisadoPorUsuarioId: 'admin-1',
       }),
     );
   });

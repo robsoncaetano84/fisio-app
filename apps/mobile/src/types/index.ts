@@ -449,6 +449,13 @@ export interface ExercicioMidia {
   tipo: string;
   sourceType: string;
   sourceUrl?: string | null;
+  storagePath?: string | null;
+  thumbnailUrl?: string | null;
+  imageUrl?: string | null;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
+  bytes?: number | null;
   author?: string | null;
   license: string;
   licenseUrl?: string | null;
@@ -470,6 +477,21 @@ export interface ExercicioMidia {
   updatedAt: string;
 }
 
+export type ExerciseTranslationLanguage = "pt" | "en" | "es";
+
+export interface ExerciseTranslationFields {
+  nome?: string;
+  objetivo?: string;
+  descricao?: string;
+  instrucoesPadrao?: string;
+  cuidados?: string;
+  contraindicacoes?: string;
+}
+
+export type ExerciseTranslations = Partial<
+  Record<ExerciseTranslationLanguage, ExerciseTranslationFields>
+>;
+
 export interface Exercicio {
   id: string;
   nome: string;
@@ -484,6 +506,7 @@ export interface Exercicio {
   contraindicacoes?: string | null;
   imagemKey?: string | null;
   tags: string[];
+  translations?: ExerciseTranslations | null;
   status: "RASCUNHO" | "APROVADO" | "ARQUIVADO";
   versao: number;
   revisadoPorUsuarioId?: string | null;
@@ -515,6 +538,7 @@ export interface ExercicioImageQueueItem {
   filaStatus: ExercicioImageQueueStatus;
   prioridade: number;
   tags: string[];
+  translations?: ExerciseTranslations | null;
 }
 
 export interface ExercicioImageQueueAppliedFilters {

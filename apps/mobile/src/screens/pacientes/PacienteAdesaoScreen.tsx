@@ -206,6 +206,8 @@ export function PacienteAdesaoScreen({ route }: Props) {
                   <View key={atividade.id} style={styles.activityItem}>
                     <ExerciseVisual
                       imageType={atividade.imagemTipo}
+                      imageUrl={atividade.imagemUrl}
+                      cacheKey={atividade.imagemTipo || atividade.id}
                       title={atividade.titulo}
                       compact
                     />

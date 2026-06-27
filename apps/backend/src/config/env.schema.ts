@@ -136,6 +136,9 @@ export const envValidationSchema = Joi.object({
   LOCKOUT_WINDOW_MIN: Joi.number().default(15),
   LOCKOUT_DURATION_MIN: Joi.number().default(30),
   REDIS_URL: Joi.string().allow('').optional(),
+  REDIS_KEY_PREFIX: Joi.string().allow('').default('fisio-app'),
+  CACHE_TTL_SECONDS: Joi.number().integer().min(1).default(60),
+  CACHE_HEAVY_TTL_SECONDS: Joi.number().integer().min(1).default(120),
   ALLOW_ADMIN_REGISTRATION: Joi.string()
     .valid('true', 'false')
     .default('false'),

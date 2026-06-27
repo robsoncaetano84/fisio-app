@@ -32,6 +32,10 @@ import { Atividade, Exercicio } from "../../types";
 import { usePacienteStore } from "../../stores/pacienteStore";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
+  getLocalizedExerciseSearchText,
+  getLocalizedExerciseText,
+} from "../../utils/exerciseTranslations";
+import {
   ExerciseImageType,
   ExerciseVisual,
   normalizeExerciseImageType,
@@ -86,11 +90,25 @@ const toBrDateFromApi = (value: string) => {
   return `${dd}/${mm}/${yyyy}`;
 };
 
+function getExercisePrimaryImageUrl(exercicio?: Exercicio | null) {
+  if (!exercicio?.imagemKey) return null;
+  const primaryMedia =
+    exercicio.midias?.find(
+      (midia) => midia.ativo && midia.assetKey === exercicio.imagemKey,
+    ) || null;
+  return (
+    primaryMedia?.thumbnailUrl ||
+    primaryMedia?.imageUrl ||
+    primaryMedia?.sourceUrl ||
+    null
+  );
+}
+
 export function AtividadeFormScreen({ navigation, route }: Props) {
   const { pacienteId, pacienteNome } = route.params;
   const { showToast } = useToast();
   const { fetchPacientes } = usePacienteStore();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [titulo, setTitulo] = useState("");
   const [exercicioId, setExercicioId] = useState<string | null>(null);
@@ -98,6 +116,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   const [instrucoesExecucao, setInstrucoesExecucao] = useState("");
   const [imagemTipo, setImagemTipo] =
     useState<ExerciseImageType>("MOBILIDADE_GERAL");
+  const [imagemUrl, setImagemUrl] = useState<string | null>(null);
   const [referenciasBibliograficas, setReferenciasBibliograficas] =
     useState("");
   const [aceiteProfissional, setAceiteProfissional] = useState(false);
@@ -168,22 +187,10 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       )
       .filter((item) => {
         if (!search) return true;
-        return [
-          item.nome,
-          item.objetivo,
-          item.descricao,
-          item.regiaoCorporal,
-          item.categoria,
-          item.nivel,
-          ...(item.tags || []),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(search);
+        return getLocalizedExerciseSearchText(item, language).includes(search);
       })
       .slice(0, 12);
-  }, [exerciseRegionFilter, exerciseSearch, exercicios]);
+  }, [exerciseRegionFilter, exerciseSearch, exercicios, language]);
 
   const loadAtividades = async () => {
     try {
@@ -231,18 +238,20 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
   };
 
   const aplicarExercicio = (exercicio: Exercicio) => {
+    const localized = getLocalizedExerciseText(exercicio, language);
     markDraftChanged();
     setExercicioId(exercicio.id);
-    setTitulo(exercicio.nome);
+    setTitulo(localized.nome);
     setDescricao(
-      [exercicio.objetivo, exercicio.descricao].filter(Boolean).join("\n\n"),
+      [localized.objetivo, localized.descricao].filter(Boolean).join("\n\n"),
     );
-    setInstrucoesExecucao(exercicio.instrucoesPadrao || "");
+    setInstrucoesExecucao(localized.instrucoesPadrao);
     setImagemTipo(
       exercicio.imagemKey
         ? normalizeExerciseImageType(exercicio.imagemKey)
         : "MOBILIDADE_GERAL",
     );
+    setImagemUrl(getExercisePrimaryImageUrl(exercicio));
     showToast({
       message: "Exercício do catálogo aplicado à prescrição",
       type: "success",
@@ -257,6 +266,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       descricao: string;
       instrucoesExecucao: string;
       imagemTipo: string;
+      imagemUrl: string;
       referencias: string[];
     }>,
   ) => {
@@ -264,6 +274,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     const descricaoOriginal = String(data.descricao || "").trim();
     const instrucoesSugeridas = String(data.instrucoesExecucao || "").trim();
     const imagemTipoSugerida = String(data.imagemTipo || "").trim();
+    const imagemUrlSugerida = String(data.imagemUrl || "").trim();
     const exercicioIdSugerido = String(data.exercicioId || "").trim();
     const referenciasArray = Array.isArray(data.referencias)
       ? data.referencias.map((item) => String(item).trim()).filter(Boolean)
@@ -286,7 +297,14 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
       }
     }
 
+    const exercicioSugerido = exercicioIdSugerido
+      ? exercicios.find((item) => item.id === exercicioIdSugerido)
+      : null;
+
     setExercicioId(exercicioIdSugerido || null);
+    setImagemUrl(
+      imagemUrlSugerida || getExercisePrimaryImageUrl(exercicioSugerido),
+    );
     if (tituloSugerido) setTitulo(tituloSugerido);
     if (descricaoFinal) setDescricao(descricaoFinal);
     if (instrucoesSugeridas) setInstrucoesExecucao(instrucoesSugeridas);
@@ -309,6 +327,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
           descricao: string;
           instrucoesExecucao: string;
           imagemTipo: string;
+          imagemUrl: string;
           referencias: string[];
           source: "ai" | "rules";
         }>
@@ -473,6 +492,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
         ? normalizeExerciseImageType(atividade.imagemTipo)
         : "MOBILIDADE_GERAL",
     );
+    setImagemUrl(atividade.imagemUrl || null);
     setReferenciasBibliograficas(
       markerIndex >= 0
         ? descricaoAtual
@@ -500,6 +520,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
     setDescricao("");
     setInstrucoesExecucao("");
     setImagemTipo("MOBILIDADE_GERAL");
+    setImagemUrl(null);
     setReferenciasBibliograficas("");
     setDiaPrescricao(1);
     setOrdemNoDia("1");
@@ -660,6 +681,7 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                     markDraftChanged();
                     setExercicioId(null);
                     setImagemTipo("MOBILIDADE_GERAL");
+                    setImagemUrl(null);
                   }}
                   activeOpacity={0.85}
                 >
@@ -728,50 +750,61 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
               </Text>
             ) : (
               <View style={styles.exerciseCatalogList}>
-                {exerciciosFiltrados.map((exercicio) => (
-                  <TouchableOpacity
-                    key={exercicio.id}
-                    style={[
-                      styles.exerciseCatalogItem,
-                      exercicioId === exercicio.id &&
-                        styles.exerciseCatalogItemActive,
-                    ]}
-                    onPress={() => aplicarExercicio(exercicio)}
-                    activeOpacity={0.88}
-                  >
-                    <ExerciseVisual
-                      imageType={exercicio.imagemKey}
-                      title={exercicio.nome}
-                      compact
-                    />
-                    <View style={styles.exerciseCatalogMeta}>
-                      <Text style={styles.exerciseCatalogName}>
-                        {exercicio.nome}
-                      </Text>
-                      <Text style={styles.exerciseCatalogInfo}>
-                        {exercicio.regiaoCorporal.replace(/_/g, " ")} •{" "}
-                        {exercicio.categoria.replace(/_/g, " ")} •{" "}
-                        {exercicio.nivel}
-                      </Text>
-                      <Text style={styles.exerciseCatalogObjective} numberOfLines={2}>
-                        {exercicio.objetivo}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={
-                        exercicioId === exercicio.id
-                          ? "checkmark-circle"
-                          : "add-circle-outline"
-                      }
-                      size={22}
-                      color={
-                        exercicioId === exercicio.id
-                          ? COLORS.success
-                          : COLORS.primary
-                      }
-                    />
-                  </TouchableOpacity>
-                ))}
+                {exerciciosFiltrados.map((exercicio) => {
+                  const localized = getLocalizedExerciseText(
+                    exercicio,
+                    language,
+                  );
+                  return (
+                    <TouchableOpacity
+                      key={exercicio.id}
+                      style={[
+                        styles.exerciseCatalogItem,
+                        exercicioId === exercicio.id &&
+                          styles.exerciseCatalogItemActive,
+                      ]}
+                      onPress={() => aplicarExercicio(exercicio)}
+                      activeOpacity={0.88}
+                    >
+                      <ExerciseVisual
+                        imageType={exercicio.imagemKey}
+                        imageUrl={getExercisePrimaryImageUrl(exercicio)}
+                        cacheKey={exercicio.imagemKey || exercicio.slug}
+                        title={localized.nome}
+                        compact
+                      />
+                      <View style={styles.exerciseCatalogMeta}>
+                        <Text style={styles.exerciseCatalogName}>
+                          {localized.nome}
+                        </Text>
+                        <Text style={styles.exerciseCatalogInfo}>
+                          {exercicio.regiaoCorporal.replace(/_/g, " ")} •{" "}
+                          {exercicio.categoria.replace(/_/g, " ")} •{" "}
+                          {exercicio.nivel}
+                        </Text>
+                        <Text
+                          style={styles.exerciseCatalogObjective}
+                          numberOfLines={2}
+                        >
+                          {localized.objetivo}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={
+                          exercicioId === exercicio.id
+                            ? "checkmark-circle"
+                            : "add-circle-outline"
+                        }
+                        size={22}
+                        color={
+                          exercicioId === exercicio.id
+                            ? COLORS.success
+                            : COLORS.primary
+                        }
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -805,6 +838,8 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
             <Text style={styles.exerciseImageTitle}>Imagem do exercício</Text>
             <ExerciseVisual
               imageType={imagemTipo}
+              imageUrl={imagemUrl}
+              cacheKey={imagemTipo}
               title={titulo}
             />
             <Text style={styles.sectionLabel}>Ilustração orientativa</Text>
@@ -1051,6 +1086,8 @@ export function AtividadeFormScreen({ navigation, route }: Props) {
                 ) : null}
                 <ExerciseVisual
                   imageType={atividade.imagemTipo}
+                  imageUrl={atividade.imagemUrl}
+                  cacheKey={atividade.imagemTipo || atividade.id}
                   title={atividade.titulo}
                   compact
                 />

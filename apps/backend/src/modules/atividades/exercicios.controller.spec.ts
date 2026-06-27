@@ -12,7 +12,7 @@ describe('ExerciciosController', () => {
       findImageProductionQueue: jest.fn().mockResolvedValue({ items: [] }),
       findImageProductionBriefs: jest.fn().mockResolvedValue({
         items: [],
-        productionMarkdownBatch: '# Pacote de producao de imagens',
+        productionMarkdownBatch: '# Pacote de produção de imagens',
       }),
       getImageProductionBrief: jest
         .fn()
@@ -21,6 +21,9 @@ describe('ExerciciosController', () => {
       update: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
       archive: jest.fn().mockResolvedValue({ success: true }),
       reviewPrimaryMedia: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      updatePrimaryMediaStorage: jest
+        .fn()
+        .mockResolvedValue({ id: 'exercicio-1' }),
     } as unknown as jest.Mocked<ExerciciosCatalogService>;
 
     const controller = new ExerciciosController(service);
@@ -130,6 +133,12 @@ describe('ExerciciosController', () => {
         ExerciciosController.prototype.reviewPrimaryMedia,
       ),
     ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.updatePrimaryMediaStorage,
+      ),
+    ).toEqual([UserRole.ADMIN]);
   });
 
   it('forwards primary media clinical review updates', () => {
@@ -143,6 +152,30 @@ describe('ExerciciosController', () => {
     controller.reviewPrimaryMedia(id, dto, { id: 'adm-1' } as any);
 
     expect(service.reviewPrimaryMedia).toHaveBeenCalledWith(id, dto, 'adm-1');
+  });
+
+  it('forwards primary media storage updates', () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const dto = {
+      storagePath: 'exercises/ponte-curta/full.jpg',
+      thumbnailUrl:
+        'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/thumb.jpg',
+      imageUrl:
+        'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/full.jpg',
+      mimeType: 'image/jpeg',
+      width: 1024,
+      height: 1024,
+      bytes: 42000,
+    };
+
+    controller.updatePrimaryMediaStorage(id, dto, { id: 'adm-1' } as any);
+
+    expect(service.updatePrimaryMediaStorage).toHaveBeenCalledWith(
+      id,
+      dto,
+      'adm-1',
+    );
   });
 
   it('forwards image production queue filters for admins', () => {
@@ -206,7 +239,7 @@ describe('ExerciciosController', () => {
         'REGENERAR_IMAGEM',
         '10',
       ),
-    ).resolves.toBe('# Pacote de producao de imagens');
+    ).resolves.toBe('# Pacote de produção de imagens');
 
     expect(service.findImageProductionBriefs).toHaveBeenCalledWith({
       q: 'ombro',

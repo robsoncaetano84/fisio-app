@@ -16,18 +16,18 @@ A etapa 35 adiciona 212 exercicios ao catalogo mestre como `RASCUNHO`, sem `imag
 
 ## Distribuicao dos 212 rascunhos
 
-| Area | Novos rascunhos |
-|---|---:|
-| Cervical / ATM | 20 |
-| Toracica / lombar / core | 30 |
-| Ombro / escapula | 30 |
-| Cotovelo / punho / mao | 22 |
-| Quadril / pelve | 28 |
-| Joelho | 28 |
-| Tornozelo / pe | 26 |
-| Equilibrio / marcha / quedas | 18 |
-| Respiracao / relaxamento / neuro leve | 10 |
-| **Total** | **212** |
+| Area                                  | Novos rascunhos |
+| ------------------------------------- | --------------: |
+| Cervical / ATM                        |              20 |
+| Toracica / lombar / core              |              30 |
+| Ombro / escapula                      |              30 |
+| Cotovelo / punho / mao                |              22 |
+| Quadril / pelve                       |              28 |
+| Joelho                                |              28 |
+| Tornozelo / pe                        |              26 |
+| Equilibrio / marcha / quedas          |              18 |
+| Respiracao / relaxamento / neuro leve |              10 |
+| **Total**                             |         **212** |
 
 ## Regras de liberacao
 
@@ -37,10 +37,18 @@ A etapa 35 adiciona 212 exercicios ao catalogo mestre como `RASCUNHO`, sem `imag
 4. Registrar midia principal como `PENDENTE` e revisar clinicamente.
 5. Somente alterar o exercicio para `APROVADO` quando a midia principal estiver `APROVADA`.
 
+## Idiomas e acentuacao
+
+- O cadastro canonico fica em PT-BR acentuado para nome, objetivo, descricao, instrucoes, cuidados e contraindicacoes.
+- A coluna `translations` armazena textos por exercicio em `pt`, `en` e `es`.
+- A tela de prescricao usa o idioma atual do app para mostrar e aplicar o exercicio ao plano do paciente.
+- A busca do catalogo considera o texto canonico e as traducoes, para o profissional encontrar o item em PT-BR, ingles ou espanhol.
+
 ## Arquivos
 
 - Seed: `apps/backend/src/modules/atividades/exercise-catalog-master.seed.ts`.
 - Migration: `apps/backend/src/migrations/1781400000000-SeedMasterExerciseCatalog.ts`.
+- Migration de idiomas/acentuacao: `apps/backend/src/migrations/1781500000000-AddExerciseTranslationsAndAccents.ts`.
 
 ## Observacao clinica
 

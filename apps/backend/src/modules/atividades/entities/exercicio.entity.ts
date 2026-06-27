@@ -1,5 +1,6 @@
 import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import type { ExerciseTranslations } from '../exercise-catalog-localization';
 import { ExercicioMidia } from './exercicio-midia.entity';
 
 export enum ExercicioStatus {
@@ -47,6 +48,9 @@ export class Exercicio extends BaseEntity {
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
   tags: string[];
+
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  translations: ExerciseTranslations;
 
   @Column({
     type: 'varchar',

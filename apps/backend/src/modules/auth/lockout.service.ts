@@ -4,8 +4,8 @@
 // ==========================================
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
 import { isRecord, parseJsonObject } from '../../common/safe-json';
+import { RedisService } from '../../common/redis.service';
 
 type LockoutRecord = {
   count: number;
@@ -22,18 +22,11 @@ const isLockoutRecord = (value: unknown): value is LockoutRecord =>
 @Injectable()
 export class LockoutService {
   private readonly inMemory = new Map<string, LockoutRecord>();
-  private readonly redis?: Redis;
-  private readonly useRedis: boolean;
 
-  constructor(private readonly configService: ConfigService) {
-    const redisUrl = this.configService.get<string>('REDIS_URL');
-    if (redisUrl) {
-      this.redis = new Redis(redisUrl);
-      this.useRedis = true;
-    } else {
-      this.useRedis = false;
-    }
-  }
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
+  ) {}
 
   private getKey(email: string) {
     return `lockout:${email.toLowerCase()}`;
@@ -56,8 +49,9 @@ export class LockoutService {
   }
 
   private async getRecord(email: string): Promise<LockoutRecord | null> {
-    if (this.useRedis && this.redis) {
-      const raw = await this.redis.get(this.getKey(email));
+    const client = this.redisService.getClient();
+    if (client) {
+      const raw = await client.get(this.redisService.key(this.getKey(email)));
       const parsed = parseJsonObject(raw);
       return isLockoutRecord(parsed) ? parsed : null;
     }
@@ -65,11 +59,12 @@ export class LockoutService {
   }
 
   private async setRecord(email: string, record: LockoutRecord): Promise<void> {
-    if (this.useRedis && this.redis) {
+    const client = this.redisService.getClient();
+    if (client) {
       const ttlMs = Math.max(this.lockoutWindowMs(), this.lockoutDurationMs());
       const ttlSeconds = Math.ceil(ttlMs / 1000);
-      await this.redis.set(
-        this.getKey(email),
+      await client.set(
+        this.redisService.key(this.getKey(email)),
         JSON.stringify(record),
         'EX',
         ttlSeconds,
@@ -80,8 +75,9 @@ export class LockoutService {
   }
 
   async reset(email: string): Promise<void> {
-    if (this.useRedis && this.redis) {
-      await this.redis.del(this.getKey(email));
+    const client = this.redisService.getClient();
+    if (client) {
+      await client.del(this.redisService.key(this.getKey(email)));
       return;
     }
     this.inMemory.delete(email);

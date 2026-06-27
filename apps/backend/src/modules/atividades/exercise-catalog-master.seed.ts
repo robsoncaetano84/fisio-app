@@ -1,4 +1,5 @@
 import { ExercicioStatus } from './entities/exercicio.entity';
+import { ExerciseImageType } from './exercise-image-type.enum';
 
 export type MasterExerciseSeed = {
   nome: string;
@@ -11,7 +12,7 @@ export type MasterExerciseSeed = {
   instrucoesPadrao: string;
   cuidados: string;
   contraindicacoes: string;
-  imagemKey: null;
+  imagemKey: ExerciseImageType | null;
   tags: string[];
   status: ExercicioStatus;
 };
@@ -3540,6 +3541,59 @@ export const MASTER_EXERCISE_TEMPLATES: MasterExerciseTemplate[] = [
   },
 ];
 
+const MASTER_EXERCISE_IMAGE_KEYS: Partial<Record<string, ExerciseImageType>> = {
+  'retracao-cervical-em-pe-na-parede':
+    ExerciseImageType.RETRACAO_CERVICAL_EM_PE_PAREDE,
+  'retracao-cervical-em-decubito-com-toalha':
+    ExerciseImageType.RETRACAO_CERVICAL_DECUBITO_TOALHA,
+  'flexao-cervical-ativa-curta': ExerciseImageType.FLEXAO_CERVICAL_ATIVA_CURTA,
+  'rotacao-cervical-em-decubito-dorsal':
+    ExerciseImageType.ROTACAO_CERVICAL_DECUBITO_DORSAL,
+  'inclinacao-cervical-sem-apoio-manual':
+    ExerciseImageType.INCLINACAO_CERVICAL_SEM_APOIO_MANUAL,
+  'isometria-cervical-em-flexao-com-mao':
+    ExerciseImageType.ISOMETRIA_CERVICAL_FLEXAO_MAO,
+  'isometria-cervical-em-extensao-na-parede':
+    ExerciseImageType.ISOMETRIA_CERVICAL_EXTENSAO_PAREDE,
+  'isometria-cervical-lateral-bilateral':
+    ExerciseImageType.ISOMETRIA_CERVICAL_LATERAL_BILATERAL,
+  'deslizamento-cervical-com-toalha':
+    ExerciseImageType.DESLIZAMENTO_CERVICAL_TOALHA,
+  'alongamento-elevador-da-escapula-sentado':
+    ExerciseImageType.ALONGAMENTO_ELEVADOR_ESCAPULA_SENTADO,
+  'mobilidade-suboccipital-com-toalha':
+    ExerciseImageType.MOBILIDADE_SUBOCCIPITAL_TOALHA,
+  'controle-ocular-cervical-sentado':
+    ExerciseImageType.CONTROLE_OCULAR_CERVICAL_SENTADO,
+  'protracao-e-retracao-cervical-sentada':
+    ExerciseImageType.PROTRACAO_RETRACAO_CERVICAL_SENTADA,
+  'abertura-mandibular-controlada':
+    ExerciseImageType.ABERTURA_MANDIBULAR_CONTROLADA,
+  'desvio-lateral-mandibular-controlado':
+    ExerciseImageType.DESVIO_LATERAL_MANDIBULAR_CONTROLADO,
+  'protrusao-mandibular-suave': ExerciseImageType.PROTRUSAO_MANDIBULAR_SUAVE,
+  'dorsiflexao-parede-joelho-a-parede':
+    ExerciseImageType.DORSIFLEXAO_PAREDE_JOELHO_A_PAREDE,
+  'mobilidade-tornozelo-com-faixa-posterior':
+    ExerciseImageType.MOBILIDADE_TORNOZELO_FAIXA_POSTERIOR,
+  'alongamento-gastrocnemio-no-degrau':
+    ExerciseImageType.ALONGAMENTO_GASTROCNEMIO_DEGRAU,
+  'eversao-tornozelo-ativa-sem-faixa':
+    ExerciseImageType.EVERSAO_TORNOZELO_ATIVA_SEM_FAIXA,
+  'inversao-tornozelo-ativa-sem-faixa':
+    ExerciseImageType.INVERSAO_TORNOZELO_ATIVA_SEM_FAIXA,
+  'flexao-extensao-dedos-do-pe': ExerciseImageType.FLEXAO_EXTENSAO_DEDOS_PE,
+  'abducao-dedos-do-pe': ExerciseImageType.ABDUCAO_DEDOS_PE,
+  'elevacao-isolada-do-hallux': ExerciseImageType.ELEVACAO_ISOLADA_HALLUX,
+  'elevacao-dedos-menores-isolada':
+    ExerciseImageType.ELEVACAO_DEDOS_MENORES_ISOLADA,
+  'doming-foot-sentado': ExerciseImageType.DOMING_FOOT_SENTADO,
+  'doming-foot-em-pe': ExerciseImageType.DOMING_FOOT_EM_PE,
+  'elevacao-panturrilha-unilateral-apoio':
+    ExerciseImageType.ELEVACAO_PANTURRILHA_UNILATERAL_APOIO,
+  'elevacao-tibial-na-parede': ExerciseImageType.ELEVACAO_TIBIAL_NA_PAREDE,
+};
+
 function buildObjective(item: MasterExerciseTemplate): string {
   return (
     'Preparar avaliacao clinica e prescricao futura de ' +
@@ -3590,7 +3644,7 @@ export const MASTER_EXERCISE_CATALOG: MasterExerciseSeed[] =
     cuidados: buildCare(item),
     contraindicacoes:
       'Nao liberar para prescricao sem revisao clinica, imagem propria e aprovacao do exercicio. Evitar em dor aguda intensa, instabilidade importante, tontura, queda recente nao avaliada ou sintomas neurologicos progressivos.',
-    imagemKey: null,
+    imagemKey: MASTER_EXERCISE_IMAGE_KEYS[item.slug] ?? null,
     tags: item.tags,
     status: ExercicioStatus.RASCUNHO,
   }));
