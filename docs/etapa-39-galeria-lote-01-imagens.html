@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synap - Galeria lote 01 de exercícios</title>
+    <style>
+      :root {
+        --bg: #f6faf8;
+        --paper: #ffffff;
+        --ink: #1f2933;
+        --muted: #667085;
+        --line: #d9e7df;
+        --primary: #2f7f62;
+        --primary-soft: #e7f3ee;
+        --warn: #9a6700;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      main {
+        width: min(1280px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 24px;
+        padding-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(24px, 4vw, 38px);
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 900px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .notice {
+        margin-top: 16px;
+        border: 1px solid #f3d48a;
+        background: #fff8e5;
+        color: var(--warn);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-weight: 650;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      .image-wrap {
+        aspect-ratio: 1;
+        border-bottom: 1px solid var(--line);
+        background: #f9fbfa;
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .body {
+        padding: 14px;
+      }
+
+      .index {
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 4px 0 6px;
+        font-size: 16px;
+        letter-spacing: 0;
+      }
+
+      .slug {
+        color: var(--muted);
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      .decision {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .box {
+        min-height: 32px;
+        border: 1px solid #b6d8c9;
+        border-radius: 6px;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      code {
+        color: var(--primary);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Galeria de revisão - lote 01</h1>
+        <p class="lead">
+          Lote com 30 imagens novas no padrão Synap: adulto neutro, roupa
+          esportiva cinza-claro/off-white, fundo claro, corpo em tons suaves de
+          cinza, destaque verde no músculo ou direção do movimento, sem texto e
+          sem marca d'água.
+        </p>
+        <p class="notice">
+          Revisão clínica obrigatória: aprovar anatomia, lado do movimento,
+          posição de apoio e clareza terapêutica antes de liberar no catálogo.
+        </p>
+      </header>
+
+      <section class="grid" id="gallery"></section>
+
+      <footer>
+        Arquivo local de revisão. As imagens são carregadas de
+        <code>docs/exercise-image-previews/lote-01</code>. Após aprovação, elas
+        devem ser vinculadas ao catálogo oficial e enviadas ao Supabase Storage.
+      </footer>
+    </main>
+
+    <script>
+      const exercises = [
+        ["Relaxamento mandibular com abertura parcial", "relaxamento-mandibular-com-abertura-parcial"],
+        ["Isometria mandibular em abertura", "isometria-mandibular-em-abertura"],
+        ["Isometria mandibular lateral", "isometria-mandibular-lateral"],
+        ["Mobilidade cervical em quatro apoios", "mobilidade-cervical-em-quatro-apoios"],
+        ["Extensão torácica no rolo", "extensao-toracica-no-rolo"],
+        ["Rotação torácica livro aberto", "rotacao-toracica-livro-aberto"],
+        ["Rotação torácica em pé com bastão", "rotacao-toracica-em-pe-com-bastao"],
+        ["Mobilidade torácica em decúbito lateral", "mobilidade-toracica-em-decubito-lateral"],
+        ["Alongamento latíssimo com apoio na mesa", "alongamento-latissimo-com-apoio-na-mesa"],
+        ["Respiração costal lateral", "respiracao-costal-lateral"],
+        ["Báscula pélvica sentada", "bascula-pelvica-sentada"],
+        ["Báscula pélvica em quatro apoios", "bascula-pelvica-em-quatro-apoios"],
+        ["Ponte unilateral assistida", "ponte-unilateral-assistida"],
+        ["Ponte com adução de bola", "ponte-com-aducao-de-bola"],
+        ["Ponte com abdução de faixa", "ponte-com-abducao-de-faixa"],
+        ["Dead bug toque de calcanhar", "dead-bug-toque-de-calcanhar"],
+        ["Dead bug braços alternados", "dead-bug-bracos-alternados"],
+        ["Prancha frontal com joelhos apoiados", "prancha-frontal-com-joelhos-apoiados"],
+        ["Prancha frontal inclinada na bancada", "prancha-frontal-inclinada-na-bancada"],
+        ["Bird dog apenas perna", "bird-dog-apenas-perna"],
+        ["Bird dog apenas braço", "bird-dog-apenas-braco"],
+        ["Superman curto em decúbito ventral", "superman-curto-em-decubito-ventral"],
+        ["Extensão lombar prone press up baixa", "extensao-lombar-prone-press-up-baixa"],
+        ["Flexão lombar sentado com apoio", "flexao-lombar-sentado-com-apoio"],
+        ["Alongamento posição da criança lateral", "alongamento-posicao-da-crianca-lateral"],
+        ["Joelho duplo ao peito", "joelho-duplo-ao-peito"],
+        ["Deslizamento nervo ciático sentado", "deslizamento-nervo-ciatico-sentado"],
+        ["Mobilização neural ciática em decúbito", "mobilizacao-neural-ciatica-em-decubito"],
+        ["Rotação lombar com bola entre joelhos", "rotacao-lombar-com-bola-entre-joelhos"],
+        ["Anti-rotação Pallof press leve", "anti-rotacao-pallof-press-leve"],
+      ];
+
+      const gallery = document.querySelector("#gallery");
+      exercises.forEach(([name, slug], index) => {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="image-wrap">
+            <img src="exercise-image-previews/lote-01/${slug}.jpg" alt="${name}" />
+          </div>
+          <div class="body">
+            <span class="index">${String(index + 1).padStart(2, "0")}</span>
+            <h2>${name}</h2>
+            <p class="slug">${slug}.jpg</p>
+            <div class="decision">
+              <div class="box">Aprovada</div>
+              <div class="box">Regenerar</div>
+              <div class="box">Observação</div>
+              <div class="box">Clínica</div>
+            </div>
+          </div>
+        `;
+        gallery.appendChild(card);
+      });
+    </script>
+  </body>
+</html>

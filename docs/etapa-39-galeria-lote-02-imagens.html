@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synap - Galeria lote 02 de exercícios</title>
+    <style>
+      :root {
+        --bg: #f6faf8;
+        --paper: #ffffff;
+        --ink: #1f2933;
+        --muted: #667085;
+        --line: #d9e7df;
+        --primary: #2f7f62;
+        --warn: #9a6700;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      main {
+        width: min(1280px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 24px;
+        padding-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(24px, 4vw, 38px);
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 900px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .notice {
+        margin-top: 16px;
+        border: 1px solid #f3d48a;
+        background: #fff8e5;
+        color: var(--warn);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-weight: 650;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      .image-wrap {
+        aspect-ratio: 1;
+        background: #f8f9f8;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .body {
+        padding: 12px;
+      }
+
+      .index {
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 12px;
+      }
+
+      h2 {
+        min-height: 44px;
+        margin: 4px 0 8px;
+        font-size: 15px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .slug {
+        color: var(--muted);
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      .decision {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .box {
+        min-height: 32px;
+        border: 1px solid #b6d8c9;
+        border-radius: 6px;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      code {
+        color: var(--primary);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Galeria de revisão - lote 02</h1>
+        <p class="lead">
+          Lote com 30 imagens novas no padrão Synap: adulto neutro, roupa
+          esportiva cinza-claro/off-white, fundo claro, corpo em tons suaves de
+          cinza, destaque verde no músculo ou direção do movimento, sem texto e
+          sem marca d'água.
+        </p>
+        <p class="notice">
+          Revisão clínica obrigatória: aprovar anatomia, lado do movimento,
+          posição de apoio e clareza terapêutica antes de liberar no catálogo.
+        </p>
+      </header>
+
+      <section class="grid" id="gallery"></section>
+
+      <footer>
+        Arquivo local de revisão. As imagens são carregadas de
+        <code>docs/exercise-image-previews/lote-02</code>. Após aprovação, elas
+        devem ser vinculadas ao catálogo oficial e enviadas ao Supabase Storage.
+      </footer>
+    </main>
+
+    <script>
+      const exercises = [
+        ["Caminhada do fazendeiro leve", "caminhada-do-fazendeiro-leve"],
+        ["Marcha em ponte curta", "marcha-em-ponte-curta"],
+        ["Controle abdominal em sedestação", "controle-abdominal-em-sedestacao"],
+        ["Estabilidade lombar com bola na parede", "estabilidade-lombar-com-bola-na-parede"],
+        ["Mobilidade pendular circular de ombro", "mobilidade-pendular-circular-de-ombro"],
+        ["Pendular ombro lateral", "pendular-ombro-lateral"],
+        ["Flexão de ombro com polia", "flexao-de-ombro-com-polia"],
+        ["Abdução de ombro com polia", "abducao-de-ombro-com-polia"],
+        ["Rotação externa de ombro com bastão", "rotacao-externa-de-ombro-com-bastao"],
+        ["Rotação interna de ombro com bastão", "rotacao-interna-de-ombro-com-bastao"],
+        ["Alongamento cápsula posterior do ombro", "alongamento-capsula-posterior-do-ombro"],
+        ["Alongamento cruzado posterior de ombro", "alongamento-cruzado-posterior-de-ombro"],
+        ["Alongamento peitoral menor no canto", "alongamento-peitoral-menor-no-canto"],
+        ["Retração escapular com faixa em pé", "retracao-escapular-com-faixa-em-pe"],
+        ["Depressão escapular sentada", "depressao-escapular-sentada"],
+        ["Elevação escapular controlada", "elevacao-escapular-controlada"],
+        ["Protração escapular na parede", "protracao-escapular-na-parede"],
+        ["Push plus na parede", "push-plus-na-parede"],
+        ["Serrátil slide com rolo", "serratil-slide-com-rolo"],
+        ["Y na parede baixo", "y-na-parede-baixo"],
+        ["T inclinado sem carga", "t-inclinado-sem-carga"],
+        ["W escapular em pé", "w-escapular-em-pe"],
+        ["Remada baixa com faixa", "remada-baixa-com-faixa"],
+        ["Remada alta com faixa leve", "remada-alta-com-faixa-leve"],
+        ["Extensão de ombro em decúbito ventral", "extensao-de-ombro-em-decubito-ventral"],
+        ["Rotação externa ombro decúbito lateral", "rotacao-externa-ombro-decubito-lateral"],
+        ["Rotação interna ombro deitado", "rotacao-interna-ombro-deitado"],
+        ["Abdução de ombro decúbito lateral", "abducao-de-ombro-decubito-lateral"],
+        ["Flexão de ombro deitado com halter leve", "flexao-de-ombro-deitado-com-halter-leve"],
+        ["Escapular setting em decúbito ventral", "escapular-setting-em-decubito-ventral"],
+      ];
+
+      const gallery = document.querySelector("#gallery");
+      exercises.forEach(([name, slug], index) => {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="image-wrap">
+            <img src="exercise-image-previews/lote-02/${slug}.jpg" alt="${name}" />
+          </div>
+          <div class="body">
+            <span class="index">${String(index + 1).padStart(2, "0")}</span>
+            <h2>${name}</h2>
+            <p class="slug">${slug}.jpg</p>
+            <div class="decision">
+              <div class="box">Aprovada</div>
+              <div class="box">Regenerar</div>
+              <div class="box">Observação</div>
+              <div class="box">Clínica</div>
+            </div>
+          </div>
+        `;
+        gallery.appendChild(card);
+      });
+    </script>
+  </body>
+</html>
