@@ -5,7 +5,7 @@ import { EXERCISE_IMAGE_TYPES } from '../modules/atividades/exercise-image-type.
 export class SeedPreviewExerciseCatalog1781300000000 implements MigrationInterface {
   name = 'SeedPreviewExerciseCatalog1781300000000';
 
-  private readonly allowedImageTypes = EXERCISE_IMAGE_TYPES;
+  private readonly allowedImageTypes: readonly string[] = EXERCISE_IMAGE_TYPES;
 
   private readonly exerciseIds: Record<string, string> = {
     'prancha-frontal-antebraco': '00000001-3434-4000-8000-000000000001',

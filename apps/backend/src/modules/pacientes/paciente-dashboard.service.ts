@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RedisService } from '../../common/redis.service';
 import { Atividade } from '../atividades/entities/atividade.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { Laudo, LaudoStatus } from '../laudos/entities/laudo.entity';
 import { PacienteScopeService } from './paciente-scope.service';
+
+const HEAVY_READ_LIMIT = 5000;
 
 @Injectable()
 export class PacienteDashboardService {
@@ -16,9 +19,25 @@ export class PacienteDashboardService {
     @InjectRepository(Atividade)
     private readonly atividadeRepository: Repository<Atividade>,
     private readonly pacienteScopeService: PacienteScopeService,
+    @Optional()
+    private readonly redisService?: RedisService,
   ) {}
 
   async getAttentionMap(
+    usuarioId: string,
+    isMasterAdmin = false,
+  ): Promise<Record<string, number | null>> {
+    return this.rememberCache(
+      this.buildCacheKey('pacientes:dashboard:attention-map', {
+        usuarioId,
+        isMasterAdmin,
+      }),
+      this.getCacheTtlSeconds(true),
+      () => this.getAttentionMapFromDatabase(usuarioId, isMasterAdmin),
+    );
+  }
+
+  private async getAttentionMapFromDatabase(
     usuarioId: string,
     isMasterAdmin = false,
   ): Promise<Record<string, number | null>> {
@@ -28,7 +47,7 @@ export class PacienteDashboardService {
       this.evolucaoRepository.metadata.tableName,
     );
 
-    const rows = await rowsQuery.getRawMany<{
+    const rows = await rowsQuery.take(HEAVY_READ_LIMIT).getRawMany<{
       pacienteId: string;
       createdAt: string | null;
       lastEvolucaoAt: string | null;
@@ -111,6 +130,17 @@ export class PacienteDashboardService {
   }
 
   async getStats(usuarioId: string, isMasterAdmin = false) {
+    return this.rememberCache(
+      this.buildCacheKey('pacientes:dashboard:stats', {
+        usuarioId,
+        isMasterAdmin,
+      }),
+      this.getCacheTtlSeconds(false),
+      () => this.getStatsFromDatabase(usuarioId, isMasterAdmin),
+    );
+  }
+
+  private async getStatsFromDatabase(usuarioId: string, isMasterAdmin = false) {
     const total = await this.pacienteScopeService
       .buildScopedPacientesQuery(usuarioId, isMasterAdmin)
       .getCount();
@@ -120,5 +150,45 @@ export class PacienteDashboardService {
       atendidosHoje: 0,
       atendidosMes: 0,
     };
+  }
+
+  private async rememberCache<T>(
+    key: string,
+    ttlSeconds: number,
+    factory: () => Promise<T>,
+  ): Promise<T> {
+    if (!this.redisService) return factory();
+    return this.redisService.remember(key, ttlSeconds, factory);
+  }
+
+  private getCacheTtlSeconds(heavy: boolean): number {
+    const envKey = heavy ? 'CACHE_HEAVY_TTL_SECONDS' : 'CACHE_TTL_SECONDS';
+    const raw = Number(process.env[envKey] || (heavy ? 120 : 60));
+    return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 60;
+  }
+
+  private buildCacheKey(prefix: string, value: unknown): string {
+    return `${prefix}:${this.hashCacheValue(this.stableStringify(value))}`;
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      return `{${Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => `${key}:${this.stableStringify(item)}`)
+        .join(',')}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  private hashCacheValue(value: string): string {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      hash = (hash * 31 + value.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash).toString(36);
   }
 }

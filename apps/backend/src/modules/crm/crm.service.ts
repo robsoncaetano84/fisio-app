@@ -10,10 +10,12 @@ import {
   NotFoundException,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
+import { RedisService } from '../../common/redis.service';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { PacienteVinculoStatus } from '../pacientes/entities/paciente.entity';
@@ -71,6 +73,24 @@ import { mapCrmInteraction, mapCrmLead, mapCrmTask } from './crm-entity.mapper';
 
 export type { CrmAdminPermission } from './crm-admin-permissions.util';
 
+const HEAVY_READ_LIMIT = 5000;
+
+type CrmCommandCenterParams = {
+  windowDays?: number;
+  semEvolucaoDias?: number;
+  limit?: number;
+  professionalId?: string;
+  patientId?: string;
+};
+
+type CrmClinicalDashboardSummaryParams = {
+  windowDays?: number;
+  semEvolucaoDias?: number;
+  professionalId?: string;
+  patientId?: string;
+  status?: string;
+};
+
 @Injectable()
 export class CrmService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CrmService.name);
@@ -106,6 +126,8 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     private readonly crmAdminAuditLogRepository: Repository<CrmAdminAuditLog>,
     @InjectRepository(CrmAutomationAction)
     private readonly crmAutomationActionRepository: Repository<CrmAutomationAction>,
+    @Optional()
+    private readonly redisService?: RedisService,
   ) {}
 
   onModuleInit(): void {
@@ -279,6 +301,14 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getPipelineSummary() {
+    return this.rememberCache(
+      'crm:pipeline-summary',
+      this.getCacheTtlSeconds(false),
+      () => this.getPipelineSummaryFromDatabase(),
+    );
+  }
+
+  private async getPipelineSummaryFromDatabase() {
     const leads = await this.crmLeadRepository.find({ where: { ativo: true } });
     const totalLeads = leads.length;
     const valueByStage = Object.values(CrmLeadStage).reduce(
@@ -306,13 +336,15 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  async getCommandCenter(params?: {
-    windowDays?: number;
-    semEvolucaoDias?: number;
-    limit?: number;
-    professionalId?: string;
-    patientId?: string;
-  }) {
+  async getCommandCenter(params?: CrmCommandCenterParams) {
+    return this.rememberCache(
+      this.buildCacheKey('crm:command-center', params || {}),
+      this.getCacheTtlSeconds(true),
+      () => this.getCommandCenterFromDatabase(params),
+    );
+  }
+
+  private async getCommandCenterFromDatabase(params?: CrmCommandCenterParams) {
     const windowDays = Math.max(
       1,
       Math.min(Number(params?.windowDays || 7), 90),
@@ -699,15 +731,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
 
   async syncAutomationActions(
     usuario: Pick<Usuario, 'id'> | null,
-    params?: {
-      windowDays?: number;
-      semEvolucaoDias?: number;
-      limit?: number;
-      professionalId?: string;
-      patientId?: string;
-    },
+    params?: CrmCommandCenterParams,
   ) {
-    const summary = await this.getCommandCenter({
+    const summary = await this.getCommandCenterFromDatabase({
       ...params,
       limit: Math.max(20, Number(params?.limit || 20)),
     });
@@ -1200,7 +1226,8 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
       .createQueryBuilder('paciente')
       .leftJoinAndSelect('paciente.usuario', 'profissional')
       .leftJoinAndSelect('paciente.pacienteUsuario', 'pacienteUsuario')
-      .orderBy('paciente.nomeCompleto', 'ASC');
+      .orderBy('paciente.nomeCompleto', 'ASC')
+      .take(HEAVY_READ_LIMIT);
 
     if (typeof params?.ativo === 'boolean') {
       qb.andWhere('paciente.ativo = :ativoFilter', {
@@ -1420,13 +1447,19 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     return qb;
   }
 
-  async getClinicalDashboardSummary(params?: {
-    windowDays?: number;
-    semEvolucaoDias?: number;
-    professionalId?: string;
-    patientId?: string;
-    status?: string;
-  }) {
+  async getClinicalDashboardSummary(
+    params?: CrmClinicalDashboardSummaryParams,
+  ) {
+    return this.rememberCache(
+      this.buildCacheKey('crm:clinical-dashboard', params || {}),
+      this.getCacheTtlSeconds(true),
+      () => this.getClinicalDashboardSummaryFromDatabase(params),
+    );
+  }
+
+  private async getClinicalDashboardSummaryFromDatabase(
+    params?: CrmClinicalDashboardSummaryParams,
+  ) {
     const windowDays = Math.max(
       1,
       Math.min(Number(params?.windowDays || 7), 90),
@@ -1451,6 +1484,7 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
         ...(professionalId ? { usuarioId: professionalId } : {}),
         ...(patientId ? { id: patientId } : {}),
       },
+      take: HEAVY_READ_LIMIT,
     });
     const pacienteIds = pacientes.map((p) => p.id);
     if (!pacienteIds.length) {
@@ -1662,7 +1696,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
       observacoes: dto.observacoes?.trim() || null,
       ativo: true,
     });
-    return mapCrmLead(await this.crmLeadRepository.save(entity), {
+    const saved = await this.crmLeadRepository.save(entity);
+    await this.invalidateCrmCache();
+    return mapCrmLead(saved, {
       includeSensitive: true,
     });
   }
@@ -1684,7 +1720,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     if (dto.observacoes !== undefined)
       lead.observacoes = dto.observacoes?.trim() || null;
 
-    return mapCrmLead(await this.crmLeadRepository.save(lead), {
+    const saved = await this.crmLeadRepository.save(lead);
+    await this.invalidateCrmCache();
+    return mapCrmLead(saved, {
       includeSensitive: true,
     });
   }
@@ -1696,6 +1734,7 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     if (!lead) throw new NotFoundException('Lead não encontrado');
     lead.ativo = false;
     await this.crmLeadRepository.save(lead);
+    await this.invalidateCrmCache();
   }
 
   async listTasks(params?: {
@@ -1747,7 +1786,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
       status: dto.status ?? CrmTaskStatus.PENDENTE,
       ativo: true,
     });
-    return mapCrmTask(await this.crmTaskRepository.save(entity), {
+    const saved = await this.crmTaskRepository.save(entity);
+    await this.invalidateCrmCache();
+    return mapCrmTask(saved, {
       includeSensitive: true,
     });
   }
@@ -1768,7 +1809,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
       task.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
     if (dto.status !== undefined) task.status = dto.status;
 
-    return mapCrmTask(await this.crmTaskRepository.save(task), {
+    const saved = await this.crmTaskRepository.save(task);
+    await this.invalidateCrmCache();
+    return mapCrmTask(saved, {
       includeSensitive: true,
     });
   }
@@ -1780,6 +1823,7 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     if (!task) throw new NotFoundException('Tarefa CRM não encontrada');
     task.ativo = false;
     await this.crmTaskRepository.save(task);
+    await this.invalidateCrmCache();
   }
 
   async listInteractions(
@@ -1833,7 +1877,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
       occurredAt: dto.occurredAt ? new Date(dto.occurredAt) : new Date(),
       ativo: true,
     });
-    return mapCrmInteraction(await this.crmInteractionRepository.save(entity), {
+    const saved = await this.crmInteractionRepository.save(entity);
+    await this.invalidateCrmCache();
+    return mapCrmInteraction(saved, {
       includeSensitive: true,
     });
   }
@@ -1857,7 +1903,9 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     if (dto.occurredAt !== undefined && dto.occurredAt)
       item.occurredAt = new Date(dto.occurredAt);
 
-    return mapCrmInteraction(await this.crmInteractionRepository.save(item), {
+    const saved = await this.crmInteractionRepository.save(item);
+    await this.invalidateCrmCache();
+    return mapCrmInteraction(saved, {
       includeSensitive: true,
     });
   }
@@ -1869,6 +1917,55 @@ export class CrmService implements OnModuleInit, OnModuleDestroy {
     if (!item) throw new NotFoundException('Interação CRM não encontrada');
     item.ativo = false;
     await this.crmInteractionRepository.save(item);
+    await this.invalidateCrmCache();
+  }
+
+  private async rememberCache<T>(
+    key: string,
+    ttlSeconds: number,
+    factory: () => Promise<T>,
+  ): Promise<T> {
+    if (!this.redisService) return factory();
+    return this.redisService.remember(key, ttlSeconds, factory);
+  }
+
+  private async invalidateCrmCache(): Promise<void> {
+    try {
+      await this.redisService?.deleteByPrefix('crm:');
+    } catch {
+      return;
+    }
+  }
+
+  private getCacheTtlSeconds(heavy: boolean): number {
+    const envKey = heavy ? 'CACHE_HEAVY_TTL_SECONDS' : 'CACHE_TTL_SECONDS';
+    const raw = Number(process.env[envKey] || (heavy ? 120 : 60));
+    return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 60;
+  }
+
+  private buildCacheKey(prefix: string, value: unknown): string {
+    return `${prefix}:${this.hashCacheValue(this.stableStringify(value))}`;
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      return `{${Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => `${key}:${this.stableStringify(item)}`)
+        .join(',')}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  private hashCacheValue(value: string): string {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      hash = (hash * 31 + value.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash).toString(36);
   }
 
   private buildLeadQuery(params?: {

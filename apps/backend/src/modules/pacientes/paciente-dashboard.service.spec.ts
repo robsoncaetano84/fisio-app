@@ -20,6 +20,7 @@ describe('PacienteDashboardService', () => {
     addGroupBy: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
     getRawMany: jest.fn().mockResolvedValue(rawMany),
     getMany: jest.fn().mockResolvedValue(many),
     getCount: jest.fn().mockResolvedValue(count),

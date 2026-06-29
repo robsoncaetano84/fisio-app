@@ -882,7 +882,7 @@ export class ExerciciosCatalogService implements OnModuleInit {
   }
 
   private hasOwn<T extends object>(target: T, key: keyof T): boolean {
-    return Object.prototype.hasOwnProperty.call(target, key);
+    return Object.hasOwn(target, key);
   }
 
   private normalizeOptionalStoragePath(value: unknown): string | null {
@@ -943,7 +943,15 @@ export class ExerciciosCatalogService implements OnModuleInit {
   }
 
   private normalizeOptionalString(value?: unknown): string | null {
-    const trimmed = String(value || '').trim();
+    if (value === null || value === undefined) return null;
+    if (
+      typeof value !== 'string' &&
+      typeof value !== 'number' &&
+      typeof value !== 'boolean'
+    ) {
+      return null;
+    }
+    const trimmed = String(value).trim();
     return trimmed || null;
   }
 

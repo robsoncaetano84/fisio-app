@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThanOrEqual, Repository } from 'typeorm';
+import { RedisService } from '../../common/redis.service';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Atividade } from '../atividades/entities/atividade.entity';
 import { AtividadeCheckin } from '../atividades/entities/atividade-checkin.entity';
@@ -21,6 +22,7 @@ import {
 import { PatientCheckClickEvent } from './entities/patient-check-click-event.entity';
 
 const STAGES: ClinicalFlowStage[] = ['ANAMNESE', 'EXAME_FISICO', 'EVOLUCAO'];
+const HEAVY_READ_LIMIT = 5000;
 const STATUS_TO_EVENT_TYPE: Record<string, ClinicalFlowEventType> = {
   OPENED: 'STAGE_OPENED',
   COMPLETED: 'STAGE_COMPLETED',
@@ -91,6 +93,8 @@ export class MetricsService {
     private readonly anamneseRepo: Repository<Anamnese>,
     @InjectRepository(Atividade)
     private readonly atividadeRepo: Repository<Atividade>,
+    @Optional()
+    private readonly redisService?: RedisService,
   ) {}
 
   async trackClinicalFlowEvent(
@@ -111,10 +115,36 @@ export class MetricsService {
       blockedReason,
     });
     await this.clinicalFlowRepo.save(created);
+    await this.invalidateMetricsCache();
+    await this.invalidateCacheByPrefix('crm:clinical-dashboard:');
     return { ok: true };
   }
 
   async getClinicalFlowSummary(
+    actorId: string,
+    actorRole: UserRole,
+    windowDays = 7,
+    filters?: MetricsSummaryFilters,
+  ) {
+    return this.rememberCache(
+      this.buildCacheKey('metrics:clinical-flow-summary', {
+        actorId,
+        actorRole,
+        windowDays,
+        filters: filters || {},
+      }),
+      this.getCacheTtlSeconds(true),
+      () =>
+        this.getClinicalFlowSummaryFromDatabase(
+          actorId,
+          actorRole,
+          windowDays,
+          filters,
+        ),
+    );
+  }
+
+  private async getClinicalFlowSummaryFromDatabase(
     actorId: string,
     actorRole: UserRole,
     windowDays = 7,
@@ -267,10 +297,38 @@ export class MetricsService {
       source,
     });
     await this.patientCheckClickRepo.save(created);
+    await this.invalidateMetricsCache();
     return { ok: true };
   }
 
   async getPatientCheckEngagementSummary(
+    actorId: string,
+    actorRole: UserRole,
+    windowDays = 7,
+    filters?: Pick<
+      MetricsSummaryFilters,
+      'professionalId' | 'patientId' | 'status'
+    >,
+  ) {
+    return this.rememberCache(
+      this.buildCacheKey('metrics:patient-check-engagement', {
+        actorId,
+        actorRole,
+        windowDays,
+        filters: filters || {},
+      }),
+      this.getCacheTtlSeconds(true),
+      () =>
+        this.getPatientCheckEngagementSummaryFromDatabase(
+          actorId,
+          actorRole,
+          windowDays,
+          filters,
+        ),
+    );
+  }
+
+  private async getPatientCheckEngagementSummaryFromDatabase(
     actorId: string,
     actorRole: UserRole,
     windowDays = 7,
@@ -355,6 +413,33 @@ export class MetricsService {
   }
 
   async getPhysicalExamTestsSummary(
+    actorId: string,
+    actorRole: UserRole,
+    windowDays = 30,
+    filters?: Pick<
+      MetricsSummaryFilters,
+      'professionalId' | 'patientId' | 'status'
+    >,
+  ) {
+    return this.rememberCache(
+      this.buildCacheKey('metrics:physical-exam-tests', {
+        actorId,
+        actorRole,
+        windowDays,
+        filters: filters || {},
+      }),
+      this.getCacheTtlSeconds(true),
+      () =>
+        this.getPhysicalExamTestsSummaryFromDatabase(
+          actorId,
+          actorRole,
+          windowDays,
+          filters,
+        ),
+    );
+  }
+
+  private async getPhysicalExamTestsSummaryFromDatabase(
     actorId: string,
     actorRole: UserRole,
     windowDays = 30,
@@ -549,6 +634,7 @@ export class MetricsService {
         ...(scopedProfessionalId ? { usuarioId: scopedProfessionalId } : {}),
       },
       select: ['id', 'createdAt', 'pacienteUsuarioId', 'vinculoStatus'],
+      take: HEAVY_READ_LIMIT,
     });
     if (!pacientes.length) return [];
     const pacienteIds = pacientes.map((p) => p.id);
@@ -618,5 +704,57 @@ export class MetricsService {
       }
     }
     return filteredIds;
+  }
+
+  private async rememberCache<T>(
+    key: string,
+    ttlSeconds: number,
+    factory: () => Promise<T>,
+  ): Promise<T> {
+    if (!this.redisService) return factory();
+    return this.redisService.remember(key, ttlSeconds, factory);
+  }
+
+  private async invalidateMetricsCache(): Promise<void> {
+    await this.invalidateCacheByPrefix('metrics:');
+  }
+
+  private async invalidateCacheByPrefix(prefix: string): Promise<void> {
+    try {
+      await this.redisService?.deleteByPrefix(prefix);
+    } catch {
+      return;
+    }
+  }
+
+  private getCacheTtlSeconds(heavy: boolean): number {
+    const envKey = heavy ? 'CACHE_HEAVY_TTL_SECONDS' : 'CACHE_TTL_SECONDS';
+    const raw = Number(process.env[envKey] || (heavy ? 120 : 60));
+    return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 60;
+  }
+
+  private buildCacheKey(prefix: string, value: unknown): string {
+    return `${prefix}:${this.hashCacheValue(this.stableStringify(value))}`;
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      return `{${Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => `${key}:${this.stableStringify(item)}`)
+        .join(',')}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  private hashCacheValue(value: string): string {
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      hash = (hash * 31 + value.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash).toString(36);
   }
 }

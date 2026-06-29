@@ -122,7 +122,7 @@ export const envValidationSchema = Joi.object({
   DB_SSL_REJECT_UNAUTHORIZED: Joi.string()
     .valid('true', 'false')
     .default('true'),
-  DB_POOL_MAX: Joi.number().integer().min(1).max(100).default(10),
+  DB_POOL_MAX: Joi.number().integer().min(1).max(100).default(8),
   DB_POOL_MIN: Joi.number().integer().min(0).max(100).default(0),
   DB_POOL_IDLE_TIMEOUT_MS: Joi.number().integer().min(1000).default(10000),
   DB_POOL_CONNECTION_TIMEOUT_MS: Joi.number()

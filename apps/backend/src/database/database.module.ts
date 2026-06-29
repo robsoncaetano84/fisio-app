@@ -13,7 +13,7 @@ import { DATABASE_ENTITIES } from './database.entities';
         const rejectUnauthorized =
           configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') !== 'false';
         const isDevelopment = configService.get('NODE_ENV') === 'development';
-        const poolMax = configService.get<number>('DB_POOL_MAX') ?? 10;
+        const poolMax = configService.get<number>('DB_POOL_MAX') ?? 8;
         const poolMin = configService.get<number>('DB_POOL_MIN') ?? 0;
         const idleTimeoutMillis =
           configService.get<number>('DB_POOL_IDLE_TIMEOUT_MS') ?? 10000;
