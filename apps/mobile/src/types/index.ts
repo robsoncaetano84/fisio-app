@@ -2,6 +2,11 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // TIPOS PRINCIPAIS - FISIO APP
 // ==========================================
+//
+// FONTE DA VERDADE: os enums de dominio abaixo espelham as entities do
+// backend (apps/backend/src/.../entities). Ao alterar um enum aqui, ajuste
+// o backend tambem. O gate scripts/check-shared-types.mjs (npm run
+// check:shared-types, parte do validate:critical) falha o CI se divergirem.
 
 // ------------------------------------------
 // ENUMS
@@ -442,6 +447,47 @@ export interface Atividade {
   updatedAt: string;
 }
 
+export interface PlanoTerapeuticoItem {
+  exercicioId: string;
+  exercicioNome: string;
+  regiaoCorporal: string;
+  categoria: string;
+  nivel: string;
+  ordem: number;
+  series: number;
+  repeticoes: number | null;
+  tempoSegundos: number | null;
+  frequenciaSemanal: number;
+  justificativa: string;
+  progressao: string;
+  imagemUrl: string | null;
+  imagemTipo: string | null;
+  score: number;
+}
+
+export interface PlanoTerapeuticoResult {
+  itens: PlanoTerapeuticoItem[];
+  regioesAlvo: string[];
+  observacaoClinica: string;
+  redFlags: string[];
+  bloqueadoPorRedFlag: boolean;
+  source: "rules" | "ai";
+  model?: string;
+  referencias: string[];
+}
+
+export interface AprovarPlanoIaItem {
+  exercicioId: string;
+  titulo?: string;
+  instrucoesExecucao?: string;
+  series?: number;
+  repeticoes?: number;
+  tempoSegundos?: number;
+  frequenciaSemanal?: number;
+  diaPrescricao?: number;
+  ordemNoDia?: number;
+}
+
 export interface ExercicioMidia {
   id: string;
   exercicioId: string;
@@ -713,6 +759,7 @@ export type RootStackParamList = {
   PacienteInviteAccess: { pacienteId: string };
   PacienteAdesao: { pacienteId: string };
   AtividadeForm: { pacienteId: string; pacienteNome?: string };
+  PlanoTerapeuticoIa: { pacienteId: string; pacienteNome?: string };
 
   // Anamnese
   AnamneseForm: {

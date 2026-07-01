@@ -39,6 +39,7 @@ import {
   PacienteInviteAccessScreen,
   PacienteAdesaoScreen,
   AtividadeFormScreen,
+  PlanoTerapeuticoIaScreen,
 } from "../screens/pacientes";
 import { AnamneseFormScreen, AnamneseListScreen } from "../screens/anamnese";
 import { EvolucaoFormScreen, EvolucaoListScreen } from "../screens/evolucao";
@@ -218,6 +219,11 @@ const MainStack = ({ t }: { t: (key: string) => string }) => (
       name="AtividadeForm"
       component={AtividadeFormScreen}
       options={{ title: t("nav.prescribeActivity") }}
+    />
+    <Stack.Screen
+      name="PlanoTerapeuticoIa"
+      component={PlanoTerapeuticoIaScreen}
+      options={{ headerShown: false }}
     />
     <Stack.Screen
       name="AnamneseForm"

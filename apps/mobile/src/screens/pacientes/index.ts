@@ -9,3 +9,4 @@ export { PacienteDetailsScreen } from "./PacienteDetailsScreen";
 export { PacienteInviteAccessScreen } from "./PacienteInviteAccessScreen";
 export { PacienteAdesaoScreen } from "./PacienteAdesaoScreen";
 export { AtividadeFormScreen } from "./AtividadeFormScreen";
+export { PlanoTerapeuticoIaScreen } from "./PlanoTerapeuticoIaScreen";

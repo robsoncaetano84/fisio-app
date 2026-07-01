@@ -1704,6 +1704,19 @@ export function PacienteDetailsScreen({
             <TouchableOpacity
               style={styles.secondaryActionChip}
               onPress={() =>
+                navigation.navigate("PlanoTerapeuticoIa", {
+                  pacienteId: paciente.id,
+                  pacienteNome: paciente.nomeCompleto,
+                })
+              }
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.secondaryActionChipText}>Plano por IA</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryActionChip}
+              onPress={() =>
                 navigation.navigate("PacienteAdesao", {
                   pacienteId: paciente.id,
                 })
