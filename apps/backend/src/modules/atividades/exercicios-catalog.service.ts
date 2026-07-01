@@ -644,6 +644,55 @@ export class ExerciciosCatalogService implements OnModuleInit {
     return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
   }
 
+  /**
+   * Retorna exercicios aprovados e com midia clinicamente aprovada para serem
+   * candidatos a um plano terapeutico. Quando `regioes` e informado, restringe
+   * por correspondencia parcial de regiaoCorporal (ex.: 'LOMBAR' casa
+   * 'LOMBAR', 'LOMBAR_QUADRIL' e 'TORACICA_LOMBAR_CORE').
+   */
+  async findCandidatosParaRecomendacao(
+    regioes: string[] = [],
+  ): Promise<Exercicio[]> {
+    const tokens = Array.from(
+      new Set(
+        (regioes || [])
+          .map((regiao) => regiao?.trim().toUpperCase())
+          .filter((regiao): regiao is string => Boolean(regiao)),
+      ),
+    );
+
+    return this.rememberCache(
+      this.buildCacheKey('exercicios:recomendacao', { regioes: tokens }),
+      this.getCacheTtlSeconds(false),
+      async () => {
+        const qb = this.exercicioRepository.createQueryBuilder('exercicio');
+        this.joinClinicallyApprovedPrimaryMedia(qb);
+        qb.where('exercicio.ativo = :ativo', { ativo: true }).andWhere(
+          'exercicio.status = :status',
+          { status: ExercicioStatus.APROVADO },
+        );
+
+        if (tokens.length) {
+          qb.andWhere(
+            new Brackets((inner) => {
+              tokens.forEach((token, index) => {
+                const param = `regiaoToken${index}`;
+                inner.orWhere(`exercicio.regiaoCorporal ILIKE :${param}`, {
+                  [param]: `%${token}%`,
+                });
+              });
+            }),
+          );
+        }
+
+        return qb
+          .orderBy('exercicio.regiaoCorporal', 'ASC')
+          .addOrderBy('exercicio.nome', 'ASC')
+          .getMany();
+      },
+    );
+  }
+
   async findBestMatchForSuggestion(
     input: ExercicioSuggestionMatchInput,
   ): Promise<Exercicio | null> {

@@ -24,6 +24,8 @@ import { DuplicateAtividadeDto } from './dto/duplicate-atividade.dto';
 import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dto';
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
 import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
+import { RecomendarPlanoIaDto } from './dto/recomendar-plano-ia.dto';
+import { AprovarPlanoIaDto } from './dto/aprovar-plano-ia.dto';
 import { AtividadesService } from './atividades.service';
 
 @Controller('atividades')
@@ -40,6 +42,27 @@ export class AtividadesController {
   ) {
     return this.atividadesService.generateAiSuggestion(dto, usuario.id);
   }
+
+  @Post('plano-ia')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  recomendarPlanoIa(
+    @Body() dto: RecomendarPlanoIaDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.atividadesService.recomendarPlanoIa(dto, usuario.id);
+  }
+
+  @Post('plano-ia/aprovar')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  aprovarPlanoIa(
+    @Body() dto: AprovarPlanoIaDto,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.atividadesService.aprovarPlanoIa(dto, usuario.id);
+  }
+
   @Post()
   @Throttle({ default: { ttl: 60, limit: 30 } })
   @Roles(UserRole.ADMIN, UserRole.USER)

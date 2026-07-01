@@ -17,6 +17,7 @@ import { ExerciciosController } from './exercicios.controller';
 import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
 import { AtividadesService } from './atividades.service';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
+import { PlanoTerapeuticoAiService } from './plano-terapeutico-ai.service';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
 import { OpenAiModule } from '../ai/openai.module';
 
@@ -40,6 +41,7 @@ import { OpenAiModule } from '../ai/openai.module';
     AtividadesService,
     AtividadeAiSuggestionService,
     ExerciciosCatalogService,
+    PlanoTerapeuticoAiService,
   ],
   exports: [AtividadesService],
 })

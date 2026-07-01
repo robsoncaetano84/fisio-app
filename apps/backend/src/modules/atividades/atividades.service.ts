@@ -10,8 +10,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { Atividade } from './entities/atividade.entity';
 import { Exercicio } from './entities/exercicio.entity';
+import { AtividadeAiGeneration } from './entities/atividade-ai-generation.entity';
 import {
   AtividadeCheckin,
   DificuldadeExecucao,
@@ -27,9 +29,15 @@ import { DuplicateAtividadeDto } from './dto/duplicate-atividade.dto';
 import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dto';
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
 import { GenerateAtividadeAiDto } from './dto/generate-atividade-ai.dto';
+import { RecomendarPlanoIaDto } from './dto/recomendar-plano-ia.dto';
+import { AprovarPlanoIaDto } from './dto/aprovar-plano-ia.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AtividadeAiSuggestionService } from './atividade-ai-suggestion.service';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
+import {
+  PlanoTerapeuticoAiService,
+  PlanoTerapeuticoResult,
+} from './plano-terapeutico-ai.service';
 
 @Injectable()
 export class AtividadesService {
@@ -44,9 +52,12 @@ export class AtividadesService {
     private readonly anamneseRepository: Repository<Anamnese>,
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
+    @InjectRepository(AtividadeAiGeneration)
+    private readonly aiGenerationRepository: Repository<AtividadeAiGeneration>,
     private readonly notificacoesService: NotificacoesService,
     private readonly atividadeAiSuggestionService: AtividadeAiSuggestionService,
     private readonly exerciciosCatalogService: ExerciciosCatalogService,
+    private readonly planoTerapeuticoAiService: PlanoTerapeuticoAiService,
   ) {}
 
   async create(dto: CreateAtividadeDto, usuarioId: string): Promise<Atividade> {
@@ -736,6 +747,178 @@ export class AtividadesService {
       imagemTipo: exercicio?.imagemKey || undefined,
       imagemUrl: this.getExerciseImageUrl(exercicio) || undefined,
     };
+  }
+
+  /**
+   * Gera uma recomendacao de plano terapeutico (varios exercicios do catalogo)
+   * a partir da anamnese + exame fisico. NAO persiste: a saida e uma sugestao
+   * para o fisioterapeuta revisar e aprovar via `aprovarPlanoIa`.
+   */
+  async recomendarPlanoIa(
+    dto: RecomendarPlanoIaDto,
+    usuarioId: string,
+  ): Promise<PlanoTerapeuticoResult> {
+    const paciente = await this.pacienteRepository.findOne({
+      where: { id: dto.pacienteId, usuarioId, ativo: true },
+    });
+    if (!paciente) {
+      throw new NotFoundException('Paciente nao encontrado');
+    }
+
+    const anamnese = await this.anamneseRepository.findOne({
+      where: { pacienteId: dto.pacienteId },
+      order: { createdAt: 'DESC' },
+    });
+    const laudo = await this.laudoRepository.findOne({
+      where: { pacienteId: dto.pacienteId },
+      order: { updatedAt: 'DESC' },
+    });
+
+    const regioes = dto.regioesFoco?.length
+      ? dto.regioesFoco
+      : this.planoTerapeuticoAiService.inferirRegioes(anamnese, laudo);
+
+    const candidatos =
+      await this.exerciciosCatalogService.findCandidatosParaRecomendacao(
+        regioes,
+      );
+
+    const resultado = await this.planoTerapeuticoAiService.recomendar(
+      paciente,
+      anamnese,
+      laudo,
+      candidatos,
+      { maxExercicios: dto.maxExercicios, regioesFoco: dto.regioesFoco },
+    );
+
+    await this.registrarAuditoriaPlano(dto.pacienteId, regioes, resultado);
+
+    return resultado;
+  }
+
+  private async registrarAuditoriaPlano(
+    pacienteId: string,
+    regioes: string[],
+    resultado: PlanoTerapeuticoResult,
+  ): Promise<void> {
+    try {
+      const generatedOn = new Date().toISOString().slice(0, 10);
+      const inputHash = createHash('sha256')
+        .update(
+          JSON.stringify({
+            regioes,
+            itens: resultado.itens.map((item) => item.exercicioId),
+            redFlags: resultado.redFlags,
+          }),
+        )
+        .digest('hex')
+        .slice(0, 64);
+
+      await this.aiGenerationRepository.upsert(
+        {
+          pacienteId,
+          generatedOn,
+          inputHash,
+          titulo:
+            `Plano terapeutico (${resultado.itens.length} exercicios)`.slice(
+              0,
+              140,
+            ),
+          descricao: resultado.observacaoClinica,
+          referencias: resultado.referencias,
+          source: resultado.source,
+          model: resultado.model ?? null,
+        },
+        ['pacienteId', 'generatedOn'],
+      );
+    } catch {
+      // Auditoria e best-effort: nunca deve quebrar a recomendacao.
+    }
+  }
+
+  /**
+   * Persiste o plano revisado/ajustado pelo fisioterapeuta como atividades do
+   * paciente (ja com aceite profissional). Cada item precisa apontar para um
+   * exercicio aprovado do catalogo.
+   */
+  async aprovarPlanoIa(
+    dto: AprovarPlanoIaDto,
+    usuarioId: string,
+  ): Promise<Atividade[]> {
+    const paciente = await this.pacienteRepository.findOne({
+      where: { id: dto.pacienteId, usuarioId, ativo: true },
+    });
+    if (!paciente) {
+      throw new NotFoundException('Paciente nao encontrado');
+    }
+
+    const agora = new Date();
+    const novas: Atividade[] = [];
+
+    for (let index = 0; index < dto.itens.length; index += 1) {
+      const item = dto.itens[index];
+      const exercicio = await this.exerciciosCatalogService.findApprovedById(
+        item.exercicioId,
+      );
+      if (!exercicio) {
+        throw new BadRequestException(
+          `Exercicio nao encontrado ou nao aprovado: ${item.exercicioId}`,
+        );
+      }
+
+      novas.push(
+        this.atividadeRepository.create({
+          pacienteId: dto.pacienteId,
+          usuarioId,
+          exercicioId: exercicio.id,
+          titulo: (item.titulo?.trim() || exercicio.nome).slice(0, 140),
+          descricao: this.montarDescricaoPlano(item, exercicio),
+          instrucoesExecucao:
+            item.instrucoesExecucao?.trim() ||
+            exercicio.instrucoesPadrao ||
+            null,
+          imagemUrl: this.getExerciseImageUrl(exercicio),
+          imagemTipo: exercicio.imagemKey || null,
+          dataLimite: null,
+          diaPrescricao:
+            typeof item.diaPrescricao === 'number' ? item.diaPrescricao : null,
+          ordemNoDia:
+            typeof item.ordemNoDia === 'number' ? item.ordemNoDia : index + 1,
+          repetirSemanal: true,
+          aceiteProfissional: true,
+          aceiteProfissionalPorUsuarioId: usuarioId,
+          aceiteProfissionalEm: agora,
+          ativo: true,
+        }),
+      );
+    }
+
+    return this.atividadeRepository.save(novas);
+  }
+
+  private montarDescricaoPlano(
+    item: AprovarPlanoIaDto['itens'][number],
+    exercicio: Exercicio,
+  ): string | null {
+    const base =
+      exercicio.descricao?.trim() || exercicio.objetivo?.trim() || '';
+    const volume =
+      typeof item.tempoSegundos === 'number'
+        ? `${item.tempoSegundos}s`
+        : typeof item.repeticoes === 'number'
+          ? `${item.repeticoes} repeticoes`
+          : null;
+    const dose = [
+      typeof item.series === 'number' ? `${item.series} serie(s)` : null,
+      volume,
+      typeof item.frequenciaSemanal === 'number'
+        ? `${item.frequenciaSemanal}x/semana`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(' x ');
+    const linhaDose = dose ? `Dose: ${dose}.` : '';
+    return [base, linhaDose].filter(Boolean).join(' ').slice(0, 1000) || null;
   }
 
   private getExerciseImageUrl(exercicio?: Exercicio | null): string | null {

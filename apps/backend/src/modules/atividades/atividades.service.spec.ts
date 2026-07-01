@@ -16,6 +16,7 @@ const makeService = () => {
   const pacienteRepository = makeRepository();
   const anamneseRepository = makeRepository();
   const laudoRepository = makeRepository();
+  const aiGenerationRepository = { ...makeRepository(), upsert: jest.fn() };
   const notificacoesService = {};
   const atividadeAiSuggestionService = {
     generate: jest.fn(),
@@ -23,6 +24,11 @@ const makeService = () => {
   const exerciciosCatalogService = {
     findApprovedById: jest.fn(),
     findBestMatchForSuggestion: jest.fn(),
+    findCandidatosParaRecomendacao: jest.fn(),
+  };
+  const planoTerapeuticoAiService = {
+    inferirRegioes: jest.fn(() => []),
+    recomendar: jest.fn(),
   };
 
   const service = new AtividadesService(
@@ -31,9 +37,11 @@ const makeService = () => {
     pacienteRepository as any,
     anamneseRepository as any,
     laudoRepository as any,
+    aiGenerationRepository as any,
     notificacoesService as any,
     atividadeAiSuggestionService as any,
     exerciciosCatalogService as any,
+    planoTerapeuticoAiService as any,
   );
 
   return {
