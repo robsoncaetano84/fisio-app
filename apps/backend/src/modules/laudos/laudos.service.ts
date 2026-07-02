@@ -5,6 +5,7 @@
 // ==========================================
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -46,6 +47,8 @@ type LaudoReferenceSuggestionResponse = {
 
 @Injectable()
 export class LaudosService {
+  private readonly logger = new Logger(LaudosService.name);
+
   constructor(
     @InjectRepository(Laudo)
     private readonly laudoRepository: Repository<Laudo>,
@@ -537,6 +540,7 @@ export class LaudosService {
     const aiSuggestion = await this.generateAiSuggestionWithDailyCap(
       pacienteId,
       paciente,
+      usuarioId,
     );
 
     const payload: CreateLaudoDto = {
@@ -593,9 +597,11 @@ export class LaudosService {
   private async generateAiSuggestionWithDailyCap(
     pacienteId: string,
     paciente: Paciente,
+    usuarioId: string,
   ): Promise<Partial<CreateLaudoDto>> {
     const acquired = await this.acquireDailyAiGenerationSlot(pacienteId);
     if (!acquired) {
+      this.logAiUsage({ usuarioId, pacienteId, outcome: 'skipped_slot_usado' });
       return {};
     }
 
@@ -639,8 +645,35 @@ export class LaudosService {
 
     if (Object.keys(suggestion).length === 0) {
       await this.releaseDailyAiGenerationSlot(pacienteId);
+      this.logAiUsage({ usuarioId, pacienteId, outcome: 'sem_resultado' });
+      return suggestion;
     }
+
+    // outcome 'ok' = 1 conclusao efetivamente cobrada pelo provedor de IA.
+    this.logAiUsage({ usuarioId, pacienteId, outcome: 'ok' });
     return suggestion;
+  }
+
+  // F13: log estruturado de uso da IA de laudo para permitir medir custo por
+  // profissional/paciente (grep/agregacao em observabilidade).
+  private logAiUsage(data: {
+    usuarioId: string;
+    pacienteId: string;
+    outcome: 'ok' | 'sem_resultado' | 'skipped_slot_usado';
+  }): void {
+    const hasApiKey = Boolean((process.env.OPENAI_API_KEY || '').trim());
+    const model = (process.env.OPENAI_MODEL || 'gpt-4.1-mini').trim();
+    this.logger.log(
+      JSON.stringify({
+        event: 'laudo_ai_usage',
+        usuarioId: data.usuarioId,
+        pacienteId: data.pacienteId,
+        outcome: data.outcome,
+        billable: data.outcome === 'ok',
+        model,
+        aiEnabled: hasApiKey,
+      }),
+    );
   }
 
   private calculateAge(dataNascimento: Date): number | null {

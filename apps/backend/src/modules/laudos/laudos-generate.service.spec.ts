@@ -18,7 +18,7 @@ import { UsuariosService } from '../usuarios/usuarios.service';
  * gasto numa geracao bem-sucedida.
  */
 describe('LaudosService.generateAndSaveByPaciente (F5)', () => {
-  let laudoRepo: jest.Mocked<Pick<Repository<Laudo>, 'findOne' | 'create' | 'save'>>;
+  let laudoRepo: { findOne: jest.Mock; create: jest.Mock; save: jest.Mock };
   let pacientesService: { findOne: jest.Mock };
   let service: LaudosService;
 
