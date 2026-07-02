@@ -22,6 +22,10 @@ import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+import {
+  LaudoHistorico,
+  LaudoHistoricoAcao,
+} from './entities/laudo-historico.entity';
 
 type LaudoReferenceCategory = 'LIVRO' | 'ARTIGO' | 'GUIDELINE';
 
@@ -58,6 +62,8 @@ export class LaudosService {
     private readonly evolucaoRepository: Repository<Evolucao>,
     @InjectRepository(LaudoAiGeneration)
     private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
+    @InjectRepository(LaudoHistorico)
+    private readonly laudoHistoricoRepository: Repository<LaudoHistorico>,
     private readonly pacientesService: PacientesService,
     private readonly usuariosService: UsuariosService,
   ) {}
@@ -102,7 +108,9 @@ export class LaudosService {
       validadoEm: null,
     });
     try {
-      return await this.laudoRepository.save(laudo);
+      const saved = await this.laudoRepository.save(laudo);
+      await this.recordHistory(saved, LaudoHistoricoAcao.CRIADO, usuarioId);
+      return saved;
     } catch (error) {
       // F7: backstop da constraint unica em caso de corrida entre requisicoes.
       if (this.isUniqueViolation(error)) {
@@ -178,7 +186,9 @@ export class LaudosService {
     laudo.status = LaudoStatus.RASCUNHO_IA;
     laudo.validadoPorUsuarioId = null;
     laudo.validadoEm = null;
-    return this.laudoRepository.save(laudo);
+    const saved = await this.laudoRepository.save(laudo);
+    await this.recordHistory(saved, LaudoHistoricoAcao.ATUALIZADO, usuarioId);
+    return saved;
   }
 
   async remove(id: string, usuarioId: string): Promise<void> {
@@ -191,7 +201,46 @@ export class LaudosService {
     laudo.status = LaudoStatus.VALIDADO_PROFISSIONAL;
     laudo.validadoPorUsuarioId = usuarioId;
     laudo.validadoEm = new Date();
-    return this.laudoRepository.save(laudo);
+    const saved = await this.laudoRepository.save(laudo);
+    await this.recordHistory(saved, LaudoHistoricoAcao.VALIDADO, usuarioId);
+    return saved;
+  }
+
+  private async recordHistory(
+    laudo: Laudo,
+    acao: LaudoHistoricoAcao,
+    usuarioId: string,
+  ): Promise<void> {
+    const snapshot = {
+      diagnosticoFuncional: laudo.diagnosticoFuncional,
+      objetivosCurtoPrazo: laudo.objetivosCurtoPrazo,
+      objetivosMedioPrazo: laudo.objetivosMedioPrazo,
+      frequenciaSemanal: laudo.frequenciaSemanal,
+      duracaoSemanas: laudo.duracaoSemanas,
+      condutas: laudo.condutas,
+      planoTratamentoIA: laudo.planoTratamentoIA,
+      criteriosAlta: laudo.criteriosAlta,
+    };
+    const registro = this.laudoHistoricoRepository.create({
+      laudoId: laudo.id,
+      pacienteId: laudo.pacienteId,
+      acao,
+      status: laudo.status,
+      snapshot,
+      alteradoPorUsuarioId: usuarioId,
+    });
+    await this.laudoHistoricoRepository.save(registro);
+  }
+
+  async findHistorico(
+    laudoId: string,
+    usuarioId: string,
+  ): Promise<LaudoHistorico[]> {
+    await this.findOne(laudoId, usuarioId); // valida posse
+    return this.laudoHistoricoRepository.find({
+      where: { laudoId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async buildPdfBuffer(
@@ -566,7 +615,9 @@ export class LaudosService {
       existing.status = LaudoStatus.RASCUNHO_IA;
       existing.validadoPorUsuarioId = null;
       existing.validadoEm = null;
-      return this.laudoRepository.save(existing);
+      const saved = await this.laudoRepository.save(existing);
+      await this.recordHistory(saved, LaudoHistoricoAcao.ATUALIZADO, usuarioId);
+      return saved;
     }
 
     const created = this.laudoRepository.create({
@@ -576,7 +627,9 @@ export class LaudosService {
       validadoEm: null,
     });
     try {
-      return await this.laudoRepository.save(created);
+      const saved = await this.laudoRepository.save(created);
+      await this.recordHistory(saved, LaudoHistoricoAcao.CRIADO, usuarioId);
+      return saved;
     } catch (error) {
       // F7: corrida na primeira criacao. Se outra requisicao criou o laudo,
       // devolve o existente em vez de estourar erro.

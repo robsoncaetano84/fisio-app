@@ -16,6 +16,7 @@ import { Anamnese } from './modules/anamneses/entities/anamnese.entity';
 import { Evolucao } from './modules/evolucoes/entities/evolucao.entity';
 import { Laudo } from './modules/laudos/entities/laudo.entity';
 import { LaudoAiGeneration } from './modules/laudos/entities/laudo-ai-generation.entity';
+import { LaudoHistorico } from './modules/laudos/entities/laudo-historico.entity';
 import { AuthLog } from './modules/auth/entities/auth-log.entity';
 import { Atividade } from './modules/atividades/entities/atividade.entity';
 import { AtividadeCheckin } from './modules/atividades/entities/atividade-checkin.entity';
@@ -100,6 +101,7 @@ import { HealthModule } from './modules/health/health.module';
             Evolucao,
             Laudo,
             LaudoAiGeneration,
+            LaudoHistorico,
             AuthLog,
             Atividade,
             AtividadeCheckin,

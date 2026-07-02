@@ -7,6 +7,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Laudo } from './entities/laudo.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+import { LaudoHistorico } from './entities/laudo-historico.entity';
 import { LaudosService } from './laudos.service';
 import { LaudosController } from './laudos.controller';
 import { PacientesModule } from '../pacientes/pacientes.module';
@@ -16,7 +17,13 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Laudo, LaudoAiGeneration, Anamnese, Evolucao]),
+    TypeOrmModule.forFeature([
+      Laudo,
+      LaudoAiGeneration,
+      LaudoHistorico,
+      Anamnese,
+      Evolucao,
+    ]),
     PacientesModule,
     UsuariosModule,
   ],

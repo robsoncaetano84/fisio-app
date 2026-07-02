@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { LaudosService } from './laudos.service';
 import { Laudo, LaudoStatus } from './entities/laudo.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
+import { LaudoHistorico } from './entities/laudo-historico.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { PacientesService } from '../pacientes/pacientes.service';
@@ -42,6 +43,10 @@ describe('LaudosService.generateAndSaveByPaciente (F5)', () => {
       { find: jest.fn().mockResolvedValue([]) } as unknown as Repository<Anamnese>,
       { find: jest.fn().mockResolvedValue([]) } as unknown as Repository<Evolucao>,
       {} as unknown as Repository<LaudoAiGeneration>,
+      {
+        create: jest.fn((x) => x),
+        save: jest.fn(async (x) => x),
+      } as unknown as Repository<LaudoHistorico>,
       pacientesService as unknown as PacientesService,
       {} as unknown as UsuariosService,
     );

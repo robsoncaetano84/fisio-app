@@ -308,6 +308,17 @@ export class LaudosController {
     res.send(pdf);
   }
 
+  @Get(':id/historico')
+  @UseGuards(JwtAuthRolesGuard)
+  @Throttle({ default: { ttl: 60, limit: 60 } })
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  findHistorico(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.laudosService.findHistorico(id, usuario.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 120 } })
