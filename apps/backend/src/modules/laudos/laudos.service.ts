@@ -513,8 +513,9 @@ export class LaudosService {
     const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
     const aiSuggestion = canUseAiToday
       ? await this.generateSuggestionWithAI({
+          // LGPD (F3): nao enviamos identificadores diretos (nome, CPF, contato)
+          // para o provedor de IA. So trafega contexto clinico pseudonimizado.
           paciente: {
-            nomeCompleto: paciente.nomeCompleto,
             idade: this.calculateAge(paciente.dataNascimento),
             sexo: paciente.sexo,
             profissao: paciente.profissao ?? '',
@@ -592,7 +593,6 @@ export class LaudosService {
 
   private async generateSuggestionWithAI(input: {
     paciente: {
-      nomeCompleto: string;
       idade: number | null;
       sexo: string;
       profissao: string;
