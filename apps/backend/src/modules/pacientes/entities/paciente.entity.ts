@@ -25,11 +25,14 @@ export enum EstadoCivil {
 @Index('IDX_PACIENTE_USUARIO_ATIVO', ['usuarioId', 'ativo'])
 @Index('IDX_PACIENTE_USUARIO_NOME', ['usuarioId', 'nomeCompleto'])
 @Index('IDX_PACIENTE_PACIENTE_USUARIO', ['pacienteUsuarioId'])
+// F16: CPF unico por profissional (nao global) — a mesma pessoa pode ser
+// paciente de mais de um profissional na plataforma.
+@Index('UQ_PACIENTE_USUARIO_CPF', ['usuarioId', 'cpf'], { unique: true })
 export class Paciente extends BaseEntity {
   @Column({ name: 'nome_completo', length: 255 })
   nomeCompleto: string;
 
-  @Column({ length: 11, unique: true })
+  @Column({ length: 11 })
   cpf: string;
 
   @Column({ length: 20, nullable: true })

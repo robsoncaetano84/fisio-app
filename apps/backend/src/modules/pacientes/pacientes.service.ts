@@ -64,7 +64,7 @@ export class PacientesService {
     usuarioId: string,
   ): Promise<Paciente> {
     const existingPaciente = await this.pacienteRepository.findOne({
-      where: { cpf: createPacienteDto.cpf },
+      where: { cpf: createPacienteDto.cpf, usuarioId },
     });
 
     if (existingPaciente) {
@@ -81,7 +81,23 @@ export class PacientesService {
       pacienteUsuarioId,
     });
 
-    return this.pacienteRepository.save(paciente);
+    try {
+      return await this.pacienteRepository.save(paciente);
+    } catch (error) {
+      // F16: backstop da unicidade (usuario_id, cpf) em caso de corrida.
+      if (this.isUniqueViolation(error)) {
+        throw new ConflictException('CPF ja cadastrado');
+      }
+      throw error;
+    }
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: string }).code === '23505'
+    );
   }
 
   async findAll(usuarioId: string): Promise<Paciente[]> {
@@ -135,7 +151,7 @@ export class PacientesService {
 
     if (updatePacienteDto.cpf && updatePacienteDto.cpf !== paciente.cpf) {
       const existingPaciente = await this.pacienteRepository.findOne({
-        where: { cpf: updatePacienteDto.cpf },
+        where: { cpf: updatePacienteDto.cpf, usuarioId },
       });
 
       if (existingPaciente) {
