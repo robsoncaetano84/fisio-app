@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synap - Galeria lote 14 de exercícios</title>
+    <style>
+      :root {
+        --bg: #f6faf8;
+        --paper: #fff;
+        --ink: #1f2933;
+        --muted: #667085;
+        --line: #d9e7df;
+        --primary: #2e7d5e;
+        --warn: #9a6700;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+      main { width: min(1280px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 48px; }
+      header { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+      h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 38px); letter-spacing: 0; }
+      p { margin: 0; }
+      .lead { max-width: 940px; color: var(--muted); }
+      .notice { margin-top: 16px; padding: 12px 14px; border: 1px solid #f3d48a; border-radius: 8px; background: #fff8e5; color: var(--warn); font-weight: 650; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+      .card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+      .image-wrap { aspect-ratio: 1; background: #f8f9f8; }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+      .body { padding: 12px; }
+      .index { color: var(--primary); font-size: 12px; font-weight: 800; }
+      h2 { min-height: 44px; margin: 4px 0 8px; font-size: 15px; line-height: 1.25; letter-spacing: 0; }
+      .slug { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+      dialog { max-width: min(94vw, 1100px); padding: 0; border: 0; border-radius: 8px; background: transparent; }
+      dialog::backdrop { background: rgb(0 0 0 / 78%); }
+      dialog img { width: min(90vw, 1024px); height: auto; cursor: zoom-out; border-radius: 8px; }
+      footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+      code { color: var(--primary); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Galeria de revisão - lote 14</h1>
+        <p class="lead">
+          Lote com 30 imagens no padrão masculino Synap: roupa esportiva
+          cinza-claro/off-white, fundo claro, traço anatômico em tons suaves de
+          cinza e destaque restrito ao verde oficial <strong>#2E7D5E</strong>.
+        </p>
+        <p class="notice">
+          Revisão clínica obrigatória: confirmar anatomia, apoios, resistência,
+          amplitude e sequência antes da liberação no catálogo oficial.
+        </p>
+      </header>
+      <section class="grid" id="gallery"></section>
+      <dialog id="preview"><img alt="" /></dialog>
+      <footer>
+        Imagens carregadas de
+        <code>docs/exercise-image-previews/lote-14</code>. Clique em uma imagem
+        para ampliá-la.
+      </footer>
+    </main>
+    <script>
+      const exercises = [
+        ["Agachamento unilateral com apoio em cadeira alta", "agachamento-unilateral-cadeira-alta"],
+        ["Alongamento da cadeia posterior na parede", "alongamento-cadeia-posterior-parede"],
+        ["Bear plank com joelhos elevados", "bear-plank-joelhos-elevados"],
+        ["Caminhada tandem com rotação da cabeça", "caminhada-tandem-rotacao-cabeca"],
+        ["Prancha Copenhagen longa", "copenhagen-prancha-longa"],
+        ["Deslizamento cervical com toalha", "deslizamento-cervical-com-toalha"],
+        ["Elevação no plano escapular com halteres", "elevacao-plano-escapular-halteres"],
+        ["Eversão do tornozelo com faixa", "eversao-tornozelo-faixa"],
+        ["Extensão excêntrica do punho com halter", "extensao-punho-excentrica-halter"],
+        ["Extensão torácica na parede com rolo", "extensao-toracica-parede-rolo"],
+        ["Flexão e extensão dos dedos do pé", "flexao-extensao-dedos-do-pe"],
+        ["Flexão plantar unilateral com faixa", "flexao-plantar-faixa-unilateral"],
+        ["Hip airplane com apoio", "hip-airplane-com-apoio"],
+        ["Inversão ativa do tornozelo sem faixa", "inversao-tornozelo-ativa-sem-faixa"],
+        ["Inversão do tornozelo com faixa", "inversao-tornozelo-faixa"],
+        ["Mobilidade suboccipital com toalha", "mobilidade-suboccipital-com-toalha"],
+        ["Mobilidade torácica thread the needle", "mobilidade-toracica-thread-needle"],
+        ["Mobilidade do tornozelo com faixa posterior", "mobilidade-tornozelo-com-faixa-posterior"],
+        ["Nordic hamstring assistido", "nordic-hamstring-assistido"],
+        ["Passada lateral sobre obstáculo", "passada-lateral-obstaculo"],
+        ["Ponte unilateral com perna estendida", "ponte-unilateral-perna-estendida"],
+        ["Prancha lateral com abdução do quadril", "prancha-lateral-abducao-quadril"],
+        ["Respiração diafragmática em decúbito dorsal", "respiracao-diafragmatica-decubito-dorsal"],
+        ["Retração cervical em decúbito com toalha", "retracao-cervical-em-decubito-com-toalha"],
+        ["Sentar, levantar e alcançar acima da cabeça", "sentar-levantar-alcance-cabeca"],
+        ["Spanish squat com faixa", "spanish-squat-faixa"],
+        ["Split squat isométrico com apoio", "split-squat-isometrico-apoio"],
+        ["Suitcase carry com marcha", "suitcase-carry-marcha"],
+        ["Tríceps kickback com faixa", "triceps-kickback-faixa"],
+        ["Wall slide com faixa nos punhos", "wall-slide-faixa-punhos"],
+      ];
+      const gallery = document.querySelector("#gallery");
+      const preview = document.querySelector("#preview");
+      const previewImage = preview.querySelector("img");
+      exercises.forEach(([name, slug], index) => {
+        const source = `exercise-image-previews/lote-14/${slug}.jpg`;
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="image-wrap"><img src="${source}" alt="${name}" loading="lazy" /></div>
+          <div class="body">
+            <span class="index">${String(index + 1).padStart(2, "0")}</span>
+            <h2>${name}</h2>
+            <p class="slug">${slug}.jpg</p>
+          </div>`;
+        card.querySelector("img").addEventListener("click", () => {
+          previewImage.src = source;
+          previewImage.alt = name;
+          preview.showModal();
+        });
+        gallery.appendChild(card);
+      });
+      preview.addEventListener("click", () => preview.close());
+    </script>
+  </body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synap - Galeria lote 15 de exercícios</title>
+    <style>
+      :root { --bg: #f6faf8; --paper: #fff; --ink: #1f2933; --muted: #667085; --line: #d9e7df; --primary: #2e7d5e; --warn: #9a6700; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+      main { width: min(1280px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 48px; }
+      header { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+      h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 38px); letter-spacing: 0; }
+      p { margin: 0; }
+      .lead { max-width: 940px; color: var(--muted); }
+      .notice { margin-top: 16px; padding: 12px 14px; border: 1px solid #f3d48a; border-radius: 8px; background: #fff8e5; color: var(--warn); font-weight: 650; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+      .card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+      .image-wrap { aspect-ratio: 1; background: #f8f9f8; }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+      .body { padding: 12px; }
+      .index { color: var(--primary); font-size: 12px; font-weight: 800; }
+      h2 { min-height: 44px; margin: 4px 0 8px; font-size: 15px; line-height: 1.25; letter-spacing: 0; }
+      .slug { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+      dialog { max-width: min(94vw, 1100px); padding: 0; border: 0; border-radius: 8px; background: transparent; }
+      dialog::backdrop { background: rgb(0 0 0 / 78%); }
+      dialog img { width: min(90vw, 1024px); height: auto; cursor: zoom-out; border-radius: 8px; }
+      footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+      code { color: var(--primary); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Galeria de revisão - lote 15</h1>
+        <p class="lead">
+          Lote com 30 imagens no padrão masculino Synap: roupa esportiva
+          cinza-claro/off-white, fundo claro, traço anatômico em tons suaves de
+          cinza e destaque restrito ao verde oficial <strong>#2E7D5E</strong>.
+        </p>
+        <p class="notice">
+          Revisão clínica obrigatória: confirmar anatomia, apoios, resistência,
+          amplitude e sequência antes da liberação no catálogo oficial.
+        </p>
+      </header>
+      <section class="grid" id="gallery"></section>
+      <dialog id="preview"><img alt="" /></dialog>
+      <footer>
+        Imagens carregadas de
+        <code>docs/exercise-image-previews/lote-15</code>. Clique em uma imagem
+        para ampliá-la.
+      </footer>
+    </main>
+    <script>
+      const exercises = [
+        ["Rock-back para adutores", "adutor-rockback"],
+        ["Alongamento dos escalenos sentado", "alongamento-escalenos-sentado"],
+        ["Alongamento do flexor do quadril em meio ajoelhado", "alongamento-flexor-quadril-meio-ajoelhado"],
+        ["Anjo na parede", "anjo-parede"],
+        ["Aperto de massa terapêutica", "aperto-massa-terapeutica"],
+        ["Avanço lateral com disco deslizante", "avanco-lateral-com-disco-deslizante"],
+        ["Caminhada na ponta dos pés", "caminhada-na-ponta-dos-pes"],
+        ["Caminhada nos calcanhares", "caminhada-nos-calcanhares"],
+        ["Deslizamento tendíneo dos dedos", "deslizamento-tendineo-dedos"],
+        ["Elevação unilateral da panturrilha no degrau", "elevacao-panturrilha-unilateral-degrau"],
+        ["Elevação do sóleo na parede", "elevacao-soleo-parede"],
+        ["Equilíbrio Star Excursion", "equilibrio-star-excursion"],
+        ["Expansão torácica com faixa", "expansao-toracica-com-faixa"],
+        ["Flexão dos joelhos na bola suíça", "flexao-joelhos-bola-suica"],
+        ["Isometria de abdução do ombro na parede", "isometria-ombro-abducao-parede"],
+        ["Marcha cruzada grapevine", "marcha-cruzada-grapevine"],
+        ["Monster walk diagonal com faixa", "monster-walk-diagonal-faixa"],
+        ["Pronação e supinação com martelo", "pronacao-supinacao-martelo"],
+        ["Push-up plus na parede", "push-up-plus-parede"],
+        ["Remada unilateral com apoio e halter", "remada-unilateral-apoio-halter"],
+        ["Respiração costal posterior sentada", "respiracao-costal-posterior-sentada"],
+        ["Respiração com lábios franzidos", "respiracao-labios-franzidos"],
+        ["Reverse Nordic", "reverse-nordic"],
+        ["Rosca de bíceps excêntrica com halter", "rosca-biceps-excentrica-halter"],
+        ["Rotação externa do ombro com faixa a 90 graus", "rotacao-externa-ombro-faixa-90"],
+        ["Saltos pogo bipodais", "saltos-pogo-bipodais"],
+        ["SNAG cervical de rotação com toalha", "snag-cervical-rotacao-toalha"],
+        ["Step-down lateral", "step-down-lateral"],
+        ["Elevação em T no decúbito ventral com halteres", "t-prono-halteres"],
+        ["Elevação em Y no decúbito ventral com halteres", "y-prono-halteres"],
+      ];
+      const gallery = document.querySelector("#gallery");
+      const preview = document.querySelector("#preview");
+      const previewImage = preview.querySelector("img");
+      exercises.forEach(([name, slug], index) => {
+        const source = `exercise-image-previews/lote-15/${slug}.jpg`;
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="image-wrap"><img src="${source}" alt="${name}" loading="lazy" /></div>
+          <div class="body">
+            <span class="index">${String(index + 1).padStart(2, "0")}</span>
+            <h2>${name}</h2>
+            <p class="slug">${slug}.jpg</p>
+          </div>`;
+        card.querySelector("img").addEventListener("click", () => {
+          previewImage.src = source;
+          previewImage.alt = name;
+          preview.showModal();
+        });
+        gallery.appendChild(card);
+      });
+      preview.addEventListener("click", () => preview.close());
+    </script>
+  </body>
+</html>
