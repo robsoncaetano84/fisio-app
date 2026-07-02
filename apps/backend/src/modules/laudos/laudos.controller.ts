@@ -144,6 +144,7 @@ export class LaudosController {
     return this.laudosService.generateAndSaveByPaciente(
       generateLaudoDto.pacienteId,
       usuario.id,
+      { regenerate: true },
     );
   }
 

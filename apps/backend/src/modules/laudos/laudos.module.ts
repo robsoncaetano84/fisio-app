@@ -10,6 +10,7 @@ import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
 import { LaudosService } from './laudos.service';
 import { LaudosController } from './laudos.controller';
 import { PacientesModule } from '../pacientes/pacientes.module';
+import { UsuariosModule } from '../usuarios/usuarios.module';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 
@@ -17,6 +18,7 @@ import { Evolucao } from '../evolucoes/entities/evolucao.entity';
   imports: [
     TypeOrmModule.forFeature([Laudo, LaudoAiGeneration, Anamnese, Evolucao]),
     PacientesModule,
+    UsuariosModule,
   ],
   controllers: [LaudosController],
   providers: [LaudosService],

@@ -16,6 +16,8 @@ import { LaudoStatus } from './entities/laudo.entity';
 import { CreateLaudoDto } from './dto/create-laudo.dto';
 import { UpdateLaudoDto } from './dto/update-laudo.dto';
 import { PacientesService } from '../pacientes/pacientes.service';
+import { UsuariosService } from '../usuarios/usuarios.service';
+import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Anamnese } from '../anamneses/entities/anamnese.entity';
 import { Evolucao } from '../evolucoes/entities/evolucao.entity';
 import { LaudoAiGeneration } from './entities/laudo-ai-generation.entity';
@@ -54,6 +56,7 @@ export class LaudosService {
     @InjectRepository(LaudoAiGeneration)
     private readonly laudoAiGenerationRepository: Repository<LaudoAiGeneration>,
     private readonly pacientesService: PacientesService,
+    private readonly usuariosService: UsuariosService,
   ) {}
 
   async getSuggestedReferences(
@@ -95,7 +98,23 @@ export class LaudosService {
       validadoPorUsuarioId: null,
       validadoEm: null,
     });
-    return this.laudoRepository.save(laudo);
+    try {
+      return await this.laudoRepository.save(laudo);
+    } catch (error) {
+      // F7: backstop da constraint unica em caso de corrida entre requisicoes.
+      if (this.isUniqueViolation(error)) {
+        throw new BadRequestException('Ja existe laudo para este paciente');
+      }
+      throw error;
+    }
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: string }).code === '23505'
+    );
   }
 
   async findByPaciente(
@@ -182,6 +201,7 @@ export class LaudosService {
   ): Promise<Buffer> {
     const laudo = await this.findOne(id, usuarioId);
     const paciente = await this.pacientesService.findOne(laudo.pacienteId, usuarioId);
+    const profissional = await this.usuariosService.findById(usuarioId);
 
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({ size: 'A4', margin: 50, compress: false });
@@ -230,7 +250,12 @@ export class LaudosService {
       .text(`Paciente: ${paciente.nomeCompleto}`, 50, 170)
       .text(`Data de emissao: ${emittedAt.toLocaleDateString('pt-BR')}`, 50, 186)
       .text(`Status: ${statusText}`, 300, 170)
-      .text(`Profissional: ${usuarioId}`, 300, 186);
+      .text(`Profissional: ${profissional.nome}`, 300, 186)
+      .text(
+        `Registro: ${profissional.registroProf?.trim() || 'Nao informado'}`,
+        300,
+        202,
+      );
 
     doc.moveDown(3.2);
     doc.fillColor('#000');
@@ -489,56 +514,30 @@ export class LaudosService {
   async generateAndSaveByPaciente(
     pacienteId: string,
     usuarioId: string,
+    options: { regenerate?: boolean } = {},
   ): Promise<Laudo> {
+    const { regenerate = false } = options;
     const paciente = await this.pacientesService.findOne(pacienteId, usuarioId);
     const existing = await this.laudoRepository.findOne({
       where: { pacienteId },
       order: { createdAt: 'DESC' },
     });
-    if (existing) {
+
+    // Um laudo ja validado nunca e sobrescrito automaticamente. E no fluxo de
+    // leitura (regenerate=false) devolvemos o existente sem tocar. So o fluxo
+    // explicito de "gerar" (regenerate=true) refaz um rascunho ainda nao
+    // validado (F5: evita ficar preso a um rascunho generico de um timeout).
+    if (
+      existing &&
+      (existing.status === LaudoStatus.VALIDADO_PROFISSIONAL || !regenerate)
+    ) {
       return existing;
     }
 
-    const anamneses = await this.anamneseRepository.find({
-      where: { pacienteId },
-      order: { createdAt: 'DESC' },
-      take: 3,
-    });
-    const evolucoes = await this.evolucaoRepository.find({
-      where: { pacienteId },
-      order: { data: 'DESC' },
-      take: 5,
-    });
-
-    const canUseAiToday = await this.acquireDailyAiGenerationSlot(pacienteId);
-    const aiSuggestion = canUseAiToday
-      ? await this.generateSuggestionWithAI({
-          // LGPD (F3): nao enviamos identificadores diretos (nome, CPF, contato)
-          // para o provedor de IA. So trafega contexto clinico pseudonimizado.
-          paciente: {
-            idade: this.calculateAge(paciente.dataNascimento),
-            sexo: paciente.sexo,
-            profissao: paciente.profissao ?? '',
-          },
-          anamnese: anamneses[0]
-            ? {
-                motivoBusca: anamneses[0].motivoBusca,
-                areasAfetadas: anamneses[0].areasAfetadas,
-                intensidadeDor: anamneses[0].intensidadeDor,
-                descricaoSintomas: anamneses[0].descricaoSintomas ?? '',
-                tempoProblema: anamneses[0].tempoProblema ?? '',
-                inicioProblema: anamneses[0].inicioProblema ?? '',
-                fatorAlivio: anamneses[0].fatorAlivio ?? '',
-              }
-            : null,
-          evolucoes: evolucoes.map((e) => ({
-            data: e.data,
-            ajustes: e.ajustes ?? '',
-            orientacoes: e.orientacoes ?? '',
-            observacoes: e.observacoes ?? '',
-          })),
-        })
-      : {};
+    const aiSuggestion = await this.generateAiSuggestionWithDailyCap(
+      pacienteId,
+      paciente,
+    );
 
     const payload: CreateLaudoDto = {
       pacienteId,
@@ -558,13 +557,90 @@ export class LaudosService {
       criteriosAlta: aiSuggestion.criteriosAlta,
     };
 
+    if (existing) {
+      Object.assign(existing, payload);
+      existing.status = LaudoStatus.RASCUNHO_IA;
+      existing.validadoPorUsuarioId = null;
+      existing.validadoEm = null;
+      return this.laudoRepository.save(existing);
+    }
+
     const created = this.laudoRepository.create({
       ...payload,
       status: LaudoStatus.RASCUNHO_IA,
       validadoPorUsuarioId: null,
       validadoEm: null,
     });
-    return this.laudoRepository.save(created);
+    try {
+      return await this.laudoRepository.save(created);
+    } catch (error) {
+      // F7: corrida na primeira criacao. Se outra requisicao criou o laudo,
+      // devolve o existente em vez de estourar erro.
+      if (this.isUniqueViolation(error)) {
+        const race = await this.laudoRepository.findOne({
+          where: { pacienteId },
+          order: { createdAt: 'DESC' },
+        });
+        if (race) return race;
+      }
+      throw error;
+    }
+  }
+
+  // Chama a IA respeitando o cap diario por paciente. O slot so e "gasto" numa
+  // geracao bem-sucedida: se a IA falhar/expirar, o slot e liberado para
+  // permitir nova tentativa no mesmo dia (F5).
+  private async generateAiSuggestionWithDailyCap(
+    pacienteId: string,
+    paciente: Paciente,
+  ): Promise<Partial<CreateLaudoDto>> {
+    const acquired = await this.acquireDailyAiGenerationSlot(pacienteId);
+    if (!acquired) {
+      return {};
+    }
+
+    const anamneses = await this.anamneseRepository.find({
+      where: { pacienteId },
+      order: { createdAt: 'DESC' },
+      take: 3,
+    });
+    const evolucoes = await this.evolucaoRepository.find({
+      where: { pacienteId },
+      order: { data: 'DESC' },
+      take: 5,
+    });
+
+    const suggestion = await this.generateSuggestionWithAI({
+      // LGPD (F3): nao enviamos identificadores diretos (nome, CPF, contato)
+      // para o provedor de IA. So trafega contexto clinico pseudonimizado.
+      paciente: {
+        idade: this.calculateAge(paciente.dataNascimento),
+        sexo: paciente.sexo,
+        profissao: paciente.profissao ?? '',
+      },
+      anamnese: anamneses[0]
+        ? {
+            motivoBusca: anamneses[0].motivoBusca,
+            areasAfetadas: anamneses[0].areasAfetadas,
+            intensidadeDor: anamneses[0].intensidadeDor,
+            descricaoSintomas: anamneses[0].descricaoSintomas ?? '',
+            tempoProblema: anamneses[0].tempoProblema ?? '',
+            inicioProblema: anamneses[0].inicioProblema ?? '',
+            fatorAlivio: anamneses[0].fatorAlivio ?? '',
+          }
+        : null,
+      evolucoes: evolucoes.map((e) => ({
+        data: e.data,
+        ajustes: e.ajustes ?? '',
+        orientacoes: e.orientacoes ?? '',
+        observacoes: e.observacoes ?? '',
+      })),
+    });
+
+    if (Object.keys(suggestion).length === 0) {
+      await this.releaseDailyAiGenerationSlot(pacienteId);
+    }
+    return suggestion;
   }
 
   private calculateAge(dataNascimento: Date): number | null {
@@ -638,7 +714,7 @@ ${JSON.stringify(input, null, 2)}
 
     try {
       const controller = new AbortController();
-      const timeoutMs = 4000;
+      const timeoutMs = 20000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -740,6 +816,17 @@ ${JSON.stringify(input, null, 2)}
       return (insertResult.identifiers?.length ?? 0) > 0;
     } catch {
       return false;
+    }
+  }
+
+  // Libera o slot diario (F5): usado quando a chamada de IA falha/expira, para
+  // nao "gastar" a cota do dia num rascunho generico e permitir nova tentativa.
+  private async releaseDailyAiGenerationSlot(pacienteId: string): Promise<void> {
+    const generatedOn = this.getUtcDayString(new Date());
+    try {
+      await this.laudoAiGenerationRepository.delete({ pacienteId, generatedOn });
+    } catch {
+      // Nao propaga: liberar o slot e best-effort.
     }
   }
 
