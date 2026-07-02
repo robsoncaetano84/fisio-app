@@ -82,11 +82,11 @@ export class AnamnesesService {
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese n�o encontrada');
+      throw new NotFoundException('Anamnese nao encontrada');
     }
 
     if (anamnese.paciente.usuarioId !== usuarioId) {
-      throw new NotFoundException('Anamnese n�o encontrada');
+      throw new NotFoundException('Anamnese nao encontrada');
     }
 
     return anamnese;
@@ -107,7 +107,7 @@ export class AnamnesesService {
     });
 
     if (!anamnese) {
-      throw new NotFoundException('Anamnese n�o encontrada');
+      throw new NotFoundException('Anamnese nao encontrada');
     }
 
     return anamnese;
@@ -119,7 +119,10 @@ export class AnamnesesService {
     usuarioId: string,
   ): Promise<Anamnese> {
     const anamnese = await this.findOne(id, usuarioId);
+    // F17: pacienteId e imutavel no update (impede remapear para outro paciente).
+    const pacienteId = anamnese.pacienteId;
     Object.assign(anamnese, updateAnamneseDto);
+    anamnese.pacienteId = pacienteId;
     return this.anamneseRepository.save(anamnese);
   }
 
@@ -129,7 +132,10 @@ export class AnamnesesService {
     usuarioId: string,
   ): Promise<Anamnese> {
     const anamnese = await this.findOneByPacienteUsuario(id, usuarioId);
+    // F17: pacienteId e imutavel no update.
+    const pacienteId = anamnese.pacienteId;
     Object.assign(anamnese, updateAnamneseDto);
+    anamnese.pacienteId = pacienteId;
     return this.anamneseRepository.save(anamnese);
   }
 

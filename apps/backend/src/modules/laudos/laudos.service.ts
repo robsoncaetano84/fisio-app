@@ -181,7 +181,10 @@ export class LaudosService {
     usuarioId: string,
   ): Promise<Laudo> {
     const laudo = await this.findOne(id, usuarioId);
+    // F17: pacienteId e imutavel no update (impede remapear para outro paciente).
+    const pacienteId = laudo.pacienteId;
     Object.assign(laudo, updateLaudoDto);
+    laudo.pacienteId = pacienteId;
     // Qualquer alteracao apos aprovacao volta para rascunho e exige nova validacao.
     laudo.status = LaudoStatus.RASCUNHO_IA;
     laudo.validadoPorUsuarioId = null;

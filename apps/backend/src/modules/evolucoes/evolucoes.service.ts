@@ -73,7 +73,10 @@ export class EvolucoesService {
     usuarioId: string,
   ): Promise<Evolucao> {
     const evolucao = await this.findOne(id, usuarioId);
+    // F17: pacienteId e imutavel no update (impede remapear para outro paciente).
+    const pacienteId = evolucao.pacienteId;
     Object.assign(evolucao, updateEvolucaoDto);
+    evolucao.pacienteId = pacienteId;
     return this.evolucaoRepository.save(evolucao);
   }
 
