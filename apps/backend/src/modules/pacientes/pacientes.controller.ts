@@ -18,13 +18,13 @@ import { UserRole } from '../usuarios/entities/usuario.entity';
 import { PacientesService } from './pacientes.service';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PacienteProfileResponseDto } from './dto/paciente-profile-response.dto';
 
 @Controller('pacientes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthRolesGuard)
 export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 

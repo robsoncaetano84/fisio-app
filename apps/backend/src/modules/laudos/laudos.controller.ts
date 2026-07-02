@@ -26,7 +26,7 @@ import { LaudosService } from './laudos.service';
 import { CreateLaudoDto } from './dto/create-laudo.dto';
 import { UpdateLaudoDto } from './dto/update-laudo.dto';
 import { GenerateLaudoDto } from './dto/generate-laudo.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -62,14 +62,14 @@ export class LaudosController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 30 } })
   create(@Body() createLaudoDto: CreateLaudoDto, @CurrentUser() usuario: Usuario) {
     return this.laudosService.create(createLaudoDto, usuario.id);
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 120 } })
   findByPaciente(
     @Query('pacienteId', ParseUUIDPipe) pacienteId: string,
@@ -84,7 +84,7 @@ export class LaudosController {
   }
 
   @Post('gerar')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 20 } })
   generateByPaciente(
     @Body() generateLaudoDto: GenerateLaudoDto,
@@ -97,7 +97,7 @@ export class LaudosController {
   }
 
   @Get('referencias-sugeridas')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 60 } })
   getSuggestedReferences(
     @Query('pacienteId', ParseUUIDPipe) pacienteId: string,
@@ -107,7 +107,7 @@ export class LaudosController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 120 } })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -141,7 +141,7 @@ export class LaudosController {
   }
 
   @Get('self')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 120 } })
   @Roles(UserRole.PACIENTE)
   findMyLatest(@CurrentUser() usuario: Usuario) {
@@ -210,7 +210,7 @@ export class LaudosController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 30 } })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -221,7 +221,7 @@ export class LaudosController {
   }
 
   @Post(':id/validar')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 20 } })
   validar(
     @Param('id', ParseUUIDPipe) id: string,
@@ -231,7 +231,7 @@ export class LaudosController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Throttle({ default: { ttl: 60, limit: 20 } })
   remove(
     @Param('id', ParseUUIDPipe) id: string,

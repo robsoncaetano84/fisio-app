@@ -22,7 +22,7 @@ import { PacienteUsuarioResponseDto } from './dto/paciente-usuario-response.dto'
 import { CreatePacienteInviteDto } from './dto/create-paciente-invite.dto';
 import { RegistroPacientePorConviteDto } from './dto/registro-paciente-por-convite.dto';
 import { AceitarPacienteInviteDto } from './dto/aceitar-paciente-convite.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { Roles } from './decorators/roles.decorator';
@@ -67,7 +67,7 @@ export class AuthController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Post('paciente-convite')
   @Throttle({ default: { ttl: 60, limit: 20 } })
   @Roles(UserRole.ADMIN, UserRole.USER)
@@ -90,7 +90,7 @@ export class AuthController {
     return this.authService.registrarPacientePorConvite(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Post('aceitar-paciente-convite')
   @Throttle({ default: { ttl: 60, limit: 20 } })
   @Roles(UserRole.PACIENTE)
@@ -101,7 +101,7 @@ export class AuthController {
     return this.authService.aceitarConvitePaciente(usuario, dto.conviteToken);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Get('me')
   async me(@CurrentUser() usuario: Usuario) {
     return {
@@ -114,7 +114,7 @@ export class AuthController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Get('paciente-usuario')
   @Roles(UserRole.ADMIN, UserRole.USER)
   async getPacienteUsuarioByEmail(
@@ -139,7 +139,7 @@ export class AuthController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthRolesGuard)
   @Get('paciente-usuarios')
   @Roles(UserRole.ADMIN, UserRole.USER)
   async searchPacienteUsuarios(

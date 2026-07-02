@@ -17,7 +17,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { CreateAtividadeDto } from './dto/create-atividade.dto';
 import { CreateAtividadeCheckinDto } from './dto/create-atividade-checkin.dto';
@@ -27,7 +27,7 @@ import { UpdateAtividadeDto } from './dto/update-atividade.dto';
 import { AtividadesService } from './atividades.service';
 
 @Controller('atividades')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthRolesGuard)
 export class AtividadesController {
   constructor(private readonly atividadesService: AtividadesService) {}
 

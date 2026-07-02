@@ -19,12 +19,12 @@ import { Throttle } from '@nestjs/throttler';
 import { EvolucoesService } from './evolucoes.service';
 import { CreateEvolucaoDto } from './dto/create-evolucao.dto';
 import { UpdateEvolucaoDto } from './dto/update-evolucao.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 
 @Controller('evolucoes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthRolesGuard)
 export class EvolucoesController {
   constructor(private readonly evolucoesService: EvolucoesService) {}
 
