@@ -3,7 +3,12 @@
 // @date:   26-01-2026
 // C RM.S ER VI CE
 // ==========================================
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
@@ -22,6 +27,8 @@ import { CrmInteraction } from './entities/crm-interaction.entity';
 
 @Injectable()
 export class CrmService {
+  private readonly logger = new Logger(CrmService.name);
+
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(CrmLead)
@@ -44,7 +51,15 @@ export class CrmService {
     }
 
     const raw = (this.configService.get<string>('MASTER_ADMIN_EMAILS') || '').trim();
-    if (!raw) return;
+    // F14: fail-closed. Sem MASTER_ADMIN_EMAILS configurada, ninguem acessa o
+    // CRM (que expõe pacientes/profissionais de todos os tenants). Antes isso
+    // liberava qualquer ADMIN.
+    if (!raw) {
+      this.logger.warn(
+        'CRM bloqueado: MASTER_ADMIN_EMAILS nao configurada. Defina o(s) e-mail(s) do admin master para liberar o acesso.',
+      );
+      throw new ForbiddenException('Acesso restrito ao administrador master');
+    }
 
     const allowedEmails = raw
       .split(',')
