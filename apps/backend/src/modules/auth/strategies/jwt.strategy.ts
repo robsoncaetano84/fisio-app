@@ -13,6 +13,7 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  tokenVersion?: number;
 }
 
 @Injectable()
@@ -34,6 +35,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!usuario || !usuario.ativo) {
       throw new UnauthorizedException('Usuario nao autorizado');
+    }
+
+    // F9: token revogado (logout incrementa tokenVersion). Tokens antigos sem o
+    // claim sao tratados como versao 0 para nao invalidar sessoes no deploy.
+    if ((payload.tokenVersion ?? 0) !== (usuario.tokenVersion ?? 0)) {
+      throw new UnauthorizedException('Sessao expirada');
     }
 
     return usuario;

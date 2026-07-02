@@ -29,6 +29,7 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: UserRole;
+  tokenVersion: number;
 }
 
 type InvitePayload = {
@@ -106,6 +107,7 @@ export class AuthService {
       sub: usuario.id,
       email: usuario.email,
       role: usuario.role,
+      tokenVersion: usuario.tokenVersion ?? 0,
     };
 
     return {
@@ -211,6 +213,11 @@ export class AuthService {
         throw new UnauthorizedException('Usuario invalido');
       }
 
+      // F9: refresh token revogado (logout) nao pode renovar sessao.
+      if ((payload.tokenVersion ?? 0) !== (usuario.tokenVersion ?? 0)) {
+        throw new UnauthorizedException('Refresh token invalido');
+      }
+
       this.logger.log(`Refresh token ok para ${usuario.email}`);
       this.logger.log(
         JSON.stringify({
@@ -244,6 +251,15 @@ export class AuthService {
       });
       throw new UnauthorizedException('Refresh token invalido');
     }
+  }
+
+  async logout(usuario: Usuario): Promise<{ success: boolean }> {
+    // F9: revoga todos os tokens (access e refresh) ja emitidos para o usuario.
+    await this.usuariosService.revokeTokens(usuario.id);
+    this.logger.log(
+      JSON.stringify({ event: 'logout', email: usuario.email, success: true }),
+    );
+    return { success: true };
   }
 
   private getInviteSecret(): string {

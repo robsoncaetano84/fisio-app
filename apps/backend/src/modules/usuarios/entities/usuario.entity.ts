@@ -36,4 +36,9 @@ export class Usuario extends BaseEntity {
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
+
+  // F9: incrementado no logout para revogar todos os tokens (access e refresh)
+  // ja emitidos. Comparado com o claim do token a cada requisicao.
+  @Column({ name: 'token_version', type: 'int', default: 0 })
+  tokenVersion: number;
 }

@@ -102,6 +102,14 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthRolesGuard)
+  @Post('logout')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @HttpCode(HttpStatus.OK)
+  async logout(@CurrentUser() usuario: Usuario) {
+    return this.authService.logout(usuario);
+  }
+
+  @UseGuards(JwtAuthRolesGuard)
   @Get('me')
   async me(@CurrentUser() usuario: Usuario) {
     return {
