@@ -82,6 +82,9 @@ import { HealthModule } from './modules/health/health.module';
         EXERCISE_CATALOG_AUTO_SEED: Joi.string()
           .valid('true', 'false')
           .optional(),
+        SUPABASE_URL: Joi.string().allow('').optional(),
+        SUPABASE_SERVICE_ROLE_KEY: Joi.string().allow('').optional(),
+        SUPABASE_EXERCISE_BUCKET: Joi.string().allow('').optional(),
       }),
     }),
 

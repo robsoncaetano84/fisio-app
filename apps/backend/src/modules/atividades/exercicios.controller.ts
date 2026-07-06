@@ -9,8 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -21,6 +24,7 @@ import { UpdateExercicioCatalogDto } from './dto/update-exercicio-catalog.dto';
 import { UpdateExercicioMidiaClinicalReviewDto } from './dto/update-exercicio-midia-clinical-review.dto';
 import { UpdateExercicioMidiaStorageDto } from './dto/update-exercicio-midia-storage.dto';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
+import type { UploadedExercicioMidiaFile } from './exercicio-midia-storage';
 
 @Controller('exercicios')
 @UseGuards(JwtAuthRolesGuard)
@@ -205,6 +209,24 @@ export class ExerciciosController {
     return this.exerciciosCatalogService.updatePrimaryMediaStorage(
       id,
       dto,
+      usuario.id,
+    );
+  }
+
+  // Etapa-38 F3: upload da imagem do exercicio (arquivo passa pelo backend ->
+  // Supabase/fallback local). Entra como revisao clinica PENDENTE.
+  @Post(':id/midia')
+  @Throttle({ default: { ttl: 60, limit: 20 } })
+  @Roles(UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadPrimaryMedia(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: UploadedExercicioMidiaFile,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.exerciciosCatalogService.uploadPrimaryMedia(
+      id,
+      file,
       usuario.id,
     );
   }

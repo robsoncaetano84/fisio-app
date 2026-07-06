@@ -22,6 +22,11 @@ import {
   ExercicioMidia,
   ExercicioMidiaRevisaoClinicaStatus,
 } from './entities/exercicio-midia.entity';
+import {
+  buildExercicioMidiaObjectKey,
+  persistExercicioMidiaFile,
+  UploadedExercicioMidiaFile,
+} from './exercicio-midia-storage';
 import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
 import { RedisService } from '../../common/redis.service';
@@ -598,6 +603,75 @@ export class ExerciciosCatalogService implements OnModuleInit {
     await this.midiaRepository.save(midia);
     await this.invalidateExerciseCatalogCache();
 
+    return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
+  }
+
+  // Etapa-38 F3: upload de imagem do exercicio pelo backend (Supabase/fallback
+  // local). Toda imagem enviada entra como revisao clinica PENDENTE — so vira
+  // prescritivel apos aprovacao humana.
+  async uploadPrimaryMedia(
+    id: string,
+    file: UploadedExercicioMidiaFile,
+    usuarioId: string,
+  ): Promise<Exercicio> {
+    const exercicio = await this.exercicioRepository.findOne({ where: { id } });
+    if (!exercicio) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+    if (!file || !file.buffer?.length) {
+      throw new BadRequestException('Arquivo de imagem obrigatorio');
+    }
+    const allowedMime = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowedMime.includes(file.mimetype)) {
+      throw new BadRequestException('Formato invalido (use PNG, JPEG ou WEBP)');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('Imagem excede o limite de 5MB');
+    }
+
+    const assetKey = exercicio.imagemKey || exercicio.slug;
+    const objectKey = buildExercicioMidiaObjectKey(assetKey, file.originalname);
+    const { storagePath, imageUrl } = await persistExercicioMidiaFile({
+      objectKey,
+      mimeType: file.mimetype,
+      fileBuffer: file.buffer,
+    });
+
+    let midia = await this.midiaRepository.findOne({
+      where: { exercicioId: exercicio.id, assetKey },
+    });
+    if (!midia) {
+      midia = this.midiaRepository.create({
+        exercicioId: exercicio.id,
+        assetKey,
+        tipo: 'UPLOAD',
+        sourceType: 'UPLOAD',
+        license: 'PROPRIETARIO',
+        versao: 0,
+      });
+    }
+    midia.sourceType = 'UPLOAD';
+    midia.storagePath = storagePath;
+    midia.imageUrl = imageUrl;
+    midia.thumbnailUrl = imageUrl;
+    midia.mimeType = file.mimetype;
+    midia.bytes = file.size;
+    if (!midia.license) midia.license = 'PROPRIETARIO';
+    midia.ativo = true;
+    midia.revisaoClinicaStatus = ExercicioMidiaRevisaoClinicaStatus.PENDENTE;
+    midia.revisaoClinicaObservacao = null;
+    midia.revisaoClinicaPorUsuarioId = null;
+    midia.revisaoClinicaEm = null;
+    midia.revisadoPorUsuarioId = usuarioId;
+    midia.revisadoEm = new Date();
+    midia.versao = (midia.versao ?? 0) + 1;
+    await this.midiaRepository.save(midia);
+
+    if (exercicio.imagemKey !== assetKey) {
+      exercicio.imagemKey = assetKey;
+      await this.exercicioRepository.save(exercicio);
+    }
+    await this.invalidateExerciseCatalogCache();
     return (await this.findOneForAdmin(exercicio.id)) ?? exercicio;
   }
 
