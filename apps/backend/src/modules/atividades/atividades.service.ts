@@ -16,6 +16,7 @@ import {
   AtividadeCheckin,
   DificuldadeExecucao,
 } from './entities/atividade-checkin.entity';
+import { Exercicio } from './entities/exercicio.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { CreateAtividadeDto } from './dto/create-atividade.dto';
@@ -24,6 +25,7 @@ import { DuplicateAtividadeDto } from './dto/duplicate-atividade.dto';
 import { DuplicateAtividadesBatchDto } from './dto/duplicate-atividades-batch.dto';
 import { UpdateAtividadeDto } from './dto/update-atividade.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
+import { ExerciciosCatalogService } from './exercicios-catalog.service';
 
 @Injectable()
 export class AtividadesService {
@@ -35,6 +37,7 @@ export class AtividadesService {
     @InjectRepository(Paciente)
     private readonly pacienteRepository: Repository<Paciente>,
     private readonly notificacoesService: NotificacoesService,
+    private readonly exerciciosCatalogService: ExerciciosCatalogService,
   ) {}
 
   async create(dto: CreateAtividadeDto, usuarioId: string): Promise<Atividade> {
@@ -45,11 +48,27 @@ export class AtividadesService {
       throw new NotFoundException('Paciente nao encontrado');
     }
 
+    // Etapa-38: se prescrever a partir do catalogo, o exercicio precisa existir
+    // e estar aprovado; a imagem/tipo/instrucoes sao derivadas no servidor.
+    const exercicio = dto.exercicioId
+      ? await this.exerciciosCatalogService.findApprovedById(dto.exercicioId)
+      : null;
+    if (dto.exercicioId && !exercicio) {
+      throw new BadRequestException(
+        'Exercicio do catalogo nao encontrado ou nao aprovado',
+      );
+    }
+
     const atividade = this.atividadeRepository.create({
       pacienteId: dto.pacienteId,
       usuarioId,
       titulo: dto.titulo.trim(),
       descricao: dto.descricao?.trim() || null,
+      exercicioId: exercicio?.id ?? null,
+      instrucoesExecucao:
+        dto.instrucoesExecucao?.trim() || exercicio?.instrucoesPadrao || null,
+      imagemUrl: this.getExerciseImageUrl(exercicio),
+      imagemTipo: exercicio?.imagemKey || dto.imagemTipo || null,
       dataLimite: dto.dataLimite ? new Date(dto.dataLimite) : null,
       diaPrescricao: typeof dto.diaPrescricao === 'number' ? dto.diaPrescricao : null,
       ordemNoDia: typeof dto.ordemNoDia === 'number' ? dto.ordemNoDia : null,
@@ -58,6 +77,22 @@ export class AtividadesService {
     });
 
     return this.atividadeRepository.save(atividade);
+  }
+
+  // Deriva a URL da imagem a partir da midia principal aprovada do exercicio.
+  // Nunca aceita URL do cliente (regra anti-URL do catalogo).
+  private getExerciseImageUrl(exercicio?: Exercicio | null): string | null {
+    if (!exercicio?.imagemKey) return null;
+    const primaryMedia =
+      exercicio.midias?.find(
+        (midia) => midia.ativo && midia.assetKey === exercicio.imagemKey,
+      ) ?? null;
+    return (
+      primaryMedia?.thumbnailUrl ||
+      primaryMedia?.imageUrl ||
+      primaryMedia?.sourceUrl ||
+      null
+    );
   }
 
   async findByPaciente(pacienteId: string, usuarioId: string): Promise<Atividade[]> {

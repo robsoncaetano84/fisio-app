@@ -7,6 +7,7 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -16,6 +17,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { ExerciseImageType } from '../exercise-image-type.enum';
 
 export class CreateAtividadeDto {
   @IsUUID()
@@ -29,6 +31,21 @@ export class CreateAtividadeDto {
   @IsOptional()
   @IsString()
   descricao?: string;
+
+  // Etapa-38: prescricao a partir de um exercicio APROVADO do catalogo. O
+  // servidor deriva imagemUrl/instrucoes; o cliente nunca envia URL de imagem.
+  @IsOptional()
+  @IsUUID()
+  exercicioId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  instrucoesExecucao?: string;
+
+  @IsOptional()
+  @IsEnum(ExerciseImageType)
+  imagemTipo?: ExerciseImageType;
 
   @IsOptional()
   @IsDateString()
