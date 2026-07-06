@@ -12,7 +12,15 @@ import { ExercicioMidia } from './entities/exercicio-midia.entity';
 import { Paciente } from '../pacientes/entities/paciente.entity';
 import { AtividadesController } from './atividades.controller';
 import { AtividadesService } from './atividades.service';
+import { ExerciciosController } from './exercicios.controller';
+import { ExerciciosCatalogService } from './exercicios-catalog.service';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
+
+// Etapa-38: os endpoints do catalogo de exercicios ficam atras de flag ate o
+// go-live. O service e sempre provido (usado internamente/plano IA); o
+// controller so e montado quando EXERCISE_CATALOG_ENABLED=true.
+const exerciseCatalogEnabled =
+  process.env.EXERCISE_CATALOG_ENABLED === 'true';
 
 @Module({
   imports: [
@@ -25,8 +33,11 @@ import { NotificacoesModule } from '../notificacoes/notificacoes.module';
     ]),
     NotificacoesModule,
   ],
-  controllers: [AtividadesController],
-  providers: [AtividadesService],
-  exports: [AtividadesService],
+  controllers: [
+    AtividadesController,
+    ...(exerciseCatalogEnabled ? [ExerciciosController] : []),
+  ],
+  providers: [AtividadesService, ExerciciosCatalogService],
+  exports: [AtividadesService, ExerciciosCatalogService],
 })
 export class AtividadesModule {}

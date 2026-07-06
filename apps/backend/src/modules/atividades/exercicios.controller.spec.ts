@@ -1,0 +1,263 @@
+import { ROLES_KEY } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../usuarios/entities/usuario.entity';
+import { ExerciciosController } from './exercicios.controller';
+import { ExerciciosCatalogService } from './exercicios-catalog.service';
+
+describe('ExerciciosController', () => {
+  const make = () => {
+    const service = {
+      findAll: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      findOneForAdmin: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      findImageProductionQueue: jest.fn().mockResolvedValue({ items: [] }),
+      findImageProductionBriefs: jest.fn().mockResolvedValue({
+        items: [],
+        productionMarkdownBatch: '# Pacote de produção de imagens',
+      }),
+      getImageProductionBrief: jest
+        .fn()
+        .mockResolvedValue({ id: 'exercicio-1', promptBase: 'prompt' }),
+      create: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      update: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      archive: jest.fn().mockResolvedValue({ success: true }),
+      reviewPrimaryMedia: jest.fn().mockResolvedValue({ id: 'exercicio-1' }),
+      updatePrimaryMediaStorage: jest
+        .fn()
+        .mockResolvedValue({ id: 'exercicio-1' }),
+    } as unknown as jest.Mocked<ExerciciosCatalogService>;
+
+    const controller = new ExerciciosController(service);
+    return { controller, service };
+  };
+
+  it('only forwards includeDrafts for admin users', () => {
+    const { controller, service } = make();
+
+    controller.findAll(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'true',
+      { id: 'usr-1', role: UserRole.USER } as any,
+    );
+
+    expect(service.findAll).toHaveBeenLastCalledWith({
+      q: undefined,
+      regiaoCorporal: undefined,
+      categoria: undefined,
+      nivel: undefined,
+      tag: undefined,
+      includeDrafts: false,
+    });
+
+    controller.findAll(
+      'lombar',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'true',
+      { id: 'adm-1', role: UserRole.ADMIN } as any,
+    );
+
+    expect(service.findAll).toHaveBeenLastCalledWith({
+      q: 'lombar',
+      regiaoCorporal: undefined,
+      categoria: undefined,
+      nivel: undefined,
+      tag: undefined,
+      includeDrafts: true,
+    });
+  });
+
+  it('uses admin detail lookup only for admin users', async () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+
+    await controller.findOne(id, { id: 'usr-1', role: UserRole.USER } as any);
+    expect(service.findOne).toHaveBeenCalledWith(id);
+    expect(service.findOneForAdmin).not.toHaveBeenCalled();
+
+    await controller.findOne(id, { id: 'adm-1', role: UserRole.ADMIN } as any);
+    expect(service.findOneForAdmin).toHaveBeenCalledWith(id);
+  });
+
+  it('enforces admin/user role metadata on read endpoints', () => {
+    expect(
+      Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.findAll),
+    ).toEqual([UserRole.ADMIN, UserRole.USER]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.findOne),
+    ).toEqual([UserRole.ADMIN, UserRole.USER]);
+  });
+
+  it('enforces admin role metadata on write endpoints', () => {
+    expect(
+      Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.create),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.findImageProductionQueue,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.findImageProductionBriefs,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.exportImageProductionBriefsMarkdown,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.getImageProductionBrief,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.update),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, ExerciciosController.prototype.archive),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.reviewPrimaryMedia,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        ExerciciosController.prototype.updatePrimaryMediaStorage,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+  });
+
+  it('forwards primary media clinical review updates', () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const dto = {
+      status: 'APROVADA',
+      observacao: 'Imagem clara para uso.',
+    } as any;
+
+    controller.reviewPrimaryMedia(id, dto, { id: 'adm-1' } as any);
+
+    expect(service.reviewPrimaryMedia).toHaveBeenCalledWith(id, dto, 'adm-1');
+  });
+
+  it('forwards primary media storage updates', () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const dto = {
+      storagePath: 'exercises/ponte-curta/full.jpg',
+      thumbnailUrl:
+        'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/thumb.jpg',
+      imageUrl:
+        'https://project.supabase.co/storage/v1/object/public/exercise-images/exercises/ponte-curta/full.jpg',
+      mimeType: 'image/jpeg',
+      width: 1024,
+      height: 1024,
+      bytes: 42000,
+    };
+
+    controller.updatePrimaryMediaStorage(id, dto, { id: 'adm-1' } as any);
+
+    expect(service.updatePrimaryMediaStorage).toHaveBeenCalledWith(
+      id,
+      dto,
+      'adm-1',
+    );
+  });
+
+  it('forwards image production queue filters for admins', () => {
+    const { controller, service } = make();
+
+    controller.findImageProductionQueue(
+      'joelho',
+      'joelho',
+      'fortalecimento',
+      'iniciante',
+      'dor_joelho',
+      'SEM_IMAGEM',
+      '25',
+    );
+
+    expect(service.findImageProductionQueue).toHaveBeenCalledWith({
+      q: 'joelho',
+      regiaoCorporal: 'joelho',
+      categoria: 'fortalecimento',
+      nivel: 'iniciante',
+      tag: 'dor_joelho',
+      filaStatus: 'SEM_IMAGEM',
+      limit: '25',
+    });
+  });
+
+  it('forwards image production brief batch filters for admins', () => {
+    const { controller, service } = make();
+
+    controller.findImageProductionBriefs(
+      'ombro',
+      'ombro',
+      'fortalecimento',
+      'iniciante',
+      'manguito',
+      'REGENERAR_IMAGEM',
+      '10',
+    );
+
+    expect(service.findImageProductionBriefs).toHaveBeenCalledWith({
+      q: 'ombro',
+      regiaoCorporal: 'ombro',
+      categoria: 'fortalecimento',
+      nivel: 'iniciante',
+      tag: 'manguito',
+      filaStatus: 'REGENERAR_IMAGEM',
+      limit: '10',
+    });
+  });
+
+  it('exports image production brief batch as markdown for admins', async () => {
+    const { controller, service } = make();
+
+    await expect(
+      controller.exportImageProductionBriefsMarkdown(
+        'ombro',
+        'ombro',
+        'fortalecimento',
+        'iniciante',
+        'manguito',
+        'REGENERAR_IMAGEM',
+        '10',
+      ),
+    ).resolves.toBe('# Pacote de produção de imagens');
+
+    expect(service.findImageProductionBriefs).toHaveBeenCalledWith({
+      q: 'ombro',
+      regiaoCorporal: 'ombro',
+      categoria: 'fortalecimento',
+      nivel: 'iniciante',
+      tag: 'manguito',
+      filaStatus: 'REGENERAR_IMAGEM',
+      limit: '10',
+    });
+  });
+
+  it('forwards image production brief lookup for admins', () => {
+    const { controller, service } = make();
+    const id = '11111111-1111-4111-8111-111111111111';
+
+    controller.getImageProductionBrief(id);
+
+    expect(service.getImageProductionBrief).toHaveBeenCalledWith(id);
+  });
+});

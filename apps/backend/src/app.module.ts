@@ -76,6 +76,12 @@ import { HealthModule } from './modules/health/health.module';
         TRUST_PROXY: Joi.string().valid('true', 'false').default('false'),
         APP_VERSION: Joi.string().allow('').optional(),
         SENTRY_DSN: Joi.string().allow('').optional(),
+        EXERCISE_CATALOG_ENABLED: Joi.string()
+          .valid('true', 'false')
+          .default('false'),
+        EXERCISE_CATALOG_AUTO_SEED: Joi.string()
+          .valid('true', 'false')
+          .optional(),
       }),
     }),
 
