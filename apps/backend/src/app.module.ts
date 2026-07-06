@@ -20,6 +20,8 @@ import { LaudoHistorico } from './modules/laudos/entities/laudo-historico.entity
 import { AuthLog } from './modules/auth/entities/auth-log.entity';
 import { Atividade } from './modules/atividades/entities/atividade.entity';
 import { AtividadeCheckin } from './modules/atividades/entities/atividade-checkin.entity';
+import { Exercicio } from './modules/atividades/entities/exercicio.entity';
+import { ExercicioMidia } from './modules/atividades/entities/exercicio-midia.entity';
 import { PushToken } from './modules/notificacoes/entities/push-token.entity';
 import { CrmLead } from './modules/crm/entities/crm-lead.entity';
 import { CrmTask } from './modules/crm/entities/crm-task.entity';
@@ -105,6 +107,8 @@ import { HealthModule } from './modules/health/health.module';
             AuthLog,
             Atividade,
             AtividadeCheckin,
+            Exercicio,
+            ExercicioMidia,
             PushToken,
             CrmLead,
             CrmTask,

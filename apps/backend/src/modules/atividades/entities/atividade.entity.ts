@@ -1,7 +1,6 @@
 // ==========================================
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
-// @date:   26-01-2026
-// A TI VI DA DE.E NT IT Y
+// ATIVIDADE.ENTITY
 // ==========================================
 import {
   Entity,
@@ -15,6 +14,7 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { Paciente } from '../../pacientes/entities/paciente.entity';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 import { AtividadeCheckin } from './atividade-checkin.entity';
+import { Exercicio } from './exercicio.entity';
 
 @Entity('atividades')
 @Index('IDX_ATIVIDADE_PACIENTE_STATUS', ['pacienteId', 'ativo'])
@@ -24,6 +24,15 @@ export class Atividade extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   descricao: string | null;
+
+  @Column({ name: 'instrucoes_execucao', type: 'text', nullable: true })
+  instrucoesExecucao: string | null;
+
+  @Column({ name: 'imagem_url', type: 'text', nullable: true })
+  imagemUrl: string | null;
+
+  @Column({ name: 'imagem_tipo', type: 'varchar', length: 80, nullable: true })
+  imagemTipo: string | null;
 
   @Column({ name: 'data_limite', type: 'date', nullable: true })
   dataLimite: Date | null;
@@ -36,6 +45,26 @@ export class Atividade extends BaseEntity {
 
   @Column({ name: 'repetir_semanal', type: 'boolean', default: true })
   repetirSemanal: boolean;
+
+  @ManyToOne(() => Exercicio, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'exercicio_id' })
+  exercicio: Exercicio | null;
+
+  @Column({ name: 'exercicio_id', type: 'uuid', nullable: true })
+  exercicioId: string | null;
+
+  @Column({ name: 'aceite_profissional', type: 'boolean', default: false })
+  aceiteProfissional: boolean;
+
+  @Column({
+    name: 'aceite_profissional_por_usuario_id',
+    type: 'uuid',
+    nullable: true,
+  })
+  aceiteProfissionalPorUsuarioId: string | null;
+
+  @Column({ name: 'aceite_profissional_em', type: 'timestamp', nullable: true })
+  aceiteProfissionalEm: Date | null;
 
   @Column({ default: true })
   ativo: boolean;
