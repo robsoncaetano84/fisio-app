@@ -19,13 +19,13 @@ import { AnamnesesService } from './anamneses.service';
 import { CreateAnamneseDto } from './dto/create-anamnese.dto';
 import { UpdateAnamneseDto } from './dto/update-anamnese.dto';
 import { CreateMyAnamneseDto } from './dto/create-my-anamnese.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 
 @Controller('anamneses')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthRolesGuard)
 export class AnamnesesController {
   constructor(private readonly anamnesesService: AnamnesesService) {}
 

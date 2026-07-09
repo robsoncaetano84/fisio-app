@@ -154,6 +154,11 @@ export class UsuariosService {
       .getMany();
   }
 
+  // F9: incrementa a versao do token, invalidando todos os tokens ja emitidos.
+  async revokeTokens(userId: string): Promise<void> {
+    await this.usuarioRepository.increment({ id: userId }, 'tokenVersion', 1);
+  }
+
   async findById(id: string): Promise<Usuario> {
     const usuario = await this.usuarioRepository.findOne({ where: { id } });
 

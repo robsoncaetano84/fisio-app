@@ -2,6 +2,8 @@ import { AnamneseHistorico } from '../modules/anamneses/entities/anamnese-histor
 import { Anamnese } from '../modules/anamneses/entities/anamnese.entity';
 import { AtividadeCheckin } from '../modules/atividades/entities/atividade-checkin.entity';
 import { Atividade } from '../modules/atividades/entities/atividade.entity';
+import { Exercicio } from '../modules/atividades/entities/exercicio.entity';
+import { ExercicioMidia } from '../modules/atividades/entities/exercicio-midia.entity';
 import { AuthLog } from '../modules/auth/entities/auth-log.entity';
 import { ClinicalAuditLog } from '../modules/clinical-governance/entities/clinical-audit-log.entity';
 import { ClinicalProtocolVersion } from '../modules/clinical-governance/entities/clinical-protocol-version.entity';
@@ -55,6 +57,8 @@ export const DATABASE_ENTITIES = [
   AuthLog,
   Atividade,
   AtividadeCheckin,
+  Exercicio,
+  ExercicioMidia,
   PushToken,
   CrmLead,
   CrmTask,

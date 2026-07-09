@@ -6,14 +6,14 @@ import { Body, Controller, Delete, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { RemovePushTokenDto } from './dto/remove-push-token.dto';
 import { NotificacoesService } from './notificacoes.service';
 
 @Controller('notificacoes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthRolesGuard)
 export class NotificacoesController {
   constructor(private readonly notificacoesService: NotificacoesService) {}
 

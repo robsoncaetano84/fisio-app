@@ -2,7 +2,7 @@
 // @author: Robson Lacerda Caetano - RCTEC - rctec.solucoestecnologicas@gmail.com
 // L AU DO.ENTITY
 // ==========================================
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Paciente } from '../../pacientes/entities/paciente.entity';
 
@@ -12,6 +12,7 @@ export enum LaudoStatus {
 }
 
 @Entity('laudos')
+@Index('UQ_LAUDO_PACIENTE_ID', ['pacienteId'], { unique: true })
 export class Laudo extends BaseEntity {
   @ManyToOne(() => Paciente)
   @JoinColumn({ name: 'paciente_id' })

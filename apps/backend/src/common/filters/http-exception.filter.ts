@@ -96,6 +96,13 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       );
     }
 
+    if (isServerError) {
+      // F15: nao expor detalhes internos (mensagem de erro/banco) ao cliente
+      // em 5xx. O detalhe real ja foi para o log e o Sentry.
+      error = 'Internal Server Error';
+      message = 'Erro interno do servidor';
+    }
+
     const payload: ErrorResponseBody = {
       statusCode: status,
       error,

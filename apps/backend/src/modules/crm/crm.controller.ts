@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthRolesGuard } from '../auth/guards/jwt-auth.guard';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import { CrmAdminPermission, CrmService } from './crm.service';
 import { CreateCrmLeadDto } from './dto/create-crm-lead.dto';
@@ -32,7 +32,7 @@ import { CrmLeadStage } from './entities/crm-lead.entity';
 import { CrmTaskStatus } from './entities/crm-task.entity';
 
 @Controller('crm')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthRolesGuard)
 @Roles(UserRole.ADMIN)
 export class CrmController {
   private readonly logger = new Logger(CrmController.name);

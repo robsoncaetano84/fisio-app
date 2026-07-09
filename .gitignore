@@ -3,8 +3,10 @@ apps/mobile/.env
 node_modules
 *.tsbuildinfo
 dist/
+.next/
 apps/backend/dist/
 logs/
+.local-logs/
 *.log
 apps/backend/backend-dev.log
 apps/backend/uploads/
