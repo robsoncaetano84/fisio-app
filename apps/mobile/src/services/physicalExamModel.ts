@@ -58,6 +58,12 @@ export interface RegionalTest {
   selecionado: boolean;
 }
 
+export interface AdmMovimento {
+  nome: string;
+  referencia: string;
+  valor: string;
+}
+
 export interface RegionalTestGroup {
   regiao:
     | "CERVICAL"
@@ -72,6 +78,7 @@ export interface RegionalTestGroup {
     | "PUNHO_MAO";
   titulo: string;
   adm: string;
+  admMovimentos: AdmMovimento[];
   testes: RegionalTest[];
 }
 
@@ -569,6 +576,99 @@ export function inferDorClassificationFromAnamnese(
 const makeTests = (names: string[]): RegionalTest[] =>
   names.map((nome) => ({ nome, resultado: "NAO_TESTADO", selecionado: false }));
 
+// Movimentos de ADM por regiao com amplitude de referencia (base AAOS).
+// Direciona exatamente quais movimentos avaliar em cada articulacao.
+export const ADM_MOVIMENTOS_POR_REGIAO: Record<
+  RegionalTestGroup["regiao"],
+  Array<{ nome: string; referencia: string }>
+> = {
+  CERVICAL: [
+    { nome: "Flexão", referencia: "0–45°" },
+    { nome: "Extensão", referencia: "0–45°" },
+    { nome: "Inclinação D", referencia: "0–45°" },
+    { nome: "Inclinação E", referencia: "0–45°" },
+    { nome: "Rotação D", referencia: "0–60°" },
+    { nome: "Rotação E", referencia: "0–60°" },
+  ],
+  TORACICA: [
+    { nome: "Rotação D", referencia: "0–35°" },
+    { nome: "Rotação E", referencia: "0–35°" },
+    { nome: "Inclinação D", referencia: "0–20°" },
+    { nome: "Inclinação E", referencia: "0–20°" },
+  ],
+  LOMBAR: [
+    { nome: "Flexão", referencia: "0–60°" },
+    { nome: "Extensão", referencia: "0–25°" },
+    { nome: "Inclinação D", referencia: "0–25°" },
+    { nome: "Inclinação E", referencia: "0–25°" },
+    { nome: "Rotação D", referencia: "0–30°" },
+    { nome: "Rotação E", referencia: "0–30°" },
+  ],
+  SACROILIACA: [
+    { nome: "Mobilidade SI D", referencia: "qualitativa" },
+    { nome: "Mobilidade SI E", referencia: "qualitativa" },
+  ],
+  QUADRIL: [
+    { nome: "Flexão", referencia: "0–120°" },
+    { nome: "Extensão", referencia: "0–20°" },
+    { nome: "Abdução", referencia: "0–45°" },
+    { nome: "Adução", referencia: "0–30°" },
+    { nome: "Rotação interna", referencia: "0–45°" },
+    { nome: "Rotação externa", referencia: "0–45°" },
+  ],
+  JOELHO: [
+    { nome: "Flexão", referencia: "0–135°" },
+    { nome: "Extensão", referencia: "0°" },
+  ],
+  TORNOZELO_PE: [
+    { nome: "Dorsiflexão", referencia: "0–20°" },
+    { nome: "Flexão plantar", referencia: "0–50°" },
+    { nome: "Inversão", referencia: "0–35°" },
+    { nome: "Eversão", referencia: "0–15°" },
+  ],
+  OMBRO: [
+    { nome: "Flexão", referencia: "0–180°" },
+    { nome: "Extensão", referencia: "0–60°" },
+    { nome: "Abdução", referencia: "0–180°" },
+    { nome: "Adução", referencia: "0–45°" },
+    { nome: "Rotação interna", referencia: "0–70°" },
+    { nome: "Rotação externa", referencia: "0–90°" },
+  ],
+  COTOVELO: [
+    { nome: "Flexão", referencia: "0–150°" },
+    { nome: "Extensão", referencia: "0°" },
+    { nome: "Pronação", referencia: "0–80°" },
+    { nome: "Supinação", referencia: "0–80°" },
+  ],
+  PUNHO_MAO: [
+    { nome: "Flexão", referencia: "0–80°" },
+    { nome: "Extensão", referencia: "0–70°" },
+    { nome: "Desvio radial", referencia: "0–20°" },
+    { nome: "Desvio ulnar", referencia: "0–30°" },
+  ],
+};
+
+export const makeAdmMovimentos = (
+  regiao: RegionalTestGroup["regiao"],
+): AdmMovimento[] =>
+  (ADM_MOVIMENTOS_POR_REGIAO[regiao] || []).map((mov) => ({
+    nome: mov.nome,
+    referencia: mov.referencia,
+    valor: "",
+  }));
+
+// Compoe o resumo textual de ADM (campo `adm`) a partir dos movimentos
+// preenchidos, mantendo compatibilidade com backend/PDF/IA que consomem string.
+export const composeAdmSummary = (
+  movimentos?: AdmMovimento[] | null,
+): string => {
+  if (!Array.isArray(movimentos)) return "";
+  return movimentos
+    .filter((mov) => String(mov?.valor || "").trim())
+    .map((mov) => `${mov.nome}: ${String(mov.valor).trim()}`)
+    .join("; ");
+};
+
 const normalizeTestKey = (value?: string | null): string =>
   String(value || "")
     .normalize("NFD")
@@ -583,7 +683,8 @@ const LEGACY_TEST_NAME_ALIASES: Record<string, string[]> = {
   [normalizeTestKey("Golfer's elbow test")]: ["Golfer's elbow"],
 };
 
-const getDefaultRegionalTests = (): RegionalTestGroup[] => [
+const getDefaultRegionalTests = (): RegionalTestGroup[] => {
+  const base: Array<Omit<RegionalTestGroup, "admMovimentos">> = [
   {
     regiao: "CERVICAL",
     titulo: "Coluna cervical",
@@ -722,7 +823,12 @@ const getDefaultRegionalTests = (): RegionalTestGroup[] => [
       "Watson",
     ]),
   },
-];
+  ];
+  return base.map((group) => ({
+    ...group,
+    admMovimentos: makeAdmMovimentos(group.regiao),
+  }));
+};
 
 const normalizeRegionalTests = (
   incoming?: RegionalTestGroup[] | null,
@@ -739,9 +845,22 @@ const normalizeRegionalTests = (
         .filter((test) => test?.nome)
         .map((test) => [normalizeTestKey(test.nome), test] as const),
     );
+    const foundAdm = Array.isArray(foundGroup.admMovimentos)
+      ? foundGroup.admMovimentos
+      : [];
+    const foundAdmByKey = new Map(
+      foundAdm
+        .filter((mov) => mov?.nome)
+        .map((mov) => [normalizeTestKey(mov.nome), mov] as const),
+    );
+    const admMovimentos = baseGroup.admMovimentos.map((baseMov) => {
+      const found = foundAdmByKey.get(normalizeTestKey(baseMov.nome));
+      return found ? { ...baseMov, valor: safeText(found.valor, "") } : baseMov;
+    });
     return {
       ...baseGroup,
-      adm: safeText(foundGroup.adm, baseGroup.adm),
+      admMovimentos,
+      adm: composeAdmSummary(admMovimentos) || safeText(foundGroup.adm, ""),
       testes: baseGroup.testes.map((baseTest) => {
         const baseKey = normalizeTestKey(baseTest.nome);
         const aliasKeys = (LEGACY_TEST_NAME_ALIASES[baseKey] || []).map((alias) =>
@@ -1072,6 +1191,92 @@ const inferChainByRegion = (region: RegionalTestGroup["regiao"]) => {
     default:
       return "Cadeia funcional global";
   }
+};
+
+// Cadeia lesional (cinetica) por regiao: segmentos ordenados do proximal ao
+// distal a avaliar/ajustar ao longo da cadeia, direcionando a conduta de ajuste.
+const CADEIA_LESIONAL_POR_REGIAO: Record<
+  RegionalTestGroup["regiao"],
+  { cadeia: string; segmentos: string[] }
+> = {
+  CERVICAL: {
+    cadeia: "cervico-escapular",
+    segmentos: [
+      "transicao cervicotoracica",
+      "coluna cervical",
+      "cintura escapular/ombro",
+    ],
+  },
+  TORACICA: {
+    cadeia: "axial toracica",
+    segmentos: [
+      "coluna cervical baixa",
+      "coluna toracica",
+      "gradil costal",
+      "coluna lombar alta",
+    ],
+  },
+  LOMBAR: {
+    cadeia: "lombopelvica",
+    segmentos: [
+      "transicao toracolombar",
+      "coluna lombar",
+      "sacroiliaca/pelve",
+      "coxofemoral",
+    ],
+  },
+  SACROILIACA: {
+    cadeia: "lombopelvica",
+    segmentos: [
+      "coluna lombar",
+      "sacroiliaca",
+      "coxofemoral",
+      "sinfise pubica",
+    ],
+  },
+  QUADRIL: {
+    cadeia: "lombopelvico-femoral",
+    segmentos: [
+      "coluna lombar/sacroiliaca",
+      "coxofemoral",
+      "joelho",
+      "tornozelo/pe",
+    ],
+  },
+  JOELHO: {
+    cadeia: "de membro inferior",
+    segmentos: ["coxofemoral", "joelho", "tornozelo/pe"],
+  },
+  TORNOZELO_PE: {
+    cadeia: "de membro inferior distal",
+    segmentos: ["joelho", "tornozelo", "retrope/mediope/antepe"],
+  },
+  OMBRO: {
+    cadeia: "cervico-escapulo-umeral",
+    segmentos: [
+      "transicao cervicotoracica",
+      "escapula/ombro",
+      "cotovelo",
+    ],
+  },
+  COTOVELO: {
+    cadeia: "de membro superior",
+    segmentos: ["ombro", "cotovelo", "punho/mao"],
+  },
+  PUNHO_MAO: {
+    cadeia: "de membro superior distal",
+    segmentos: ["cotovelo", "punho", "carpo/mao"],
+  },
+};
+
+const buildCadeiaLesionalAjuste = (
+  region: RegionalTestGroup["regiao"],
+): string => {
+  const chain = CADEIA_LESIONAL_POR_REGIAO[region];
+  if (!chain) return "";
+  return `Trabalhar a cadeia lesional (${chain.cadeia}): avaliar e mobilizar/ajustar ${chain.segmentos.join(
+    " -> ",
+  )} conforme restricoes encontradas.`;
 };
 
 const REGION_CONDUTA_HINTS: Record<
@@ -1509,6 +1714,9 @@ export function enrichStructuredExameWithClinicalLogic(
         progressao: "Progressao por funcao, dor e tolerancia a carga.",
       };
   const condutaHintByLesion = LESION_TYPE_CONDUTA_HINTS[predominantHintType];
+  const cadeiaLesionalAjuste = primaryRegion
+    ? buildCadeiaLesionalAjuste(primaryRegion)
+    : "";
   const condutaHint = preparedExam.redFlags.criticalTriggered
     ? {
         tecnicaManual:
@@ -1522,7 +1730,9 @@ export function enrichStructuredExameWithClinicalLogic(
       }
     : {
         tecnicaManual: `${condutaHintByRegion.tecnicaManual} ${condutaHintByLesion.tecnicaManual}`,
-        ajuste: `${condutaHintByRegion.ajuste} ${condutaHintByLesion.ajuste}`,
+        ajuste: `${condutaHintByRegion.ajuste} ${condutaHintByLesion.ajuste}${
+          cadeiaLesionalAjuste ? ` ${cadeiaLesionalAjuste}` : ""
+        }`,
         exercicio: `${condutaHintByRegion.exercicio} ${condutaHintByLesion.exercicio}`,
         progressao: `${condutaHintByRegion.progressao} ${condutaHintByLesion.progressao}`,
       };
@@ -1834,131 +2044,183 @@ export function parseStructuredExame(raw?: string | null): ExameFisicoStructured
   }
 }
 
+// Prefixos de textos-semente/placeholder que NAO representam preenchimento real
+// do profissional (instrucoes imperativas geradas por padrao) e que a previa
+// clinica deve ocultar para trazer apenas o que foi efetivamente preenchido.
+const PREVIEW_PLACEHOLDER_PREFIXES = [
+  "nao informado",
+  "nao testado",
+  "nao classificad",
+  "a definir",
+  "avaliar",
+  "comparar",
+  "testar",
+  "observar",
+  "identificar",
+  "mapear",
+  "selecionar",
+  "correlacionar",
+  "definir",
+  "listar",
+  "marcar",
+  "priorizar",
+  "considerar",
+  "revisar",
+  "palpacao dinamica",
+];
+
+// Textos-semente estaticos que nao comecam com verbo imperativo mas tambem
+// nao representam preenchimento real.
+const PREVIEW_PLACEHOLDER_EXACT = [
+  "cervical (c1-c7), toracica (t1-t12), lombar (l1-l5), sacro, iliacos d/e.",
+  "sem protecao descrita.",
+  "sem relacao funcional clara no momento.",
+  "sem fator biomecanico principal definido.",
+];
+
+const isPreviewFilled = (value?: string | null): boolean => {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (!text) return false;
+  if (text.includes("a definir")) return false;
+  if (PREVIEW_PLACEHOLDER_EXACT.includes(text)) return false;
+  return !PREVIEW_PLACEHOLDER_PREFIXES.some((prefix) => text.startsWith(prefix));
+};
+
+const buildPreviewSection = (
+  header: string,
+  entries: Array<[string, string | null | undefined]>,
+): string[] => {
+  const lines = entries
+    .filter(([, value]) => isPreviewFilled(value))
+    .map(([label, value]) => `${label}: ${String(value).trim()}`);
+  return lines.length ? [header, ...lines, ""] : [];
+};
+
 export function renderStructuredExameToText(exam: ExameFisicoStructured): string {
-  const redFlagsPositivas = exam.redFlags.answers
+  const regioesLines = exam.avaliacaoRegioes.flatMap((group) => {
+    const lines: string[] = [];
+    if (isPreviewFilled(group.adm)) lines.push(`- ADM: ${group.adm.trim()}`);
+    group.testes
+      .filter((t) => t.resultado !== "NAO_TESTADO" || t.selecionado)
+      .forEach((t) => {
+        lines.push(
+          t.resultado === "NAO_TESTADO"
+            ? `- ${t.nome}: Selecionado`
+            : `- ${t.nome}: ${t.resultado === "POSITIVO" ? "Positivo" : "Negativo"}`,
+        );
+      });
+    return lines.length ? [group.titulo, ...lines] : [];
+  });
+
+  const redFlagsLines: string[] = exam.redFlags.answers
     .filter((item) => item.positive)
-    .map((item) => `- ${item.question}`)
-    .join("\n");
+    .map((item) => `- ${item.question}`);
+  if (exam.redFlags.criticalTriggered) {
+    redFlagsLines.push(
+      "ALERTA: Red flag critica detectada. Encaminhamento imediato recomendado.",
+    );
+  }
+  if (isPreviewFilled(exam.redFlags.referralDestination)) {
+    redFlagsLines.push(
+      `Destino de encaminhamento: ${String(exam.redFlags.referralDestination).trim()}`,
+    );
+  }
+  if (isPreviewFilled(exam.redFlags.referralReason)) {
+    redFlagsLines.push(
+      `Justificativa do encaminhamento: ${String(exam.redFlags.referralReason).trim()}`,
+    );
+  }
 
   return [
-    "Classificacao de dor",
-    `Principal: ${exam.dorPrincipal || "Nao classificada"}`,
-    `Subtipo clinico: ${exam.dorSubtipo || "Nao classificado"}`,
-    "",
-    "Observacao",
-    `Postura: ${exam.observacao.postura}`,
-    `Assimetria: ${exam.observacao.assimetria}`,
-    `Protecao: ${exam.observacao.protecao}`,
-    `Padrao de movimento: ${exam.observacao.padraoMovimento}`,
-    `Edema: ${exam.observacao.edema}`,
-    `Atrofia muscular: ${exam.observacao.atrofiaMuscular}`,
-    `Marcha: ${exam.observacao.marcha}`,
-    "",
-    "Movimento",
-    `Ativo: ${exam.movimento.ativo}`,
-    `Passivo: ${exam.movimento.passivo}`,
-    `Resistido: ${exam.movimento.resistido}`,
-    `Reproduz dor: ${exam.movimento.reproduzDor}`,
-    `Qualidade do movimento: ${exam.movimento.qualidadeMovimento}`,
-    "",
-    "Padrao de dor",
-    `Local: ${exam.padraoDor.local}`,
-    `Irradiada: ${exam.padraoDor.irradiada}`,
-    "",
-    "Palpacao",
-    `Pontos dolorosos: ${exam.palpacao.pontosDolorosos}`,
-    `Muscular: ${exam.palpacao.muscular}`,
-    `Articular: ${exam.palpacao.articular}`,
-    `Palpacao dinamica vertebral: ${exam.palpacao.dinamicaVertebral}`,
-    `Temperatura: ${exam.palpacao.temperatura}`,
-    `Tonus muscular: ${exam.palpacao.tonusMuscular}`,
-    `Hipomobilidade articular: ${exam.palpacao.hipomobilidadeArticular}`,
-    `Hipomobilidade segmentar - Cervical: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.cervical)}`,
-    `Hipomobilidade segmentar - Toracica: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.toracica)}`,
-    `Hipomobilidade segmentar - Lombar: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.lombar)}`,
-    `Hipomobilidade segmentar - Sacro: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.sacro)}`,
-    `Hipomobilidade segmentar - Iliaco D: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.iliacoDireito)}`,
-    `Hipomobilidade segmentar - Iliaco E: ${safeText(exam.palpacao.hipomobilidadeSegmentar?.iliacoEsquerdo)}`,
-    "",
-    "Testes funcionais",
-    `Agachamento: ${exam.testesFuncionais.agachamento}`,
-    `Agachamento unilateral: ${exam.testesFuncionais.agachamentoUnilateral}`,
-    `Salto: ${exam.testesFuncionais.salto}`,
-    `Corrida: ${exam.testesFuncionais.corrida}`,
-    `Estabilidade: ${exam.testesFuncionais.estabilidade}`,
-    `Controle motor: ${exam.testesFuncionais.controleMotor}`,
-    "",
-    "Testes",
-    `Biomecanicos: ${exam.testes.biomecanicos}`,
-    `Ortopedicos: ${exam.testes.ortopedicos}`,
-    `Imagem: ${exam.testes.imagem}`,
-    "",
-    "Avaliacao por regioes",
-    ...exam.avaliacaoRegioes.flatMap((group) => {
-      const lines = [`${group.titulo}`, `- ADM: ${safeText(group.adm)}`];
-      const selectedOrTested = group.testes.filter(
-        (t) => t.resultado !== "NAO_TESTADO" || t.selecionado,
-      );
-      if (!selectedOrTested.length) {
-        lines.push("- Sem testes marcados");
-        return lines;
-      }
-      selectedOrTested.forEach((t) => {
-        if (t.resultado === "NAO_TESTADO") {
-          lines.push(`- ${t.nome}: Selecionado`);
-          return;
-        }
-        lines.push(`- ${t.nome}: ${t.resultado === "POSITIVO" ? "Positivo" : "Negativo"}`);
-      });
-      return lines;
-    }),
-    "",
-    "Cadeia cinetica",
-    `Coxofemoral: ${exam.cadeiaCinetica.quadril}`,
-    `Pelve: ${exam.cadeiaCinetica.pelve}`,
-    `Coluna toracica: ${exam.cadeiaCinetica.colunaToracica}`,
-    `Pe: ${exam.cadeiaCinetica.pe}`,
-    "",
-    "Cruzamento final",
-    `Hipotese principal: ${exam.cruzamentoFinal.hipotesePrincipal}`,
-    `Hipoteses secundarias: ${exam.cruzamentoFinal.hipotesesSecundarias}`,
-    `Inconsistencias: ${exam.cruzamentoFinal.inconsistencias}`,
-    `Direcao de conduta: ${exam.cruzamentoFinal.condutaDirecionada}`,
-    `Prioridade: ${exam.cruzamentoFinal.prioridade}`,
-    `Confianca da hipotese: ${exam.cruzamentoFinal.confiancaHipotese}`,
-    `Score de evidencia: ${exam.cruzamentoFinal.scoreEvidencia}`,
-    `Perfil de scoring: ${exam.cruzamentoFinal.perfilScoring}`,
-    "",
-    "Raciocinio clinico",
-    `Origem provavel da dor: ${exam.raciocinioClinico.origemProvavelDor}`,
-    `Estrutura envolvida: ${exam.raciocinioClinico.estruturaEnvolvida}`,
-    `Tipo de lesao: ${exam.raciocinioClinico.tipoLesao}`,
-    `Fator biomecanico associado: ${exam.raciocinioClinico.fatorBiomecanicoAssociado}`,
-    `Relacao com atividade/gesto: ${exam.raciocinioClinico.relacaoComEsporte}`,
-    "",
-    "Diagnostico funcional",
-    `Disfuncao principal: ${exam.diagnosticoFuncionalIa.disfuncaoPrincipal}`,
-    `Cadeia envolvida: ${exam.diagnosticoFuncionalIa.cadeiaEnvolvida}`,
-    "",
-    "Conduta direcionada",
-    `Tecnica manual indicada: ${exam.condutaIa.tecnicaManualIndicada}`,
-    `Ajuste articular: ${exam.condutaIa.ajusteArticular}`,
-    `Exercicio corretivo: ${exam.condutaIa.exercicioCorretivo}`,
-    `Liberacao miofascial: ${exam.condutaIa.liberacaoMiofascial}`,
-    `Progressao esportiva: ${exam.condutaIa.progressaoEsportiva}`,
-    "",
-    "Red flags",
-    redFlagsPositivas || "Nenhuma red flag positiva na triagem.",
-    exam.redFlags.criticalTriggered
-      ? "ALERTA: Red flag critica detectada. Encaminhamento imediato recomendado."
-      : "Sem red flag critica no momento.",
-    exam.redFlags.referralDestination
-      ? `Destino de encaminhamento: ${exam.redFlags.referralDestination}`
-      : "",
-    exam.redFlags.referralReason
-      ? `Justificativa do encaminhamento: ${exam.redFlags.referralReason}`
-      : "",
+    ...buildPreviewSection("Classificacao de dor", [
+      ["Principal", exam.dorPrincipal],
+      ["Subtipo clinico", exam.dorSubtipo],
+    ]),
+    ...buildPreviewSection("Observacao", [
+      ["Postura", exam.observacao.postura],
+      ["Assimetria", exam.observacao.assimetria],
+      ["Protecao", exam.observacao.protecao],
+      ["Padrao de movimento", exam.observacao.padraoMovimento],
+      ["Edema", exam.observacao.edema],
+      ["Atrofia muscular", exam.observacao.atrofiaMuscular],
+      ["Marcha", exam.observacao.marcha],
+    ]),
+    ...buildPreviewSection("Movimento", [
+      ["Ativo", exam.movimento.ativo],
+      ["Passivo", exam.movimento.passivo],
+      ["Resistido", exam.movimento.resistido],
+      ["Reproduz dor", exam.movimento.reproduzDor],
+      ["Qualidade do movimento", exam.movimento.qualidadeMovimento],
+    ]),
+    ...buildPreviewSection("Padrao de dor", [
+      ["Local", exam.padraoDor.local],
+      ["Irradiada", exam.padraoDor.irradiada],
+    ]),
+    ...buildPreviewSection("Palpacao", [
+      ["Pontos dolorosos", exam.palpacao.pontosDolorosos],
+      ["Muscular", exam.palpacao.muscular],
+      ["Articular", exam.palpacao.articular],
+      ["Palpacao dinamica vertebral", exam.palpacao.dinamicaVertebral],
+      ["Temperatura", exam.palpacao.temperatura],
+      ["Tonus muscular", exam.palpacao.tonusMuscular],
+      ["Hipomobilidade articular", exam.palpacao.hipomobilidadeArticular],
+      ["Hipomobilidade segmentar - Cervical", exam.palpacao.hipomobilidadeSegmentar?.cervical],
+      ["Hipomobilidade segmentar - Toracica", exam.palpacao.hipomobilidadeSegmentar?.toracica],
+      ["Hipomobilidade segmentar - Lombar", exam.palpacao.hipomobilidadeSegmentar?.lombar],
+      ["Hipomobilidade segmentar - Sacro", exam.palpacao.hipomobilidadeSegmentar?.sacro],
+      ["Hipomobilidade segmentar - Iliaco D", exam.palpacao.hipomobilidadeSegmentar?.iliacoDireito],
+      ["Hipomobilidade segmentar - Iliaco E", exam.palpacao.hipomobilidadeSegmentar?.iliacoEsquerdo],
+    ]),
+    ...buildPreviewSection("Testes funcionais", [
+      ["Agachamento", exam.testesFuncionais.agachamento],
+      ["Agachamento unilateral", exam.testesFuncionais.agachamentoUnilateral],
+      ["Salto", exam.testesFuncionais.salto],
+      ["Corrida", exam.testesFuncionais.corrida],
+      ["Estabilidade", exam.testesFuncionais.estabilidade],
+      ["Controle motor", exam.testesFuncionais.controleMotor],
+    ]),
+    ...buildPreviewSection("Testes", [
+      ["Biomecanicos", exam.testes.biomecanicos],
+      ["Ortopedicos", exam.testes.ortopedicos],
+      ["Imagem", exam.testes.imagem],
+    ]),
+    ...(regioesLines.length
+      ? ["Avaliacao por regioes", ...regioesLines, ""]
+      : []),
+    ...buildPreviewSection("Cadeia cinetica", [
+      ["Coxofemoral", exam.cadeiaCinetica.quadril],
+      ["Pelve", exam.cadeiaCinetica.pelve],
+      ["Coluna toracica", exam.cadeiaCinetica.colunaToracica],
+      ["Pe", exam.cadeiaCinetica.pe],
+    ]),
+    ...buildPreviewSection("Cruzamento final", [
+      ["Hipotese principal", exam.cruzamentoFinal.hipotesePrincipal],
+      ["Hipoteses secundarias", exam.cruzamentoFinal.hipotesesSecundarias],
+      ["Inconsistencias", exam.cruzamentoFinal.inconsistencias],
+      ["Direcao de conduta", exam.cruzamentoFinal.condutaDirecionada],
+      ["Prioridade", exam.cruzamentoFinal.prioridade],
+      ["Confianca da hipotese", exam.cruzamentoFinal.confiancaHipotese],
+    ]),
+    ...buildPreviewSection("Raciocinio clinico", [
+      ["Origem provavel da dor", exam.raciocinioClinico.origemProvavelDor],
+      ["Estrutura envolvida", exam.raciocinioClinico.estruturaEnvolvida],
+      ["Tipo de lesao", exam.raciocinioClinico.tipoLesao],
+      ["Fator biomecanico associado", exam.raciocinioClinico.fatorBiomecanicoAssociado],
+      ["Relacao com atividade/gesto", exam.raciocinioClinico.relacaoComEsporte],
+    ]),
+    ...buildPreviewSection("Diagnostico funcional", [
+      ["Disfuncao principal", exam.diagnosticoFuncionalIa.disfuncaoPrincipal],
+      ["Cadeia envolvida", exam.diagnosticoFuncionalIa.cadeiaEnvolvida],
+    ]),
+    ...buildPreviewSection("Conduta direcionada", [
+      ["Tecnica manual indicada", exam.condutaIa.tecnicaManualIndicada],
+      ["Ajuste articular", exam.condutaIa.ajusteArticular],
+      ["Exercicio corretivo", exam.condutaIa.exercicioCorretivo],
+      ["Liberacao miofascial", exam.condutaIa.liberacaoMiofascial],
+      ["Progressao esportiva", exam.condutaIa.progressaoEsportiva],
+    ]),
+    ...(redFlagsLines.length ? ["Red flags", ...redFlagsLines, ""] : []),
   ]
-    .filter(Boolean)
-    .join("\n");
+    .join("\n")
+    .trim();
 }

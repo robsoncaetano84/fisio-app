@@ -52,6 +52,7 @@ import {
 import { RootStackParamList } from "../../types";
 import { useLanguage } from "../../i18n/LanguageProvider";
 import {
+  composeAdmSummary,
   DorClassificationSuggestion,
   ExameFisicoStructured,
   inferDorClassificationFromAnamnese,
@@ -76,7 +77,6 @@ import {
   EXAM_PRESETS,
   PRIORIDADE_OPTIONS,
   RED_FLAG_LABELS,
-  SCORING_PROFILE_OPTIONS,
   TEST_RESULT_OPTIONS,
   TIPO_LESAO_OPTIONS,
   type ExamPreset,
@@ -671,13 +671,22 @@ export function ExameFisicoFormScreen({
     );
   };
 
-  const setRegionalAdm = (regiao: RegionalTestGroup["regiao"], adm: string) => {
+  const setRegionalAdmMovimento = (
+    regiao: RegionalTestGroup["regiao"],
+    movimentoNome: string,
+    valor: string,
+  ) => {
     if (!exam) return;
-    const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) =>
-      grupo.regiao === regiao ? { ...grupo, adm } : grupo,
-    );
+    const avaliacaoRegioes = exam.avaliacaoRegioes.map((grupo) => {
+      if (grupo.regiao !== regiao) return grupo;
+      const admMovimentos = grupo.admMovimentos.map((mov) =>
+        mov.nome === movimentoNome ? { ...mov, valor } : mov,
+      );
+      return { ...grupo, admMovimentos, adm: composeAdmSummary(admMovimentos) };
+    });
     const latest = getLatestAnamnese();
-    if (String(adm || "").trim() && errors.admRegioes) {
+    const target = avaliacaoRegioes.find((grupo) => grupo.regiao === regiao);
+    if (String(target?.adm || "").trim() && errors.admRegioes) {
       setErrors((prev) => ({ ...prev, admRegioes: "" }));
     }
     setExam(
@@ -1887,14 +1896,22 @@ export function ExameFisicoFormScreen({
                     </TouchableOpacity>
                   </View>
                 </View>
-                <Input
-                  label={`ADM - ${grupo.titulo}`}
-                  value={grupo.adm}
-                  onChangeText={(value) => setRegionalAdm(grupo.regiao, value)}
-                  multiline
-                  numberOfLines={2}
-                  placeholder="Registre amplitude de movimento objetiva da articulacao/regiao"
-                />
+                <View style={{ marginTop: 12, marginBottom: 4 }}>
+                  <Text style={styles.regionTestName}>
+                    {`ADM - ${grupo.titulo}`}
+                  </Text>
+                  {grupo.admMovimentos.map((mov) => (
+                    <Input
+                      key={`${grupo.regiao}-adm-${mov.nome}`}
+                      label={`${mov.nome} (ref ${mov.referencia})`}
+                      value={mov.valor}
+                      onChangeText={(value) =>
+                        setRegionalAdmMovimento(grupo.regiao, mov.nome, value)
+                      }
+                      placeholder="Valor medido (ex.: 110°)"
+                    />
+                  ))}
+                </View>
                 {grupo.testes.map((teste) => (
                   <View
                     key={`${grupo.regiao}-${teste.nome}`}
@@ -2367,48 +2384,50 @@ export function ExameFisicoFormScreen({
               </TouchableOpacity>
             ))}
           </View>
+          <Text style={styles.label}>Força da evidência clínica</Text>
+          <View style={styles.evidenceScaleRow}>
+            <Text style={styles.evidenceScaleEndpoint}>menor</Text>
+            <View style={styles.evidenceScaleTrack}>
+              {CONFIANCA_OPTIONS.map((level, index) => {
+                const reached =
+                  index <=
+                  CONFIANCA_OPTIONS.indexOf(
+                    exam.cruzamentoFinal.confiancaHipotese,
+                  );
+                const bandColor =
+                  index === 0
+                    ? "#C77D2E"
+                    : index === 1
+                      ? "#3E8E63"
+                      : COLORS.primary;
+                return (
+                  <View
+                    key={level}
+                    style={[
+                      styles.evidenceScaleSegment,
+                      index === CONFIANCA_OPTIONS.length - 1 && {
+                        borderRightWidth: 0,
+                      },
+                      reached && { backgroundColor: bandColor },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.evidenceScaleSegmentText,
+                        reached && styles.evidenceScaleSegmentTextActive,
+                      ]}
+                    >
+                      {prettyEnum(level)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <Text style={styles.evidenceScaleEndpoint}>maior</Text>
+          </View>
           <Text style={styles.statusText}>
             Score de evidência: {exam.cruzamentoFinal.scoreEvidencia}
           </Text>
-          <Text style={styles.label}>Perfil de scoring</Text>
-          <View style={styles.optionsRow}>
-            {SCORING_PROFILE_OPTIONS.map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.chip,
-                  exam.cruzamentoFinal.perfilScoring === item &&
-                    styles.chipSelected,
-                ]}
-                onPress={() => {
-                  const latest = getLatestAnamnese();
-                  const nextExam = {
-                    ...exam,
-                    cruzamentoFinal: {
-                      ...exam.cruzamentoFinal,
-                      perfilScoring: item,
-                    },
-                  };
-                  setExam(
-                    enrichStructuredExameWithClinicalLogic(nextExam, latest, {
-                      overwrite: false,
-                      recalculateDecision: true,
-                    }),
-                  );
-                }}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    exam.cruzamentoFinal.perfilScoring === item &&
-                      styles.chipTextSelected,
-                  ]}
-                >
-                  {prettyEnum(item)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
           {errors.classificationConfirmation ? (
             <Text style={styles.validationErrorText}>
               {errors.classificationConfirmation}
@@ -2589,6 +2608,42 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: "600",
     marginTop: SPACING.xs,
+  },
+  evidenceScaleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  evidenceScaleEndpoint: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+  evidenceScaleTrack: {
+    flex: 1,
+    flexDirection: "row",
+    borderRadius: BORDER_RADIUS.full,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  evidenceScaleSegment: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.white,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+  },
+  evidenceScaleSegmentText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    fontWeight: "700",
+  },
+  evidenceScaleSegmentTextActive: {
+    color: COLORS.white,
   },
   flagRow: {
     borderWidth: 1,

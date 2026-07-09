@@ -61,7 +61,12 @@ export const useLaudoStore = create<{
   createLaudo: async (payload: CreateLaudoPayload) => {
     try {
       set({ isLoading: true });
-      const response = await api.post<Laudo>("/laudos", payload);
+      // Timeout ampliado: o create faz varios round-trips ao banco remoto e
+      // pode passar dos 15s padrao (cold start do pooler), fazendo o cliente
+      // abortar com "timeout" mesmo apos o registro ter sido persistido.
+      const response = await api.post<Laudo>("/laudos", payload, {
+        timeout: 60000,
+      });
       set({ laudoAtual: response.data, isLoading: false });
       return response.data;
     } catch (error) {
@@ -73,7 +78,9 @@ export const useLaudoStore = create<{
   updateLaudo: async (id: string, payload: Partial<CreateLaudoPayload>) => {
     try {
       set({ isLoading: true });
-      const response = await api.patch<Laudo>(`/laudos/${id}`, payload);
+      const response = await api.patch<Laudo>(`/laudos/${id}`, payload, {
+        timeout: 60000,
+      });
       set({ laudoAtual: response.data, isLoading: false });
       return response.data;
     } catch (error) {
