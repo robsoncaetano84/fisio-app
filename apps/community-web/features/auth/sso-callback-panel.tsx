@@ -7,6 +7,7 @@ import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import {
   createSsoTokenRecord,
   exchangeSsoToken,
+  sanitizeReturnTo,
   SSO_RECEIVED_AT_STORAGE_KEY,
   SSO_RECORD_STORAGE_KEY,
   SSO_TOKEN_STORAGE_KEY,
@@ -68,7 +69,7 @@ export function SsoCallbackPanel() {
         const authenticatedRecord: CommunitySsoTokenRecord = {
           ...nextRecord,
           status: 'authenticated',
-          returnTo: session.returnTo || nextRecord.returnTo,
+          returnTo: sanitizeReturnTo(session.returnTo) || nextRecord.returnTo,
           userName: session.profile.nome,
           userRole: session.profile.role,
         };

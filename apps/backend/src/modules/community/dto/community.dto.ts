@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  IsUUID,
   Length,
   Max,
   Min,
@@ -54,8 +55,7 @@ export class CreateCommunityPostDto {
   @Length(20, 20000)
   contentMarkdown: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   categoryId: string;
 
   @IsOptional()
@@ -85,8 +85,7 @@ export class CreateCommunityReplyDto {
 }
 
 export class MarkUsefulReplyDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   replyId: string;
 }
 
@@ -146,7 +145,7 @@ export class CreateCommunityResourceDto {
   clinicalUse: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   categoryId?: string;
 
   @IsOptional()
@@ -160,8 +159,7 @@ export class CreateCommunityReportDto {
   @IsIn(['post', 'reply', 'resource', 'profile'])
   targetType: 'post' | 'reply' | 'resource' | 'profile';
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   targetId: string;
 
   @IsString()
@@ -188,8 +186,7 @@ export class CreateBookmarkDto {
   @IsIn(['post', 'reply', 'resource', 'profile'])
   targetType: 'post' | 'reply' | 'resource' | 'profile';
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   targetId: string;
 }
 
@@ -319,8 +316,7 @@ export class CommunityModerationActionDto {
   @IsIn(['post', 'reply', 'resource'])
   targetType: 'post' | 'reply' | 'resource';
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   targetId: string;
 
   @IsIn(['HIDE', 'RESTORE'])

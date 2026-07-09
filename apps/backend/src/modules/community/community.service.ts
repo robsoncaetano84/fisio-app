@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
 import { createHash, createHmac, randomBytes } from 'crypto';
 import type { SignOptions } from 'jsonwebtoken';
 import { IsNull, type FindOptionsWhere, Repository } from 'typeorm';
@@ -541,7 +542,7 @@ export class CommunityService {
 
   async getProfile(username: string) {
     const profile = await this.profilesRepository.findOne({
-      where: [{ username }, { id: username }],
+      where: isUUID(username) ? [{ username }, { id: username }] : [{ username }],
     });
     if (!profile) throw new NotFoundException('Perfil nao encontrado');
     return this.hydrateProfile(profile);
@@ -978,6 +979,7 @@ export class CommunityService {
 
   presignUpload(actor: CurrentActor, dto: PresignCommunityUploadDto) {
     this.assertCommunityUser(actor);
+    this.assertAllowedUploadType(dto.contentType);
     if (!this.hasS3Config()) {
       throw new ServiceUnavailableException('Storage S3 nao configurado');
     }
@@ -1680,11 +1682,12 @@ export class CommunityService {
   ) {
     const rawToken = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + 60_000);
+    const safeReturnTo = this.sanitizeReturnTo(input.returnTo);
     await this.ssoTokensRepository.save(
       this.ssoTokensRepository.create({
         tokenHash: this.hashToken(rawToken),
         userId: actor.id,
-        returnTo: input.returnTo || null,
+        returnTo: safeReturnTo,
         deviceContext: input.deviceContext || {},
         expiresAt,
         consumedAt: null,
@@ -1703,8 +1706,8 @@ export class CommunityService {
       token: rawToken,
       source: 'synap-app',
     });
-    if (input.returnTo?.startsWith('/') && !input.returnTo.startsWith('//')) {
-      callbackParams.set('returnTo', input.returnTo);
+    if (safeReturnTo) {
+      callbackParams.set('returnTo', safeReturnTo);
     }
     return {
       oneTimeToken: rawToken,
@@ -1760,6 +1763,24 @@ export class CommunityService {
 
   private hashToken(rawToken: string) {
     return createHash('sha256').update(rawToken).digest('hex');
+  }
+
+  private sanitizeReturnTo(value?: string | null): string | null {
+    if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+    return value;
+  }
+
+  private assertAllowedUploadType(contentType: string) {
+    const allowed = [
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+      'image/gif',
+      'application/pdf',
+    ];
+    if (!allowed.includes(contentType.trim().toLowerCase())) {
+      throw new BadRequestException('Tipo de arquivo nao permitido para upload');
+    }
   }
 
   private resolveCommunityPermissions(role: UserRole) {

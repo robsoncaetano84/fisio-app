@@ -4,6 +4,8 @@ import {
   Delete,
   Get,
   Param,
+  ParseEnumPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -38,7 +40,10 @@ import {
   UpdateCommunityUserRoleDto,
 } from './dto/community.dto';
 import { CommunityService } from './community.service';
-import type { CommunityTargetType } from './community.types';
+import {
+  COMMUNITY_TARGET_TYPES,
+  type CommunityTargetType,
+} from './community.types';
 
 const COMMUNITY_ROLES = [UserRole.ADMIN, UserRole.USER, UserRole.MODERATOR];
 const MODERATION_ROLES = [UserRole.ADMIN, UserRole.MODERATOR];
@@ -103,7 +108,7 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 30 } })
   createReply(
     @CurrentUser() usuario: Usuario,
-    @Param('postId') postId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
     @Body() dto: CreateCommunityReplyDto,
   ) {
     return this.communityService.createReply(usuario, postId, dto);
@@ -123,7 +128,7 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 30 } })
   markUsefulReply(
     @CurrentUser() usuario: Usuario,
-    @Param('postId') postId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
     @Body() dto: MarkUsefulReplyDto,
   ) {
     return this.communityService.markUsefulReply(usuario, postId, dto);
@@ -185,8 +190,9 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 60 } })
   removeBookmark(
     @CurrentUser() usuario: Usuario,
-    @Param('targetType') targetType: CommunityTargetType,
-    @Param('targetId') targetId: string,
+    @Param('targetType', new ParseEnumPipe(COMMUNITY_TARGET_TYPES))
+    targetType: CommunityTargetType,
+    @Param('targetId', ParseUUIDPipe) targetId: string,
   ) {
     return this.communityService.removeBookmark(usuario, targetType, targetId);
   }
@@ -195,8 +201,9 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 80 } })
   react(
     @CurrentUser() usuario: Usuario,
-    @Param('targetType') targetType: CommunityTargetType,
-    @Param('targetId') targetId: string,
+    @Param('targetType', new ParseEnumPipe(COMMUNITY_TARGET_TYPES))
+    targetType: CommunityTargetType,
+    @Param('targetId', ParseUUIDPipe) targetId: string,
   ) {
     return this.communityService.react(usuario, targetType, targetId);
   }
@@ -238,7 +245,7 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 120 } })
   markNotificationRead(
     @CurrentUser() usuario: Usuario,
-    @Param('notificationId') notificationId: string,
+    @Param('notificationId', ParseUUIDPipe) notificationId: string,
   ) {
     return this.communityService.markNotificationRead(usuario, notificationId);
   }
@@ -288,7 +295,7 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 40 } })
   updateReport(
     @CurrentUser() usuario: Usuario,
-    @Param('reportId') reportId: string,
+    @Param('reportId', ParseUUIDPipe) reportId: string,
     @Body() dto: UpdateCommunityReportDto,
   ) {
     return this.communityService.updateReport(usuario, reportId, dto);
@@ -323,7 +330,7 @@ export class CommunityController {
   @Throttle({ default: { ttl: 60, limit: 20 } })
   updateUserRole(
     @CurrentUser() usuario: Usuario,
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateCommunityUserRoleDto,
   ) {
     return this.communityService.updateUserRole(usuario, userId, dto);

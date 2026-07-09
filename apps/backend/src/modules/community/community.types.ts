@@ -30,7 +30,13 @@ export type CommunityNotificationType =
   | 'MODERATION'
   | 'RELEVANT_DISCUSSION';
 
-export type CommunityTargetType = 'post' | 'reply' | 'resource' | 'profile';
+export const COMMUNITY_TARGET_TYPES = [
+  'post',
+  'reply',
+  'resource',
+  'profile',
+] as const;
+export type CommunityTargetType = (typeof COMMUNITY_TARGET_TYPES)[number];
 
 export const COMMUNITY_CONTRIBUTION_RULES: Record<
   CommunityContributionEventType,
