@@ -27,6 +27,17 @@ export class OpenAiService {
     return this.getApiKey().length > 0;
   }
 
+  // web_search e uma tool nativa da OpenAI; provedores compativeis (Groq etc.)
+  // nao a suportam. Quem chama deve omitir a tool quando isto for false.
+  supportsWebSearch(): boolean {
+    try {
+      const host = new URL(this.getBaseUrl()).host.toLowerCase();
+      return host === 'api.openai.com' || host.endsWith('.openai.com');
+    } catch {
+      return false;
+    }
+  }
+
   isEnabled(envKey: string, fallback = true): boolean {
     const raw = process.env[envKey];
     if (raw == null || String(raw).trim() === '') return fallback;
