@@ -1,0 +1,89 @@
+arquivo,asset_key,# nome_do_exercicio
+,ABDUCAO_OMBRO_EM_PE,# Abducao de ombro em pe
+,ABDUCAO_QUADRIL_FAIXA_JOELHOS,# Abducao de quadril com faixa
+,ABDUCAO_QUADRIL_DECUBITO_LATERAL,# Abducao de quadril em decubito lateral
+,AGACHAMENTO_ISOMETRICO_PAREDE,# Agachamento isometrico na parede
+,AGACHAMENTO_PARCIAL_ASSISTIDO,# Agachamento parcial assistido
+,ALONGAMENTO_CERVICAL_LATERAL_ASSISTIDO,# Alongamento cervical lateral assistido
+,ALONGAMENTO_FLEXORES_QUADRIL_MEIO_AJOELHADO,# Alongamento de flexores de quadril em meio ajoelhado
+,ALONGAMENTO_PANTURRILHA_PAREDE,# Alongamento de panturrilha na parede
+,ALONGAMENTO_PEITORAL_PORTA,# Alongamento peitoral na porta
+,ALONGAMENTO_PIRIFORME_DECUBITO_DORSAL,# Alongamento piriforme em decubito dorsal
+,ALONGAMENTO_POSTERIOR_COXA_FAIXA,# Alongamento posterior de coxa com faixa
+,APOIO_TANDEM_COM_APOIO,# Apoio tandem com apoio
+,AVANCO_ASSISTIDO_CURTO_APOIO,# Avanco assistido curto com apoio
+,BIRD_DOG_EXTENSAO_ALTERNADA,# Bird-dog / extensao alternada
+,CAMINHADA_LATERAL_FAIXA,# Caminhada lateral com faixa
+,CAMINHADA_PONTA_PES,# Caminhada na ponta dos pes
+,CAMINHADA_CALCANHARES,# Caminhada nos calcanhares
+,CIRCULOS_TORNOZELO_SENTADO,# Circulos de tornozelo sentado
+,CLAMSHELL_ABERTURA_QUADRIL,# Clamshell / abertura de quadril
+,CONTROLE_CERVICAL_PROFUNDO,# Controle cervical profundo
+,DEAD_BUG_CONTROLE_LOMBOPELVICO,# Dead bug
+,DESLIZAMENTO_CALCANHAR_DECUBITO,# Deslizamento de calcanhar
+,DESLIZAMENTO_NEURAL_MEDIANO,# Deslizamento neural mediano
+,DESVIO_RADIAL_ULNAR_PUNHO,# Desvio radial/ulnar de punho
+,DOBRADICA_QUADRIL_BASTAO,# Dobradica de quadril com bastao
+,DORSIFLEXAO_TORNOZELO_FAIXA,# Dorsiflexao de tornozelo com faixa
+,ELEVACAO_ASSISTIDA_OMBRO,# Elevação assistida de ombro
+,ELEVACAO_PANTURRILHA_APOIO,# Elevacao de panturrilha com apoio
+,ELEVACAO_PERNA_RETA,# Elevacao de perna reta
+,ELEVACAO_LATERAL_PERNA_EM_PE,# Elevacao lateral de perna em pe
+,ELEVACAO_PLANO_ESCAPULA_SCAPTION,# Elevacao no plano da escapula
+,ENRUGAR_TOALHA_DEDOS_PE,# Enrugar toalha com dedos
+,EQUILIBRIO_BIPODAL_TRANSFERENCIA_PESO,# Equilibrio bipodal com transferencia de peso
+,EQUILIBRIO_UNIPODAL_APOIO,# Equilibrio unipodal com apoio
+,EVERSAO_TORNOZELO_FAIXA,# Eversao de tornozelo com faixa
+,EXTENSAO_CERVICAL_SENTADA,# Extensao cervical sentada
+,EXTENSAO_COTOVELO_FAIXA,# Extensao de cotovelo com faixa
+,EXTENSAO_JOELHO_SENTADO,# Extensao de joelho sentado
+,EXTENSAO_JOELHO_SENTADO_LONGA,# Extensao de joelho sentado
+,EXTENSAO_OMBRO_FAIXA,# Extensao de ombro com faixa
+,EXTENSAO_QUADRIL_QUATRO_APOIOS,# Extensao de quadril em quatro apoios
+,EXTENSAO_DEDOS_ELASTICO,# Extensao dos dedos com elastico
+,EXTENSAO_TERMINAL_JOELHO_FAIXA,# Extensao terminal de joelho com faixa
+,EXTENSAO_TORACICA_ENCOSTO_CADEIRA,# Extensao toracica no encosto
+,FLEXAO_BRACO_PAREDE,# Flexao de braco na parede
+,FLEXAO_JOELHO_EM_PE_APOIO,# Flexao de joelho em pe com apoio
+,FLEXAO_OMBRO_BASTAO_DECUBITO,# Flexao de ombro com bastao
+,FLEXAO_PLANTAR_FAIXA,# Flexao plantar com faixa
+,FLEXAO_EXTENSAO_COTOVELO_HALTER,# Flexao/extensao de cotovelo com halter
+,INCLINACAO_PELVICA_POSTERIOR_DECUBITO,# Inclinacao pelvica posterior
+,INVERSAO_TORNOZELO_FAIXA,# Inversao de tornozelo com faixa
+,ISOMETRIA_ABDUCAO_OMBRO_PAREDE,# Isometria de abducao de ombro na parede
+,ISOMETRIA_ADUTORES_BOLA,# Isometria de adutores com bola
+,ISOMETRIA_FLEXAO_OMBRO_PAREDE,# Isometria de flexao de ombro na parede
+,ISOMETRIA_QUADRICEPS_TOALHA,# Isometria de quadriceps com toalha
+,ISOMETRIA_ROTACAO_EXTERNA_OMBRO,# Isometria de rotacao externa de ombro
+,JOELHO_AO_PEITO_UNILATERAL,# Joelho ao peito unilateral
+,MARCHA_ESTACIONARIA_APOIO,# Marcha estacionaria com apoio
+,MARCHA_SENTADA,# Marcha sentada
+,MOBILIDADE_PUNHO_FLEXAO_EXTENSAO,# Mobilidade de punho em flexao e extensao
+,MOBILIDADE_LOMBAR_GATO_CAMELO,# Mobilidade lombar em gato-camelo
+,MOBILIDADE_TORACICA_QUATRO_APOIOS,# Mobilidade toracica em quatro apoios
+,MOBILIDADE_TORACICA_ROTACAO_SENTADA,# Mobilidade toracica em rotacao sentada
+,OPOSICAO_POLEGAR,# Oposicao do polegar
+,PENDULAR_OMBRO_CODMAN,# Pendular de ombro / Codman
+,PONTE_COM_MARCHA_ALTERNADA,# Ponte com marcha alternada
+,PONTE_CURTA,# Ponte curta
+,PRANCHA_FRONTAL_ANTEBRACO,# Prancha frontal no antebraco
+,PRANCHA_LATERAL_JOELHOS_APOIADOS,# Prancha lateral com joelhos apoiados
+,PREENSAO_MANUAL_BOLA_MACIA,# Preensao manual com bola macia
+,PRONACAO_SUPINACAO_ANTEBRACO,# Pronacao/supinacao de antebraco
+,PULL_APART_FAIXA,# Pull-apart com faixa
+,RELOGIO_ESCAPULAR_PAREDE,# Relogio escapular na parede
+,REMADA_EM_PE_FAIXA,# Remada em pe com faixa
+,REMADA_SENTADA_FAIXA,# Remada sentada com faixa
+,RESPIRACAO_DIAFRAGMATICA_DECUBITO,# Respiracao diafragmatica em decubito
+,RETRACAO_ESCAPULAR_SENTADA,# Retracao escapular sentada
+,ROTACAO_CERVICAL_SENTADA,# Rotacao cervical sentada
+,ROTACAO_TRONCO_SENTADA,# Rotacao de tronco sentada
+,ROTACAO_EXTERNA_OMBRO_FAIXA,# Rotacao externa de ombro com faixa
+,ROTACAO_INTERNA_OMBRO_FAIXA,# Rotacao interna de ombro com faixa
+,ROTACAO_LOMBAR_DECUBITO,# Rotacao lombar em decubito
+,SENTAR_LEVANTAR_CONTROLADO,# Sentar e levantar controlado
+,SHORT_FOOT_ARCO_PLANTAR,# Short foot
+,SOCO_SERRATIL_DECUBITO,# Soco do serratil em decubito
+,STEP_DOWN_BAIXO,# Step-down baixo
+,STEP_UP_BAIXO_APOIO,# Step-up baixo com apoio
+,WALL_SLIDE_DESLIZAMENTO_BRACOS,# Wall slide

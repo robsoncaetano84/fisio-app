@@ -10,3 +10,6 @@ logs/
 *.log
 apps/backend/backend-dev.log
 apps/backend/uploads/
+
+# arquivos de ambiente local (nunca versionar)
+**/.env.local
