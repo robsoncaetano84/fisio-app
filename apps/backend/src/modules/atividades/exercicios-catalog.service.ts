@@ -29,6 +29,7 @@ import {
 } from './exercicio-midia-storage';
 import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
+import { MASTER_EXERCISE_CATALOG } from './exercise-catalog-master.seed';
 import { RedisService } from '../../common/redis.service';
 
 export type ExercicioCatalogFilters = {
@@ -813,10 +814,18 @@ export class ExerciciosCatalogService implements OnModuleInit {
     const total = await this.exercicioRepository.count();
     if (total > 0) return;
 
-    for (const item of [
+    const seenSlugs = new Set<string>();
+    const catalogo = [
       ...INITIAL_EXERCISE_CATALOG,
       ...PREVIEW_EXERCISE_CATALOG,
-    ]) {
+      ...MASTER_EXERCISE_CATALOG,
+    ].filter((item) => {
+      if (seenSlugs.has(item.slug)) return false;
+      seenSlugs.add(item.slug);
+      return true;
+    });
+
+    for (const item of catalogo) {
       const localization = buildExerciseLocalization(item);
       const exercicio = await this.exercicioRepository.save(
         this.exercicioRepository.create({
@@ -829,23 +838,27 @@ export class ExerciciosCatalogService implements OnModuleInit {
         }),
       );
 
-      await this.midiaRepository.save(
-        this.midiaRepository.create({
-          exercicioId: exercicio.id,
-          assetKey: item.imagemKey,
-          tipo: 'ILUSTRACAO',
-          sourceType: 'PROPRIA',
-          sourceUrl: null,
-          author: 'Synap',
-          license: 'PROPRIETARIA_SYNAP',
-          licenseUrl: null,
-          attributionText: 'Ilustracao propria Synap.',
-          revisadoEm: new Date(),
-          revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
-          ativo: true,
-          versao: 1,
-        }),
-      );
+      // Itens do catalogo mestre entram sem imagemKey (RASCUNHO ate ter imagem
+      // propria); so criamos midia principal quando ha uma chave de imagem.
+      if (item.imagemKey) {
+        await this.midiaRepository.save(
+          this.midiaRepository.create({
+            exercicioId: exercicio.id,
+            assetKey: item.imagemKey,
+            tipo: 'ILUSTRACAO',
+            sourceType: 'PROPRIA',
+            sourceUrl: null,
+            author: 'Synap',
+            license: 'PROPRIETARIA_SYNAP',
+            licenseUrl: null,
+            attributionText: 'Ilustracao propria Synap.',
+            revisadoEm: new Date(),
+            revisaoClinicaStatus: ExercicioMidiaRevisaoClinicaStatus.PENDENTE,
+            ativo: true,
+            versao: 1,
+          }),
+        );
+      }
     }
   }
 
