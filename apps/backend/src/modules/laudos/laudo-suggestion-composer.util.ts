@@ -328,22 +328,10 @@ export function buildClinicalReasoningSummary(
 
   const hipotesesFuncionais = uniqueStrings(
     [
-      areasPrioritarias.length
-        ? `Regiao prioritaria: ${areasPrioritarias.join(', ')}`
-        : '',
-      ...areasSelecionadasDetalhadas.map(
-        (area) => `Area selecionada na anamnese: ${area.resumo}`,
-      ),
-      observacoesAreas.length
-        ? `Observacoes clinicas por area: ${observacoesAreas.join(' | ')}`
-        : '',
-      latestAnamnese?.tipoDor
-        ? `Padrao de dor informado: ${latestAnamnese.tipoDor}`
-        : '',
+      latestAnamnese?.tipoDor ? `Padrao de dor: ${latestAnamnese.tipoDor}` : '',
       latestAnamnese?.inicioProblema || latestAnamnese?.mecanismoLesao
         ? `Inicio/mecanismo: ${safeText(latestAnamnese?.inicioProblema, 'nao informado')} / ${safeText(latestAnamnese?.mecanismoLesao, 'nao informado')}`
         : '',
-      exameFisicoResumo ? `Exame fisico: ${exameFisicoResumo}` : '',
       latestAnamnese?.limitacoesFuncionais
         ? `Limitacao funcional: ${shortText(latestAnamnese.limitacoesFuncionais, 180)}`
         : '',
@@ -368,7 +356,6 @@ export function buildClinicalReasoningSummary(
       observacoesAreas.length
         ? `Observacoes das areas selecionadas: ${observacoesAreas.join(' | ')}`
         : '',
-      buildLifestyleFactor(latestAnamnese),
     ].filter(Boolean),
   );
 
@@ -471,22 +458,6 @@ function buildRuleBasedLaudoFields(
   const hasRedFlag = summary.riscosOuAlertas.some((item) =>
     item.toLowerCase().includes('red flag'),
   );
-  const evidence = summary.evidenciasDisponiveis.length
-    ? summary.evidenciasDisponiveis.join(', ')
-    : 'dados clinicos limitados';
-  const lacunas = summary.lacunasClinicas.length
-    ? ` Lacunas para revisar: ${summary.lacunasClinicas.join('; ')}.`
-    : '';
-  const examSuffix = buildExamCorrelationSuffix(options.examesConsiderados);
-  const areaObservationSuffix = summary.observacoesAreas.length
-    ? ` Observacoes por area: ${summary.observacoesAreas.join(' | ')}.`
-    : '';
-  const filledFieldsSuffix = summary.pontosAnamnesePreenchidos.length
-    ? ` Pontos preenchidos da anamnese considerados: ${summary.pontosAnamnesePreenchidos.join(', ')}.`
-    : '';
-  const anchorSuffix = summary.ancorasEspecificidade.length
-    ? ` Ancoras especificas do caso: ${summary.ancorasEspecificidade.join(' | ')}.`
-    : '';
   const primaryArea = summary.areasSelecionadasDetalhadas[0]?.resumo;
   const primaryGoal = summary.metasPaciente[0];
   const relevantFactors = summary.fatoresRelevantes.slice(0, 4).join(' | ');
@@ -497,17 +468,14 @@ function buildRuleBasedLaudoFields(
 
   return {
     diagnosticoFuncional: joinSentences([
-      `Hipotese funcional inicial: ${summary.queixaPrincipal}.`,
+      `Hipotese funcional: ${summary.queixaPrincipal}.`,
       summary.areasPrioritarias.length
         ? `Regioes prioritarias: ${summary.areasPrioritarias.join(', ')}.`
         : '',
-      'Em linguagem simples: o plano deve relacionar a dor, o movimento e as atividades que o paciente quer recuperar.',
       summary.hipotesesFuncionais.length
         ? `Raciocinio: ${summary.hipotesesFuncionais.join(' | ')}.`
         : '',
-      areaObservationSuffix,
-      `Base de evidencia: ${evidence}.`,
-      `${anchorSuffix}${filledFieldsSuffix}${lacunas}${examSuffix}${options.exameFisicoHint}`,
+      options.exameFisicoHint,
     ]),
     objetivosCurtoPrazo: hasRedFlag
       ? 'Garantir seguranca clinica, revisar red flags e definir encaminhamento antes de progressao terapeutica.'
@@ -515,9 +483,7 @@ function buildRuleBasedLaudoFields(
           summary.irritabilidade === 'ALTA'
             ? `Reduzir irritabilidade em ${primaryArea || 'regiao sintomatica'} mantendo ${progressCriterion}.`
             : `Reduzir sintomas em ${primaryArea || 'regiao sintomatica'} e melhorar controle motor inicial com ${progressCriterion}.`,
-          relevantFactors
-            ? `Dosar pelo comportamento: ${relevantFactors}.`
-            : '',
+          relevantFactors ? `Dosar pelo comportamento: ${relevantFactors}.` : '',
           summary.metasPaciente[0] || '',
         ]),
     objetivosMedioPrazo: joinSentences([
@@ -533,33 +499,17 @@ function buildRuleBasedLaudoFields(
         ? 'Priorizar orientacao de seguranca, encaminhamento/reavaliacao e suspender progressao de carga ate liberacao clinica.'
         : '',
       'Educacao em dor e manejo de carga conforme irritabilidade do caso.',
-      summary.fatoresRelevantes.length
-        ? `Dosar condutas considerando: ${summary.fatoresRelevantes.join(' | ')}.`
-        : '',
-      summary.areasSelecionadasDetalhadas.length
-        ? `Priorizar avaliacao e resposta terapeutica por area selecionada: ${summary.areasSelecionadasDetalhadas.map((area) => area.resumo).join(' | ')}.`
-        : '',
-      `Conduta: exercicios terapeuticos progressivos para ${primaryArea || 'regiao sintomatica'} | Evidencia do caso: ${summary.ancorasEspecificidade.slice(0, 4).join(' | ') || evidence} | Criterio de progressao: ${progressCriterion}.`,
-      relevantFactors
-        ? `Conduta: manejo de carga e educacao direcionada | Evidencia do caso: ${relevantFactors} | Criterio de progressao: execucao das atividades-alvo sem piora sustentada.`
-        : '',
+      `Exercicios terapeuticos progressivos para ${primaryArea || 'regiao sintomatica'}, com progressao por: ${progressCriterion}.`,
       summary.evolucaoRecente.length
         ? `Ajustar pela evolucao recente: ${summary.evolucaoRecente.join(' / ')}.`
         : '',
-      `Evidencias usadas: ${evidence}.`,
     ]),
     planoTratamentoIA: [
-      `Fase 1 - Controle de sintomas: controlar irritabilidade (${summary.irritabilidade}) em ${primaryArea || 'regiao sintomatica'} e confirmar lacunas clinicas. Condutas: educacao direcionada, ajuste de carga e movimento toleravel. Evidencia: ${summary.ancorasEspecificidade.slice(0, 3).join(' | ') || evidence}. Criterio: ${progressCriterion}.`,
-      `Fase 2 - Recuperacao de movimento/forca: progredir mobilidade, controle motor e forca em ${primaryArea || 'regiao prioritaria'}. Condutas: tarefas graduadas vinculadas a ${primaryGoal || 'funcao-alvo do paciente'}. Evidencia: ${relevantFactors || evidence}. Criterio: melhora funcional objetiva e resposta estavel entre sessoes.`,
-      `Fase 3 - Retorno a funcao: retorno funcional especifico para ${primaryGoal || 'atividade-alvo'} e prevencao de recidiva. Condutas: exposicao progressiva a demandas do caso e plano domiciliar. Criterio: tarefa-alvo executada com independencia e baixa reatividade.`,
-      summary.areasSelecionadasDetalhadas.length
-        ? `Monitoramento por area: ${summary.areasSelecionadasDetalhadas.map((area) => area.resumo).join(' | ')}.`
-        : '',
+      `Fase 1 - Controle de sintomas: controlar irritabilidade (${summary.irritabilidade}) em ${primaryArea || 'regiao sintomatica'}. Condutas: educacao direcionada, ajuste de carga e movimento toleravel. Criterio: ${progressCriterion}.`,
+      `Fase 2 - Recuperacao de movimento/forca: progredir mobilidade, controle motor e forca em ${primaryArea || 'regiao prioritaria'}. Condutas: tarefas graduadas vinculadas a ${primaryGoal || 'funcao-alvo do paciente'}. Criterio: melhora funcional objetiva e resposta estavel entre sessoes.`,
+      `Fase 3 - Retorno a funcao: retorno funcional especifico para ${primaryGoal || 'atividade-alvo'} e prevencao de recidiva. Condutas: exposicao progressiva as demandas do caso e plano domiciliar. Criterio: tarefa-alvo executada com independencia e baixa reatividade.`,
       summary.riscosOuAlertas.length
         ? `Alertas a monitorar: ${summary.riscosOuAlertas.join(' | ')}.`
-        : '',
-      summary.lacunasClinicas.length
-        ? `Pendencias de avaliacao: ${summary.lacunasClinicas.join(' | ')}.`
         : '',
     ]
       .filter(Boolean)
@@ -570,9 +520,6 @@ function buildRuleBasedLaudoFields(
         ? `${primaryGoal} atingida ou funcionalmente compensada.`
         : 'Meta funcional do paciente atingida ou funcionalmente compensada.',
       `Autonomia no autocuidado/plano domiciliar, com progressao baseada em ${progressCriterion}.`,
-      summary.areasPrioritarias.length
-        ? `Reavaliar regioes prioritarias antes da alta: ${summary.areasPrioritarias.join(', ')}.`
-        : '',
     ]),
   };
 }
@@ -587,11 +534,6 @@ function calculateAge(dataNascimento: Date): number | null {
     idade--;
   }
   return idade;
-}
-
-function buildExamCorrelationSuffix(examesCount: number): string {
-  if (examesCount <= 0) return '';
-  return ` Correlacionar com ${examesCount} exame(s) anexado(s).`;
 }
 
 function buildExameFisicoHint(exameFisicoResumo?: string | null): string {
@@ -837,29 +779,6 @@ function inferIrritability(input: {
   return 'NAO_DEFINIDA';
 }
 
-function buildLifestyleFactor(anamnese?: SuggestionAnamnese): string {
-  if (!anamnese) return '';
-  const factors = [
-    typeof anamnese.qualidadeSono === 'number'
-      ? `sono ${anamnese.qualidadeSono}/10`
-      : '',
-    typeof anamnese.nivelEstresse === 'number'
-      ? `estresse ${anamnese.nivelEstresse}/10`
-      : '',
-    typeof anamnese.energiaDiaria === 'number'
-      ? `energia ${anamnese.energiaDiaria}/10`
-      : '',
-    typeof anamnese.apoioEmocional === 'number'
-      ? `apoio emocional ${anamnese.apoioEmocional}/10`
-      : '',
-    anamnese.observacoesEstiloVida
-      ? shortText(anamnese.observacoesEstiloVida, 140)
-      : '',
-  ].filter(Boolean);
-  return factors.length
-    ? `Fatores biopsicossociais: ${factors.join(', ')}`
-    : '';
-}
 
 function buildClinicalGaps(input: {
   latestAnamnese?: SuggestionAnamnese;
