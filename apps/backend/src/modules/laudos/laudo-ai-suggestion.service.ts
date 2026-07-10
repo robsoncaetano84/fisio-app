@@ -332,10 +332,20 @@ ${JSON.stringify(input, null, 2)}
       'gpt-5-mini',
     );
     const currentYear = new Date().getFullYear();
-    const systemPrompt =
-      'Voce e um assistente de revisao bibliografica clinica para fisioterapeutas. Busque fontes confiaveis e atuais. Nao invente estudos, autores, anos, periodicos ou URLs.';
+    // Provedores sem busca web (ex.: Groq): o modelo sugere referencias pelo
+    // conhecimento consolidado, sem inventar URLs que nao consegue verificar.
+    const webSearch = this.openAiService.supportsWebSearch();
+    const systemPrompt = webSearch
+      ? 'Voce e um assistente de revisao bibliografica clinica para fisioterapeutas. Busque fontes confiaveis e atuais. Nao invente estudos, autores, anos, periodicos ou URLs.'
+      : 'Voce e um assistente de revisao bibliografica clinica para fisioterapeutas. Sugira apenas referencias classicas e consolidadas que voce tem alta confianca de que existem. Nao invente estudos, autores, anos, periodicos ou URLs.';
+    const instrucaoBusca = webSearch
+      ? 'Use busca web para encontrar estudos, revisoes sistematicas, diretrizes ou consensos clinicos atualizados e relevantes para o caso.'
+      : 'Sem acesso a busca web: use seu conhecimento consolidado para sugerir estudos, revisoes sistematicas, diretrizes ou consensos clinicos reconhecidos e relevantes para o caso.';
+    const instrucaoUrl = webSearch
+      ? 'url (URL direta da fonte consultada),'
+      : 'url (inclua SOMENTE se for uma URL canonica e estavel — DOI, site oficial da diretriz/entidade; caso contrario omita este campo),';
     const userPrompt = `
-Use busca web para encontrar estudos, revisoes sistematicas, diretrizes ou consensos clinicos atualizados e relevantes para o caso.
+${instrucaoBusca}
 
 Retorne SOMENTE JSON valido com as chaves:
 laudoReferences (array),
@@ -348,7 +358,7 @@ category ("ARTIGO" ou "GUIDELINE"),
 source (periodico, entidade ou base),
 year (number quando disponivel),
 authors (string opcional),
-url (URL direta da fonte consultada),
+${instrucaoUrl}
 rationale (por que essa referencia ajuda neste caso).
 
 Regras:
@@ -381,20 +391,26 @@ ${JSON.stringify(input.referenciasClinicas || null, null, 2)}
         model,
         systemPrompt,
         userContent: userPrompt,
-        tools: [
-          {
-            type: 'web_search',
-            filters: {
-              allowed_domains: this.clinicalReferenceDomains,
-            },
-            search_context_size: 'medium',
-            external_web_access: true,
-          },
-        ],
-        toolChoice: 'auto',
+        ...(webSearch
+          ? {
+              tools: [
+                {
+                  type: 'web_search',
+                  filters: {
+                    allowed_domains: this.clinicalReferenceDomains,
+                  },
+                  search_context_size: 'medium',
+                  external_web_access: true,
+                },
+              ],
+              toolChoice: 'auto',
+            }
+          : {}),
         temperature: 0.1,
         timeoutMs,
-        operation: 'laudo clinical reference web search',
+        operation: webSearch
+          ? 'laudo clinical reference web search'
+          : 'laudo clinical reference (knowledge)',
       });
 
       if (!response) return null;

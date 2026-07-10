@@ -27,6 +27,17 @@ export class OpenAiService {
     return this.getApiKey().length > 0;
   }
 
+  // web_search e uma tool nativa da OpenAI; provedores compativeis (Groq etc.)
+  // nao a suportam. Quem chama deve omitir a tool quando isto for false.
+  supportsWebSearch(): boolean {
+    try {
+      const host = new URL(this.getBaseUrl()).host.toLowerCase();
+      return host === 'api.openai.com' || host.endsWith('.openai.com');
+    } catch {
+      return false;
+    }
+  }
+
   isEnabled(envKey: string, fallback = true): boolean {
     const raw = process.env[envKey];
     if (raw == null || String(raw).trim() === '') return fallback;
@@ -64,10 +75,11 @@ export class OpenAiService {
     try {
       const body: Record<string, unknown> = {
         model,
-        input: [
+        messages: [
           { role: 'system', content: input.systemPrompt },
           { role: 'user', content: input.userContent },
         ],
+        response_format: { type: 'json_object' },
       };
       if (input.tools?.length) {
         body.tools = input.tools;
@@ -80,13 +92,12 @@ export class OpenAiService {
       }
 
       let response = await this.postResponse(apiKey, body, controller.signal);
-      if (
-        !response.ok &&
-        typeof body.temperature === 'number' &&
-        [400, 422].includes(response.status)
-      ) {
+      // Alguns provedores/modelos rejeitam temperature ou response_format:
+      // tenta de novo sem esses campos opcionais (o extractJsonObject cobre o resto).
+      if (!response.ok && [400, 422].includes(response.status)) {
         const retryBody = { ...body };
         delete retryBody.temperature;
+        delete retryBody.response_format;
         response = await this.postResponse(
           apiKey,
           retryBody,
@@ -102,8 +113,7 @@ export class OpenAiService {
       }
 
       const data = (await response.json()) as {
-        output_text?: string;
-        output?: Array<{ content?: Array<{ text?: string }> }>;
+        choices?: Array<{ message?: { content?: string } }>;
       };
       const outputText = this.extractOutputText(data);
       const parsed = this.extractJsonObject(outputText);
@@ -128,7 +138,19 @@ export class OpenAiService {
   }
 
   private getApiKey(): string {
-    return String(process.env.OPENAI_API_KEY || '').trim();
+    // AI_API_KEY (provedor atual, ex.: Groq) tem prioridade; OPENAI_API_KEY fica
+    // como compatibilidade/producao.
+    return String(
+      process.env.AI_API_KEY || process.env.OPENAI_API_KEY || '',
+    ).trim();
+  }
+
+  private getBaseUrl(): string {
+    // Endpoint compativel com OpenAI Chat Completions. Troca de provedor
+    // (Groq/OpenAI/Ollama/etc.) e so setar AI_BASE_URL — sem mexer no codigo.
+    return String(process.env.AI_BASE_URL || 'https://api.openai.com/v1')
+      .trim()
+      .replace(/\/$/, '');
   }
 
   private postResponse(
@@ -136,7 +158,7 @@ export class OpenAiService {
     body: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<Response> {
-    return fetch('https://api.openai.com/v1/responses', {
+    return fetch(`${this.getBaseUrl()}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -148,17 +170,9 @@ export class OpenAiService {
   }
 
   private extractOutputText(data: {
-    output_text?: string;
-    output?: Array<{ content?: Array<{ text?: string }> }>;
+    choices?: Array<{ message?: { content?: string } }>;
   }): string {
-    return (
-      data.output_text ||
-      data.output
-        ?.flatMap((item) => item.content || [])
-        .map((content) => content.text || '')
-        .join('\n') ||
-      ''
-    );
+    return data.choices?.[0]?.message?.content || '';
   }
 
   private extractJsonObject(raw: string): Record<string, unknown> | null {
