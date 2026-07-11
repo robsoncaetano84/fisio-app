@@ -158,17 +158,17 @@ describe('laudo suggestion composer util', () => {
     expect(draft.source).toBe('rules');
     expect(draft.examesConsiderados).toBe(1);
     expect(draft.examesComLeituraIa).toBe(1);
-    expect(draft.payload.diagnosticoFuncional).toContain(
-      'Hipotese funcional inicial',
-    );
+    expect(draft.payload.diagnosticoFuncional).toContain('Hipotese funcional:');
     expect(draft.payload.diagnosticoFuncional).toContain(
       'Baseado no exame fisico',
     );
     expect(draft.payload.diagnosticoFuncional).toContain('Dor ao flexionar');
     expect(draft.payload.objetivosCurtoPrazo).toContain('Voltar a correr 5km');
-    expect(draft.payload.condutas).toContain('Evidencias usadas');
-    expect(draft.payload.condutas).toContain('Conduta: exercicios');
-    expect(draft.payload.condutas).toContain('Criterio de progressao');
+    expect(draft.payload.condutas).toContain('Educacao em dor');
+    expect(draft.payload.condutas).toContain(
+      'Exercicios terapeuticos progressivos',
+    );
+    expect(draft.payload.condutas).toContain('progressao por:');
     expect(draft.payload.planoTratamentoIA).toContain(
       'Fase 2 - Recuperacao de movimento/forca',
     );

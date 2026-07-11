@@ -22,8 +22,7 @@ import { OpenAiModule } from '../ai/openai.module';
 // Etapa-38: os endpoints do catalogo de exercicios ficam atras de flag ate o
 // go-live. O service e sempre provido (usado internamente/plano IA); o
 // controller so e montado quando EXERCISE_CATALOG_ENABLED=true.
-const exerciseCatalogEnabled =
-  process.env.EXERCISE_CATALOG_ENABLED === 'true';
+const exerciseCatalogEnabled = process.env.EXERCISE_CATALOG_ENABLED === 'true';
 
 @Module({
   imports: [

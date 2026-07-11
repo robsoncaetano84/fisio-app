@@ -3,6 +3,7 @@
 // @date:   26-01-2026
 // E VO LU CO ES U PD AT E.S PE C
 // ==========================================
+import { BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { EvolucoesService } from './evolucoes.service';
 import { Evolucao } from './entities/evolucao.entity';
@@ -10,10 +11,12 @@ import { PacientesService } from '../pacientes/pacientes.service';
 
 /**
  * F17: o update nao pode remapear a evolucao para outro paciente (injecao
- * cross-tenant). O pacienteId original deve ser preservado.
+ * cross-tenant). Hoje a protecao e mais forte: evolucao registrada e imutavel,
+ * entao qualquer update e recusado com BadRequestException — apos validar a
+ * posse do paciente (pacientesService.findOne).
  */
 describe('EvolucoesService.update (F17)', () => {
-  it('ignora pacienteId enviado no update e mantem o original', async () => {
+  it('recusa qualquer edicao de evolucao registrada (imutavel)', async () => {
     const evolucao = {
       id: 'e1',
       pacienteId: 'paciente-do-dono',
@@ -26,18 +29,28 @@ describe('EvolucoesService.update (F17)', () => {
       save: jest.fn(async (x: Evolucao) => x),
     } as unknown as Repository<Evolucao>;
 
-    const service = new EvolucoesService(
-      repo,
-      {} as unknown as PacientesService,
-    );
+    const pacientesService = {
+      findOne: jest.fn().mockResolvedValue(evolucao.paciente),
+    } as unknown as PacientesService;
 
-    const result = await service.update(
-      'e1',
-      { pacienteId: 'paciente-de-outro-profissional', observacoes: 'nova' } as never,
+    const service = new EvolucoesService(repo, pacientesService);
+
+    await expect(
+      service.update(
+        'e1',
+        {
+          pacienteId: 'paciente-de-outro-profissional',
+          observacoes: 'nova',
+        } as never,
+        'u1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // Nao persiste nada e valida a posse do paciente original.
+    expect(repo.save).not.toHaveBeenCalled();
+    expect(pacientesService.findOne).toHaveBeenCalledWith(
+      'paciente-do-dono',
       'u1',
     );
-
-    expect(result.pacienteId).toBe('paciente-do-dono');
-    expect(result.observacoes).toBe('nova'); // demais campos sao aplicados
   });
 });

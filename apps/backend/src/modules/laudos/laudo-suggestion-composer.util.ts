@@ -483,7 +483,9 @@ function buildRuleBasedLaudoFields(
           summary.irritabilidade === 'ALTA'
             ? `Reduzir irritabilidade em ${primaryArea || 'regiao sintomatica'} mantendo ${progressCriterion}.`
             : `Reduzir sintomas em ${primaryArea || 'regiao sintomatica'} e melhorar controle motor inicial com ${progressCriterion}.`,
-          relevantFactors ? `Dosar pelo comportamento: ${relevantFactors}.` : '',
+          relevantFactors
+            ? `Dosar pelo comportamento: ${relevantFactors}.`
+            : '',
           summary.metasPaciente[0] || '',
         ]),
     objetivosMedioPrazo: joinSentences([
@@ -778,7 +780,6 @@ function inferIrritability(input: {
   if (input.irradiacao) return 'MODERADA';
   return 'NAO_DEFINIDA';
 }
-
 
 function buildClinicalGaps(input: {
   latestAnamnese?: SuggestionAnamnese;

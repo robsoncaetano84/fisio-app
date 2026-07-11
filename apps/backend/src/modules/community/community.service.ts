@@ -542,7 +542,9 @@ export class CommunityService {
 
   async getProfile(username: string) {
     const profile = await this.profilesRepository.findOne({
-      where: isUUID(username) ? [{ username }, { id: username }] : [{ username }],
+      where: isUUID(username)
+        ? [{ username }, { id: username }]
+        : [{ username }],
     });
     if (!profile) throw new NotFoundException('Perfil nao encontrado');
     return this.hydrateProfile(profile);
@@ -1779,7 +1781,9 @@ export class CommunityService {
       'application/pdf',
     ];
     if (!allowed.includes(contentType.trim().toLowerCase())) {
-      throw new BadRequestException('Tipo de arquivo nao permitido para upload');
+      throw new BadRequestException(
+        'Tipo de arquivo nao permitido para upload',
+      );
     }
   }
 

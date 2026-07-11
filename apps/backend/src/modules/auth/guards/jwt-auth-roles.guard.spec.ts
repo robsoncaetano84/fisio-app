@@ -6,6 +6,8 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtAuthRolesGuard } from './jwt-auth.guard';
+import { ROLES_KEY } from '../decorators/roles.decorator';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { UserRole } from '../../usuarios/entities/usuario.entity';
 
 /**
@@ -27,8 +29,17 @@ describe('JwtAuthRolesGuard', () => {
   }
 
   function buildGuard(rolesRequired: UserRole[] | undefined) {
+    // O guard consulta duas chaves: IS_PUBLIC_KEY (rota aberta) e ROLES_KEY
+    // (roles exigidas). O mock precisa responder por chave, senao o array de
+    // roles seria interpretado tambem como "rota publica".
     const reflector = {
-      getAllAndOverride: jest.fn().mockReturnValue(rolesRequired),
+      getAllAndOverride: jest.fn((key: string) =>
+        key === IS_PUBLIC_KEY
+          ? false
+          : key === ROLES_KEY
+            ? rolesRequired
+            : undefined,
+      ),
     } as unknown as Reflector;
     return new JwtAuthRolesGuard(reflector);
   }

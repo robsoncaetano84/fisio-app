@@ -3,9 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 // Etapa-38: vincula Atividade ao catalogo de exercicios e carrega imagem/
 // instrucoes/aceite. Todas as colunas sao aditivas e nullable (ou com default),
 // mantendo compat com atividades atuais em texto livre.
-export class AddAtividadeExerciseFields1782000500000
-  implements MigrationInterface
-{
+export class AddAtividadeExerciseFields1782000500000 implements MigrationInterface {
   name = 'AddAtividadeExerciseFields1782000500000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
