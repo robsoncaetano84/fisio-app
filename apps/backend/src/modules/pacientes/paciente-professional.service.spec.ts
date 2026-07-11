@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PacienteProfessionalService } from './paciente-professional.service';
 import {

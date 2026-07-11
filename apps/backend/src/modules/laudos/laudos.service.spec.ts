@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { LaudoStatus } from './entities/laudo.entity';
 import { LaudosService } from './laudos.service';

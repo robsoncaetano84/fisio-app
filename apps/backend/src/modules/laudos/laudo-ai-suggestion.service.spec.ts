@@ -7,6 +7,7 @@ describe('LaudoAiSuggestionService', () => {
       isEnabled: jest.fn(),
       resolveModel: jest.fn().mockReturnValue('test-model'),
       getPositiveIntegerEnv: jest.fn().mockReturnValue(15000),
+      supportsWebSearch: jest.fn().mockReturnValue(true),
       createJsonResponse: jest.fn(),
     }) as any;
 
@@ -200,6 +201,23 @@ describe('LaudoAiSuggestionService', () => {
         toolChoice: 'auto',
       }),
     );
+  });
+
+  it('omits web_search tool when the provider does not support it (Groq)', async () => {
+    const openAiService = createOpenAiService();
+    openAiService.isConfigured.mockReturnValue(true);
+    openAiService.isEnabled.mockReturnValue(true);
+    openAiService.supportsWebSearch.mockReturnValue(false);
+    openAiService.createJsonResponse.mockResolvedValue({
+      parsed: { laudoReferences: [], planoReferences: [] },
+    });
+    const service = new LaudoAiSuggestionService(openAiService);
+
+    await service.findUpdatedClinicalReferences(baseInput);
+
+    const call = openAiService.createJsonResponse.mock.calls[0][0];
+    expect(call.tools).toBeUndefined();
+    expect(call.toolChoice).toBeUndefined();
   });
 
   it('does not search updated references when web references are disabled', async () => {

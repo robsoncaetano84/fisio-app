@@ -73,8 +73,10 @@ export class JwtAuthRolesGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as { role?: UserRole } | undefined;
+    const request = context
+      .switchToHttp()
+      .getRequest<{ user?: { role?: UserRole } }>();
+    const user = request.user;
 
     if (!user?.role || !roles.includes(user.role)) {
       throw new ForbiddenException('Acesso negado para o seu perfil');

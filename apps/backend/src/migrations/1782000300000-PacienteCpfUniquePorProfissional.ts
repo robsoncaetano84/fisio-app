@@ -3,9 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 // F16: CPF passa a ser unico por profissional, nao global. Remove o unique
 // global (nome auto-gerado pelo synchronize) e cria unique composto
 // (usuario_id, cpf). Requer ausencia de duplicatas (usuario_id, cpf).
-export class PacienteCpfUniquePorProfissional1782000300000
-  implements MigrationInterface
-{
+export class PacienteCpfUniquePorProfissional1782000300000 implements MigrationInterface {
   name = 'PacienteCpfUniquePorProfissional1782000300000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -63,9 +61,7 @@ export class PacienteCpfUniquePorProfissional1782000300000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `DROP INDEX IF EXISTS "UQ_PACIENTE_USUARIO_CPF"`,
-    );
+    await queryRunner.query(`DROP INDEX IF EXISTS "UQ_PACIENTE_USUARIO_CPF"`);
     // Restaura o unique global de cpf.
     await queryRunner.query(
       `CREATE UNIQUE INDEX IF NOT EXISTS "UQ_PACIENTE_CPF" ON "pacientes" ("cpf")`,

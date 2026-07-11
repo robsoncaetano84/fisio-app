@@ -18,9 +18,16 @@ describe('OpenAiService', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    // Garante ambiente limpo: AI_API_KEY tem prioridade sobre OPENAI_API_KEY.
+    delete process.env.AI_API_KEY;
+    delete process.env.AI_BASE_URL;
     fetchMock = jest.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
     service = new OpenAiService();
+  });
+
+  const chatBody = (content: string) => ({
+    choices: [{ message: { content } }],
   });
 
   afterEach(() => {
@@ -34,6 +41,33 @@ describe('OpenAiService', () => {
 
     process.env.OPENAI_API_KEY = ' sk-test ';
     expect(service.isConfigured()).toBe(true);
+  });
+
+  it('prioritizes AI_API_KEY and routes to AI_BASE_URL/chat/completions', async () => {
+    process.env.OPENAI_API_KEY = 'sk-openai';
+    process.env.AI_API_KEY = 'gsk-groq';
+    process.env.AI_BASE_URL = 'https://api.groq.com/openai/v1/';
+    fetchMock.mockResolvedValueOnce(makeResponse(200, chatBody('{"ok":true}')));
+
+    await service.createJsonResponse({
+      model: 'llama-test',
+      systemPrompt: 'system',
+      userContent: 'user',
+      timeoutMs: 1000,
+      operation: 'unit test',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      'Bearer gsk-groq',
+    );
+  });
+
+  it('supportsWebSearch only for OpenAI base URLs', () => {
+    expect(service.supportsWebSearch()).toBe(true); // default openai.com
+    process.env.AI_BASE_URL = 'https://api.groq.com/openai/v1';
+    expect(service.supportsWebSearch()).toBe(false);
   });
 
   it('resolves enabled flags and model fallbacks from env', () => {
@@ -84,12 +118,10 @@ describe('OpenAiService', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('parses JSON from output_text, including fenced content', async () => {
+  it('parses JSON from message content, including fenced content', async () => {
     process.env.OPENAI_API_KEY = 'sk-test';
     fetchMock.mockResolvedValueOnce(
-      makeResponse(200, {
-        output_text: '```json\n{"ok":true,"score":3}\n```',
-      }),
+      makeResponse(200, chatBody('```json\n{"ok":true,"score":3}\n```')),
     );
 
     await expect(
@@ -106,19 +138,10 @@ describe('OpenAiService', () => {
     });
   });
 
-  it('extracts output text from nested response content', async () => {
+  it('extracts JSON from message content surrounded by text', async () => {
     process.env.OPENAI_API_KEY = 'sk-test';
     fetchMock.mockResolvedValueOnce(
-      makeResponse(200, {
-        output: [
-          {
-            content: [
-              { text: 'prefix ' },
-              { text: '{"source":"nested"} suffix' },
-            ],
-          },
-        ],
-      }),
+      makeResponse(200, chatBody('prefix {"source":"nested"} suffix')),
     );
 
     await expect(
@@ -138,7 +161,7 @@ describe('OpenAiService', () => {
     process.env.OPENAI_API_KEY = 'sk-test';
     fetchMock
       .mockResolvedValueOnce(makeResponse(400))
-      .mockResolvedValueOnce(makeResponse(200, { output_text: '{"ok":true}' }));
+      .mockResolvedValueOnce(makeResponse(200, chatBody('{"ok":true}')));
 
     await expect(
       service.createJsonResponse({
@@ -165,11 +188,9 @@ describe('OpenAiService', () => {
     expect(secondBody.temperature).toBeUndefined();
   });
 
-  it('passes Responses API tools and tool choice when provided', async () => {
+  it('passes tools and tool choice through to the request when provided', async () => {
     process.env.OPENAI_API_KEY = 'sk-test';
-    fetchMock.mockResolvedValueOnce(
-      makeResponse(200, { output_text: '{"ok":true}' }),
-    );
+    fetchMock.mockResolvedValueOnce(makeResponse(200, chatBody('{"ok":true}')));
 
     await service.createJsonResponse({
       model: 'gpt-test',

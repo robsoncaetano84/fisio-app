@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
 import { ConflictException } from '@nestjs/common';
 import { Usuario, UserRole } from '../usuarios/entities/usuario.entity';
 import {

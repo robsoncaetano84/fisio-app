@@ -4,6 +4,7 @@ import { ExerciseImageType } from './exercise-image-type.enum';
 import { ExercicioStatus } from './entities/exercicio.entity';
 import { PREVIEW_EXERCISE_CATALOG } from './exercise-catalog-preview.seed';
 import { INITIAL_EXERCISE_CATALOG } from './exercicio-catalog.seed';
+import { MASTER_EXERCISE_CATALOG } from './exercise-catalog-master.seed';
 import { ExerciciosCatalogService } from './exercicios-catalog.service';
 import { ExercicioMidiaRevisaoClinicaStatus } from './entities/exercicio-midia.entity';
 
@@ -73,10 +74,24 @@ describe('ExerciciosCatalogService', () => {
 
     await service.onModuleInit();
 
-    const expectedTotal =
-      INITIAL_EXERCISE_CATALOG.length + PREVIEW_EXERCISE_CATALOG.length;
-    expect(exercicioRepository.save).toHaveBeenCalledTimes(expectedTotal);
-    expect(midiaRepository.save).toHaveBeenCalledTimes(expectedTotal);
+    // O seed combina INITIAL + PREVIEW + MASTER deduplicando por slug, e so
+    // cria midia principal para itens que ja possuem imagemKey.
+    const seenSlugs = new Set<string>();
+    const catalogoEsperado = [
+      ...INITIAL_EXERCISE_CATALOG,
+      ...PREVIEW_EXERCISE_CATALOG,
+      ...MASTER_EXERCISE_CATALOG,
+    ].filter((item) => {
+      if (seenSlugs.has(item.slug)) return false;
+      seenSlugs.add(item.slug);
+      return true;
+    });
+    const expectedExercicios = catalogoEsperado.length;
+    const expectedMidias = catalogoEsperado.filter(
+      (item) => item.imagemKey,
+    ).length;
+    expect(exercicioRepository.save).toHaveBeenCalledTimes(expectedExercicios);
+    expect(midiaRepository.save).toHaveBeenCalledTimes(expectedMidias);
     expect(exercicioRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         nome: 'Mobilidade lombar em gato-camelo',

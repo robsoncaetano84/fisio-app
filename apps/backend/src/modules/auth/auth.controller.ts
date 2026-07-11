@@ -195,10 +195,11 @@ export class AuthController {
   ): Promise<PacienteUsuarioResponseDto | null> {
     const normalizedEmail = query.email.trim().toLowerCase();
 
-    const pacienteUsuario = await this.usuariosService.findPacienteByEmailForProfissional(
-      usuario.id,
-      normalizedEmail,
-    );
+    const pacienteUsuario =
+      await this.usuariosService.findPacienteByEmailForProfissional(
+        usuario.id,
+        normalizedEmail,
+      );
     if (!pacienteUsuario) {
       return null;
     }
@@ -242,11 +243,12 @@ export class AuthController {
     @CurrentUser() usuario: Usuario,
     @Query() query: SearchPacienteUsuariosQueryDto,
   ): Promise<PacienteUsuarioResponseDto[]> {
-    const usuarios = await this.usuariosService.searchPacientesByTermForProfissional(
-      usuario.id,
-      query.query,
-      query.limit ?? 10,
-    );
+    const usuarios =
+      await this.usuariosService.searchPacientesByTermForProfissional(
+        usuario.id,
+        query.query,
+        query.limit ?? 10,
+      );
     return usuarios.map((pacienteUsuario) => ({
       id: pacienteUsuario.id,
       nome: pacienteUsuario.nome,
