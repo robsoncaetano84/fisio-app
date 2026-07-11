@@ -55,7 +55,11 @@ jobs:
     runs-on: windows-latest
     needs: [mobile, backend, community-web]
     steps:
+      # fetch-depth: 0 garante o historico completo — o rollback drill resolve
+      # HEAD~1, que nao existe num checkout raso (fetch-depth: 1 default).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
