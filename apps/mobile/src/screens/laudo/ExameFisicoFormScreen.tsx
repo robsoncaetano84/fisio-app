@@ -89,6 +89,17 @@ type ExameFisicoFormScreenProps = {
 };
 type IconName = keyof typeof Ionicons.glyphMap;
 
+const VALIDATION_FIELD_LABELS: Record<string, string> = {
+  exam: "Exame físico",
+  movimentoReproduzDor: "Movimento que reproduz a dor",
+  hipotesePrincipal: "Hipótese principal",
+  conduta: "Conduta direcionada",
+  avaliacaoRegioes: "Pelo menos um teste regional marcado",
+  admRegioes: "ADM de pelo menos uma região",
+  referralDestination: "Destino do encaminhamento",
+  referralReason: "Motivo do encaminhamento",
+};
+
 export function ExameFisicoFormScreen({
   route,
   navigation,
@@ -264,6 +275,17 @@ export function ExameFisicoFormScreen({
     );
     return { tested, total, pending: Math.max(total - tested, 0) };
   }, [visibleRegionalGroups]);
+  const pendingValidationLabels = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          Object.entries(errors)
+            .filter(([, message]) => Boolean(message))
+            .map(([key]) => VALIDATION_FIELD_LABELS[key] || key),
+        ),
+      ),
+    [errors],
+  );
 
   const generateSuggestion = async (force = false) => {
     if (generating) return;
@@ -762,12 +784,12 @@ export function ExameFisicoFormScreen({
         "clinical.validation.atLeastOneRegionalTestRequired",
       );
     }
-    const groupsForAdmValidation = visibleRegionalGroups;
-    const missingAdm = groupsForAdmValidation.some(
-      (grupo) => !String(grupo.adm || "").trim(),
+    const hasAnyAdm = exam.avaliacaoRegioes.some((grupo) =>
+      String(grupo.adm || "").trim(),
     );
-    if (missingAdm) {
-      nextErrors.admRegioes = "Registre ADM nas regioes exibidas/em foco.";
+    if (!hasAnyAdm) {
+      nextErrors.admRegioes =
+        "Registre a ADM de pelo menos uma região avaliada.";
     }
 
     if (exam.redFlags.criticalTriggered) {
@@ -781,14 +803,6 @@ export function ExameFisicoFormScreen({
           "clinical.validation.referralReasonRequired",
         );
       }
-    }
-    if (
-      AI_REVIEW_REQUIRED &&
-      exam.source === "rule-based" &&
-      !classificationConfirmed
-    ) {
-      nextErrors.classificationConfirmation =
-        "Confirme a classificação sugerida por IA antes de salvar.";
     }
 
     setErrors(nextErrors);
@@ -810,15 +824,10 @@ export function ExameFisicoFormScreen({
       grupo.testes.some((teste) => teste.resultado !== "NAO_TESTADO"),
     );
     if (!hasAtLeastOneRegionalResult) fields.push("avaliacaoRegioes");
-    const groupsForAdmValidation =
-      showAllRegions || !relevantRegionSet.size
-        ? source.avaliacaoRegioes
-        : source.avaliacaoRegioes.filter((grupo) =>
-            relevantRegionSet.has(grupo.regiao),
-          );
-    if (
-      groupsForAdmValidation.some((grupo) => !String(grupo.adm || "").trim())
-    ) {
+    const hasAnyAdm = source.avaliacaoRegioes.some((grupo) =>
+      String(grupo.adm || "").trim(),
+    );
+    if (!hasAnyAdm) {
       fields.push("admRegioes");
     }
     if (source.redFlags.criticalTriggered) {
@@ -828,13 +837,6 @@ export function ExameFisicoFormScreen({
       if (!String(source.redFlags.referralReason || "").trim()) {
         fields.push("referralReason");
       }
-    }
-    if (
-      AI_REVIEW_REQUIRED &&
-      source.source === "rule-based" &&
-      !classificationConfirmed
-    ) {
-      fields.push("classificationConfirmation");
     }
     return fields;
   };
@@ -875,9 +877,14 @@ export function ExameFisicoFormScreen({
         pacienteId,
         fields: failedFields,
       }).catch(() => undefined);
+      const missingLabels = failedFields.map(
+        (field) => VALIDATION_FIELD_LABELS[field] || field,
+      );
       showToast({
         type: "error",
-        message: "Revise os campos obrigatórios para salvar.",
+        message: missingLabels.length
+          ? `Falta preencher: ${missingLabels.join(", ")}.`
+          : "Revise os campos obrigatórios para salvar.",
       });
       return;
     }
@@ -1423,7 +1430,9 @@ export function ExameFisicoFormScreen({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.blockTitle}>Observacao e movimento</Text>
+          <Text style={styles.blockTitle}>
+            Exame postural, observação e movimento
+          </Text>
           <View style={styles.photoRow}>
             <Text style={styles.photoCountText}>
               {loadingPosturePhotos
@@ -1820,22 +1829,35 @@ export function ExameFisicoFormScreen({
             </View>
           ) : null}
           {relevantRegions.length ? (
-            <View style={styles.contextHeaderRow}>
-              <Text style={styles.contextHintText}>
-                Foco clínico:{" "}
-                {relevantRegions
-                  .map((r) => CLINICAL_REGION_LABELS[r])
-                  .join(", ")}
-                {cadeiaProvavel ? ` â€¢ ${cadeiaProvavel}` : ""}
-              </Text>
-              <TouchableOpacity
-                style={styles.contextToggleChip}
-                onPress={() => setShowAllRegions((prev) => !prev)}
-              >
-                <Text style={styles.contextToggleChipText}>
-                  {showAllRegions ? "Ver foco" : "Mostrar todas"}
+            <View style={styles.focusRegionsCard}>
+              <View style={styles.focusRegionsHeader}>
+                <Ionicons name="locate" size={18} color={COLORS.primary} />
+                <Text style={styles.focusRegionsTitle}>
+                  Regiões para testar
                 </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.contextToggleChip}
+                  onPress={() => setShowAllRegions((prev) => !prev)}
+                >
+                  <Text style={styles.contextToggleChipText}>
+                    {showAllRegions ? "Ver foco" : "Mostrar todas"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.focusRegionsChips}>
+                {relevantRegions.map((region) => (
+                  <View key={region} style={styles.focusRegionChip}>
+                    <Text style={styles.focusRegionChipText}>
+                      {CLINICAL_REGION_LABELS[region]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {cadeiaProvavel ? (
+                <Text style={styles.focusRegionsChain}>
+                  Cadeia provável: {cadeiaProvavel}
+                </Text>
+              ) : null}
             </View>
           ) : null}
           <Text style={styles.regionProgressText}>
@@ -2498,6 +2520,20 @@ export function ExameFisicoFormScreen({
       </ScrollView>
 
       <View style={styles.footer}>
+        {!recordedExamLocked &&
+        hasAttemptedSave &&
+        pendingValidationLabels.length ? (
+          <View style={styles.pendingCard}>
+            <Text style={styles.pendingCardTitle}>
+              Falta preencher para concluir:
+            </Text>
+            {pendingValidationLabels.map((label) => (
+              <Text key={label} style={styles.pendingCardItem}>
+                • {label}
+              </Text>
+            ))}
+          </View>
+        ) : null}
         <Button
           title={
             recordedExamLocked
@@ -2757,6 +2793,25 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
   },
+  pendingCard: {
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: `${COLORS.error}10`,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  pendingCardTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "700",
+    color: COLORS.error,
+    marginBottom: 2,
+  },
+  pendingCardItem: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textPrimary,
+  },
   emptyWrap: {
     flex: 1,
     alignItems: "center",
@@ -2958,17 +3013,46 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 18,
   },
-  contextHeaderRow: {
+  focusRegionsCard: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: `${COLORS.primary}0D`,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  focusRegionsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: SPACING.xs,
     marginBottom: SPACING.xs,
   },
-  contextHintText: {
+  focusRegionsTitle: {
     flex: 1,
+    fontSize: FONTS.sizes.md,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  focusRegionsChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  focusRegionChip: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  focusRegionChipText: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: "600",
+    color: COLORS.white,
+  },
+  focusRegionsChain: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
   },
   contextToggleChip: {
     borderWidth: 1,

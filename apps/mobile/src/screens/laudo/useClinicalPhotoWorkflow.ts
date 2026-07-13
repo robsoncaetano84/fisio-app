@@ -146,10 +146,20 @@ export function useClinicalPhotoWorkflow({
           message: "Foto registrada e analisada.",
         });
         await loadClinicalPhotosCount();
-      } catch {
+      } catch (error) {
+        const detail =
+          (error as { response?: { data?: { message?: string | string[] } } })
+            ?.response?.data?.message ||
+          (error as Error)?.message ||
+          "";
+        const detailText = Array.isArray(detail)
+          ? detail.join("; ")
+          : String(detail || "").trim();
         showToast({
           type: "error",
-          message: "Nao foi possivel enviar a foto.",
+          message: detailText
+            ? `Nao foi possivel enviar a foto: ${detailText}`
+            : "Nao foi possivel enviar a foto.",
         });
       } finally {
         setUploadingPosturePhoto(false);
