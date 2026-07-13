@@ -2,6 +2,26 @@
 const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  // Proxy same-origin para o backend (producao em *.onrender.com):
+  // onrender.com esta na Public Suffix List, entao front e backend em
+  // subdominios distintos sao "sites" diferentes e o cookie de sessao
+  // (SameSite=Lax) nem seria aceito nem enviado em fetch cross-site.
+  // Com o rewrite, o navegador fala so com o proprio dominio do front
+  // (NEXT_PUBLIC_COMMUNITY_API_URL=/api) e o cookie vira first-party.
+  // Rotas proprias em app/api (health, openapi) tem precedencia sobre
+  // o rewrite. Sem COMMUNITY_API_URL definido, nenhum proxy e criado.
+  async rewrites() {
+    const target = (process.env.COMMUNITY_API_URL || '')
+      .trim()
+      .replace(/\/$/, '');
+    if (!target || !/^https?:\/\//.test(target)) return [];
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${target}/:path*`,
+      },
+    ];
+  },
   async headers() {
     const scriptSrc =
       process.env.NODE_ENV === 'development'
