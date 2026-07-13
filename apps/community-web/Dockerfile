@@ -11,6 +11,17 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# NEXT_PUBLIC_* e inlined no bundle e o rewrite /api (next.config.js) e
+# serializado no build — precisam existir AQUI, nao so em runtime.
+# O Render passa as env vars do painel como build args, mas o Dockerfile
+# precisa declara-las com ARG para que chequem ao `npm run build`.
+ARG COMMUNITY_API_URL
+ARG NEXT_PUBLIC_COMMUNITY_API_URL
+ARG NEXT_PUBLIC_COMMUNITY_URL
+ENV COMMUNITY_API_URL=$COMMUNITY_API_URL \
+    NEXT_PUBLIC_COMMUNITY_API_URL=$NEXT_PUBLIC_COMMUNITY_API_URL \
+    NEXT_PUBLIC_COMMUNITY_URL=$NEXT_PUBLIC_COMMUNITY_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
