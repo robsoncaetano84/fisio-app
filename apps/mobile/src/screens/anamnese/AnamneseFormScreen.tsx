@@ -131,6 +131,7 @@ const HORA_INTENSIFICA_PRESETS = [
   "Fim do dia",
   "Após esforço",
   "Após trabalho",
+  "Intermitente (dor o tempo todo)",
 ];
 const FATOR_ALIVIO_PRESETS = [
   "Repouso",
@@ -158,15 +159,6 @@ const LIMITACOES_PRESETS = [
   "Subir escadas",
   "Dirigir",
   "Agachar",
-];
-const ATIVIDADES_PIORAM_PRESETS = [
-  "Levantar peso",
-  "Ficar sentado",
-  "Ficar em pé",
-  "Caminhar",
-  "Subir escadas",
-  "Exercício",
-  "Dirigir",
 ];
 const META_PACIENTE_PRESETS = [
   "Reduzir dor",
@@ -2188,59 +2180,6 @@ export function AnamneseFormScreen({
                 numberOfLines={3}
                 style={{ height: 90, textAlignVertical: "top" }}
                 containerStyle={{ marginTop: SPACING.md }}
-              />
-
-              <Text style={[styles.subLabel, { marginTop: SPACING.md }]}>
-                Atividades que pioram
-              </Text>
-              <View style={styles.optionsGrid}>
-                {ATIVIDADES_PIORAM_PRESETS.map((preset) => (
-                  <SelectOption
-                    key={preset}
-                    label={preset}
-                    selected={parsePresetValues(atividadesQuePioram).includes(
-                      preset,
-                    )}
-                    onPress={() =>
-                      setAtividadesQuePioram(
-                        togglePresetInText(atividadesQuePioram, preset),
-                      )
-                    }
-                  />
-                ))}
-              </View>
-
-              <Input
-                placeholder="Quais movimentos ou situações pioram os sintomas? (ex.: levantar peso, ficar muito tempo sentado)"
-                value={atividadesQuePioram}
-                onChangeText={(text) => {
-                  setAtividadesQuePioram(text);
-                  if (errors.atividadesQuePioram) {
-                    setErrors((prev) => ({ ...prev, atividadesQuePioram: "" }));
-                  }
-                }}
-                error={errors.atividadesQuePioram}
-                showCount
-                showClear
-                maxLength={1000}
-                onClear={() => setAtividadesQuePioram("")}
-                rightIcon={
-                  VOICE_ENABLED ? getMicIcon("atividadesQuePioram") : undefined
-                }
-                onRightIconPress={
-                  VOICE_ENABLED
-                    ? () => toggleVoice("atividadesQuePioram")
-                    : undefined
-                }
-                hint={
-                  activeField === "atividadesQuePioram" && isRecording
-                    ? partial
-                    : undefined
-                }
-                multiline
-                numberOfLines={3}
-                style={{ height: 90, textAlignVertical: "top" }}
-                containerStyle={{ marginTop: SPACING.sm }}
               />
 
               <Text style={[styles.subLabel, { marginTop: SPACING.md }]}>
