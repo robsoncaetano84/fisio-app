@@ -69,6 +69,15 @@ export function buildCommunitySsoCallbackUrl(
   sso: CommunitySsoResponse,
   returnTo = "/",
 ) {
+  // Preferir o redirectUrl emitido pelo backend: ele e a fonte unica da URL
+  // da comunidade (COMMUNITY_WEB_URL) e ja vem com token/source/returnTo
+  // sanitizados. Montar a URL no cliente usava EXPO_PUBLIC_COMMUNITY_WEB_URL
+  // embutida no build estatico — em producao apontava para localhost:3002.
+  const fromBackend = String(sso.redirectUrl || "").trim();
+  if (/^https?:\/\//i.test(fromBackend)) {
+    return normalizeCommunityUrlForAndroidEmulator(fromBackend);
+  }
+  // Fallback (backend antigo sem redirectUrl): monta localmente.
   const token = encodeURIComponent(sso.oneTimeToken);
   const next = encodeURIComponent(sanitizeReturnTo(returnTo));
   return `${getCommunityWebUrl()}/sso/callback?token=${token}&source=synap-app&returnTo=${next}`;
